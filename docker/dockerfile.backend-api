@@ -14,7 +14,7 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expone el puerto 8000 para FastAPI
-EXPOSE ${BACKEND_API_PORT}
+EXPOSE ${BACKEND_API_PORT_INTERNAL}
 
 # Comando por defecto
-CMD ["sh", "-c", "uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT} --reload"]
+CMD ["sh", "-c", "uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload"]

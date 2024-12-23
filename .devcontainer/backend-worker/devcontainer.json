@@ -1,58 +1,29 @@
-// Para detalles del formato, consulta https://aka.ms/devcontainer.json. Para opciones de configuración, consulta el
-// README en: https://github.com/devcontainers/templates/tree/main/src/docker-existing-docker-compose
 {
-	"name": "Dev Container - Worker",
-
-	// Lista de archivos docker-compose. Puedes agregar más archivos aquí si es necesario.
+	"name": "Dev Container - Backend WORKER Python",
 	"dockerComposeFile": [
-		"./docker-compose.yml",
-		"docker-compose.yml"
+	  "../../docker-compose.override.yml",
+	  "docker-compose.yml"
 	],
-
-	// Define el servicio que VS Code utilizará en el contenedor.
-	"service": "react-docker-sample",
-
-	// Define la carpeta que se abrirá por defecto en VS Code al conectarse al contenedor.
-	"workspaceFolder": "/home/node/app",
-
-	// Personalizaciones específicas para VS Code.
+	"service": "backend-worker",
+	"workspaceFolder": "/app",
 	"customizations": {
-		"vscode": {
-			// Extensiones que se instalarán automáticamente en el contenedor.
-			"extensions": [
-				"esbenp.prettier-vscode",
-				"dbaeumer.vscode-eslint",
-				"ms-azuretools.vscode-docker",
-				"shd101wyy.markdown-preview-enhanced",
-				"ms-vscode.js-debug"
-			],
-			// Configuraciones específicas para el editor.
-			"settings": {
-				"files.encoding": "utf8",
-				"files.eol": "\n",
-				"editor.defaultFormatter": "esbenp.prettier-vscode",
-				"[javascript]": {
-					"editor.defaultFormatter": "esbenp.prettier-vscode"
-				}
-			}
+	  "vscode": {
+		"extensions": [
+		  "ms-python.python",
+		  "ms-azuretools.vscode-docker",
+		  "eamodio.gitlens",
+		  "ms-python.vscode-pylance",
+		  "streetsidesoftware.code-spell-checker"
+		],
+		"settings": {
+		  "python.pythonPath": "/usr/local/bin/python",
+		  "python.formatting.provider": "black",
+		  "editor.formatOnSave": true,
+		  "files.encoding": "utf8",
+		  "files.eol": "\n"
 		}
+	  }
 	},
-
-	// Lista de puertos expuestos que estarán disponibles localmente.
-	"forwardPorts": [3000],
-
-	// Descomenta la siguiente línea si deseas iniciar servicios específicos de tu configuración de Docker Compose.
-	// "runServices": [],
-
-	// Descomenta la siguiente línea si deseas que los contenedores permanezcan activos después de que VS Code se cierre.
-	// "shutdownAction": "none",
-
-	// Descomenta la siguiente línea para ejecutar comandos después de crear el contenedor.
-	// "postCreateCommand": "cat /etc/os-release",
-
-	// Configura las características específicas que deseas agregar al contenedor. Más información: https://containers.dev/features.
-	// "features": {},
-
-	// Descomenta si deseas conectarte como un usuario existente diferente al predeterminado del contenedor. Más información: https://aka.ms/dev-containers-non-root.
-	"remoteUser": "node"
-}
+	"remoteUser": "root"
+  }
+  

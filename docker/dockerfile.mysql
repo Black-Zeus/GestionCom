@@ -4,7 +4,7 @@ FROM mariadb:10.6
 # =======================
 # Copia de scripts de inicialización
 # =======================
-COPY ./scripts/mysql/*.sql /docker-entrypoint-initdb.d/
+COPY ./scripts/mariadb/*.sql /docker-entrypoint-initdb.d/
 
 # =======================
 # Variables de Entorno (tomadas del docker-compose)
