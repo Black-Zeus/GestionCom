@@ -38,6 +38,7 @@
 logs/**
 volumes/mailpit/**
 volumes/minio/**
+volumes/mariadb/**
 volumes/mysql/**
 volumes/rabbitmq/**
 volumes/redis/**

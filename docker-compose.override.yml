@@ -7,7 +7,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.frontend.dev
-    image: ${PROJECT_NAME}/frontend:dev
+    image: ${PROJECT_NAME}/frontend:dev.v0.1
     volumes:
       - ./volumes/frontend:/app
       - /app/node_modules
@@ -27,7 +27,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.backend-api
-    image: ${PROJECT_NAME}/backend-api:dev
+    image: ${PROJECT_NAME}/backend-api:dev.v0.1
     volumes:
       - ./volumes/backend-api:/app
     ports:
@@ -46,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.backend-docs
-    image: ${PROJECT_NAME}/backend-docs:dev
+    image: ${PROJECT_NAME}/backend-docs:dev.v0.1
     volumes:
       - ./volumes/backend-docs:/app
     networks:
@@ -65,7 +65,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.backend-tasks
-    image: ${PROJECT_NAME}/backend-tasks:dev
+    image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
     volumes:
       - ./volumes/backend-tasks:/app
     networks:
@@ -84,7 +84,7 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.backend-worker
-    image: ${PROJECT_NAME}/backend-worker:dev
+    image: ${PROJECT_NAME}/backend-worker:dev.v0.1
     volumes:
       - ./volumes/backend-worker:/app
     networks:
@@ -151,8 +151,8 @@ services:
     ports:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     volumes:
-      - ./volumes/mysql/db:/var/lib/mysql
-      - ./scripts/mysql:/docker-entrypoint-initdb.d
+      - ./volumes/mariadb/db:/var/lib/mysql
+      - ./scripts/mariadb:/docker-entrypoint-initdb.d
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
