@@ -1,0 +1,21 @@
+# Usar la imagen base de Redis
+FROM redis:7-alpine
+
+# Establecer directorio de trabajo
+WORKDIR /usr/local/etc/redis
+
+# Copiar el archivo de configuración personalizado
+COPY ./scripts/redis/redis.conf ./redis.conf
+
+# Instalar cron para tareas programadas
+RUN apk add --no-cache bash busybox-suid && \
+    echo "0 0 * * * echo FLUSHALL | redis-cli" > /etc/crontabs/root && \
+    chmod 600 /etc/crontabs/root
+
+# =======================
+# Exponer puerto definido por entorno
+# =======================
+EXPOSE ${REDIS_PORT}
+
+# Comando de inicio del contenedor
+CMD ["sh", "-c", "crond && redis-server /usr/local/etc/redis/redis.conf"]

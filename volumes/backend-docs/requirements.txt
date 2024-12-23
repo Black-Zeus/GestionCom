@@ -1,0 +1,9 @@
+fastapi                  # Framework para la API
+uvicorn                  # Servidor ASGI para FastAPI
+minio                    # Cliente para MinIO (almacenamiento S3)
+pandas                   # Manipulación de datos (Excel y CSV)
+openpyxl                 # Generación de Excel
+python-docx              # Creación de documentos Word
+reportlab                # Generación de PDFs
+jinja2                   # Plantillas HTML (para PDF y documentos)
+pypdf2                   # Manipulación de PDFs

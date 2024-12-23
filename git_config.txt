@@ -1,0 +1,28 @@
+
+git init
+
+git config --global core.autocrlf true
+git config --global user.name "Victor Soto"
+git config --global user.email "blk.zeus@gmail.com"
+git config --global init.defaultBranch main
+
+
+git add --renormalize .
+git commit -m "chore: normalización de finales de línea a CRLF
+
+- Se aplica normalización de líneas (LF → CRLF)
+- Asegura consistencia en entornos Windows y mejora compatibilidad"
+
+git diff --cached
+
+git add .
+git commit -m "feat: primera versión estable del sistema
+
+- Se establece la estructura base del proyecto
+- Configuración inicial de Docker, Docker Compose y contenedores
+- Se añaden scripts y configuraciones esenciales (.env, .gitattributes, .dockerignore)
+- Estructura de carpetas para frontend, backend y servicios
+- Se aplican reglas de .gitignore para evitar archivos innecesarios en el control de versiones
+
+El sistema está operativo y listo para desarrollo futuro."
+

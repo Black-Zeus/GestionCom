@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY volumes/backend-worker/requirements.txt /app/requirements.txt
+
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY volumes/backend-worker/ /app
+
+# Configura el PYTHONPATH para permitir importaciones desde /app
+ENV PYTHONPATH=/app
+
+# Ejecutar Celery como worker usando variables de entorno
+CMD ["sh", "-c", "celery -A tasks worker --loglevel=${WORKER_LOG_LEVEL} --concurrency=${WORKER_CONCURRENCY}"]

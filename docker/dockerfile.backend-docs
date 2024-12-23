@@ -1,0 +1,20 @@
+# Imagen base
+FROM python:3.11-slim
+
+# Establecer directorio de trabajo
+WORKDIR /app
+
+# Copiar dependencias
+COPY volumes/backend-docs/requirements.txt .
+
+# Instalar dependencias
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar el código fuente
+COPY volumes/backend-docs/ .
+
+# Puerto de la API de documentos
+EXPOSE ${DOCS_API_PORT_INTERNAL}
+
+# Comando por defecto (usando variables de entorno)
+CMD ["sh", "-c", "uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}"]

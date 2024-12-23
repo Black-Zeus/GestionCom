@@ -1,0 +1,14 @@
+{
+  "Rules": [    
+    {
+      "ID": "Expiration_rule_Reports",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Status": "Enabled",
+      "Expiration": {
+        "Days": 90
+      }
+    }
+  ]
+}

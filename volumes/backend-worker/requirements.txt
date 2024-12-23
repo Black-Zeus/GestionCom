@@ -1,0 +1,9 @@
+fastapi                  # Framework para la API (si es necesario)
+uvicorn                  # Servidor ASGI
+celery                   # Manejo de tareas en segundo plano (worker)
+redis                    # Broker para Celery (opcional, si usas Redis como cola)
+pymysql                  # Conexión a bases de datos MariaDB/MySQL
+requests                 # Realizar peticiones HTTP (para consumir APIs internas)
+schedule                 # Programador simple para tareas recurrentes
+python-crontab           # Manejo de cron jobs directamente desde Python
+minio                    # Cliente para MinIO (almacenamiento S3)

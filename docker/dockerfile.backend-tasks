@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY volumes/backend-tasks/requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY volumes/backend-tasks/ .
+
+# Puerto de la API de tareas (tasks)
+EXPOSE ${TASKS_API_PORT}
+
+# Comando por defecto (usando variables de entorno)
+CMD ["sh", "-c", "uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT}"]

@@ -1,0 +1,211 @@
+services:
+  # =========================
+  # FRONTEND - React/NodeJS
+  # =========================
+  frontend:
+    container_name: ${PROJECT_NAME}-frontend
+    build:
+      context: .
+      dockerfile: docker/dockerfile.frontend.dev
+    image: ${PROJECT_NAME}/frontend:dev
+    volumes:
+      - ./volumes/frontend:/app
+      - /app/node_modules
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT_INTERNAL}"
+    command: ["npm", "run", "dev"]
+    networks:
+      - ${EXTERNAL_NETWORK}
+    env_file:
+      - ./volumes/frontend/.env
+
+  # =========================
+  # BACKEND API - FastAPI/Python
+  # =========================
+  backend-api:
+    container_name: ${PROJECT_NAME}-backend-api
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-api
+    image: ${PROJECT_NAME}/backend-api:dev
+    volumes:
+      - ./volumes/backend-api:/app
+    ports:
+      - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
+    networks:
+      - ${INTERNAL_NETWORK}
+    env_file:
+      - ./volumes/backend-api/.env
+
+  # =========================
+  # BACKEND DOCS - Generación de Documentos
+  # =========================
+  backend-docs:
+    container_name: ${PROJECT_NAME}-backend-docs
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-docs
+    image: ${PROJECT_NAME}/backend-docs:dev
+    volumes:
+      - ./volumes/backend-docs:/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    expose:
+      - ${DOCS_API_PORT_INTERNAL}
+    command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
+    env_file:
+      - ./volumes/backend-docs/.env
+
+  # =========================
+  # BACKEND TASKS - Ejecución de Tareas
+  # =========================
+  backend-tasks:
+    container_name: ${PROJECT_NAME}-backend-tasks
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-tasks
+    image: ${PROJECT_NAME}/backend-tasks:dev
+    volumes:
+      - ./volumes/backend-tasks:/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    expose:
+      - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
+    env_file:
+      - ./volumes/backend-tasks/.env
+
+  # =========================
+  # BACKEND WORKER - Procesador de Colas
+  # =========================
+  backend-worker:
+    container_name: ${PROJECT_NAME}-backend-worker
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-worker
+    image: ${PROJECT_NAME}/backend-worker:dev
+    volumes:
+      - ./volumes/backend-worker:/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      - redis
+      - rabbitmq
+    command: ["celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}"]
+    env_file:
+      - ./volumes/backend-worker/.env
+
+  # =========================
+  # MINIO - S3 Object Storage
+  # =========================
+  minio:
+    container_name: ${PROJECT_NAME}-minio
+    build:
+      context: .
+      dockerfile: docker/dockerfile.minio
+    image: ${PROJECT_NAME}/minio:latest
+    volumes:
+      - ./volumes/minio:/data
+    ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - ${INTERNAL_NETWORK}
+
+  # =========================
+  # MAILPIT - Mail Testing
+  # =========================
+  mailpit:
+    container_name: ${PROJECT_NAME}-mailpit
+    image: axllent/mailpit:v1.21.6
+    ports:
+      - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
+      - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
+    volumes:
+      - ./volumes/mailpit:/data
+    environment:
+      MP_STORAGE: ${MAILPIT_STORAGE}
+      MP_UI_COLOR: ${MAILPIT_UI_COLOR}
+      MP_LOGGING: "true"
+    networks:
+      - ${INTERNAL_NETWORK}
+
+  # =========================
+  # MARIADB - Base de Datos
+  # =========================
+  mariadb:
+    container_name: ${PROJECT_NAME}-mariadb
+    build:
+      context: .
+      dockerfile: docker/dockerfile.mysql
+    image: ${PROJECT_NAME}/mariadb:10.6
+    ports:
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
+    volumes:
+      - ./volumes/mysql/db:/var/lib/mysql
+      - ./scripts/mysql:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    restart: unless-stopped
+    networks:
+      - ${INTERNAL_NETWORK}
+      - ${EXTERNAL_NETWORK}
+
+  # =========================
+  # RABBITMQ - Mensajería
+  # =========================
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: ${PROJECT_NAME}-rabbitmq
+    ports:
+      - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
+      - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"
+    volumes:
+      - ./volumes/rabbitmq:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    restart: unless-stopped
+    networks:
+      - ${INTERNAL_NETWORK}
+
+  # =========================
+  # REDIS - Cache
+  # =========================
+  redis:
+    build:
+      context: .
+      dockerfile: docker/dockerfile.redis
+    image: ${PROJECT_NAME}/redis:7.2
+    container_name: ${PROJECT_NAME}-redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - ./volumes/redis/data:/data
+    restart: unless-stopped
+    networks:
+      - ${INTERNAL_NETWORK}
+
+# =========================
+# NETWORKS - Redes Docker
+# =========================
+networks:
+  internal:
+    driver: bridge
+  external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${EXTERNAL_SUBNET}
