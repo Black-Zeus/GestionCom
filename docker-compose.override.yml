@@ -11,9 +11,15 @@ services:
     volumes:
       - ./volumes/frontend:/app
       - /app/node_modules
+      - ./logs/frontend:/var/log/app
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT_INTERNAL}"
     command: ["npm", "run", "dev"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${EXTERNAL_NETWORK}
     env_file:
@@ -30,9 +36,15 @@ services:
     image: ${PROJECT_NAME}/backend-api:dev.v0.1
     volumes:
       - ./volumes/backend-api:/app
+      - ./logs/backend-api:/var/log/app
     ports:
       - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
     env_file:
@@ -49,11 +61,17 @@ services:
     image: ${PROJECT_NAME}/backend-docs:dev.v0.1
     volumes:
       - ./volumes/backend-docs:/app
+      - ./logs/backend-docs:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
     expose:
       - ${DOCS_API_PORT_INTERNAL}
     command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     env_file:
       - ./volumes/backend-docs/.env
 
@@ -68,11 +86,17 @@ services:
     image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
     volumes:
       - ./volumes/backend-tasks:/app
+      - ./logs/backend-tasks:/var/log/app 
     networks:
       - ${INTERNAL_NETWORK}
     expose:
       - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     env_file:
       - ./volumes/backend-tasks/.env
 
@@ -87,12 +111,18 @@ services:
     image: ${PROJECT_NAME}/backend-worker:dev.v0.1
     volumes:
       - ./volumes/backend-worker:/app
+      - ./logs/backend-worker:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
       - redis
       - rabbitmq
     command: ["celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     env_file:
       - ./volumes/backend-worker/.env
 
@@ -107,12 +137,18 @@ services:
     image: ${PROJECT_NAME}/minio:latest
     volumes:
       - ./volumes/minio:/data
+      - ./logs/minio:/var/log/minio
     ports:
       - "${MINIO_PORT}:${MINIO_PORT}"
       - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live"]
       interval: 30s
@@ -132,10 +168,16 @@ services:
       - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
     volumes:
       - ./volumes/mailpit:/data
+      - ./logs/mailpit:/var/log/mailpit
     environment:
       MP_STORAGE: ${MAILPIT_STORAGE}
       MP_UI_COLOR: ${MAILPIT_UI_COLOR}
       MP_LOGGING: "true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
 
@@ -153,12 +195,18 @@ services:
     volumes:
       - ./volumes/mariadb/db:/var/lib/mysql
       - ./scripts/mariadb:/docker-entrypoint-initdb.d
+      - ./logs/mariadb:/var/log/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
       - ${EXTERNAL_NETWORK}
@@ -174,10 +222,16 @@ services:
       - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"
     volumes:
       - ./volumes/rabbitmq:/var/lib/rabbitmq
+      - ./logs/rabbitmq:/var/log/rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
 
@@ -194,7 +248,13 @@ services:
       - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
       - ./volumes/redis/data:/data
+      - ./logs/redis:/var/log/redis
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
 
