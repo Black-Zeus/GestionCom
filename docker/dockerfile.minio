@@ -1,5 +1,5 @@
 # Usa la imagen de MinIO con una versión específica
-FROM minio/minio:RELEASE.2024-12-13T22-19-12Z
+FROM minio/minio:RELEASE.2025-01-20T14-49-07Z
 
 # =======================
 # Copia de scripts y configuraciones
@@ -12,14 +12,6 @@ COPY ./scripts/minio/lifeCicle/ /tmp/lifeCicle/
 # Permisos y configuración
 # =======================
 RUN chmod +x /usr/bin/create-bucket.sh
-
-# =======================
-# Variables de entorno para MinIO
-# =======================
-ENV MINIO_ROOT_USER=${MINIO_ROOT_USER}
-ENV MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-ENV MINIO_PORT=${MINIO_PORT}
-ENV MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT}
 
 # =======================
 # Establecer Entrypoint y Comando

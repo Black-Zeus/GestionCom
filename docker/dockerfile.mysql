@@ -7,14 +7,6 @@ FROM mariadb:10.6
 COPY ./scripts/mariadb/*.sql /docker-entrypoint-initdb.d/
 
 # =======================
-# Variables de Entorno (tomadas del docker-compose)
-# =======================
-ENV MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-ENV MYSQL_DATABASE=${MYSQL_DATABASE}
-ENV MYSQL_USER=${MYSQL_USER}
-ENV MYSQL_PASSWORD=${MYSQL_PASSWORD}
-
-# =======================
 # Exponer el puerto 3306
 # =======================
 EXPOSE ${MYSQL_PORT}

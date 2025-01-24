@@ -1,4 +1,34 @@
 services:
+
+  # =========================
+  # NGINX - Reverse Proxy
+  # =========================
+  nginx:
+    container_name: ${PROJECT_NAME}-nginx
+    build:
+      context: .
+      dockerfile: docker/dockerfile.nginx-dev
+    depends_on:
+      - frontend
+    volumes:
+      - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
+      - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
+      - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
+      - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
+    ports:
+      - "${NGINX_PORT}:${NGINX_PORT_INTERNAL}"
+    networks:
+      - ${EXTERNAL_NETWORK}
+      - ${INTERNAL_NETWORK}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
   # =========================
   # FRONTEND - React/NodeJS
   # =========================
@@ -14,14 +44,19 @@ services:
       - ./logs/frontend:/var/log/app
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT_INTERNAL}"
-    command: ["npm", "run", "dev"]
+    command: [ "npm", "run", "dev" ]
+    depends_on:
+      - backend-api
+      - backend-docs
+      - backend-tasks
+      - backend-worker
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
     networks:
-      - ${EXTERNAL_NETWORK}
+      - ${INTERNAL_NETWORK}
     env_file:
       - ./volumes/frontend/.env
 
@@ -37,6 +72,8 @@ services:
     volumes:
       - ./volumes/backend-api:/app
       - ./logs/backend-api:/var/log/app
+    depends_on:
+      - mariadb
     ports:
       - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
@@ -64,6 +101,8 @@ services:
       - ./logs/backend-docs:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
+    depends_on:
+      - minio
     expose:
       - ${DOCS_API_PORT_INTERNAL}
     command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
@@ -86,9 +125,12 @@ services:
     image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
     volumes:
       - ./volumes/backend-tasks:/app
-      - ./logs/backend-tasks:/var/log/app 
+      - ./logs/backend-tasks:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
+    depends_on:
+      - redis
+      - rabbitmq
     expose:
       - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
@@ -117,7 +159,7 @@ services:
     depends_on:
       - redis
       - rabbitmq
-    command: ["celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}"]
+    command: [ "celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}" ]
     logging:
       driver: "json-file"
       options:
@@ -150,7 +192,7 @@ services:
         max-size: "10m"
         max-file: "5"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -215,7 +257,7 @@ services:
   # RABBITMQ - Mensajería
   # =========================
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:4.0.5-management-alpine
     container_name: ${PROJECT_NAME}-rabbitmq
     ports:
       - "${RABBITMQ_PORT}:${RABBITMQ_PORT}"
@@ -257,6 +299,7 @@ services:
         max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
+    # =========================
 
 # =========================
 # NETWORKS - Redes Docker
