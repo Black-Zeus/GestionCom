@@ -1,0 +1,17 @@
+# Usa la imagen base oficial de NGINX
+FROM nginx:1.25-alpine
+
+# Copia el script para procesar las variables de entorno
+COPY scripts/nginx/entrypoint.sh /entrypoint.sh
+
+# Copia la plantilla de configuración de NGINX
+COPY scripts/nginx/nginx.dev.conf /etc/nginx/templates/nginx.template.conf
+
+# Asegura permisos de ejecución para el script
+RUN chmod +x /entrypoint.sh
+
+# Define el puerto que expondrá el contenedor
+EXPOSE 80
+
+# Define el punto de entrada del contenedor
+ENTRYPOINT ["/entrypoint.sh"]
