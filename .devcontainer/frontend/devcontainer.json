@@ -5,7 +5,7 @@
 
 	// Lista de archivos docker-compose. Puedes agregar más archivos aquí si es necesario.
 	"dockerComposeFile": [
-		"../../docker-compose.override.yml",
+		"../../docker-compose-dev.yml",
 		"docker-compose.yml"
 	],
 
@@ -39,7 +39,7 @@
 	},
 
 	// Lista de puertos expuestos que estarán disponibles localmente.
-	"forwardPorts": [3000],
+	"forwardPorts": [3000, 80],
 
 	// Descomenta la siguiente línea si deseas iniciar servicios específicos de tu configuración de Docker Compose.
 	// "runServices": [],

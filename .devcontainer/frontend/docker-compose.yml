@@ -24,3 +24,12 @@ services:
     # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 1000; do :; done"
  
+    ports:
+      - "5173:5173" # Puerto para React en caliente
+
+  nginx:
+    image: nginx:1.25-alpine
+    ports:
+      - "80:80" # Proxy inverso para el puerto 80
+    depends_on:
+      - frontend
