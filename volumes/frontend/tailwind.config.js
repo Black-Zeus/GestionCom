@@ -1,59 +1,51 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",  // Ruta del archivo HTML
+    "./index.html", // Ruta del archivo HTML
     "./src/**/*.{js,ts,jsx,tsx}", // Archivos React y JSX/TSX
   ],
-  darkMode: 'class', // Activar el modo oscuro usando la clase 'dark' en el contenedor raíz
+  darkMode: 'class', // Activar el modo oscuro usando la clase 'dark'
 
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#2aace0', // Color primario en modo claro
-          dark: '#205db0',    // Color primario en modo oscuro
-          gradient: 'linear-gradient(90deg, #2aace0, #205db0)', // Gradiente para primario
-        },
-        secondary: {
-          DEFAULT: '#1b5699', // Color secundario en modo claro
-          dark: '#3b84a3',    // Color secundario en modo oscuro
-        },
-        accent: {
-          DEFAULT: '#316d9d', // Color de acento en modo claro
-          dark: '#2b80c3',    // Color de acento en modo oscuro
-        },
-        gray: {
-          400: '#666666',    // Gris claro
-          500: '#4d4d4d',    // Gris medio
-          600: '#333333',    // Gris oscuro
+        minimal: {
+          light1: '#e6e8e3', // Color claro 1
+          light2: '#d7dacf', // Color claro 2
+          neutral1: '#bec3bc', // Color neutro 1
+          neutral2: '#8f9a9c', // Color neutro 2
+          dark1: '#65727a', // Color oscuro 1
         },
         background: {
-          light: '#e5e5e5',   // Fondo claro en modo claro
-          dark: '#121d43',    // Fondo oscuro en modo oscuro
+          light: '#f8f9fa', // Fondo claro
+          dark: '#121212', // Fondo oscuro (modo oscuro)
         },
         text: {
-          light: '#505050',   // Texto claro en modo claro
-          dark: '#f5f5f5',    // Texto claro en modo oscuro
+          light: '#4a4a4a', // Texto en modo claro
+          dark: '#eaeaea', // Texto en modo oscuro
         },
-        negative: {
-          black: '#000000',   // Negro
-          white: '#ffffff',   // Blanco
+        accent: {
+          DEFAULT: '#8f9a9c', // Color de acento general
+          dark: '#65727a', // Acento para modo oscuro
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Arial', 'sans-serif'], // Fuente principal
-        serif: ['Georgia', 'serif'], // Fuente serif opcional
+        sans: ['"Source Sans Pro"', 'Arial', 'sans-serif'], // Fuente sans-serif
+        serif: ['Merriweather', 'serif'], // Fuente serif
       },
       spacing: {
-        '128': '32rem', // Espaciado extra grande
+        '18': '4.5rem', // Espaciado adicional
+        '72': '18rem',
+        '80': '20rem',
+        '96': '24rem',
       },
       boxShadow: {
-        custom: '0 4px 6px rgba(0, 0, 0, 0.1)', // Sombra personalizada
+        subtle: '0 2px 4px rgba(0, 0, 0, 0.05)', // Sombra ligera
+        deep: '0 4px 10px rgba(0, 0, 0, 0.2)', // Sombra más profunda
       },
-      fontSize: {
-        'xs': '.75rem',   // Tamaño de fuente más pequeño
-        'sm': '.875rem',  // Tamaño de fuente pequeño
-        'lg': '1.125rem', // Tamaño de fuente grande
+      borderRadius: {
+        'xl': '1.25rem', // Radio adicional
+        '2xl': '1.5rem',
       },
     },
   },
