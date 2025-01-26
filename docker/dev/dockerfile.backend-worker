@@ -5,16 +5,13 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copiar dependencias
-COPY volumes/backend-worker/ ./
+COPY volumes/backend-worker/requirements.txt .
 
 # Actualiza pip a la última versión
 RUN pip install --upgrade pip
 
 # Instala las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia contenido del sistema
-COPY volumes/backend-worker/ ./
 
 # Configurar el PYTHONPATH para permitir importaciones desde /app
 ENV PYTHONPATH=/app

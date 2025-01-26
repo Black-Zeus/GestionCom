@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copiar dependencias
-COPY volumes/backend-docs/ ./
+COPY volumes/backend-docs/requirements.txt .
 
 # Actualiza pip a la última versión
 RUN pip install --upgrade pip

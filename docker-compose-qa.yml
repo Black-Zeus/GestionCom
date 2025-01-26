@@ -7,10 +7,13 @@ services:
     container_name: ${PROJECT_NAME}-nginx
     build:
       context: .
-      dockerfile: docker/dev/dockerfile.nginx.dev
-    image: ${PROJECT_NAME}/nginx:dev.v0.1
+      dockerfile: docker/dockerfile.nginx
+    image: ${PROJECT_NAME}/nginx:qa.v0.1
     depends_on:
-      - frontend
+      - backend-api
+      - backend-docs
+      - backend-tasks
+      - backend-worker
     volumes:
       - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
     environment:
@@ -39,56 +42,17 @@ services:
           memory: "64M"
 
   # =========================
-  # FRONTEND - React/NodeJS
-  # =========================
-  frontend:
-    container_name: ${PROJECT_NAME}-frontend
-    build:
-      context: .
-      dockerfile: docker/dev/dockerfile.frontend.dev
-    image: ${PROJECT_NAME}/frontend:dev.v0.1
-    volumes:
-      - ./volumes/frontend:/app
-      - /app/node_modules
-      - ./logs/frontend:/var/log/app
-    ports:
-      - "${FRONTEND_PORT}:${FRONTEND_PORT_INTERNAL}"
-    command: [ "npm", "run", "dev" ]
-    depends_on:
-      - backend-api
-      - backend-docs
-      - backend-tasks
-      - backend-worker
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-    networks:
-      - ${INTERNAL_NETWORK}
-    env_file:
-      - ./volumes/frontend/.env
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: "256M"
-        reservations:
-          cpus: "0.5"
-          memory: "128M"
-
-  # =========================
   # BACKEND API - FastAPI/Python
   # =========================
   backend-api:
     container_name: ${PROJECT_NAME}-backend-api
     build:
       context: .
-      dockerfile: docker/dev/dockerfile.backend-api
-    image: ${PROJECT_NAME}/backend-api:dev.v0.1
+      dockerfile: docker/dockerfile.backend-api
+    image: ${PROJECT_NAME}/backend-api:qa.v0.1
     volumes:
-      - ./volumes/backend-api:/app
-      - ./logs/backend-api:/var/log/app
+      - backend-api-qa:/app  # Volumen nombrado para QA
+      - ./logs/backend-api:/var/log/app  # Mantén los logs como bind mount para depuración
     depends_on:
       - mariadb
     ports:
@@ -119,16 +83,16 @@ services:
     container_name: ${PROJECT_NAME}-backend-docs
     build:
       context: .
-      dockerfile: docker/dev/dockerfile.backend-docs
-    image: ${PROJECT_NAME}/backend-docs:dev.v0.1
+      dockerfile: docker/dockerfile.backend-docs
+    image: ${PROJECT_NAME}/backend-docs:qa.v0.1
     volumes:
-      - ./volumes/backend-docs:/app
+      - backend-docs-qa:/app
       - ./logs/backend-docs:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
       - minio
-    ports:
+    expose:
       - ${DOCS_API_PORT_INTERNAL}
     command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
     logging:
@@ -154,17 +118,17 @@ services:
     container_name: ${PROJECT_NAME}-backend-tasks
     build:
       context: .
-      dockerfile: docker/dev/dockerfile.backend-tasks
-    image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
+      dockerfile: docker/dockerfile.backend-tasks
+    image: ${PROJECT_NAME}/backend-tasks:qa.v0.1
     volumes:
-      - ./volumes/backend-tasks:/app
+      - backend-tasks-qa:/app
       - ./logs/backend-tasks:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
       - redis
       - rabbitmq
-    ports:
+    expose:
       - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
     logging:
@@ -190,10 +154,10 @@ services:
     container_name: ${PROJECT_NAME}-backend-worker
     build:
       context: .
-      dockerfile: docker/dev/dockerfile.backend-worker
-    image: ${PROJECT_NAME}/backend-worker:dev.v0.1
+      dockerfile: docker/dockerfile.backend-worker
+    image: ${PROJECT_NAME}/backend-worker:qa.v0.1
     volumes:
-      - ./volumes/backend-worker:/app
+      - backend-worker-qa:/app
       - ./logs/backend-worker:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
@@ -225,9 +189,9 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.minio
-    image: ${PROJECT_NAME}/minio:dev.v0.1
+    image: ${PROJECT_NAME}/minio:qa.v0.1
     volumes:
-      - ./volumes/minio:/data
+      - minio-qa:/data
       - ./logs/minio:/var/log/minio
     expose:
       - "${MINIO_PORT}:${MINIO_PORT}"
@@ -258,39 +222,6 @@ services:
           memory: "256M"
 
   # =========================
-  # MAILPIT - Mail Testing
-  # =========================
-  mailpit:
-    container_name: ${PROJECT_NAME}-mailpit
-    image: axllent/mailpit:v1.21.6
-    expose:
-      - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
-    ports:
-      - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
-    volumes:
-      - ./volumes/mailpit:/data
-      - ./logs/mailpit:/var/log/mailpit
-    environment:
-      MP_STORAGE: ${MAILPIT_STORAGE}
-      MP_UI_COLOR: ${MAILPIT_UI_COLOR}
-      MP_LOGGING: "true"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-    networks:
-      - ${INTERNAL_NETWORK}
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: "128M"
-        reservations:
-          cpus: "0.1"
-          memory: "64M"
-
-  # =========================
   # MARIADB - Base de Datos
   # =========================
   mariadb:
@@ -299,10 +230,10 @@ services:
       context: .
       dockerfile: docker/dockerfile.mysql
     image: ${PROJECT_NAME}/mariadb:10.6
-    ports:
+    expose:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     volumes:
-      - ./volumes/mariadb/db:/var/lib/mysql
+      - mariadb-qa:/var/lib/mysql
       - ./scripts/mariadb:/docker-entrypoint-initdb.d
       - ./logs/mariadb:/var/log/mysql
     environment:
@@ -336,10 +267,9 @@ services:
     container_name: ${PROJECT_NAME}-rabbitmq
     expose:
       - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
-    ports:      
       - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
     volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
+      - rabbitmq-qa:/var/lib/rabbitmq
       - ./logs/rabbitmq:/var/log/rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
@@ -373,7 +303,7 @@ services:
     expose:
       - "${REDIS_PORT}"
     volumes:
-      - ./volumes/redis/data:/data
+      - redis-qa:/data
       - ./logs/redis:/var/log/redis
     restart: unless-stopped
     logging:
@@ -403,3 +333,16 @@ networks:
     ipam:
       config:
         - subnet: ${EXTERNAL_SUBNET}
+
+# =========================
+# VOLUMES - Persistencia
+# =========================
+volumes:
+  backend-api-qa:
+  backend-docs-qa:
+  backend-tasks-qa:
+  backend-worker-qa:
+  minio-qa:
+  mariadb-qa:
+  rabbitmq-qa:
+  redis-qa:

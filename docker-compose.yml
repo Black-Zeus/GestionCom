@@ -1,0 +1,347 @@
+services:
+
+  # =========================
+  # NGINX - Reverse Proxy
+  # =========================
+  nginx:
+    container_name: ${PROJECT_NAME}-nginx
+    build:
+      context: .
+      dockerfile: docker/dockerfile.nginx
+    image: ${PROJECT_NAME}/nginx:prd.v0.1
+    depends_on:
+      - backend-api
+      - backend-docs
+      - backend-tasks
+      - backend-worker
+    volumes:
+      - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
+    environment:
+      - PROJECT_NAME=${PROJECT_NAME}
+      - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
+      - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
+      - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
+      - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
+    ports:
+      - "${NGINX_PORT}:${NGINX_PORT_INTERNAL}"
+    networks:
+      - ${EXTERNAL_NETWORK}
+      - ${INTERNAL_NETWORK}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "128M"
+        reservations:
+          cpus: "0.25"
+          memory: "64M"
+
+  # =========================
+  # BACKEND API - FastAPI/Python
+  # =========================
+  backend-api:
+    container_name: ${PROJECT_NAME}-backend-api
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-api
+    image: ${PROJECT_NAME}/backend-api:prd.v0.1
+    volumes:
+      - backend-api-prd:/app
+      - ./logs/backend-api:/var/log/app
+    depends_on:
+      - mariadb
+    expose:
+      - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    env_file:
+      - ./volumes/backend-api/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "256M"
+        reservations:
+          cpus: "0.5"
+          memory: "128M"
+
+  # =========================
+  # BACKEND DOCS - Generación de Documentos
+  # =========================
+  backend-docs:
+    container_name: ${PROJECT_NAME}-backend-docs
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-docs
+    image: ${PROJECT_NAME}/backend-docs:prd.v0.1
+    volumes:
+      - backend-docs-prd:/app
+      - ./logs/backend-docs:/var/log/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      - minio
+    expose:
+      - ${DOCS_API_PORT_INTERNAL}
+    command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file:
+      - ./volumes/backend-docs/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # =========================
+  # BACKEND TASKS - Ejecución de Tareas
+  # =========================
+  backend-tasks:
+    container_name: ${PROJECT_NAME}-backend-tasks
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-tasks
+    image: ${PROJECT_NAME}/backend-tasks:prd.v0.1
+    volumes:
+      - backend-tasks-prd:/app
+      - ./logs/backend-tasks:/var/log/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      - redis
+      - rabbitmq
+    expose:
+      - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file:
+      - ./volumes/backend-tasks/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # =========================
+  # BACKEND WORKER - Procesador de Colas
+  # =========================
+  backend-worker:
+    container_name: ${PROJECT_NAME}-backend-worker
+    build:
+      context: .
+      dockerfile: docker/dockerfile.backend-worker
+    image: ${PROJECT_NAME}/backend-worker:prd.v0.1
+    volumes:
+      - backend-worker-prd:/app
+      - ./logs/backend-worker:/var/log/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      - redis
+      - rabbitmq
+    command: [ "celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}" ]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file:
+      - ./volumes/backend-worker/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.5"
+          memory: "256M"
+
+  # =========================
+  # MINIO - S3 Object Storage
+  # =========================
+  minio:
+    container_name: ${PROJECT_NAME}-minio
+    build:
+      context: .
+      dockerfile: docker/dockerfile.minio
+    image: ${PROJECT_NAME}/minio:prd.v0.1
+    volumes:
+      - minio-prd:/data
+      - ./logs/minio:/var/log/minio
+    expose:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - ${INTERNAL_NETWORK}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.5"
+          memory: "256M"
+
+  # =========================
+  # MARIADB - Base de Datos
+  # =========================
+  mariadb:
+    container_name: ${PROJECT_NAME}-mariadb
+    build:
+      context: .
+      dockerfile: docker/dockerfile.mysql
+    image: ${PROJECT_NAME}/mariadb:10.6
+    expose:
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
+    volumes:
+      - mariadb-prd:/var/lib/mysql
+      - ./scripts/mariadb:/docker-entrypoint-initdb.d
+      - ./logs/mariadb:/var/log/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+      - ${EXTERNAL_NETWORK}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "1G"
+        reservations:
+          cpus: "0.5"
+          memory: "512M"
+
+  # =========================
+  # RABBITMQ - Mensajería
+  # =========================
+  rabbitmq:
+    image: rabbitmq:4.0.5-management-alpine
+    container_name: ${PROJECT_NAME}-rabbitmq
+    expose:
+      - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
+      - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
+    volumes:
+      - rabbitmq-prd:/var/lib/rabbitmq
+      - ./logs/rabbitmq:/var/log/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # =========================
+  # REDIS - Cache
+  # =========================
+  redis:
+    build:
+      context: .
+      dockerfile: docker/dockerfile.redis
+    image: ${PROJECT_NAME}/redis:7.2
+    container_name: ${PROJECT_NAME}-redis
+    expose:
+      - "${REDIS_PORT}"
+    volumes:
+      - redis-prd:/data
+      - ./logs/redis:/var/log/redis
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+# =========================
+# NETWORKS - Redes Docker
+# =========================
+networks:
+  internal:
+    driver: bridge
+  external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${EXTERNAL_SUBNET}
+
+# =========================
+# VOLUMES - Persistencia
+# =========================
+volumes:
+  backend-api-prd:
+  backend-docs-prd:
+  backend-tasks-prd:
+  backend-worker-prd:
+  minio-prd:
+  mariadb-prd:
+  rabbitmq-prd:
+  redis-prd:

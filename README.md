@@ -11,7 +11,7 @@ El proyecto utiliza las siguientes tecnologías, organizadas en varios contenedo
 - **Backend Docs**: Servicio para la gestión de documentación interna y APIs. Implementado en Python (ver `docker/dockerfile.backend-docs`).
 - **Backend Tasks**: Maneja tareas programadas y de fondo. Implementado en Python (ver `docker/dockerfile.backend-tasks`).
 - **Backend Worker**: Procesa tareas asíncronas que requieren más tiempo de ejecución. Implementado en Python (ver `docker/dockerfile.backend-worker`).
-- **Frontend Dev**: Versión de desarrollo del frontend. Implementado en React (ver `docker/dockerfile.frontend.dev`).
+- **Frontend Dev**: Versión de desarrollo del frontend. Implementado en React (ver `docker/dev/dockerfile.frontend.dev`).
 - **Frontend Prd**: Versión de producción del frontend. Implementado en React (ver `docker/dockerfile.frontend.prd`).
 - **MinIO**: Almacenamiento de objetos compatible con S3 para manejo de archivos (ver `docker/dockerfile.minio`).
 - **MySQL**: Base de datos relacional (ver `docker/dockerfile.mysql`).

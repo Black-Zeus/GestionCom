@@ -4,8 +4,8 @@ FROM python:3.11-slim
 # Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Copia el archivo de dependencias
-COPY ./volumes/backend-api/ ./
+# Copia el archivo de dependencias y lo instala
+COPY ./volumes/backend-api/requirements.txt .
 
 # Actualiza pip a la última versión
 RUN pip install --upgrade pip
@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE ${BACKEND_API_PORT_INTERNAL}
 
 # Comando por defecto
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${BACKEND_API_PORT_INTERNAL}", "--reload"]
+CMD ["sh", "-c", "uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload"]

@@ -4,16 +4,3 @@
 @tailwind utilities;
 
 /* Otros estilos personalizados */
-
-
-.authenticated-bg {
-    background: url('../public/fondo_principal.png') no-repeat center center fixed;
-    background-size: cover;
-    min-height: 100vh;
-}
-
-.landing-bg {
-    background: url('../public/fondo_login.png') no-repeat center center fixed;
-    background-size: cover;
-    min-height: 100vh;
-}

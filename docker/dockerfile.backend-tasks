@@ -1,15 +1,23 @@
+# Imagen base
 FROM python:3.11-slim
 
+# Establecer directorio de trabajo
 WORKDIR /app
 
-COPY volumes/backend-tasks/requirements.txt .
+# Copiar dependencias
+COPY volumes/backend-tasks/ ./
 
+# Actualiza pip a la última versión
+RUN pip install --upgrade pip
+
+# Instala las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY volumes/backend-tasks/ .
+# Copia contenido del sistema
+COPY volumes/backend-tasks/ ./
 
 # Puerto de la API de tareas (tasks)
-EXPOSE ${TASKS_API_PORT}
+EXPOSE ${TASKS_API_PORT_INTERNAL}
 
 # Comando por defecto (usando variables de entorno)
-CMD ["sh", "-c", "uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT}"]
+CMD ["sh", "-c", "uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}"]

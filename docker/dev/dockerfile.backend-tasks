@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copiar dependencias
-COPY volumes/backend-docs/ ./
+COPY volumes/backend-tasks/requirements.txt .
 
 # Actualiza pip a la última versión
 RUN pip install --upgrade pip
@@ -13,8 +13,8 @@ RUN pip install --upgrade pip
 # Instala las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Puerto de la API de documentos
-EXPOSE ${DOCS_API_PORT_INTERNAL}
+# Puerto de la API de tareas (tasks)
+EXPOSE ${TASKS_API_PORT_INTERNAL}
 
 # Comando por defecto (usando variables de entorno)
-CMD ["sh", "-c", "uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}"]
+CMD ["sh", "-c", "uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}"]
