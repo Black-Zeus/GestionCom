@@ -6,6 +6,19 @@ WORKDIR /app
 # Copia los archivos necesarios para instalar dependencias
 COPY volumes/frontend/package.json volumes/frontend/package-lock.json ./
 
+# Agregar variables de entorno del entorno Docker al proceso de build
+ARG VITE_FRONTEND_ENV
+ENV VITE_FRONTEND_ENV=${VITE_FRONTEND_ENV}
+
+RUN echo "Building with VITE_FRONTEND_ENV: $VITE_FRONTEND_ENV"
+
+# Copia el script de configuración
+COPY scripts/nginx/setup_env.sh /setup_env.sh
+RUN chmod +x /setup_env.sh
+
+# Ejecuta el script para configurar el entorno
+RUN /setup_env.sh
+
 RUN npm install
 
 # Copia el resto del código fuente

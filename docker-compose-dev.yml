@@ -9,6 +9,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.nginx.dev
     image: ${PROJECT_NAME}/nginx:dev.v0.1
+    labels:
+      - stack=inventario
     depends_on:
       - frontend
     volumes:
@@ -47,6 +49,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.frontend.dev
     image: ${PROJECT_NAME}/frontend:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/frontend:/app
       - /app/node_modules
@@ -59,6 +63,8 @@ services:
       - backend-docs
       - backend-tasks
       - backend-worker
+    environment:
+      - ENV=${ENV}
     logging:
       driver: "json-file"
       options:
@@ -78,7 +84,7 @@ services:
           memory: "128M"
 
   # =========================
-  # BACKEND API - FastAPI/Python
+  # BACKEND API - Api COnsultas a Base de Datos
   # =========================
   backend-api:
     container_name: ${PROJECT_NAME}-backend-api
@@ -86,6 +92,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.backend-api
     image: ${PROJECT_NAME}/backend-api:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/backend-api:/app
       - ./logs/backend-api:/var/log/app
@@ -113,7 +121,7 @@ services:
           memory: "128M"
 
   # =========================
-  # BACKEND DOCS - Generación de Documentos
+  # BACKEND DOCS - Generación de Documentos / Conexion Minio
   # =========================
   backend-docs:
     container_name: ${PROJECT_NAME}-backend-docs
@@ -121,6 +129,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.backend-docs
     image: ${PROJECT_NAME}/backend-docs:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/backend-docs:/app
       - ./logs/backend-docs:/var/log/app
@@ -148,7 +158,7 @@ services:
           memory: "128M"
 
   # =========================
-  # BACKEND TASKS - Ejecución de Tareas
+  # BACKEND TASKS - Ejecución de Tareas en segundo plano
   # =========================
   backend-tasks:
     container_name: ${PROJECT_NAME}-backend-tasks
@@ -156,6 +166,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.backend-tasks
     image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/backend-tasks:/app
       - ./logs/backend-tasks:/var/log/app
@@ -192,6 +204,8 @@ services:
       context: .
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-worker:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-worker:/var/log/app
@@ -226,6 +240,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.minio
     image: ${PROJECT_NAME}/minio:dev.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/minio:/data
       - ./logs/minio:/var/log/minio
@@ -267,6 +283,8 @@ services:
       - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
     ports:
       - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/mailpit:/data
       - ./logs/mailpit:/var/log/mailpit
@@ -301,6 +319,8 @@ services:
     image: ${PROJECT_NAME}/mariadb:10.6
     ports:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/mariadb/db:/var/lib/mysql
       - ./scripts/mariadb:/docker-entrypoint-initdb.d
@@ -338,6 +358,8 @@ services:
       - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
     ports:      
       - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/rabbitmq:/var/lib/rabbitmq
       - ./logs/rabbitmq:/var/log/rabbitmq
@@ -372,6 +394,8 @@ services:
     container_name: ${PROJECT_NAME}-redis
     expose:
       - "${REDIS_PORT}"
+    labels:
+      - stack=inventario
     volumes:
       - ./volumes/redis/data:/data
       - ./logs/redis:/var/log/redis

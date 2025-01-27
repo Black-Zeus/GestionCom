@@ -8,12 +8,16 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.nginx
+      args:
+        VITE_FRONTEND_ENV: ${ENV} # Pasar la variable ENV como ARG al Dockerfile
     image: ${PROJECT_NAME}/nginx:qa.v0.1
     depends_on:
       - backend-api
       - backend-docs
       - backend-tasks
       - backend-worker
+    labels:
+      - stack=inventario
     volumes:
       - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
     environment:
@@ -22,6 +26,7 @@ services:
       - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
       - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
       - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
+      - VITE_FRONTEND_ENV=${ENV}
     ports:
       - "${NGINX_PORT}:${NGINX_PORT_INTERNAL}"
     networks:
@@ -50,6 +55,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.backend-api
     image: ${PROJECT_NAME}/backend-api:qa.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - backend-api-qa:/app  # Volumen nombrado para QA
       - ./logs/backend-api:/var/log/app  # Mantén los logs como bind mount para depuración
@@ -85,6 +92,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.backend-docs
     image: ${PROJECT_NAME}/backend-docs:qa.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - backend-docs-qa:/app
       - ./logs/backend-docs:/var/log/app
@@ -120,6 +129,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.backend-tasks
     image: ${PROJECT_NAME}/backend-tasks:qa.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - backend-tasks-qa:/app
       - ./logs/backend-tasks:/var/log/app
@@ -156,6 +167,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-worker:qa.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - backend-worker-qa:/app
       - ./logs/backend-worker:/var/log/app
@@ -190,6 +203,8 @@ services:
       context: .
       dockerfile: docker/dockerfile.minio
     image: ${PROJECT_NAME}/minio:qa.v0.1
+    labels:
+      - stack=inventario
     volumes:
       - minio-qa:/data
       - ./logs/minio:/var/log/minio
@@ -232,6 +247,8 @@ services:
     image: ${PROJECT_NAME}/mariadb:10.6
     expose:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
+    labels:
+      - stack=inventario
     volumes:
       - mariadb-qa:/var/lib/mysql
       - ./scripts/mariadb:/docker-entrypoint-initdb.d
@@ -268,6 +285,8 @@ services:
     expose:
       - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
       - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
+    labels:
+      - stack=inventario
     volumes:
       - rabbitmq-qa:/var/lib/rabbitmq
       - ./logs/rabbitmq:/var/log/rabbitmq
@@ -302,6 +321,8 @@ services:
     container_name: ${PROJECT_NAME}-redis
     expose:
       - "${REDIS_PORT}"
+    labels:
+      - stack=inventario
     volumes:
       - redis-qa:/data
       - ./logs/redis:/var/log/redis
