@@ -1,50 +1,65 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html", // Ruta del archivo HTML
-    "./src/**/*.{js,ts,jsx,tsx}", // Archivos React y JSX/TSX
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class', // Activar el modo oscuro usando la clase 'dark'
 
   theme: {
     extend: {
       colors: {
-        minimal: {
-          light1: '#e6e8e3', // Color claro 1
-          light2: '#d7dacf', // Color claro 2
-          neutral1: '#bec3bc', // Color neutro 1
-          neutral2: '#8f9a9c', // Color neutro 2
-          dark1: '#65727a', // Color oscuro 1
-        },
         background: {
-          light: '#f8f9fa', // Fondo claro
-          dark: '#121212', // Fondo oscuro (modo oscuro)
+          DEFAULT: '#F7F7F8',  // Gris claro para fondo principal
+          light: '#F7F7F8',  // Fondo claro
+          dark: '#1E1E1E',   // Fondo oscuro para modo dark
         },
         text: {
-          light: '#4a4a4a', // Texto en modo claro
-          dark: '#eaeaea', // Texto en modo oscuro
+          DEFAULT: '#333333',  // Texto principal en gris oscuro
+          light: '#333333',    // Texto principal claro
+          dark: '#A4A4A4',     // Texto secundario para modo dark
         },
-        accent: {
-          DEFAULT: '#8f9a9c', // Color de acento general
-          dark: '#65727a', // Acento para modo oscuro
+        primary: {
+          DEFAULT: '#0070F3',  // Azul brillante para elementos activos
+          light: '#0070F3',    // Azul brillante en modo claro
+          dark: '#005BB5',     // Azul más oscuro en modo oscuro
+        },
+        success: {
+          DEFAULT: '#28A745',  // Verde éxito
+          light: '#28A745',    // Verde éxito claro
+          dark: '#218838',     // Verde más oscuro en modo dark
+        },
+        danger: {
+          DEFAULT: '#DC3545',  // Rojo de alerta
+          light: '#F5A1A6',    // Rojo más suave en modo claro
+          dark: '#C92A2A',     // Rojo más oscuro en modo dark
+        },
+        secondary: {
+          DEFAULT: '#E9E9E9',  // Gris suave para fondo secundario
+          light: '#E9E9E9',    // Fondo secundario claro
+          dark: '#333333',     // Fondo más oscuro en modo dark
+        },
+        border: {
+          DEFAULT: '#CCCCCC',  // Color gris para bordes
+          light: '#CCCCCC',    // Bordes grises claros
+          dark: '#555555',     // Bordes más oscuros en modo dark
         },
       },
       fontFamily: {
-        sans: ['"Source Sans Pro"', 'Arial', 'sans-serif'], // Fuente sans-serif
-        serif: ['Merriweather', 'serif'], // Fuente serif
+        sans: ['"Inter"', 'Arial', 'sans-serif'],
       },
       spacing: {
-        '18': '4.5rem', // Espaciado adicional
+        '18': '4.5rem',
         '72': '18rem',
         '80': '20rem',
-        '96': '24rem',
       },
       boxShadow: {
-        subtle: '0 2px 4px rgba(0, 0, 0, 0.05)', // Sombra ligera
-        deep: '0 4px 10px rgba(0, 0, 0, 0.2)', // Sombra más profunda
+        subtle: '0 2px 4px rgba(0, 0, 0, 0.05)',
+        deep: '0 4px 10px rgba(0, 0, 0, 0.2)',
+        "t-md": "0 -4px 6px rgba(0, 0, 0, 0.1)", // Sombra superior mediana
       },
       borderRadius: {
-        'xl': '1.25rem', // Radio adicional
+        'xl': '1.25rem',
         '2xl': '1.5rem',
       },
     },
