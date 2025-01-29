@@ -1,5 +1,0 @@
-services:
-  backend-api:
-    volumes:
-      - ../../volumes/backend-docs:/workspaces:cached
-    command: /bin/sh -c "while sleep 1000; do :; done"
