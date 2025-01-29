@@ -1,6 +1,9 @@
 # Usa Python 3.11 como base
 FROM python:3.11-slim
 
+# Crea un usuario no root y su directorio de trabajo
+RUN useradd -m appuser
+
 # Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
@@ -12,6 +15,9 @@ RUN pip install --upgrade pip
 
 # Instala las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Cambia al usuario no root
+USER appuser
 
 # Expone el puerto 8000 para FastAPI
 EXPOSE ${BACKEND_API_PORT_INTERNAL}
