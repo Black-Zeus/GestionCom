@@ -323,7 +323,7 @@ services:
       - stack=inventario
     volumes:
       - ./volumes/mariadb/db:/var/lib/mysql
-      - ./scripts/mariadb:/docker-entrypoint-initdb.d
+      - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d
       - ./logs/mariadb:/var/log/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -399,6 +399,7 @@ services:
     volumes:
       - ./volumes/redis/data:/data
       - ./logs/redis:/var/log/redis
+      - ./scripts/redis/redis.conf:/etc/redis/redis.conf
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -407,6 +408,39 @@ services:
         max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}    
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # =========================
+  # REDISINSIGHT - Panel Web para Redis
+  # =========================
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: ${PROJECT_NAME}-redisinsight
+    ports:
+      - "${REDIS_PORT_PANEL}:5540"
+    labels:
+      - stack=inventario
+    volumes:
+      - ./volumes/redisinsight/db:/db
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    environment:
+      - REDISINSIGHT_REDIS_URI="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB}"
     deploy:
       resources:
         limits:
