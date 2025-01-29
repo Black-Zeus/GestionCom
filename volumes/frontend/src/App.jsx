@@ -11,7 +11,7 @@ import Demo from "./pages/Demo";
 import InventoryMenu from "./pages/InventoryMenu";
 import NotFound from "./components/ui/Errors/NotFound";
 import Forbidden from "./components/ui/Errors/Forbidden";
-import Login from "./features/Auth/login";
+import Login from "./features/Auth/Login";
 import RecoverPassword from "./features/Auth/RecoverPass";
 import ResetPassword from "./features/Auth/ResetPassword";
 import About from "./pages/About";
