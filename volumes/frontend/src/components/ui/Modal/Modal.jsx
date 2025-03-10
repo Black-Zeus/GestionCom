@@ -188,4 +188,39 @@ ExternalLinkModal.propTypes = {
   url: PropTypes.string.isRequired,
 };
 
+// 📌 Modal de Formulario
+export const FormModal = ({ isOpen, onClose, onSubmit, title, children }) => {
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} variant="info">
+      <h2 className="text-lg font-bold mb-4">{title}</h2>
+      <form onSubmit={onSubmit}>
+        {children}
+        <div className="flex justify-end mt-4">
+          <button
+            type="button"
+            className="py-2 px-4 bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg mr-2 hover:bg-gray-400 dark:hover:bg-gray-600"
+            onClick={onClose}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="py-2 px-4 bg-blue-600 dark:bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800"
+          >
+            Guardar
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+FormModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node.isRequired,
+};
+
 export default Modal;

@@ -1,4 +1,4 @@
-import Demo from "../pages/demo";
+import Demo from "../pages/Demo";
 
 const adminRoutes = [
     { path: "admin", element: <Demo /> },
