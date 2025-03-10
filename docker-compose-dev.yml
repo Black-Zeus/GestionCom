@@ -98,7 +98,8 @@ services:
       - ./volumes/backend-api:/app
       - ./logs/backend-api:/var/log/app
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     ports:
       - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
@@ -137,7 +138,8 @@ services:
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     ports:
       - ${DOCS_API_PORT_INTERNAL}
     command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
@@ -174,8 +176,10 @@ services:
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
-      - redis
-      - rabbitmq
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
@@ -211,10 +215,12 @@ services:
       - ./logs/backend-worker:/var/log/app
     networks:
       - ${INTERNAL_NETWORK}
-    depends_on:
-      - redis
-      - rabbitmq
-    command: [ "celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}" ]
+    depends_on:      
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: [ "celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=${WORKER_QUEUES}" ]
     logging:
       driver: "json-file"
       options:
@@ -230,6 +236,85 @@ services:
         reservations:
           cpus: "0.5"
           memory: "256M"
+
+  # =========================
+  # WORKER NOTIFICATIONS - Procesador de Notificaciones en Tiempo Real
+  # =========================
+  worker-notifications:
+    container_name: ${PROJECT_NAME}-worker-notifications
+    build:
+      context: .
+      dockerfile: docker/dev/dockerfile.backend-worker
+    image: ${PROJECT_NAME}/worker-notifications:dev.v0.1
+    labels:
+      - stack=inventario
+    volumes:
+      - ./volumes/backend-worker:/app
+      - ./logs/backend-notification:/var/log/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: [ "celery", "-A", "notifications", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=notifications" ]
+    # 🏗️ Comando de ejecución:
+    # - Celery Worker especializado en notificaciones en tiempo real.
+    # - Solo procesa tareas en la cola "notifications".
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file:
+      - ./volumes/backend-worker/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # =========================
+  # BACKEND BEAT - Planificador de Tareas Automáticas
+  # =========================
+  backend-beat:
+    container_name: ${PROJECT_NAME}-backend-beat
+    build:
+      context: .
+      dockerfile: docker/dev/dockerfile.backend-worker
+    image: ${PROJECT_NAME}/backend-beat:dev.v0.1
+    labels:
+      - stack=inventario
+    volumes:
+      - ./volumes/backend-worker:/app
+      - ./logs/backend-beats:/var/log/app
+    networks:
+      - ${INTERNAL_NETWORK}
+    depends_on:
+      - backend-worker
+    command: [ "celery", "-A", "beat", "beat", "--loglevel=${WORKER_LOG_LEVEL}" ]
+    # 🏗️ Comando de ejecución:
+    # - Celery Beat programa tareas recurrentes sin necesidad de cronjobs.
+    # - Se usa para ejecutar procesos automáticos como descarga de datos de SIBIF.
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    env_file:
+      - ./volumes/backend-worker/.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
 
   # =========================
   # MINIO - S3 Object Storage
@@ -322,8 +407,7 @@ services:
     labels:
       - stack=inventario
     volumes:
-      - ./volumes/mariadb/db:/var/lib/mysql
-      - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d
+      - ./volumes/mariadb/db:/var/lib/mysql      
       - ./logs/mariadb:/var/log/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -338,7 +422,11 @@ services:
         max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
-      - ${EXTERNAL_NETWORK}
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" , "-u", "${MYSQL_USER}","-p${MYSQL_PASSWORD}" ]
+      interval: 10s
+      retries: 5
+      timeout: 5s
     deploy:
       resources:
         limits:
@@ -374,6 +462,11 @@ services:
         max-file: "5"
     networks:
       - ${INTERNAL_NETWORK}
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      retries: 5
+      timeout: 5s
     deploy:
       resources:
         limits:
@@ -410,6 +503,11 @@ services:
       - ${INTERNAL_NETWORK}
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
     deploy:
       resources:
         limits:
@@ -423,7 +521,7 @@ services:
   # REDISINSIGHT - Panel Web para Redis
   # =========================
   redisinsight:
-    image: redis/redisinsight:latest
+    image: redis/redisinsight:2.66
     container_name: ${PROJECT_NAME}-redisinsight
     ports:
       - "${REDIS_PORT_PANEL}:5540"
@@ -440,7 +538,8 @@ services:
     networks:
       - ${INTERNAL_NETWORK}
     environment:
-      - REDISINSIGHT_REDIS_URI="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB}"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDISINSIGHT_REDIS_URI: "redis://default:${REDIS_PASSWORD}@${PROJECT_NAME}-redis:${REDIS_PORT}/0"
     deploy:
       resources:
         limits:

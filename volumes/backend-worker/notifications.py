@@ -3,7 +3,7 @@ import os
 
 # Configuración de Celery
 celery_app = Celery(
-    "tasks",
+    "notifications",
     broker=os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672"),
     backend=os.getenv("CELERY_BACKEND", "redis://localhost:6379/1")
 )
@@ -20,12 +20,8 @@ celery_app.conf.update(
 )
 
 # =====================
-# Definición de tareas generales
+# Definición de tareas de notificaciones
 # =====================
 @celery_app.task
-def add(x, y):
-    return x + y
-
-@celery_app.task
-def process_data(data):
-    return {"processed_data": data.upper()}
+def send_notification(user_id, message):
+    return f"Notificación enviada a {user_id}: {message}"
