@@ -1,66 +1,120 @@
-# Ignorar archivos y carpetas por defecto
-**/.git
-**/.svn
-**/.hg
-**/.bzr
-**/.DS_Store
-**/Thumbs.db
-**/node_modules
-**/dist
-**/build
-**/.cache
-**/.idea
-**/.vscode
-**/__pycache__
-**/.pytest_cache
-**/.mypy_cache
-**/.coverage
-**/.venv
-**/.env
-**/.terraform
-**/.next
-**/.nuxt
-**/.serverless
-**/coverage
-**/target
-**/bin
-**/obj
-**/.gradle
-**/.vs
-**/.circleci
-**/.github
-**/.docker
-**/yarn.lock
-**/package-lock.json
-**/pnpm-lock.yaml
-
-# Excluir carpetas específicas de volúmenes y logs
-logs/**
-volumes/mailpit/**
-volumes/minio/**
-volumes/mariadb/**
-volumes/mysql/**
-volumes/rabbitmq/**
-volumes/redis/**
-
-
-# Ignorar archivos sensibles y configuraciones
-*.env
-*.env.*
-.env
-*.bak
-*.log
-*.pid
+# =========================
+# ARCHIVOS DEL SISTEMA
+# =========================
+.DS_Store
+Thumbs.db
 *.swp
 *.tmp
-*.lock
+*~
+
+# =========================
+# ENTORNOS DE DESARROLLO
+# =========================
+.idea/
+.vscode/
+.vs/
+
+# =========================
+# DEPENDENCIAS Y BUILD
+# =========================
+node_modules/
+dist/
+build/
+target/
+bin/
+obj/
+.cache/
+.gradle/
+.next/
+.nuxt/
+.serverless/
+
+# =========================
+# ARCHIVOS DE BLOQUEO (opcional)
+# =========================
+# yarn.lock
+# package-lock.json
+# pnpm-lock.yaml
+
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.coverage
+.venv/
+venv/
+env/
+
+# =========================
+# VARIABLES DE ENTORNO
+# =========================
+# Solo ignorar .env en la raíz del proyecto
+/.env
+/.env.*
+
+# Mantener ejemplos de configuración en cualquier lugar
+!**/.env.example
+!**/.env.template
+
+# =========================
+# LOGS Y DATOS TEMPORALES
+# =========================
+logs/
+*.log
+*.pid
+tmp/
+temp/
+
+# =========================
+# CARPETAS DE RESPALDO/BASURA
+# =========================
+Trash/
+trash/
+backup/
+old/
+
+# =========================
+# VOLÚMENES DE SERVICIOS DOCKER
+# (Ignorar carpetas completas de servicios)
+# =========================
+volumes/mailpit/
+volumes/mariadb/
+volumes/minio/
+volumes/redis/
+volumes/redisinsight/
+volumes/celerybeat/
+
+# =========================
+# CERTIFICADOS Y CLAVES
+# =========================
 *.key
 *.crt
 *.pem
 *.p12
 *.jks
-*.db
+*.bak
 
-# Evitar incluir archivos temporales
-tmp/
-temp/
+# =========================
+# BASES DE DATOS
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# CONTROL DE VERSIONES
+# =========================
+.git/
+.svn/
+.hg/
+.bzr/
+
+# =========================
+# HERRAMIENTAS DE DEVOPS
+# =========================
+.terraform/
+.docker/
