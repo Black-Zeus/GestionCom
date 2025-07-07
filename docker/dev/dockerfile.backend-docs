@@ -1,5 +1,11 @@
 # Imagen base
-FROM python:3.11-slim
+FROM python:3.12-slim
+
+# Argumento para el puerto (configurable en build time)
+ARG DOCS_API_PORT_INTERNAL=8010
+
+# Crea un usuario no root
+RUN useradd -m appuser
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -13,8 +19,11 @@ RUN pip install --upgrade pip
 # Instala las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Puerto de la API de documentos
-EXPOSE ${DOCS_API_PORT_INTERNAL}
+# Cambia al usuario no root
+USER appuser
+
+# Puerto de la API de documentos (usando ARG)
+EXPOSE $DOCS_API_PORT_INTERNAL
 
 # Comando por defecto (usando variables de entorno)
 CMD ["sh", "-c", "uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}"]

@@ -1,6 +1,10 @@
 # Usa la imagen de MinIO con una versión específica
 FROM minio/minio:RELEASE.2025-01-20T14-49-07Z
 
+# Argumentos para puertos configurables
+ARG MINIO_PORT=9000
+ARG MINIO_CONSOLE_PORT=9001
+
 # =======================
 # Copia de scripts y configuraciones
 # =======================
@@ -14,10 +18,15 @@ COPY ./scripts/minio/lifeCicle/ /tmp/lifeCicle/
 RUN chmod +x /usr/bin/create-bucket.sh
 
 # =======================
+# Puertos expuestos
+# =======================
+EXPOSE $MINIO_PORT $MINIO_CONSOLE_PORT
+
+# =======================
 # Establecer Entrypoint y Comando
 # =======================
 ENTRYPOINT ["/usr/bin/create-bucket.sh"]
-CMD ["server", "/data", "--console-address", ":${MINIO_CONSOLE_PORT}"]
+CMD ["server", "/data", "--console-address", ":9001"]
 
 # =======================
 # Notas y Manejo de Errores

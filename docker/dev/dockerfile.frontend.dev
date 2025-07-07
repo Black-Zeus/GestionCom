@@ -1,20 +1,31 @@
-# Usa una imagen oficial de Node.js (versión fija)
-FROM node:18-alpine
+# Usa una imagen oficial de Node.js (versión 24 LTS)
+FROM node:24-alpine
+
+# Argumento para el puerto (configurable en build time)
+ARG FRONTEND_PORT_INTERNAL=3000
+
+# Usar el usuario node que ya existe en la imagen (UID 1000)
+# En node:24-alpine ya existe el usuario 'node' con UID 1000
 
 # Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copia solo los archivos esenciales para la instalación de dependencias
-COPY volumes/frontend/package.json .
+# Cambiar permisos del directorio de trabajo al usuario node
+RUN chown node:node /app
 
-# Instala las dependencias
+# Cambiar al usuario node para las operaciones
+USER node
+
+# Copia solo package.json primero
+COPY --chown=node:node volumes/frontend/package.json ./
+
+# Instala las dependencias (usamos npm install en lugar de npm ci para desarrollo)
 RUN npm install
 
-# Copia el código fuente
-#COPY volumes/frontend/ .
+# En desarrollo no copiamos el código fuente - se monta como volumen
 
-# Exponer el puerto para Vite/React (desde el .env)
-EXPOSE ${FRONTEND_PORT_INTERNAL}
+# Exponer el puerto para Vite/React (usando ARG)
+EXPOSE $FRONTEND_PORT_INTERNAL
 
 # Iniciar el servidor en modo desarrollo
 CMD ["sh", "-c", "npm run dev -- --host ${FRONTEND_HOST} --port ${FRONTEND_PORT_INTERNAL}"]

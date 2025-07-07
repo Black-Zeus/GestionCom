@@ -1,10 +1,8 @@
-# =======================
-# Exponer puerto definido por entorno
-# =======================
-# EXPOSE ${REDIS_PORT}
-
 # Usar la imagen base de Redis
-FROM redis:7-alpine
+FROM redis:8.2-m01-alpine3.22
+
+# Argumento para el puerto (configurable en build time)
+ARG REDIS_PORT=6379
 
 # Establecer directorio de trabajo
 WORKDIR /usr/local/etc/redis
@@ -12,10 +10,13 @@ WORKDIR /usr/local/etc/redis
 # Copiar el archivo de configuración personalizado
 COPY ./scripts/redis/redis.conf /etc/redis/redis.conf
 
-# Instalar bash y busybox (para cronjobs)
-RUN apk add --no-cache bash busybox-suid && \
-    echo "0 0 * * * echo FLUSHALL | redis-cli -a $REDIS_PASSWORD" > /etc/crontabs/root && \
-    chmod 600 /etc/crontabs/root
+# Instalar bash para scripts (removido cron innecesario en desarrollo)
+RUN apk add --no-cache bash
 
-# Comando de inicio
-CMD ["sh", "-c", "crond && redis-server /etc/redis/redis.conf --requirepass ${REDIS_PASSWORD}"]
+# =======================
+# Exponer puerto usando ARG
+# =======================
+EXPOSE $REDIS_PORT
+
+# Comando de inicio (simplificado - el compose maneja la configuración)
+CMD ["redis-server", "/etc/redis/redis.conf"]

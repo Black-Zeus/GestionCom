@@ -1,0 +1,8 @@
+# Usar la imagen oficial de RedisInsight 2.70
+FROM redis/redisinsight:2.70
+
+# Exponer puerto estándar de RedisInsight
+EXPOSE 5540
+
+# Usar configuración por defecto - conexiones se configuran vía web UI
+# El volumen /db persistirá las configuraciones automáticamente

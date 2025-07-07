@@ -1,13 +1,15 @@
 # Usa la imagen de MariaDB con versión específica
 FROM mariadb:10.6
 
+# Argumento para el puerto (configurable en build time)
+ARG MYSQL_PORT=3306
+
 # =======================
 # Copia de scripts de inicialización
 # =======================
 COPY ./scripts/mariadb/entrypoint/*.sql /docker-entrypoint-initdb.d/
 
 # =======================
-# Exponer el puerto 3306
+# Exponer el puerto (usando ARG)
 # =======================
-EXPOSE ${MYSQL_PORT}
-
+EXPOSE $MYSQL_PORT

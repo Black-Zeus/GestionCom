@@ -1,5 +1,7 @@
-# Usa Python 3.11 como base
-FROM python:3.11-slim
+FROM python:3.12-slim
+
+# Argumento para el puerto (configurable en build time)
+ARG BACKEND_API_PORT_INTERNAL=8000
 
 # Crea un usuario no root y su directorio de trabajo
 RUN useradd -m appuser
@@ -19,8 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Cambia al usuario no root
 USER appuser
 
-# Expone el puerto 8000 para FastAPI
-EXPOSE ${BACKEND_API_PORT_INTERNAL}
+# Expone el puerto para FastAPI (usando ARG)
+EXPOSE $BACKEND_API_PORT_INTERNAL
 
 # Comando por defecto
 CMD ["sh", "-c", "uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload"]

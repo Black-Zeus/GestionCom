@@ -1,6 +1,6 @@
 services:
 
-  # =========================
+# =========================
   # NGINX - Reverse Proxy
   # =========================
   nginx:
@@ -8,13 +8,26 @@ services:
     build:
       context: .
       dockerfile: docker/dev/dockerfile.nginx.dev
+      args:
+        - NGINX_PORT_INTERNAL=${NGINX_PORT_INTERNAL}
     image: ${PROJECT_NAME}/nginx:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     depends_on:
-      - frontend
+      frontend:
+        condition: service_started  # Cambiar a service_started
+      backend-api:
+        condition: service_started  # Cambiar a service_started
+      #frontend:
+      #  condition: service_started
+      #backend-api:
+      #  condition: service_healthy
+      #backend-docs:
+      #  condition: service_healthy
+      #backend-tasks:
+      #  condition: service_healthy
     volumes:
-      - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
+      - ./logs/nginx:/var/log/nginx
     environment:
       - PROJECT_NAME=${PROJECT_NAME}
       - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
@@ -39,6 +52,13 @@ services:
         reservations:
           cpus: "0.25"
           memory: "64M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # =========================
   # FRONTEND - React/NodeJS
@@ -48,23 +68,29 @@ services:
     build:
       context: .
       dockerfile: docker/dev/dockerfile.frontend.dev
+      args:
+        - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
     image: ${PROJECT_NAME}/frontend:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/frontend:/app
       - /app/node_modules
       - ./logs/frontend:/var/log/app
     ports:
       - "${FRONTEND_PORT}:${FRONTEND_PORT_INTERNAL}"
-    command: [ "npm", "run", "dev" ]
+    command: ["npm", "run", "dev"]
     depends_on:
-      - backend-api
-      - backend-docs
-      - backend-tasks
-      - backend-worker
+      backend-api:
+        #condition: service_healthy
+        condition: service_started  # Cambiar a service_started
+      #backend-docs:
+      #  condition: service_healthy
+      #backend-tasks:
+      #  condition: service_healthy
     environment:
       - ENV=${ENV}
+      - NODE_ENV=development
     logging:
       driver: "json-file"
       options:
@@ -78,27 +104,38 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "256M"
+          memory: "512M"
         reservations:
           cpus: "0.5"
-          memory: "128M"
+          memory: "256M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${FRONTEND_PORT_INTERNAL}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # =========================
-  # BACKEND API - Api COnsultas a Base de Datos
+# =========================
+  # BACKEND API - Consultas a Base de Datos
   # =========================
   backend-api:
     container_name: ${PROJECT_NAME}-backend-api
     build:
       context: .
       dockerfile: docker/dev/dockerfile.backend-api
+      args:
+        - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-api:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-api:/app
       - ./logs/backend-api:/var/log/app
     depends_on:
       mariadb:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     ports:
       - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
@@ -116,22 +153,31 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "256M"
+          memory: "512M"
         reservations:
           cpus: "0.5"
-          memory: "128M"
+          memory: "256M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${BACKEND_API_PORT_INTERNAL}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # =========================
-  # BACKEND DOCS - Generación de Documentos / Conexion Minio
+# =========================
+  # BACKEND DOCS - Generación de Documentos / Conexión Minio
   # =========================
   backend-docs:
     container_name: ${PROJECT_NAME}-backend-docs
     build:
       context: .
       dockerfile: docker/dev/dockerfile.backend-docs
+      args:
+        - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-docs:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-docs:/app
       - ./logs/backend-docs:/var/log/app
@@ -140,9 +186,11 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - ${DOCS_API_PORT_INTERNAL}
-    command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL}
+      - "${DOCS_API_PORT}:${DOCS_API_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL} --reload
     logging:
       driver: "json-file"
       options:
@@ -158,8 +206,15 @@ services:
         reservations:
           cpus: "0.25"
           memory: "128M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${DOCS_API_PORT_INTERNAL}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # =========================
+# =========================
   # BACKEND TASKS - Ejecución de Tareas en segundo plano
   # =========================
   backend-tasks:
@@ -167,9 +222,11 @@ services:
     build:
       context: .
       dockerfile: docker/dev/dockerfile.backend-tasks
+      args:
+        - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-tasks:/app
       - ./logs/backend-tasks:/var/log/app
@@ -180,9 +237,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      mariadb:
+        condition: service_healthy
     ports:
       - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
-    command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL}
+    command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL} --reload
     logging:
       driver: "json-file"
       options:
@@ -198,6 +257,13 @@ services:
         reservations:
           cpus: "0.25"
           memory: "128M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${TASKS_API_PORT_INTERNAL}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # =========================
   # BACKEND WORKER - Procesador de Colas
@@ -209,7 +275,7 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-worker:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-worker:/var/log/app
@@ -220,7 +286,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: [ "celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=${WORKER_QUEUES}" ]
+      mariadb:
+        condition: service_healthy
+    command: ["celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=${WORKER_QUEUES}", "--concurrency=4"]
     logging:
       driver: "json-file"
       options:
@@ -236,9 +304,16 @@ services:
         reservations:
           cpus: "0.5"
           memory: "256M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "tasks", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # =========================
-  # WORKER NOTIFICATIONS - Procesador de Notificaciones en Tiempo Real
+  # WORKER NOTIFICATIONS - Procesador de Notificaciones
   # =========================
   worker-notifications:
     container_name: ${PROJECT_NAME}-worker-notifications
@@ -247,7 +322,7 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/worker-notifications:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-notification:/var/log/app
@@ -258,10 +333,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: [ "celery", "-A", "notifications", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=notifications" ]
-    # 🏗️ Comando de ejecución:
-    # - Celery Worker especializado en notificaciones en tiempo real.
-    # - Solo procesa tareas en la cola "notifications".
+      backend-worker:
+        condition: service_healthy
+    command: ["celery", "-A", "notifications", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=notifications", "--concurrency=2"]
     logging:
       driver: "json-file"
       options:
@@ -277,9 +351,16 @@ services:
         reservations:
           cpus: "0.25"
           memory: "128M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "notifications", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # =========================
-  # BACKEND BEAT - Planificador de Tareas Automáticas
+  # BACKEND BEAT - Planificador de Tareas
   # =========================
   backend-beat:
     container_name: ${PROJECT_NAME}-backend-beat
@@ -288,18 +369,21 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-beat:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-beats:/var/log/app
+      - ./volumes/celerybeat:/var/lib/celerybeat
     networks:
       - ${INTERNAL_NETWORK}
     depends_on:
-      - backend-worker
-    command: [ "celery", "-A", "beat", "beat", "--loglevel=${WORKER_LOG_LEVEL}" ]
-    # 🏗️ Comando de ejecución:
-    # - Celery Beat programa tareas recurrentes sin necesidad de cronjobs.
-    # - Se usa para ejecutar procesos automáticos como descarga de datos de SIBIF.
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      backend-worker:
+        condition: service_healthy
+    command: ["celery", "-A", "beat", "beat", "--loglevel=${WORKER_LOG_LEVEL}", "--pidfile=/var/lib/celerybeat/celerybeat.pid", "--schedule=/var/lib/celerybeat/celerybeat-schedule"]
     logging:
       driver: "json-file"
       options:
@@ -315,8 +399,9 @@ services:
         reservations:
           cpus: "0.25"
           memory: "128M"
+    restart: unless-stopped
 
-  # =========================
+# =========================
   # MINIO - S3 Object Storage
   # =========================
   minio:
@@ -324,29 +409,34 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.minio
+      args:
+        - MINIO_PORT=${MINIO_PORT}
+        - MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT}
     image: ${PROJECT_NAME}/minio:dev.v0.1
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/minio:/data
       - ./logs/minio:/var/log/minio
-    expose:
-      - "${MINIO_PORT}:${MINIO_PORT}"
     ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
       - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_CONSOLE_ADDRESS: ":${MINIO_CONSOLE_PORT}"
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT}"
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://${MINIO_HOST}:${MINIO_PORT}/minio/health/live" ]
+      test: ["CMD", "curl", "-f", "http://localhost:${MINIO_PORT}/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
+      start_period: 60s
     networks:
       - ${INTERNAL_NETWORK}
     deploy:
@@ -357,6 +447,7 @@ services:
         reservations:
           cpus: "0.5"
           memory: "256M"
+    restart: unless-stopped
 
   # =========================
   # MAILPIT - Mail Testing
@@ -364,12 +455,11 @@ services:
   mailpit:
     container_name: ${PROJECT_NAME}-mailpit
     image: axllent/mailpit:v1.21.6
-    expose:
-      - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
     ports:
+      - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
       - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/mailpit:/data
       - ./logs/mailpit:/var/log/mailpit
@@ -377,6 +467,8 @@ services:
       MP_STORAGE: ${MAILPIT_STORAGE}
       MP_UI_COLOR: ${MAILPIT_UI_COLOR}
       MP_LOGGING: "true"
+      MP_SMTP_BIND_ADDR: "0.0.0.0:${MAILPIT_SMTP_PORT}"
+      MP_UI_BIND_ADDR: "0.0.0.0:${MAILPIT_UI_PORT}"
     logging:
       driver: "json-file"
       options:
@@ -392,6 +484,12 @@ services:
         reservations:
           cpus: "0.1"
           memory: "64M"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${MAILPIT_UI_PORT}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # =========================
   # MARIADB - Base de Datos
@@ -401,19 +499,21 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.mysql
+      args:
+        - MYSQL_PORT=${MYSQL_PORT}
     image: ${PROJECT_NAME}/mariadb:10.6
     ports:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/mariadb/db:/var/lib/mysql      
       - ./logs/mariadb:/var/log/mysql
+      - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d:ro
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_INITDB_SKIP_TZINFO: 1
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -423,10 +523,11 @@ services:
     networks:
       - ${INTERNAL_NETWORK}
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" , "-u", "${MYSQL_USER}","-p${MYSQL_PASSWORD}" ]
-      interval: 10s
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
       retries: 5
-      timeout: 5s
+      timeout: 10s
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -435,38 +536,46 @@ services:
         reservations:
           cpus: "0.5"
           memory: "512M"
+    security_opt:
+      - seccomp:unconfined
 
-  # =========================
-  # RABBITMQ - Mensajería
-  # =========================
-  rabbitmq:
-    image: rabbitmq:4.0.5-management-alpine
-    container_name: ${PROJECT_NAME}-rabbitmq
-    expose:
-      - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
-    ports:      
-      - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
+# =========================
+# PHPMYADMIN - Administrador de BD
+# =========================
+  phpmyadmin:
+    container_name: ${PROJECT_NAME}-phpmyadmin
+    image: phpmyadmin:5.2.2-apache
+    ports:
+      - "${MYSQL_PORT_PHPMYADMIN}:80"
     labels:
-      - stack=inventario
-    volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
-      - ./logs/rabbitmq:/var/log/rabbitmq
+      - stack=${PROJECT_NAME}
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      PMA_HOST: mariadb
+      PMA_PORT: ${MYSQL_PORT}
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      PMA_ARBITRARY: 1
+      # Configuración para desarrollo
+      MAX_EXECUTION_TIME: 600
+      MEMORY_LIMIT: 512M
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      mariadb:
+        condition: service_healthy
     restart: unless-stopped
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-        max-file: "5"
+        max-file: "3"
     networks:
       - ${INTERNAL_NETWORK}
     healthcheck:
-      test: [ "CMD", "rabbitmqctl", "status" ]
-      interval: 10s
-      retries: 5
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: ${HEALTH_CHECK_INTERVAL}
+      retries: ${HEALTH_CHECK_RETRIES}
+      timeout: ${HEALTH_CHECK_TIMEOUT}
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -476,23 +585,78 @@ services:
           cpus: "0.25"
           memory: "128M"
 
-  # =========================
+# =========================
+# RABBITMQ - Mensajería (Configuración Mejorada)
+# =========================
+  rabbitmq:
+    image: rabbitmq:4.0.5-management-alpine
+    container_name: ${PROJECT_NAME}-rabbitmq
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_UI_PORT}:15672"
+    labels:
+      - stack=${PROJECT_NAME}
+    volumes:
+      #- rabbitmq_data:/var/lib/rabbitmq
+      - ./logs/rabbitmq:/var/log/rabbitmq
+      # Temporalmente comentados hasta crear los archivos
+      # - ./scripts/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # - ./scripts/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      # Configuración de nodo simplificada
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      # Cookie de Erlang predefinido (opcional)
+      RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+      # Configuraciones adicionales para evitar problemas de permisos
+      RABBITMQ_CONFIG_FILE: "/var/lib/rabbitmq/rabbitmq"
+      RABBITMQ_MNESIA_DIR: "/var/lib/rabbitmq/mnesia"
+      RABBITMQ_LOG_BASE: "/var/log/rabbitmq"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    # Usuario específico para evitar problemas de permisos
+    user: "999:999"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      retries: 5
+      timeout: 10s
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "256M"
+
+# =========================
   # REDIS - Cache
   # =========================
   redis:
     build:
       context: .
       dockerfile: docker/dockerfile.redis
+      args:
+        - REDIS_PORT=${REDIS_PORT}
     image: ${PROJECT_NAME}/redis:7.2
     container_name: ${PROJECT_NAME}-redis
-    expose:
-      - "${REDIS_PORT}"
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
     labels:
-      - stack=inventario
+      - stack=${PROJECT_NAME}
     volumes:
       - ./volumes/redis/data:/data
       - ./logs/redis:/var/log/redis
-      - ./scripts/redis/redis.conf:/etc/redis/redis.conf
+      - ./scripts/redis/redis.conf:/etc/redis/redis.conf:ro
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -502,12 +666,14 @@ services:
     networks:
       - ${INTERNAL_NETWORK}
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}    
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: ["redis-server", "/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD}"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
       retries: 5
-      timeout: 5s
+      timeout: 10s
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -517,46 +683,66 @@ services:
           cpus: "0.25"
           memory: "128M"
 
-  # =========================
+# =========================
   # REDISINSIGHT - Panel Web para Redis
   # =========================
   redisinsight:
-    image: redis/redisinsight:2.66
+    build:
+      context: .
+      dockerfile: docker/dev/dockerfile.redisinsight
+    image: ${PROJECT_NAME}/redisinsight:dev.v0.1
     container_name: ${PROJECT_NAME}-redisinsight
+    labels:
+      - stack=${PROJECT_NAME}  # ← Falta label
     ports:
       - "${REDIS_PORT_PANEL}:5540"
-    labels:
-      - stack=inventario
     volumes:
-      - ./volumes/redisinsight/db:/db
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-    networks:
-      - ${INTERNAL_NETWORK}
+      - ./volumes/redisinsight/db:/db  # ✅ Persistencia correcta
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDISINSIGHT_REDIS_URI: "redis://default:${REDIS_PASSWORD}@${PROJECT_NAME}-redis:${REDIS_PORT}/0"
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - ${INTERNAL_NETWORK}  # Agregar red
+    restart: unless-stopped  # Agregar restart policy
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: "256M"
-        reservations:
           cpus: "0.25"
           memory: "128M"
-
+        reservations:
+          cpus: "0.1"
+          memory: "64M"
+    healthcheck:  # Agregar healthcheck
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5540"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+                
 # =========================
 # NETWORKS - Redes Docker
 # =========================
 networks:
   internal:
     driver: bridge
+    name: ${PROJECT_NAME}_internal
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
   external:
     driver: bridge
+    name: ${PROJECT_NAME}_external
     ipam:
       config:
         - subnet: ${EXTERNAL_SUBNET}
+
+# =========================
+# VOLUMES - Volúmenes Docker
+# =========================
+volumes:
+  rabbitmq_data:
+    driver: local
