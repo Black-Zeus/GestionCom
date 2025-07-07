@@ -1,10 +1,35 @@
--- 02_createUsers.sql
+-- =============================================
+-- Crear usuario remoto para debugging/desarrollo
+-- =============================================
 
--- Asignar privilegios completos al usuario 'remoto' en la base de datos 'tecnocomp'
-GRANT ALL PRIVILEGES ON tecnocomp.* TO 'remoto'@'%';
+-- Usuario específico para debugging con acceso remoto
+CREATE USER IF NOT EXISTS 'dev_remote'@'%' IDENTIFIED BY 'dev_remote_pass_2024';
+GRANT ALL PRIVILEGES ON inventario.* TO 'dev_remote'@'%';
 
--- Asignar privilegios completos al usuario 'root' en todas las bases de datos, pero solo desde 'localhost'
-GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+CREATE USER IF NOT EXISTS 'inventario_user'@'localhost' IDENTIFIED BY 'inventario_pass_2024';
+GRANT ALL PRIVILEGES ON inventario.* TO 'inventario_user'@'localhost';
 
--- Aplicar cambios en privilegios
+-- Aplicar cambios
 FLUSH PRIVILEGES;
+
+
+-- =============================================
+-- Eliminar usuario de debugging (solo PRD)
+-- Descomentar siguientes Lineas
+-- =============================================
+
+-- DROP USER IF EXISTS 'dev_remote'@'%';
+-- FLUSH PRIVILEGES;
+-- SELECT 'Usuario de debugging eliminado' AS resultado;
+
+
+-- Mostrar todos los usuarios del sistema
+-- SELECT 'Listado completo de usuarios del sistema:' AS info;
+-- SELECT User, Host, 
+--        CASE 
+--            WHEN Host = 'localhost' THEN 'Local'
+--            WHEN Host = '%' THEN 'Remoto'
+--            ELSE Host 
+--        END AS Tipo_Acceso
+-- FROM mysql.user 
+-- ORDER BY User, Host;
