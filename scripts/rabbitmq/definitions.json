@@ -1,0 +1,237 @@
+{
+  "rabbit_version": "4.0.5",
+  "rabbitmq_version": "4.0.5",
+  "product_name": "RabbitMQ",
+  "product_version": "4.0.5",
+  "users": [
+    {
+      "name": "inventario_user",
+      "password_hash": "PASSWORD_HASH_PLACEHOLDER",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    },
+    {
+      "name": "worker_user",
+      "password_hash": "PASSWORD_HASH_PLACEHOLDER",
+      "hashing_algorithm": "rabbit_password_hashing_sha256", 
+      "tags": ["management"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    },
+    {
+      "name": "inventario"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "inventario_user",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    },
+    {
+      "user": "inventario_user", 
+      "vhost": "inventario",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    },
+    {
+      "user": "worker_user",
+      "vhost": "inventario",
+      "configure": "^(celery|notifications).*",
+      "write": "^(celery|notifications).*",
+      "read": "^(celery|notifications).*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [
+    {
+      "name": "cluster_name",
+      "value": "inventario_cluster"
+    }
+  ],
+  "policies": [
+    {
+      "vhost": "inventario",
+      "name": "celery_policy",
+      "pattern": "^celery.*",
+      "apply-to": "queues",
+      "definition": {
+        "message-ttl": 3600000,
+        "max-length": 10000,
+        "overflow": "reject-publish"
+      },
+      "priority": 0
+    },
+    {
+      "vhost": "inventario", 
+      "name": "notifications_policy",
+      "pattern": "^notifications.*",
+      "apply-to": "queues",
+      "definition": {
+        "message-ttl": 1800000,
+        "max-length": 5000,
+        "overflow": "drop-head"
+      },
+      "priority": 1
+    }
+  ],
+  "queues": [
+    {
+      "name": "celery",
+      "vhost": "inventario",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 3600000,
+        "x-max-length": 10000
+      }
+    },
+    {
+      "name": "celery.high_priority",
+      "vhost": "inventario", 
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 1800000,
+        "x-max-length": 5000,
+        "x-max-priority": 10
+      }
+    },
+    {
+      "name": "celery.low_priority",
+      "vhost": "inventario",
+      "durable": true, 
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 7200000,
+        "x-max-length": 20000,
+        "x-max-priority": 1
+      }
+    },
+    {
+      "name": "notifications",
+      "vhost": "inventario",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 1800000,
+        "x-max-length": 5000
+      }
+    },
+    {
+      "name": "reports",
+      "vhost": "inventario",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 7200000,
+        "x-max-length": 1000
+      }
+    },
+    {
+      "name": "documents",
+      "vhost": "inventario", 
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-message-ttl": 3600000,
+        "x-max-length": 2000
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "celery.direct",
+      "vhost": "inventario",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "celery.topic", 
+      "vhost": "inventario",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "notifications.fanout",
+      "vhost": "inventario",
+      "type": "fanout", 
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "documents.direct",
+      "vhost": "inventario",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "celery.direct",
+      "vhost": "inventario",
+      "destination": "celery",
+      "destination_type": "queue",
+      "routing_key": "celery",
+      "arguments": {}
+    },
+    {
+      "source": "celery.direct",
+      "vhost": "inventario", 
+      "destination": "celery.high_priority",
+      "destination_type": "queue",
+      "routing_key": "celery.high_priority",
+      "arguments": {}
+    },
+    {
+      "source": "celery.direct",
+      "vhost": "inventario",
+      "destination": "celery.low_priority", 
+      "destination_type": "queue",
+      "routing_key": "celery.low_priority",
+      "arguments": {}
+    },
+    {
+      "source": "celery.topic",
+      "vhost": "inventario",
+      "destination": "reports",
+      "destination_type": "queue", 
+      "routing_key": "reports.*",
+      "arguments": {}
+    },
+    {
+      "source": "notifications.fanout",
+      "vhost": "inventario",
+      "destination": "notifications",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    },
+    {
+      "source": "documents.direct",
+      "vhost": "inventario",
+      "destination": "documents",
+      "destination_type": "queue",
+      "routing_key": "documents",
+      "arguments": {}
+    }
+  ]
+}
