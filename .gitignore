@@ -86,7 +86,22 @@ volumes/mariadb/
 volumes/minio/
 volumes/redis/
 volumes/redisinsight/
-volumes/celerybeat/
+
+# =========================
+# ARCHIVOS TEMPORALES DE BACKENDS Y CELERY
+# (Mantener código fuente, ignorar archivos generados)
+# =========================
+# Archivos de programación de tareas
+volumes/backend-worker/*-schedule
+volumes/backend-tasks/*-schedule
+volumes/backend-docs/*-schedule
+volumes/celerybeat/*-schedule
+
+# Archivos de proceso y estado
+volumes/celerybeat/*.pid
+volumes/celerybeat/*.db
+volumes/celerybeat/*.log
+volumes/celerybeat/*.lock
 
 # =========================
 # CERTIFICADOS Y CLAVES
