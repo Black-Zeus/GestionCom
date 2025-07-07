@@ -1,8 +1,32 @@
 #!/bin/bash
 
+# Función para leer PROJECT_NAME desde .env
+read_project_name() {
+    local env_file=".env"
+    
+    if [[ -f "$env_file" ]]; then
+        # Buscar la línea que contiene PROJECT_NAME y extraer el valor
+        local project_line=$(grep "^PROJECT_NAME=" "$env_file" 2>/dev/null)
+        if [[ -n "$project_line" ]]; then
+            # Extraer el valor después del =, removiendo espacios y comillas
+            echo "$project_line" | cut -d'=' -f2 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//;s/^"//;s/"$//'
+        else
+            echo ""
+        fi
+    else
+        echo ""
+    fi
+}
+
+
 # Variables iniciales
 ENV="dev"
-LABEL_FILTER="stack=Ambrosia"
+
+# Leer PROJECT_NAME desde .env, usar "Inventario" como fallback
+PROJECT_NAME=$(read_project_name)
+STACK="${PROJECT_NAME:-NoExiteStackName}"
+
+LABEL_FILTER="stack=${STACK}"
 COMPOSE_FILE=""
 CURRENT_IP=""
 
@@ -25,6 +49,7 @@ banner_menu_ambiente(){
   fi
 
   echo "Archivo de configuración: $COMPOSE_FILE"
+  echo "Stack: $STACK"
   echo "Entorno: $ENV"
   echo "IP Actual: $current_ip"
 }
@@ -145,7 +170,7 @@ menu_limpieza() {
   banner_menu_ambiente
   echo "======================================="
   echo ""
-  echo " 1. 🧹 Limpiar contenedores, redes, imágenes y volúmenes"
+  echo " 1. 🧹 Limpiar contenedores, redes y volúmenes"
   echo " 2. 🖼️  Limpiar imágenes no utilizadas"
   echo " 3. 💾 Limpiar volúmenes no utilizados"
   echo " 4. 🗑️  Limpiar todo (contenedores, imágenes y volúmenes)"
@@ -544,11 +569,12 @@ clean() {
   clear
   echo "======================================="
   echo "Docker Tools - Limpieza"
-  echo "Limpiando contenedores, redes, imágenes y volúmenes"
+  echo "Limpiando contenedores, redes y volúmenes"
   banner_menu_ambiente
   echo "======================================="
   echo ""
-  docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --rmi all --volumes --remove-orphans
+  #docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --rmi all --volumes --remove-orphans
+  docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --volumes --remove-orphans
   pause
   menu_limpieza
 }
@@ -561,7 +587,18 @@ clean_images() {
   banner_menu_ambiente
   echo "======================================="
   echo ""
-  docker image prune -af
+  
+  # Solicitar confirmación antes de proceder
+  read -p "¿Estás seguro de que deseas eliminar las imágenes no utilizadas? (s/n): " confirmacion
+
+  # Comprobar la respuesta
+  if [[ "$confirmacion" =~ ^[Ss]$ ]]; then
+    docker image prune -af
+    echo "Las imágenes no utilizadas han sido eliminadas."
+  else
+    echo "Operación cancelada. No se eliminaron las imágenes."
+  fi
+
   pause
   menu_limpieza
 }
@@ -590,9 +627,10 @@ clean_all() {
 
   # Limpiar contenedores, imágenes, redes y volúmenes relacionados con el stack
   echo "======================================="
-  echo "Limpiando contenedores, redes, imágenes y volúmenes del stack..."
+  echo "Limpiando contenedores, redes y volúmenes del stack..."
   echo "======================================="
-  docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --rmi all --volumes --remove-orphans
+  #docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --rmi all --volumes --remove-orphans
+  docker compose -f "$COMPOSE_FILE" --env-file .env --env-file .env.$ENV down --volumes --remove-orphans
 
   # Verificar y eliminar volúmenes huérfanos
   echo "======================================="
@@ -618,7 +656,17 @@ clean_all() {
   echo "======================================="
   echo "Limpiando imágenes no utilizadas..."
   echo "======================================="
-  docker image prune -af
+
+  # Solicitar confirmación antes de proceder
+  read -p "¿Estás seguro de que deseas eliminar las imágenes no utilizadas? (s/n): " confirmacion
+
+  # Comprobar la respuesta
+  if [[ "$confirmacion" =~ ^[Ss]$ ]]; then
+    docker image prune -af
+    echo "Las imágenes no utilizadas han sido eliminadas."
+  else
+    echo "Operación cancelada. No se eliminaron las imágenes."
+  fi
 
   # Eliminar caché de builds generadas
   echo "======================================="
