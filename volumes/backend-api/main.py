@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from routes import users, auth, health_services
-from utils.authMiddleware import authenticate_request  # Middleware de autenticación
+from middleware.auth_middleware import authenticate_request  # ← Movemos aquí
+from middleware.response_middleware import ResponseMiddleware  # ← Agregamos
 
-# Configuración de la aplicación
 app = FastAPI(
     title="API de Conectividad con la Base de Datos del Sistema",
     description="API encargada de gestionar la conectividad y acceso a la base de datos del sistema, con múltiples endpoints para manejar datos específicos.",
@@ -13,31 +13,33 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Lista de endpoints protegidos (Privados)
 PRIVATE_ROUTES = ["/users", "/inventory", "/admin", "/reports"]
 
-# Middleware para proteger solo los endpoints privados
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.scope["path"]
-
-        # Si la ruta está en la lista de privadas, se requiere autenticación
+        
         if any(path.startswith(route) for route in PRIVATE_ROUTES):
             try:
-                authenticate_request(request)
+                await authenticate_request(request)  # ← Hacemos async
             except HTTPException as e:
-                return HTTPException(status_code=e.status_code, detail=e.detail)
-
-        # Si la ruta no es privada, se asume pública y se permite el acceso
+                return JSONResponse(
+                    status_code=e.status_code,
+                    content={
+                        "success": False,
+                        "status": e.status_code,
+                        "message": e.detail,
+                        "error": {"code": "AUTH_FAILED", "details": e.detail}
+                    }
+                )
+        
         return await call_next(request)
 
-# Agregar middleware a la aplicación
-app.add_middleware(AuthMiddleware)
+# Middleware en orden correcto
+app.add_middleware(ResponseMiddleware)  # ← Primero respuestas unificadas
+app.add_middleware(AuthMiddleware)      # ← Luego autenticación
 
-# Incluir los endpoints (auth y health son públicos automáticamente)
-## Endpoints Publicos
+# Routers (sin cambios)
 app.include_router(auth.router, prefix="/auth")
 app.include_router(health_services.router, prefix="/health")
-
-## Endpoints Privados
 app.include_router(users.router, prefix="/users")
