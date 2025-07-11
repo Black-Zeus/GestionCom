@@ -1,20 +1,42 @@
+# Core Framework
 annotated-types==0.7.0
 anyio==4.8.0
-bcrypt==4.2.1
-click==8.1.8
 fastapi==0.115.7
-greenlet==3.1.1
-h11==0.14.0
-idna==3.10
-passlib==1.7.4
-pydantic==2.10.6
-pydantic_core==2.27.2
-PyJWT==2.10.1
-PyMySQL==1.1.1
-python-dotenv==1.0.1
-redis==5.2.1
-sniffio==1.3.1
-SQLAlchemy==2.0.37
 starlette==0.45.3
-typing_extensions==4.12.2
 uvicorn==0.34.0
+
+# Database Drivers
+aiomysql==0.2.0           # ← NUEVA: Para conexiones async a MySQL/MariaDB
+PyMySQL==1.1.1            # Para conexiones sync a MySQL/MariaDB
+SQLAlchemy==2.0.37        # ORM con soporte async
+greenlet==3.1.1           # Dependencia de SQLAlchemy async
+
+# Cache/Redis
+redis==5.2.1              # Cliente Redis con soporte async
+hiredis==2.3.2            # ← NUEVA: Parser optimizado para Redis
+
+# Authentication & Security
+bcrypt==4.2.1             # Hash de contraseñas
+PyJWT==2.10.1             # JSON Web Tokens
+passlib==1.7.4            # Biblioteca de hashing
+
+# Data Validation
+pydantic==2.10.6          # Validación de datos
+pydantic-settings==2.8.0  # Configuración con Pydantic
+pydantic_core==2.27.2     # Core de Pydantic
+email-validator==2.1.0    # ← NUEVA: Validación de emails
+
+# Configuration & Environment
+python-dotenv==1.0.1      # Variables de entorno desde .env
+
+# JSON & Performance
+orjson==3.9.15            # ← NUEVA: Parser JSON optimizado
+
+# HTTP & Networking
+h11==0.14.0               # Protocolo HTTP
+idna==3.10                # Manejo de dominios internacionales
+sniffio==1.3.1            # Detección async/sync
+click==8.1.8              # CLI utilities
+
+# Type Annotations
+typing_extensions==4.12.2 # Extensiones de typing

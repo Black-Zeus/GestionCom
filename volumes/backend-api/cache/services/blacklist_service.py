@@ -1,457 +1,670 @@
 """
-Servicio de blacklist para tokens JWT revocados
+Servicio de blacklist para tokens JWT - Invalidación y verificación
+Integrado con Redis y tu arquitectura de cache existente
 """
-import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, Any, List, Set
 
-from cache.redis_client import redis_client, redis_fallback
+from cache.redis_client import redis_client
 from core.config import settings
-from core.constants import RedisKeys
 from core.security import jwt_manager
+from core.constants import RedisKeys
+from core.exceptions import CacheException, SystemException
+from schemas.token import BlacklistReason, TokenType
 
 
+# Configurar logger
 logger = logging.getLogger(__name__)
 
 
 class BlacklistService:
     """
-    Servicio para manejar tokens JWT en blacklist:
-    - Agregar tokens revocados a blacklist
-    - Verificar si tokens están blacklisted
-    - Limpiar tokens expirados
-    - Estadísticas de blacklist
+    Servicio para gestión de blacklist de tokens JWT
     """
     
     def __init__(self):
-        self.default_ttl = settings.TOKEN_BLACKLIST_TTL
+        # TTLs por defecto
+        self.default_blacklist_ttl = 86400  # 24 horas
+        self.cleanup_batch_size = 1000
+        
+        # Prefijos de Redis keys
+        self.token_blacklist_prefix = "blacklist:token:"
+        self.user_tokens_prefix = "blacklist:user:"
+        self.blacklist_metadata_prefix = "blacklist:meta:"
+        
+        # Configuración de operaciones batch
+        self.max_batch_size = 100
     
     # ==========================================
-    # OPERACIONES PRINCIPALES
+    # BLACKLIST INDIVIDUAL DE TOKENS
     # ==========================================
     
-    @redis_fallback(False)  # Si Redis falla, asumimos que NO está blacklisted
-    async def is_token_blacklisted(self, jti: str, user_id: Optional[int] = None) -> bool:
-        """
-        Verificar si un token está en blacklist
-        
-        Args:
-            jti: JWT ID del token
-            user_id: ID del usuario (opcional, para verificaciones adicionales)
-        
-        Returns:
-            True si está blacklisted, False si no
-        """
-        if not jti:
-            return False
-        
-        try:
-            # 1. Verificar blacklist específica del token
-            token_key = RedisKeys.token_blacklist(jti)
-            is_blacklisted = await redis_client.exists(token_key)
-            
-            if is_blacklisted:
-                logger.debug(f"Token {jti} found in blacklist")
-                return True
-            
-            # 2. Verificar blacklist de refresh tokens
-            refresh_key = RedisKeys.refresh_blacklist(jti)
-            is_refresh_blacklisted = await redis_client.exists(refresh_key)
-            
-            if is_refresh_blacklisted:
-                logger.debug(f"Refresh token {jti} found in blacklist")
-                return True
-            
-            # 3. Verificar revocación masiva por usuario (si se proporciona user_id)
-            if user_id:
-                user_revoked_data = await self._get_user_revocation_info(user_id)
-                if user_revoked_data:
-                    # Si hay revocación masiva, verificar timestamp del token
-                    token_revoked_before = user_revoked_data.get("all_tokens_before")
-                    if token_revoked_before:
-                        # Comparar con issued_at del token (requiere decodificar)
-                        # Esto es una verificación adicional de seguridad
-                        return await self._is_token_revoked_by_timestamp(jti, token_revoked_before)
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking blacklist for token {jti}: {e}")
-            # En caso de error, por seguridad asumimos que NO está blacklisted
-            # para no bloquear usuarios legítimos
-            return False
-    
-    async def add_token_to_blacklist(
+    async def blacklist_token(
         self,
         jti: str,
-        reason: str = "manual_revocation",
-        user_id: Optional[int] = None,
-        revoked_by: Optional[str] = None,
-        ttl: Optional[int] = None
+        reason: str,
+        user_id: int,
+        expires_at: Optional[datetime] = None,
+        blacklisted_by_user_id: Optional[int] = None,
+        notes: Optional[str] = None
     ) -> bool:
         """
         Agregar token a blacklist
         
         Args:
             jti: JWT ID del token
-            reason: Razón de revocación
-            user_id: ID del usuario dueño del token
-            revoked_by: Quien revocó el token (user/admin/system)
-            ttl: Tiempo de vida en cache (default: configurado)
-        
+            reason: Razón del blacklist
+            user_id: ID del usuario propietario
+            expires_at: Cuándo expira el blacklist (por defecto: expiración del token)
+            blacklisted_by_user_id: Quién blacklisteó el token
+            notes: Notas adicionales
+            
         Returns:
-            True si se agregó exitosamente
+            True si se blacklisteó exitosamente
         """
-        if not jti:
-            return False
-        
         try:
-            # Preparar información de revocación
-            revocation_info = {
+            # 1. Calcular TTL del blacklist
+            ttl = self._calculate_blacklist_ttl(expires_at)
+            
+            # 2. Crear metadata del blacklist
+            metadata = {
                 "jti": jti,
-                "reason": reason,
-                "revoked_at": datetime.now(timezone.utc).isoformat(),
-                "revoked_by": revoked_by or "system",
-                "user_id": user_id
-            }
-            
-            # Calcular TTL apropiado
-            effective_ttl = ttl or self.default_ttl
-            
-            # Si tenemos el token, usar su tiempo restante como TTL máximo
-            if user_id:
-                remaining_time = await self._get_token_remaining_time(jti)
-                if remaining_time and remaining_time > 0:
-                    effective_ttl = min(effective_ttl, remaining_time)
-            
-            # Agregar a blacklist
-            token_key = RedisKeys.token_blacklist(jti)
-            success = await redis_client.setex(
-                token_key,
-                effective_ttl,
-                revocation_info
-            )
-            
-            if success:
-                logger.info(f"Token {jti} added to blacklist. Reason: {reason}")
-                
-                # Incrementar contador de estadísticas
-                await self._increment_blacklist_stats(reason)
-                
-                return True
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error adding token {jti} to blacklist: {e}")
-            return False
-    
-    async def add_refresh_token_to_blacklist(
-        self,
-        refresh_jti: str,
-        reason: str = "manual_revocation",
-        user_id: Optional[int] = None,
-        ttl: Optional[int] = None
-    ) -> bool:
-        """
-        Agregar refresh token a blacklist
-        """
-        if not refresh_jti:
-            return False
-        
-        try:
-            revocation_info = {
-                "jti": refresh_jti,
-                "token_type": "refresh",
-                "reason": reason,
-                "revoked_at": datetime.now(timezone.utc).isoformat(),
-                "user_id": user_id
-            }
-            
-            # TTL más largo para refresh tokens
-            effective_ttl = ttl or (settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600)
-            
-            refresh_key = RedisKeys.refresh_blacklist(refresh_jti)
-            success = await redis_client.setex(
-                refresh_key,
-                effective_ttl,
-                revocation_info
-            )
-            
-            if success:
-                logger.info(f"Refresh token {refresh_jti} added to blacklist. Reason: {reason}")
-                await self._increment_blacklist_stats(f"refresh_{reason}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Error adding refresh token {refresh_jti} to blacklist: {e}")
-            return False
-    
-    # ==========================================
-    # REVOCACIÓN MASIVA POR USUARIO
-    # ==========================================
-    
-    async def revoke_all_user_tokens(
-        self,
-        user_id: int,
-        reason: str = "security_breach",
-        revoked_by: str = "admin"
-    ) -> bool:
-        """
-        Revocar todos los tokens de un usuario
-        
-        Esto se hace estableciendo un timestamp límite.
-        Todos los tokens emitidos antes de este timestamp quedan invalidados.
-        """
-        try:
-            revocation_data = {
                 "user_id": user_id,
                 "reason": reason,
-                "revoked_by": revoked_by,
-                "revoked_at": datetime.now(timezone.utc).isoformat(),
-                "all_tokens_before": datetime.now(timezone.utc).isoformat()
+                "blacklisted_at": datetime.now(timezone.utc).isoformat(),
+                "blacklisted_by_user_id": blacklisted_by_user_id,
+                "expires_at": expires_at.isoformat() if expires_at else None,
+                "notes": notes
             }
             
-            # Guardar en Redis con TTL largo (máximo tiempo de vida de cualquier token)
-            max_token_lifetime = settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600
-            user_revoke_key = f"user:tokens:revoked:{user_id}"
+            # 3. Keys de Redis
+            token_key = f"{self.token_blacklist_prefix}{jti}"
+            user_tokens_key = f"{self.user_tokens_prefix}{user_id}"
+            metadata_key = f"{self.blacklist_metadata_prefix}{jti}"
             
-            success = await redis_client.setex(
-                user_revoke_key,
-                max_token_lifetime,
-                revocation_data
-            )
+            # 4. Usar pipeline para operación atómica
+            async with redis_client.pipeline() as pipe:
+                # Marcar token como blacklisteado
+                pipe.setex(token_key, ttl, "1")
+                
+                # Agregar a lista de tokens del usuario
+                pipe.sadd(user_tokens_key, jti)
+                pipe.expire(user_tokens_key, ttl)
+                
+                # Guardar metadata
+                pipe.setex(metadata_key, ttl, metadata)
+                
+                # Incrementar contador global
+                pipe.incr("blacklist:stats:total")
+                pipe.incr(f"blacklist:stats:reason:{reason}")
+                
+                results = await pipe.execute()
+            
+            # 5. Verificar que todas las operaciones fueron exitosas
+            success = all(results[:3])  # Las primeras 3 operaciones deben ser exitosas
             
             if success:
-                logger.warning(f"All tokens revoked for user {user_id}. Reason: {reason}")
-                await self._increment_blacklist_stats(f"mass_revocation_{reason}")
+                logger.info(f"Token {jti} blacklisted successfully for user {user_id}, reason: {reason}")
+            else:
+                logger.error(f"Failed to blacklist token {jti}")
             
             return success
             
         except Exception as e:
-            logger.error(f"Error revoking all tokens for user {user_id}: {e}")
+            logger.error(f"Error blacklisting token {jti}: {e}")
             return False
     
-    async def _get_user_revocation_info(self, user_id: int) -> Optional[Dict[str, Any]]:
+    async def is_token_blacklisted(self, jti: str, user_id: Optional[int] = None) -> bool:
         """
-        Obtener información de revocación masiva para un usuario
-        """
-        try:
-            user_revoke_key = f"user:tokens:revoked:{user_id}"
-            revocation_data = await redis_client.get(user_revoke_key)
-            return revocation_data
-        except Exception as e:
-            logger.error(f"Error getting user revocation info for {user_id}: {e}")
-            return None
-    
-    async def _is_token_revoked_by_timestamp(self, jti: str, revoked_before: str) -> bool:
-        """
-        Verificar si un token fue emitido antes del timestamp de revocación masiva
+        Verificar si un token está en blacklist
+        
+        Args:
+            jti: JWT ID del token
+            user_id: ID del usuario (opcional, para validación adicional)
+            
+        Returns:
+            True si el token está blacklisteado
         """
         try:
-            # Obtener timestamp de emisión del token
-            # Nota: Esto requiere decodificar el token sin validar
-            # Se podría optimizar guardando issued_at en cache al crear tokens
+            token_key = f"{self.token_blacklist_prefix}{jti}"
             
-            # Por ahora, para simplificar, si hay revocación masiva asumimos revocado
-            # En implementación real se compararían los timestamps
+            # Verificar existencia en blacklist
+            is_blacklisted = await redis_client.exists(token_key)
             
-            revoked_datetime = datetime.fromisoformat(revoked_before.replace('Z', '+00:00'))
-            current_time = datetime.now(timezone.utc)
-            
-            # Si la revocación fue hace menos de 1 día, asumir revocado
-            # (todos los access tokens habrán expirado)
-            time_diff = current_time - revoked_datetime
-            return time_diff.total_seconds() < (24 * 3600)
-            
-        except Exception as e:
-            logger.error(f"Error checking token timestamp revocation: {e}")
-            return True  # Por seguridad, asumir revocado
-    
-    # ==========================================
-    # OPERACIONES DE MANTENIMIENTO
-    # ==========================================
-    
-    async def remove_token_from_blacklist(self, jti: str) -> bool:
-        """
-        Remover token de blacklist (función administrativa)
-        """
-        try:
-            token_key = RedisKeys.token_blacklist(jti)
-            refresh_key = RedisKeys.refresh_blacklist(jti)
-            
-            # Intentar eliminar de ambas blacklists
-            deleted_count = await redis_client.delete(token_key, refresh_key)
-            
-            if deleted_count > 0:
-                logger.info(f"Token {jti} removed from blacklist")
+            if is_blacklisted:
+                logger.debug(f"Token {jti} found in blacklist")
+                
+                # Validación adicional por usuario si se proporciona
+                if user_id:
+                    user_tokens_key = f"{self.user_tokens_prefix}{user_id}"
+                    is_user_token = await redis_client.sismember(user_tokens_key, jti)
+                    
+                    if not is_user_token:
+                        logger.warning(f"Token {jti} in blacklist but not associated with user {user_id}")
+                        return False
+                
                 return True
             
             return False
+            
+        except Exception as e:
+            logger.error(f"Error checking blacklist for token {jti}: {e}")
+            # En caso de error, por seguridad asumir que SÍ está blacklisteado
+            return True
+    
+    async def remove_from_blacklist(self, jti: str, user_id: int) -> bool:
+        """
+        Remover token de blacklist (para casos especiales)
+        
+        Args:
+            jti: JWT ID del token
+            user_id: ID del usuario
+            
+        Returns:
+            True si se removió exitosamente
+        """
+        try:
+            token_key = f"{self.token_blacklist_prefix}{jti}"
+            user_tokens_key = f"{self.user_tokens_prefix}{user_id}"
+            metadata_key = f"{self.blacklist_metadata_prefix}{jti}"
+            
+            # Usar pipeline para operación atómica
+            async with redis_client.pipeline() as pipe:
+                pipe.delete(token_key)
+                pipe.srem(user_tokens_key, jti)
+                pipe.delete(metadata_key)
+                
+                results = await pipe.execute()
+            
+            removed = results[0] > 0  # Si se deletó al menos 1 key
+            
+            if removed:
+                logger.info(f"Token {jti} removed from blacklist for user {user_id}")
+            
+            return removed
             
         except Exception as e:
             logger.error(f"Error removing token {jti} from blacklist: {e}")
             return False
     
-    async def clear_expired_blacklist_entries(self) -> int:
-        """
-        Limpiar entradas expiradas de blacklist (Redis lo hace automáticamente,
-        pero esta función puede usarse para estadísticas)
-        """
-        # Redis maneja automáticamente la expiración con TTL
-        # Esta función podría implementar limpieza manual si fuera necesario
-        logger.info("Blacklist cleanup completed (handled automatically by Redis TTL)")
-        return 0
-    
     # ==========================================
-    # ESTADÍSTICAS Y MONITOREO
+    # BLACKLIST MASIVO POR USUARIO
     # ==========================================
     
-    async def get_blacklist_stats(self) -> Dict[str, Any]:
+    async def blacklist_user_tokens(
+        self,
+        user_id: int,
+        reason: str,
+        token_types: Optional[List[TokenType]] = None,
+        exclude_jti: Optional[str] = None,
+        issued_after: Optional[datetime] = None,
+        issued_before: Optional[datetime] = None,
+        blacklisted_by_user_id: Optional[int] = None,
+        notes: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
-        Obtener estadísticas de blacklist
+        Blacklistear todos los tokens de un usuario
+        
+        Args:
+            user_id: ID del usuario
+            reason: Razón del blacklist
+            token_types: Tipos de tokens a blacklistear (None = todos)
+            exclude_jti: JTI a excluir del blacklist
+            issued_after: Solo tokens emitidos después de esta fecha
+            issued_before: Solo tokens emitidos antes de esta fecha
+            blacklisted_by_user_id: Quién ejecuta el blacklist
+            notes: Notas del blacklist masivo
+            
+        Returns:
+            Diccionario con estadísticas del blacklist
         """
         try:
-            stats_key = "blacklist:stats"
-            stats = await redis_client.get(stats_key) or {}
+            logger.info(f"Starting bulk blacklist for user {user_id}, reason: {reason}")
             
-            # Agregar información adicional
-            health_info = await redis_client.health_check()
+            # 1. Obtener tokens activos del usuario (simulado - en implementación real sería desde una BD de sesiones)
+            active_tokens = await self._get_user_active_tokens(user_id)
             
-            return {
-                "total_blacklisted_tokens": stats.get("total_revocations", 0),
-                "revocations_by_reason": stats.get("by_reason", {}),
-                "last_updated": stats.get("last_updated"),
-                "redis_status": health_info.get("status", "unknown")
+            if not active_tokens:
+                logger.info(f"No active tokens found for user {user_id}")
+                return {
+                    "total_found": 0,
+                    "total_blacklisted": 0,
+                    "blacklisted_jtis": [],
+                    "failed_jtis": [],
+                    "excluded_jtis": []
+                }
+            
+            # 2. Filtrar tokens según criterios
+            tokens_to_blacklist = []
+            excluded_jtis = []
+            
+            for token_info in active_tokens:
+                jti = token_info.get("jti")
+                token_type = token_info.get("token_type")
+                issued_at = token_info.get("issued_at")
+                
+                # Excluir token específico
+                if exclude_jti and jti == exclude_jti:
+                    excluded_jtis.append(jti)
+                    continue
+                
+                # Filtrar por tipo de token
+                if token_types and token_type not in token_types:
+                    continue
+                
+                # Filtrar por fecha de emisión
+                if issued_after and issued_at and issued_at < issued_after:
+                    continue
+                
+                if issued_before and issued_at and issued_at > issued_before:
+                    continue
+                
+                tokens_to_blacklist.append(token_info)
+            
+            # 3. Blacklistear tokens en lotes
+            blacklisted_jtis = []
+            failed_jtis = []
+            
+            for i in range(0, len(tokens_to_blacklist), self.max_batch_size):
+                batch = tokens_to_blacklist[i:i + self.max_batch_size]
+                batch_results = await self._blacklist_token_batch(
+                    batch, reason, user_id, blacklisted_by_user_id, notes
+                )
+                
+                blacklisted_jtis.extend(batch_results["successful"])
+                failed_jtis.extend(batch_results["failed"])
+            
+            result = {
+                "total_found": len(active_tokens),
+                "total_blacklisted": len(blacklisted_jtis),
+                "blacklisted_jtis": blacklisted_jtis,
+                "failed_jtis": failed_jtis,
+                "excluded_jtis": excluded_jtis,
+                "reason": reason,
+                "blacklisted_at": datetime.now(timezone.utc).isoformat()
             }
             
+            logger.info(f"Bulk blacklist completed for user {user_id}: {len(blacklisted_jtis)} tokens blacklisted")
+            
+            return result
+            
         except Exception as e:
-            logger.error(f"Error getting blacklist stats: {e}")
+            logger.error(f"Error in bulk blacklist for user {user_id}: {e}")
+            return {
+                "total_found": 0,
+                "total_blacklisted": 0,
+                "blacklisted_jtis": [],
+                "failed_jtis": [],
+                "excluded_jtis": [],
+                "error": str(e)
+            }
+    
+    async def _blacklist_token_batch(
+        self,
+        tokens: List[Dict[str, Any]],
+        reason: str,
+        user_id: int,
+        blacklisted_by_user_id: Optional[int],
+        notes: Optional[str]
+    ) -> Dict[str, List[str]]:
+        """
+        Blacklistear un lote de tokens
+        """
+        successful = []
+        failed = []
+        
+        try:
+            # Procesar tokens individualmente dentro del lote
+            for token_info in tokens:
+                jti = token_info.get("jti")
+                expires_at = token_info.get("expires_at")
+                
+                try:
+                    success = await self.blacklist_token(
+                        jti=jti,
+                        reason=reason,
+                        user_id=user_id,
+                        expires_at=expires_at,
+                        blacklisted_by_user_id=blacklisted_by_user_id,
+                        notes=notes
+                    )
+                    
+                    if success:
+                        successful.append(jti)
+                    else:
+                        failed.append(jti)
+                        
+                except Exception as e:
+                    logger.error(f"Error blacklisting token {jti} in batch: {e}")
+                    failed.append(jti)
+            
+            return {"successful": successful, "failed": failed}
+            
+        except Exception as e:
+            logger.error(f"Error processing token batch: {e}")
+            return {"successful": [], "failed": [token.get("jti") for token in tokens]}
+    
+    async def get_user_blacklisted_tokens(self, user_id: int) -> List[Dict[str, Any]]:
+        """
+        Obtener todos los tokens blacklisteados de un usuario
+        
+        Args:
+            user_id: ID del usuario
+            
+        Returns:
+            Lista de tokens blacklisteados con metadata
+        """
+        try:
+            user_tokens_key = f"{self.user_tokens_prefix}{user_id}"
+            
+            # Obtener JTIs blacklisteados del usuario
+            blacklisted_jtis = await redis_client.smembers(user_tokens_key)
+            
+            if not blacklisted_jtis:
+                return []
+            
+            # Obtener metadata de cada token
+            tokens_info = []
+            
+            for jti in blacklisted_jtis:
+                metadata_key = f"{self.blacklist_metadata_prefix}{jti}"
+                metadata = await redis_client.get(metadata_key)
+                
+                if metadata:
+                    tokens_info.append(metadata)
+                else:
+                    # Token sin metadata, crear entrada básica
+                    tokens_info.append({
+                        "jti": jti,
+                        "user_id": user_id,
+                        "reason": "unknown",
+                        "blacklisted_at": None
+                    })
+            
+            return tokens_info
+            
+        except Exception as e:
+            logger.error(f"Error getting blacklisted tokens for user {user_id}: {e}")
+            return []
+    
+    # ==========================================
+    # OPERACIONES DE LIMPIEZA Y MANTENIMIENTO
+    # ==========================================
+    
+    async def cleanup_expired_blacklist_entries(self) -> Dict[str, int]:
+        """
+        Limpiar entradas expiradas de blacklist
+        
+        Returns:
+            Estadísticas de limpieza
+        """
+        try:
+            logger.info("Starting blacklist cleanup")
+            
+            # Obtener todas las keys de blacklist
+            token_pattern = f"{self.token_blacklist_prefix}*"
+            metadata_pattern = f"{self.blacklist_metadata_prefix}*"
+            
+            token_keys = await redis_client.keys(token_pattern)
+            metadata_keys = await redis_client.keys(metadata_pattern)
+            
+            # Verificar cuáles han expirado realmente
+            expired_tokens = []
+            expired_metadata = []
+            
+            # Procesar en lotes para no sobrecargar Redis
+            for i in range(0, len(token_keys), self.cleanup_batch_size):
+                batch = token_keys[i:i + self.cleanup_batch_size]
+                
+                for key in batch:
+                    ttl = await redis_client.ttl(key)
+                    if ttl == -2:  # Key expirada
+                        expired_tokens.append(key)
+            
+            for i in range(0, len(metadata_keys), self.cleanup_batch_size):
+                batch = metadata_keys[i:i + self.cleanup_batch_size]
+                
+                for key in batch:
+                    ttl = await redis_client.ttl(key)
+                    if ttl == -2:  # Key expirada
+                        expired_metadata.append(key)
+            
+            # Eliminar keys expiradas
+            if expired_tokens:
+                await redis_client.delete(*expired_tokens)
+            
+            if expired_metadata:
+                await redis_client.delete(*expired_metadata)
+            
+            stats = {
+                "expired_tokens_cleaned": len(expired_tokens),
+                "expired_metadata_cleaned": len(expired_metadata),
+                "total_cleaned": len(expired_tokens) + len(expired_metadata)
+            }
+            
+            logger.info(f"Blacklist cleanup completed: {stats['total_cleaned']} entries removed")
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error in blacklist cleanup: {e}")
             return {"error": str(e)}
     
-    async def _increment_blacklist_stats(self, reason: str):
+    async def get_blacklist_statistics(self) -> Dict[str, Any]:
         """
-        Incrementar contadores de estadísticas
+        Obtener estadísticas del sistema de blacklist
+        
+        Returns:
+            Estadísticas completas del blacklist
         """
         try:
-            stats_key = "blacklist:stats"
+            # Contadores básicos
+            total_blacklisted = await redis_client.get("blacklist:stats:total") or 0
             
-            # Obtener estadísticas actuales
-            current_stats = await redis_client.get(stats_key) or {
-                "total_revocations": 0,
-                "by_reason": {},
-                "last_updated": None
+            # Estadísticas por razón
+            reasons_stats = {}
+            for reason in BlacklistReason:
+                count = await redis_client.get(f"blacklist:stats:reason:{reason.value}") or 0
+                reasons_stats[reason.value] = int(count)
+            
+            # Contar keys activas (aproximado)
+            token_pattern = f"{self.token_blacklist_prefix}*"
+            active_tokens = await redis_client.keys(token_pattern)
+            active_count = len(active_tokens) if active_tokens else 0
+            
+            # Información de TTLs
+            ttl_info = {}
+            if active_tokens:
+                sample_size = min(10, len(active_tokens))
+                sample_keys = active_tokens[:sample_size]
+                
+                ttls = []
+                for key in sample_keys:
+                    ttl = await redis_client.ttl(key)
+                    if ttl > 0:
+                        ttls.append(ttl)
+                
+                if ttls:
+                    ttl_info = {
+                        "min_ttl": min(ttls),
+                        "max_ttl": max(ttls),
+                        "avg_ttl": sum(ttls) // len(ttls)
+                    }
+            
+            return {
+                "total_blacklisted_ever": int(total_blacklisted),
+                "currently_active": active_count,
+                "reasons_breakdown": reasons_stats,
+                "ttl_info": ttl_info,
+                "calculated_at": datetime.now(timezone.utc).isoformat()
             }
             
-            # Incrementar contadores
-            current_stats["total_revocations"] += 1
-            current_stats["by_reason"][reason] = current_stats["by_reason"].get(reason, 0) + 1
-            current_stats["last_updated"] = datetime.now(timezone.utc).isoformat()
-            
-            # Guardar con TTL de 30 días
-            await redis_client.setex(stats_key, 30 * 24 * 3600, current_stats)
-            
         except Exception as e:
-            logger.error(f"Error updating blacklist stats: {e}")
+            logger.error(f"Error getting blacklist statistics: {e}")
+            return {"error": str(e)}
     
-    async def _get_token_remaining_time(self, jti: str) -> Optional[int]:
+    # ==========================================
+    # MÉTODOS PRIVADOS Y UTILIDADES
+    # ==========================================
+    
+    def _calculate_blacklist_ttl(self, expires_at: Optional[datetime]) -> int:
         """
-        Obtener tiempo restante de un token (para optimizar TTL de blacklist)
+        Calcular TTL para entrada de blacklist
+        
+        Args:
+            expires_at: Cuándo expira el token original
+            
+        Returns:
+            TTL en segundos
+        """
+        if expires_at:
+            now = datetime.now(timezone.utc)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            
+            ttl = int((expires_at - now).total_seconds())
+            
+            # Asegurar TTL mínimo y máximo
+            ttl = max(60, ttl)  # Mínimo 1 minuto
+            ttl = min(ttl, self.default_blacklist_ttl)  # Máximo configurado
+            
+            return ttl
+        
+        return self.default_blacklist_ttl
+    
+    async def _get_user_active_tokens(self, user_id: int) -> List[Dict[str, Any]]:
+        """
+        Obtener tokens activos de un usuario
+        
+        NOTA: Esta es una implementación simplificada.
+        En una implementación real, esto vendría de:
+        1. Una tabla de sesiones en BD
+        2. Un registry de tokens activos en Redis
+        3. Análisis de logs de tokens emitidos
+        
+        Por ahora, retorna una lista vacía para evitar errores.
         """
         try:
-            # En implementación real, esto podría usar un cache de tokens activos
-            # o decodificar el token para obtener exp
+            # Implementación placeholder
+            # En tu implementación real, aquí obtendrías tokens activos desde:
+            # - Base de datos de sesiones
+            # - Registry de tokens en Redis
+            # - Sistema de tracking de tokens
             
-            # Por simplicidad, usar TTL por defecto
-            return self.default_ttl
+            logger.debug(f"Getting active tokens for user {user_id} - placeholder implementation")
+            
+            # Por ahora retornar lista vacía
+            # TODO: Implementar obtención real de tokens activos
+            return []
             
         except Exception as e:
-            logger.error(f"Error getting token remaining time: {e}")
-            return None
+            logger.error(f"Error getting active tokens for user {user_id}: {e}")
+            return []
+    
+    async def health_check(self) -> Dict[str, Any]:
+        """
+        Verificar salud del servicio de blacklist
+        """
+        try:
+            # Test básico de conectividad
+            if not redis_client._is_available:
+                return {
+                    "status": "unhealthy",
+                    "error": "Redis not available"
+                }
+            
+            # Test de operación básica
+            test_jti = f"health_check_{datetime.now().timestamp()}"
+            test_key = f"{self.token_blacklist_prefix}{test_jti}"
+            
+            # Intentar escribir y leer
+            await redis_client.setex(test_key, 10, "health_check")
+            value = await redis_client.get(test_key)
+            await redis_client.delete(test_key)
+            
+            if value == "health_check":
+                return {
+                    "status": "healthy",
+                    "redis_available": True,
+                    "operations": "ok"
+                }
+            else:
+                return {
+                    "status": "degraded",
+                    "redis_available": True,
+                    "operations": "failed"
+                }
+                
+        except Exception as e:
+            return {
+                "status": "unhealthy",
+                "error": str(e)
+            }
 
 
 # ==========================================
 # INSTANCIA GLOBAL Y FUNCIONES DE CONVENIENCIA
 # ==========================================
 
+# Instancia global del servicio
 blacklist_service = BlacklistService()
 
 
-# Funciones de conveniencia para usar en middleware y dependencies
+# Funciones de conveniencia para usar en otros servicios
+async def blacklist_token(
+    jti: str,
+    reason: str,
+    user_id: int,
+    expires_at: Optional[datetime] = None,
+    blacklisted_by_user_id: Optional[int] = None,
+    notes: Optional[str] = None
+) -> bool:
+    """
+    Función de conveniencia para blacklistear token individual
+    """
+    return await blacklist_service.blacklist_token(
+        jti=jti,
+        reason=reason,
+        user_id=user_id,
+        expires_at=expires_at,
+        blacklisted_by_user_id=blacklisted_by_user_id,
+        notes=notes
+    )
+
+
 async def is_token_blacklisted(jti: str, user_id: Optional[int] = None) -> bool:
     """
     Función de conveniencia para verificar blacklist
+    Esta es la función que usa tu auth_middleware.py
     """
     return await blacklist_service.is_token_blacklisted(jti, user_id)
 
 
-async def add_token_to_blacklist(
-    jti: str,
-    reason: str = "manual_revocation",
-    user_id: Optional[int] = None,
-    revoked_by: Optional[str] = None
-) -> bool:
-    """
-    Función de conveniencia para agregar token a blacklist
-    """
-    return await blacklist_service.add_token_to_blacklist(jti, reason, user_id, revoked_by)
-
-
-async def revoke_all_user_tokens(
+async def blacklist_all_user_tokens(
     user_id: int,
-    reason: str = "security_breach",
-    revoked_by: str = "admin"
-) -> bool:
+    reason: str = BlacklistReason.USER_LOGOUT.value,
+    exclude_jti: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Función de conveniencia para revocar todos los tokens de un usuario
+    Función de conveniencia para blacklist masivo
     """
-    return await blacklist_service.revoke_all_user_tokens(user_id, reason, revoked_by)
+    return await blacklist_service.blacklist_user_tokens(
+        user_id=user_id,
+        reason=reason,
+        exclude_jti=exclude_jti
+    )
 
 
-async def revoke_refresh_token(
-    refresh_jti: str,
-    reason: str = "manual_revocation",
-    user_id: Optional[int] = None
-) -> bool:
+async def cleanup_expired_blacklist() -> Dict[str, int]:
     """
-    Función de conveniencia para revocar refresh token
+    Función de conveniencia para limpieza programada
     """
-    return await blacklist_service.add_refresh_token_to_blacklist(refresh_jti, reason, user_id)
-
-
-# ==========================================
-# FUNCIONES ADMINISTRATIVAS
-# ==========================================
-
-async def remove_token_from_blacklist(jti: str) -> bool:
-    """
-    Función administrativa para remover token de blacklist
-    """
-    return await blacklist_service.remove_token_from_blacklist(jti)
+    return await blacklist_service.cleanup_expired_blacklist_entries()
 
 
 async def get_blacklist_stats() -> Dict[str, Any]:
     """
-    Función para obtener estadísticas de blacklist
+    Función de conveniencia para estadísticas
     """
-    return await blacklist_service.get_blacklist_stats()
-
-
-async def clear_user_token_revocation(user_id: int) -> bool:
-    """
-    Función administrativa para limpiar revocación masiva de usuario
-    """
-    try:
-        user_revoke_key = f"user:tokens:revoked:{user_id}"
-        deleted = await redis_client.delete(user_revoke_key)
-        
-        if deleted:
-            logger.info(f"Cleared token revocation for user {user_id}")
-            
-        return deleted > 0
-        
-    except Exception as e:
-        logger.error(f"Error clearing user token revocation for {user_id}: {e}")
-        return False
+    return await blacklist_service.get_blacklist_statistics()
