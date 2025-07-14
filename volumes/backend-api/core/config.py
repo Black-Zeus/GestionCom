@@ -38,8 +38,13 @@ class Settings:
     
     # ====== JWT Configuration ======
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-    JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") or "60")
-    BACKEND_API_SECRET_KEY: str = os.getenv("JWT_SECRET_SYSTEM", "default_secret_key")  # Alias para compatibilidad
+    JWT_SECRET_SYSTEM: str = os.getenv("JWT_SECRET_SYSTEM", "default_secret_key_change_in_production")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") or "30")
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS") or "7")
+    
+    # ====== Aliases para compatibilidad ======
+    BACKEND_API_SECRET_KEY: str = JWT_SECRET_SYSTEM  # Alias para compatibilidad
+    JWT_EXPIRATION_MINUTES: int = JWT_ACCESS_TOKEN_EXPIRE_MINUTES  # Alias para compatibilidad
     
     # ====== Servicios externos ======
     DOCS_API_URL: Optional[str] = os.getenv("DOCS_API_URL")
@@ -52,6 +57,8 @@ class Settings:
     
     # ====== Security Settings ======
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_REQUESTS_PER_MINUTE") or "60")
+    RATE_LIMIT_LOGIN_ATTEMPTS_PER_HOUR: int = int(os.getenv("RATE_LIMIT_LOGIN_ATTEMPTS_PER_HOUR") or "10")
+    RATE_LIMIT_WINDOW: int = int(os.getenv("RATE_LIMIT_WINDOW") or "60")
     MAX_LOGIN_ATTEMPTS: int = int(os.getenv("MAX_LOGIN_ATTEMPTS") or "5")
     LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES") or "15")
     
@@ -59,8 +66,11 @@ class Settings:
     USER_SECRET_CACHE_TTL: int = int(os.getenv("USER_SECRET_CACHE_TTL") or "3600")
     TOKEN_BLACKLIST_TTL: int = int(os.getenv("TOKEN_BLACKLIST_TTL") or "1800")
     
+    # ====== JWT Refresh Token Settings ======
+    JWT_REFRESH_TOKEN_ROTATION: bool = os.getenv("JWT_REFRESH_TOKEN_ROTATION", "false").lower() == "true"
+    
     #======== Enable Stack =====
-    ENABLE_STACK_TRACE:bool = os.getenv("ENABLE_STACK_TRACE", "false").lower() == "true"
+    ENABLE_STACK_TRACE: bool = os.getenv("ENABLE_STACK_TRACE", "false").lower() == "true"
     
     # ====== Propiedades computadas ======
     @property
@@ -96,13 +106,20 @@ class Settings:
             ("MYSQL_USER", self.MYSQL_USER),
             ("MYSQL_PASSWORD", self.MYSQL_PASSWORD),
             ("MYSQL_DATABASE", self.MYSQL_DATABASE),
-            ("SECRET_KEY", self.SECRET_KEY),
+            ("JWT_SECRET_SYSTEM", self.JWT_SECRET_SYSTEM),
         ]
         
         missing_vars = [var_name for var_name, var_value in required_vars if not var_value]
         
         if missing_vars:
             raise ValueError(f"Variables de entorno faltantes: {', '.join(missing_vars)}")
+        
+        # Validaciones adicionales de seguridad
+        if self.is_production and self.JWT_SECRET_SYSTEM == "default_secret_key_change_in_production":
+            raise ValueError("JWT_SECRET_SYSTEM debe ser cambiado en producción")
+        
+        if len(self.JWT_SECRET_SYSTEM) < 32:
+            print("⚠️  Advertencia: JWT_SECRET_SYSTEM debería tener al menos 32 caracteres para mayor seguridad")
     
     # ====== Información de debug ======
     def get_debug_info(self) -> dict:
@@ -122,6 +139,11 @@ class Settings:
             "redis_db": self.REDIS_DB,
             "is_development": self.is_development,
             "is_production": self.is_production,
+            "jwt_algorithm": self.JWT_ALGORITHM,
+            "jwt_access_token_expire_minutes": self.JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
+            "jwt_refresh_token_expire_days": self.JWT_REFRESH_TOKEN_EXPIRE_DAYS,
+            "rate_limit_requests_per_minute": self.RATE_LIMIT_REQUESTS_PER_MINUTE,
+            "rate_limit_login_attempts_per_hour": self.RATE_LIMIT_LOGIN_ATTEMPTS_PER_HOUR,
         }
     
     def get_sensitive_debug_info(self) -> dict:
@@ -133,7 +155,7 @@ class Settings:
             **self.get_debug_info(),
             "mysql_password": self.MYSQL_PASSWORD,
             "redis_password": self.REDIS_PASSWORD,
-            "secret_key": self.SECRET_KEY[:10] + "..." if len(self.SECRET_KEY) > 10 else self.SECRET_KEY,
+            "jwt_secret_system": self.JWT_SECRET_SYSTEM[:10] + "..." if len(self.JWT_SECRET_SYSTEM) > 10 else self.JWT_SECRET_SYSTEM,
         }
 
 # Instancia global de configuración

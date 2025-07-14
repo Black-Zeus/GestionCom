@@ -18,7 +18,9 @@ hiredis==2.3.2            # ← NUEVA: Parser optimizado para Redis
 # Authentication & Security
 bcrypt==4.2.1             # Hash de contraseñas
 PyJWT==2.10.1             # JSON Web Tokens
-passlib==1.7.4            # Biblioteca de hashing
+python-jose[cryptography]==3.3.0  # ← NUEVA: José JWT library (requerida para core.security)
+passlib[bcrypt]==1.7.4    # Biblioteca de hashing con bcrypt extra
+cryptography==43.0.3      # ← NUEVA: Dependencia de python-jose para algoritmos avanzados
 
 # Data Validation
 pydantic==2.10.6          # Validación de datos

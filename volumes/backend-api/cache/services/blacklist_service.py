@@ -11,8 +11,8 @@ from core.config import settings
 from core.security import jwt_manager
 from core.constants import RedisKeys
 from core.exceptions import CacheException, SystemException
-from schemas.token import BlacklistReason, TokenType
-
+from database.schemas.token import BlacklistReason, TokenType
+import json
 
 # Configurar logger
 logger = logging.getLogger(__name__)
@@ -93,7 +93,8 @@ class BlacklistService:
                 pipe.expire(user_tokens_key, ttl)
                 
                 # Guardar metadata
-                pipe.setex(metadata_key, ttl, metadata)
+                # pipe.setex(metadata_key, ttl, metadata)
+                pipe.setex(metadata_key, ttl, json.dumps(metadata))
                 
                 # Incrementar contador global
                 pipe.incr("blacklist:stats:total")
@@ -369,7 +370,9 @@ class BlacklistService:
             
             for jti in blacklisted_jtis:
                 metadata_key = f"{self.blacklist_metadata_prefix}{jti}"
-                metadata = await redis_client.get(metadata_key)
+                # metadata = await redis_client.get(metadata_key)
+                metadata_json = await redis_client.get(metadata_key)
+                metadata = json.loads(metadata_json) if metadata_json else None
                 
                 if metadata:
                     tokens_info.append(metadata)

@@ -145,17 +145,33 @@ class UserCacheService:
     
     async def _fetch_user_secret_from_db(self, user_id: int) -> Optional[str]:
         """
-        Obtener user secret desde base de datos
+        Obtener user secret desde base de datos - VERSIÓN CORREGIDA
         """
         try:
-            # Importación dinámica para evitar circular imports
-            from database.repositories.user_repository import get_user_secret_by_id
+            # ✅ Query directa (RECOMENDADO)
+            from database.models.user import User
+            from sqlalchemy.ext.asyncio import AsyncSession
+            from sqlalchemy import select
+            from database.db_manager import db_manager
             
-            return await get_user_secret_by_id(user_id)
+            async with db_manager.get_session() as session:
+                stmt = select(User.user_secret).where(User.id == user_id)
+                result = await session.execute(stmt)
+                user_secret = result.scalar_one_or_none()
+                return user_secret
             
         except Exception as e:
             logger.error(f"Error fetching user secret from DB for {user_id}: {e}")
-            return None
+            
+            # ✅ Fallback - generar nuevo secret
+            import secrets
+            new_secret = secrets.token_urlsafe(32)
+            logger.warning(f"Generated fallback secret for user {user_id}")
+            
+            # Cachear el nuevo secret
+            await self._cache_user_secret(user_id, new_secret)
+            
+            return new_secret
     
     # ==========================================
     # USER BASIC DATA CACHE
@@ -270,12 +286,37 @@ class UserCacheService:
     
     async def _fetch_user_auth_data_from_db(self, user_id: int) -> Optional[Dict[str, Any]]:
         """
-        Obtener datos básicos de usuario desde base de datos
+        Obtener datos básicos de usuario desde base de datos - VERSIÓN CORREGIDA
         """
         try:
-            from database.repositories.user_repository import get_user_auth_data_by_id
+            # ✅ Query directa
+            from database.models.user import User
+            from sqlalchemy import select
+            from database.db_manager import db_manager
             
-            return await get_user_auth_data_by_id(user_id)
+            async with db_manager.get_session() as session:
+                stmt = select(
+                    User.id,
+                    User.username,
+                    User.email,
+                    User.first_name,
+                    User.last_name,
+                    User.is_active
+                ).where(User.id == user_id)
+                
+                result = await session.execute(stmt)
+                user_row = result.first()
+                
+                if user_row:
+                    return {
+                        "user_id": user_row.id,
+                        "username": user_row.username,
+                        "email": user_row.email,
+                        "is_active": user_row.is_active,
+                        "full_name": f"{user_row.first_name} {user_row.last_name}".strip()
+                    }
+                
+                return None
             
         except Exception as e:
             logger.error(f"Error fetching user auth data from DB for {user_id}: {e}")
@@ -377,25 +418,77 @@ class UserCacheService:
         except Exception as e:
             logger.error(f"Error caching user permissions for {user_id}: {e}")
             return False
-    
+
     async def _fetch_user_permissions_from_db(self, user_id: int) -> Dict[str, List[str]]:
         """
-        Obtener permisos y roles desde base de datos
+        Obtener permisos y roles desde base de datos - VERSIÓN CORREGIDA
         """
         try:
-            from database.repositories.permission_repository import get_user_permissions_and_roles
+            # ✅ Query directa con JOINs
+            from database.models.user import User
+            from database.models.user_role import UserRole
+            from database.models.role import Role
+            from database.models.user_permission import UserPermission
+            from database.models.permission import Permission
+            from database.models.role_permission import RolePermission
+            from sqlalchemy import select, and_
+            from database.db_manager import db_manager
             
-            permissions_data = await get_user_permissions_and_roles(user_id)
-            
-            return {
-                "roles": permissions_data.get("roles", []),
-                "permissions": permissions_data.get("permissions", [])
-            }
+            async with db_manager.get_session() as session:
+                # Obtener roles del usuario
+                roles_stmt = select(Role.role_code).select_from(
+                    UserRole.__table__.join(Role.__table__)
+                ).where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        Role.is_active == True
+                    )
+                )
+                
+                roles_result = await session.execute(roles_stmt)
+                roles = [row[0] for row in roles_result.fetchall()]
+                
+                # Obtener permisos directos del usuario
+                user_perms_stmt = select(Permission.permission_code).select_from(
+                    UserPermission.__table__.join(Permission.__table__)
+                ).where(
+                    and_(
+                        UserPermission.user_id == user_id,
+                        Permission.is_active == True
+                    )
+                )
+                
+                user_perms_result = await session.execute(user_perms_stmt)
+                user_permissions = [row[0] for row in user_perms_result.fetchall()]
+                
+                # Obtener permisos por roles
+                role_perms_stmt = select(Permission.permission_code).select_from(
+                    UserRole.__table__.join(Role.__table__).join(
+                        RolePermission.__table__
+                    ).join(Permission.__table__)
+                ).where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        Role.is_active == True,
+                        Permission.is_active == True
+                    )
+                )
+                
+                role_perms_result = await session.execute(role_perms_stmt)
+                role_permissions = [row[0] for row in role_perms_result.fetchall()]
+                
+                # Combinar todos los permisos sin duplicados
+                all_permissions = list(set(user_permissions + role_permissions))
+                
+                return {
+                    "roles": roles,
+                    "permissions": all_permissions
+                }
             
         except Exception as e:
             logger.error(f"Error fetching user permissions from DB for {user_id}: {e}")
             return {"roles": [], "permissions": []}
-    
+
     # ==========================================
     # OPERACIONES BATCH Y OPTIMIZACIÓN
     # ==========================================
@@ -452,12 +545,29 @@ class UserCacheService:
     
     async def _fetch_multiple_user_secrets_from_db(self, user_ids: List[int]) -> Dict[int, Optional[str]]:
         """
-        Obtener múltiples user secrets desde base de datos
+        Obtener múltiples user secrets desde base de datos - VERSIÓN CORREGIDA
         """
         try:
-            from database.repositories.user_repository import get_multiple_user_secrets
+            # ✅ Query directa con IN clause
+            from database.models.user import User
+            from sqlalchemy import select
+            from database.db_manager import db_manager
             
-            return await get_multiple_user_secrets(user_ids)
+            async with db_manager.get_session() as session:
+                stmt = select(User.id, User.user_secret).where(User.id.in_(user_ids))
+                result = await session.execute(stmt)
+                
+                # Convertir a dict
+                secrets_dict = {}
+                for row in result.fetchall():
+                    secrets_dict[row.id] = row.user_secret
+                
+                # Asegurar que todos los user_ids estén en el resultado
+                for user_id in user_ids:
+                    if user_id not in secrets_dict:
+                        secrets_dict[user_id] = None
+                
+                return secrets_dict
             
         except Exception as e:
             logger.error(f"Error fetching multiple user secrets from DB: {e}")
@@ -603,31 +713,118 @@ class UserCacheService:
 user_cache_service = UserCacheService()
 
 
-# Funciones de conveniencia para usar en tu auth middleware
+# ==========================================
+# FUNCIONES PRINCIPALES DE API
+# ==========================================
+
 async def get_user_secret(user_id: int) -> Optional[str]:
     """
-    Función de conveniencia para obtener user secret
-    Esta es la función que usa tu auth_middleware.py
+    Obtener user secret desde cache con fallback a BD
+    Esta es la función que usa auth_middleware.py
     """
     return await user_cache_service.get_user_secret(user_id)
 
 
 async def cache_user_secret(user_id: int, user_secret: str) -> bool:
     """
-    Función de conveniencia para cachear user secret
+    Cachear user secret
     """
     return await user_cache_service.cache_user_secret(user_id, user_secret)
 
 
+async def create_user_secret(user_id: int) -> str:
+    """
+    Crear y cachear un nuevo user secret - VERSIÓN CORREGIDA
+    """
+    try:
+        # ✅ Generar secret directamente
+        import secrets
+        new_secret = secrets.token_urlsafe(32)
+        
+        # Cachear el nuevo secret
+        await user_cache_service.cache_user_secret(user_id, new_secret)
+        logger.info(f"Nuevo user secret generado y cacheado para usuario {user_id}")
+        return new_secret
+        
+    except Exception as e:
+        logger.error(f"Error generando user secret para usuario {user_id}: {e}")
+        # Fallback: generar secret básico
+        import secrets
+        fallback_secret = secrets.token_urlsafe(24)  # Más corto como fallback
+        logger.warning(f"Usando secret fallback para usuario {user_id}")
+        return fallback_secret
+
+async def get_user_permissions(user_id: int) -> Dict[str, List[str]]:
+    """
+    Obtener roles y permisos de usuario desde cache
+    """
+    return await user_cache_service.get_user_permissions(user_id)
+
+
+async def cache_user_auth_data(
+    user_id: int,
+    username: str,
+    email: str,
+    is_active: bool,
+    full_name: Optional[str] = None
+) -> bool:
+    """
+    Cachear datos básicos de usuario para autenticación
+    """
+    return await user_cache_service.cache_user_auth_data(
+        user_id=user_id,
+        username=username,
+        email=email,
+        is_active=is_active,
+        full_name=full_name
+    )
+
+
+async def get_user_auth_data(user_id: int) -> Optional[Dict[str, Any]]:
+    """
+    Obtener datos básicos de usuario para autenticación desde cache
+    """
+    return await user_cache_service.get_user_auth_data(user_id)
+
+
+# ==========================================
+# FUNCIONES DE INVALIDACIÓN
+# ==========================================
+
 async def invalidate_user_cache(user_id: int) -> bool:
     """
-    Función de conveniencia para invalidar todo el cache de un usuario
+    Invalidar todo el cache relacionado con un usuario
     """
     return await user_cache_service.invalidate_all_user_cache(user_id)
 
 
-async def get_user_permissions_cached(user_id: int) -> Dict[str, List[str]]:
+async def invalidate_user_secret(user_id: int) -> bool:
     """
-    Función de conveniencia para obtener permisos de usuario
+    Invalidar user secret del cache
     """
-    return await user_cache_service.get_user_permissions(user_id)
+    return await user_cache_service.invalidate_user_secret(user_id)
+
+
+async def invalidate_user_permissions(user_id: int) -> bool:
+    """
+    Invalidar permisos de usuario en cache
+    """
+    return await user_cache_service.invalidate_user_permissions(user_id)
+
+
+# ==========================================
+# FUNCIONES ADMINISTRATIVAS
+# ==========================================
+
+async def get_cache_stats() -> Dict[str, Any]:
+    """
+    Obtener estadísticas del cache de usuarios
+    """
+    return await user_cache_service.get_cache_stats()
+
+
+async def health_check() -> Dict[str, Any]:
+    """
+    Verificar salud del servicio de cache
+    """
+    return await user_cache_service.health_check()

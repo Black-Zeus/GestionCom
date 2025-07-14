@@ -520,3 +520,67 @@ def redis_fallback(fallback_value: Any = None):
         
         return wrapper
     return decorator
+
+
+# Agregar al RedisClient en cache/redis_client.py
+
+async def hincrby(self, key: str, field: str, amount: int = 1) -> int:
+    """
+    Incrementar valor de un field en un hash
+    
+    Args:
+        key: Clave del hash
+        field: Campo del hash a incrementar
+        amount: Cantidad a incrementar (default 1)
+        
+    Returns:
+        Nuevo valor después del incremento
+    """
+    async def _hincrby_operation():
+        return await self._redis.hincrby(key, field, amount)
+    
+    result = await self._execute_with_retry(_hincrby_operation)
+    return result or 0
+
+async def hget(self, key: str, field: str) -> Optional[Any]:
+    """
+    Obtener valor de un field en un hash
+    """
+    async def _hget_operation():
+        value = await self._redis.hget(key, field)
+        if value is None:
+            return None
+        
+        # Intentar convertir a número si es posible
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return value
+    
+    return await self._execute_with_retry(_hget_operation)
+
+async def hgetall(self, key: str) -> Dict[str, Any]:
+    """
+    Obtener todos los fields y valores de un hash
+    """
+    async def _hgetall_operation():
+        result = await self._redis.hgetall(key)
+        
+        # Convertir valores a tipos apropiados
+        converted = {}
+        for field, value in result.items():
+            try:
+                converted[field] = int(value)
+            except (ValueError, TypeError):
+                try:
+                    converted[field] = float(value)
+                except (ValueError, TypeError):
+                    converted[field] = value
+        
+        return converted
+    
+    result = await self._execute_with_retry(_hgetall_operation)
+    return result or {}

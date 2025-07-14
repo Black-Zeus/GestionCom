@@ -13,53 +13,43 @@ from core.password_manager import PasswordManager
 # ==========================================
 # SCHEMAS DE LOGIN
 # ==========================================
-
-class LoginRequest(BaseModel):
-    """Schema para solicitud de login"""
+class LoginRequest_old(BaseModel):
+    """Schema optimizado para login - username/email automático"""
     
     username: str = Field(
-        ...,
+        ..., 
         min_length=3,
         max_length=50,
-        description="Username o email del usuario",
-        example="juan.perez"
+        description="Username o email del usuario"
     )
-    
     password: str = Field(
-        ...,
+        ..., 
         min_length=1,
         max_length=128,
         description="Contraseña del usuario"
     )
-    
     remember_me: bool = Field(
-        default=False,
-        description="Si mantener la sesión por más tiempo"
-    )
-    
-    device_info: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Información del dispositivo (opcional)"
+        default=False, 
+        description="Mantener sesión activa más tiempo"
     )
     
     @field_validator('username')
     @classmethod
     def validate_username(cls, v):
-        """Validar y normalizar username"""
+        """Validar y normalizar username o email automáticamente"""
         if not v:
             raise ValueError('Username/email es requerido')
         
         v = v.strip()
         
-        # Si parece email, validar formato básico
+        # Si parece email, validar formato y normalizar
         if '@' in v:
             email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
             if not re.match(email_pattern, v):
                 raise ValueError('Formato de email inválido')
-            return v.lower()
+            return v.lower()  # Emails siempre en minúsculas
         
-        # Si es username, normalizar
+        # Si es username, validar formato y normalizar  
         v = v.lower()
         if not re.match(r'^[a-zA-Z0-9._-]+$', v):
             raise ValueError('Username solo puede contener letras, números, puntos, guiones y guiones bajos')
@@ -69,23 +59,20 @@ class LoginRequest(BaseModel):
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
-        """Validar contraseña"""
+        """Validar que la contraseña no esté vacía"""
         if not v:
             raise ValueError('Contraseña es requerida')
-        
-        # No validar fortaleza en login, solo que no esté vacía
         return v
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
-                "username": "juan.perez",
-                "password": "mi_contraseña_segura",
-                "remember_me": False,
-                "device_info": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                "username": "admin.demo",
+                "password": "admin123",
+                "remember_me": False
             }
         }
-
+    )
 
 class LoginResponse(BaseModel):
     """Schema para respuesta de login exitoso"""
@@ -103,7 +90,8 @@ class LoginResponse(BaseModel):
     login_at: datetime = Field(..., description="Timestamp del login")
     session_id: str = Field(..., description="ID único de la sesión")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -123,7 +111,7 @@ class LoginResponse(BaseModel):
                 "session_id": "abc123def456"
             }
         }
-
+    )
 
 class UserAuthInfo(BaseModel):
     """Schema para información básica del usuario en respuestas de auth"""
@@ -148,24 +136,79 @@ class UserAuthInfo(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra= {
             "example": {
-                "id": 1,
-                "username": "juan.perez",
-                "email": "juan.perez@empresa.com",
-                "full_name": "Juan Pérez",
-                "first_name": "Juan",
-                "last_name": "Pérez",
-                "is_active": True,
-                "can_login": True,
-                "last_login_at": "2024-01-14T15:20:00Z",
-                "roles": ["MANAGER", "USER"],
-                "permissions": ["PRODUCTS.VIEW", "PRODUCTS.CREATE", "INVENTORY.VIEW"],
-                "password_expires_at": "2024-04-15T00:00:00Z",
-                "must_change_password": False
+                    "id": 1,
+                    "username": "juan.perez",
+                    "email": "juan.perez@empresa.com",
+                    "full_name": "Juan Pérez",
+                    "first_name": "Juan",
+                    "last_name": "Pérez",
+                    "is_active": True,
+                    "can_login": True,
+                    "last_login_at": "2024-01-14T15:20:00Z",
+                    "roles": ["MANAGER", "USER"],
+                    "permissions": ["PRODUCTS.VIEW", "PRODUCTS.CREATE", "INVENTORY.VIEW"],
+                    "password_expires_at": "2024-04-15T00:00:00Z",
+                    "must_change_password": False
+                }
+            }
+    )
+
+# ==========================================
+# SCHEMAS BÁSICOS (Locales)
+# ==========================================
+class LoginRequest(BaseModel):
+    """Schema para solicitud de login"""
+    
+    username: str = Field(
+        ..., 
+        min_length=3,
+        max_length=50,
+        description="Username o email del usuario"
+    )
+    
+    password: str = Field(
+        ..., 
+        min_length=1,
+        max_length=128,
+        description="Contraseña del usuario"
+    )
+    
+    remember_me: bool = Field(
+        default=False, 
+        description="Si mantener la sesión por más tiempo"
+    )
+    
+
+    
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra= {
+            "example": {
+                "username": "admin",
+                "password": "admin123", 
+                "remember_me": False
             }
         }
+    )
+
+class TokenValidateRequest(BaseModel):
+    """Schema para validación de token"""
+    token: str = Field(..., description="Token a validar")
+
+class PasswordStrengthCheck(BaseModel):
+    """Schema para verificar fortaleza de contraseña"""
+    password: str = Field(..., description="Contraseña a verificar")
+
+class PasswordStrengthResponse(BaseModel):
+    """Schema para respuesta de fortaleza"""
+    is_valid: bool = Field(..., description="Si cumple requisitos")
+    score: int = Field(..., description="Puntuación 0-100")
+    errors: list = Field(default_factory=list, description="Errores encontrados")
+    suggestions: list = Field(default_factory=list, description="Sugerencias")
 
 
 # ==========================================
@@ -188,12 +231,15 @@ class RefreshTokenRequest(BaseModel):
             raise ValueError('Refresh token es requerido')
         return v.strip()
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             }
         }
+        )
+        
 
 
 class RefreshTokenResponse(BaseModel):
@@ -209,7 +255,8 @@ class RefreshTokenResponse(BaseModel):
     
     refreshed_at: datetime = Field(..., description="Timestamp del refresh")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -219,6 +266,7 @@ class RefreshTokenResponse(BaseModel):
                 "refreshed_at": "2024-01-15T11:00:00Z"
             }
         }
+    )
 
 
 # ==========================================
@@ -238,14 +286,15 @@ class LogoutRequest(BaseModel):
         description="Si cerrar sesión en todos los dispositivos"
     )
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "logout_all_devices": False
             }
         }
-
+    )
 
 class LogoutResponse(BaseModel):
     """Schema para respuesta de logout"""
@@ -254,7 +303,8 @@ class LogoutResponse(BaseModel):
     logged_out_at: datetime = Field(..., description="Timestamp del logout")
     tokens_invalidated: int = Field(..., description="Número de tokens invalidados")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "message": "Logout exitoso",
@@ -262,7 +312,7 @@ class LogoutResponse(BaseModel):
                 "tokens_invalidated": 2
             }
         }
-
+    )
 
 # ==========================================
 # SCHEMAS DE CAMBIO DE CONTRASEÑA
@@ -315,7 +365,8 @@ class PasswordChangeRequest(BaseModel):
             raise ValueError('Las contraseñas no coinciden')
         return v
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "current_password": "mi_contraseña_actual",
@@ -324,6 +375,7 @@ class PasswordChangeRequest(BaseModel):
                 "invalidate_all_sessions": True
             }
         }
+    )
 
 
 class PasswordChangeResponse(BaseModel):
@@ -334,7 +386,8 @@ class PasswordChangeResponse(BaseModel):
     sessions_invalidated: int = Field(..., description="Número de sesiones invalidadas")
     must_login_again: bool = Field(default=True, description="Si debe iniciar sesión nuevamente")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "message": "Contraseña cambiada exitosamente",
@@ -343,6 +396,7 @@ class PasswordChangeResponse(BaseModel):
                 "must_login_again": True
             }
         }
+    )
 
 
 # ==========================================
@@ -362,13 +416,15 @@ class PasswordResetRequest(BaseModel):
         description="Token de reCAPTCHA para prevenir spam"
     )
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "email": "juan.perez@empresa.com",
                 "recaptcha_token": "03AGdBq24..."
             }
         }
+    )
 
 
 class PasswordResetResponse(BaseModel):
@@ -381,12 +437,14 @@ class PasswordResetResponse(BaseModel):
     
     # No incluir información sensible que pueda revelar si el email existe
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "message": "Si el email existe, se envió un link de recuperación"
             }
         }
+    )
 
 
 class PasswordResetConfirm(BaseModel):
@@ -426,7 +484,8 @@ class PasswordResetConfirm(BaseModel):
             raise ValueError('Las contraseñas no coinciden')
         return v
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "token": "abc123def456...",
@@ -434,6 +493,7 @@ class PasswordResetConfirm(BaseModel):
                 "confirm_password": "Mi_Nueva_Contraseña_123!"
             }
         }
+    )
 
 
 class PasswordResetConfirmResponse(BaseModel):
@@ -443,7 +503,8 @@ class PasswordResetConfirmResponse(BaseModel):
     reset_at: datetime = Field(..., description="Timestamp del reset")
     must_login: bool = Field(default=True, description="Si debe iniciar sesión")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "message": "Contraseña restablecida exitosamente",
@@ -451,6 +512,7 @@ class PasswordResetConfirmResponse(BaseModel):
                 "must_login": True
             }
         }
+    )
 
 
 # ==========================================
@@ -463,13 +525,15 @@ class TokenValidationRequest(BaseModel):
     token: str = Field(..., description="Token a validar")
     token_type: Optional[str] = Field(default="access", description="Tipo de token (access|refresh)")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
                 "token_type": "access"
             }
         }
+    )
 
 
 class TokenValidationResponse(BaseModel):
@@ -482,7 +546,8 @@ class TokenValidationResponse(BaseModel):
     username: Optional[str] = Field(None, description="Username (si token válido)")
     reason: Optional[str] = Field(None, description="Razón de invalidez (si aplica)")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "valid": True,
@@ -493,6 +558,7 @@ class TokenValidationResponse(BaseModel):
                 "reason": None
             }
         }
+    )
 
 
 class PasswordStrengthCheck(BaseModel):
@@ -500,12 +566,14 @@ class PasswordStrengthCheck(BaseModel):
     
     password: str = Field(..., description="Contraseña a verificar")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "password": "mi_contraseña_a_verificar"
             }
         }
+    )
 
 
 class PasswordStrengthResponse(BaseModel):
@@ -517,7 +585,8 @@ class PasswordStrengthResponse(BaseModel):
     suggestions: List[str] = Field(default_factory=list, description="Sugerencias de mejora")
     requirements: Dict[str, bool] = Field(default_factory=dict, description="Cumplimiento de requisitos")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "is_valid": False,
@@ -533,6 +602,7 @@ class PasswordStrengthResponse(BaseModel):
                 }
             }
         }
+    )
 
 
 # ==========================================
@@ -550,7 +620,8 @@ class ActiveSession(BaseModel):
     expires_at: datetime = Field(..., description="Cuándo expira la sesión")
     is_current: bool = Field(..., description="Si es la sesión actual")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "session_id": "abc123def456",
@@ -562,7 +633,7 @@ class ActiveSession(BaseModel):
                 "is_current": True
             }
         }
-
+    )
 
 class UserSessionsResponse(BaseModel):
     """Schema para respuesta de sesiones activas del usuario"""
@@ -571,7 +642,8 @@ class UserSessionsResponse(BaseModel):
     total_sessions: int = Field(..., description="Total de sesiones activas")
     current_session_id: str = Field(..., description="ID de la sesión actual")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "sessions": [
@@ -586,19 +658,21 @@ class UserSessionsResponse(BaseModel):
                 "current_session_id": "abc123"
             }
         }
-
+    )
 
 class TerminateSessionRequest(BaseModel):
     """Schema para terminar sesión específica"""
     
     session_id: str = Field(..., description="ID de la sesión a terminar")
     
-    class Config:
+    model_config = ConfigDict(
+        from_attributes=True,
         json_schema_extra = {
             "example": {
                 "session_id": "abc123def456"
             }
         }
+        )
 
 
 # ==========================================

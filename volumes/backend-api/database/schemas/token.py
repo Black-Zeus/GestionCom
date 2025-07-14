@@ -2,10 +2,10 @@
 Schemas Pydantic para manejo específico de tokens JWT
 Complementa schemas/auth.py con funcionalidades avanzadas de tokens
 """
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Dict, Any, Union
+from datetime import datetime
+from typing import Optional, List, Dict, Any
 from enum import Enum
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, field_serializer
 
 
 # ==========================================
@@ -248,7 +248,6 @@ class TokenValidateRequest(BaseModel):
             }
         }
 
-
 class TokenValidateResponse(BaseModel):
     """Schema para respuesta de validación de token"""
     
@@ -269,8 +268,17 @@ class TokenValidateResponse(BaseModel):
     validated_at: datetime = Field(..., description="Cuándo se validó")
     time_to_expiry: Optional[int] = Field(None, description="Segundos hasta expiración")
     
-    class Config:
-        json_schema_extra = {
+    # ✅ PYDANTIC V2 - Usar field_serializer en lugar de json_encoders
+    @field_serializer('validated_at')
+    def serialize_validated_at(self, value: datetime) -> str:
+        """Serializar datetime a ISO string"""
+        return value.isoformat()
+    
+    # ✅ ConfigDict SIN json_encoders (deprecado en v2)
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        json_schema_extra={
             "example": {
                 "valid": True,
                 "status": "valid",
@@ -286,7 +294,7 @@ class TokenValidateResponse(BaseModel):
                 "time_to_expiry": 900
             }
         }
-
+    )
 
 # ==========================================
 # SCHEMAS PARA BLACKLIST

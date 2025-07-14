@@ -17,7 +17,7 @@ from core.config import settings
 from core.exceptions import SystemException, ValidationException, DatabaseException
 from core.constants import ErrorCode
 from cache.services.user_cache import user_cache_service
-from models.user import User
+from database.models.user import User
 
 
 # Configurar logger
