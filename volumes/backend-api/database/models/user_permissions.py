@@ -138,7 +138,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @validates('expires_at')
     def validate_expires_at(self, key, value):
         """Validate expires_at is in the future when provided"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         if value is not None and value <= datetime.now():
             raise ValueError("expires_at debe ser una fecha futura")
         return value
@@ -147,7 +147,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @property
     def is_expired(self) -> bool:
         """Check if the permission has expired"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         return self.expires_at is not None and self.expires_at <= datetime.now()
     
     @property
@@ -179,7 +179,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
         """Get all permissions assigned to a user"""
         query = session.query(cls).filter(cls.user_id == user_id)
         if not include_expired:
-            from datetime import datetime
+            from datetime import datetime, timezone
             query = query.filter(
                 (cls.expires_at.is_(None)) | (cls.expires_at > datetime.now())
             )
@@ -204,7 +204,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
         )
         
         if check_expired:
-            from datetime import datetime
+            from datetime import datetime, timezone
             query = query.filter(
                 (cls.expires_at.is_(None)) | (cls.expires_at > datetime.now())
             )
@@ -222,7 +222,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
         )
         
         if check_expired:
-            from datetime import datetime
+            from datetime import datetime, timezone
             query = query.filter(
                 (cls.expires_at.is_(None)) | (cls.expires_at > datetime.now())
             )
@@ -233,7 +233,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     def get_active_user_permissions(cls, session, user_id: int) -> List["UserPermission"]:
         """Get active permissions for a user (not expired and permission is active)"""
         from database.models.permission import Permission
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
             Permission.is_active == True,
@@ -243,7 +243,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_grant_permissions(cls, session, user_id: int) -> List["UserPermission"]:
         """Get all GRANT permissions for a user"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).filter(
             cls.user_id == user_id,
             cls.permission_type == PermissionType.GRANT,
@@ -253,7 +253,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_deny_permissions(cls, session, user_id: int) -> List["UserPermission"]:
         """Get all DENY permissions for a user"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).filter(
             cls.user_id == user_id,
             cls.permission_type == PermissionType.DENY,
@@ -264,7 +264,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     def get_permissions_by_group_for_user(cls, session, user_id: int, permission_group: str) -> List["UserPermission"]:
         """Get permissions of a specific group for a user"""
         from database.models.permission import Permission
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
             Permission.permission_group == permission_group,
@@ -275,7 +275,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_expiring_permissions(cls, session, days_ahead: int = 7) -> List["UserPermission"]:
         """Get permissions that will expire in the specified number of days"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timezone, timedelta
         future_date = datetime.now() + timedelta(days=days_ahead)
         return session.query(cls).filter(
             cls.expires_at.isnot(None),
@@ -286,7 +286,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_expired_permissions(cls, session) -> List["UserPermission"]:
         """Get all expired permissions"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).filter(
             cls.expires_at.isnot(None),
             cls.expires_at <= datetime.now()
@@ -295,7 +295,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def cleanup_expired_permissions(cls, session) -> int:
         """Remove expired permissions and return count of deleted records"""
-        from datetime import datetime
+        from datetime import datetime, timezone
         count = session.query(cls).filter(
             cls.expires_at.isnot(None),
             cls.expires_at <= datetime.now()
@@ -306,7 +306,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     def count_active_assignments(cls, session) -> int:
         """Count total active permission assignments to users"""
         from database.models.permission import Permission
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             Permission.is_active == True,
             (cls.expires_at.is_(None)) | (cls.expires_at > datetime.now())
@@ -316,7 +316,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     def count_permissions_for_user(cls, session, user_id: int) -> int:
         """Count total active permissions assigned to a user"""
         from database.models.permission import Permission
-        from datetime import datetime
+        from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
             Permission.is_active == True,

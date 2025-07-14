@@ -1,7 +1,7 @@
 """
 Schemas Pydantic para el modelo Permission
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, validator, ConfigDict
 

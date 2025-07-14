@@ -2,7 +2,7 @@
 Pydantic schemas for UserPermission model
 """
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
 from enum import Enum
 

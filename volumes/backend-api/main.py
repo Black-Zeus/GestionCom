@@ -2,11 +2,15 @@
 Aplicación principal FastAPI - Versión Final Simple
 Sistema de carga de routers con lista específica y configuración centralizada
 """
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
-from datetime import datetime
+from datetime import datetime, timezone
+import traceback
+from middleware.main_middleware import TraceMiddleware, SimpleAuthMiddleware
+from core.response import ResponseManager
+from core.constants import HTTPStatus, ErrorCode, ErrorType
+from core.constants import RESPONSE_MANAGER_AVAILABLE 
 
 # ==========================================
 # CONFIGURACIÓN DE LA APLICACIÓN
@@ -29,6 +33,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Agregar middleware de trace
+app.add_middleware(TraceMiddleware)
 
 # ==========================================
 # CONFIGURACIÓN DE ROUTERS
@@ -59,50 +67,7 @@ ROUTERS_TO_LOAD = [
     # },
 ]
 
-# Rutas que requieren autenticación
-PRIVATE_ROUTES = ["/users", "/inventory", "/admin", "/reports"]
 
-# ==========================================
-# MIDDLEWARE DE AUTENTICACIÓN SIMPLE
-# ==========================================
-
-class SimpleAuthMiddleware(BaseHTTPMiddleware):
-    """Middleware de autenticación simplificado"""
-    
-    async def dispatch(self, request: Request, call_next):
-        path = request.scope["path"]
-        
-        # Verificar si la ruta requiere autenticación
-        if any(path.startswith(route) for route in PRIVATE_ROUTES):
-            try:
-                # Import dinámico para evitar dependencias circulares
-                from middleware.auth_middleware import authenticate_request
-                await authenticate_request(request)
-            except ImportError:
-                # Si no hay middleware de auth, permitir acceso temporalmente
-                pass
-            except HTTPException as e:
-                return JSONResponse(
-                    status_code=e.status_code,
-                    content={
-                        "success": False,
-                        "status": e.status_code,
-                        "message": e.detail,
-                        "error": {"code": "AUTH_FAILED", "details": e.detail}
-                    }
-                )
-            except Exception as e:
-                return JSONResponse(
-                    status_code=500,
-                    content={
-                        "success": False,
-                        "status": 500,
-                        "message": "Error interno de autenticación",
-                        "error": {"code": "AUTH_SYSTEM_ERROR", "details": str(e)}
-                    }
-                )
-        
-        return await call_next(request)
 
 # Agregar middleware
 app.add_middleware(SimpleAuthMiddleware)
@@ -157,10 +122,9 @@ for router_config in ROUTERS_TO_LOAD:
             
     except Exception as e:
         error_msg = str(e)
-        if len(error_msg) > 31:
-            error_msg = error_msg[:28] + "..."
+        
         router_stats["failed"][router_name] = error_msg
-        print(f"│ {router_name:<19} │ ❌ ERROR   │ {error_msg:<31} │")
+        print(f"│ {router_name} │ ❌ ERROR   │ {error_msg} │")
 
 # Cerrar tabla
 print("└─────────────────────┴────────────┴─────────────────────────────────┘")
@@ -191,9 +155,10 @@ print("=" * 60)
 # ==========================================
 
 @app.get("/", tags=["Root"])
-async def root():
+async def root(request: Request):
     """Endpoint raíz de la API"""
-    return {
+    
+    data = {
         "message": "API de Conectividad con la Base de Datos del Sistema",
         "version": "1.0.0",
         "status": "active",
@@ -203,11 +168,31 @@ async def root():
             "failed": list(router_stats["failed"].keys()),
             "success_rate": f"{len(router_stats['loaded'])}/{router_stats['total_configured']}",
             "success_percentage": f"{(len(router_stats['loaded']) / router_stats['total_configured'] * 100) if router_stats['total_configured'] > 0 else 0:.1f}%"
+        },
+        "features": {
+            "response_manager": RESPONSE_MANAGER_AVAILABLE,
+            "auth_middleware": True,
+            "trace_middleware": True
         }
     }
+    
+    if RESPONSE_MANAGER_AVAILABLE:
+        return ResponseManager.success(
+            data=data,
+            message="API funcionando correctamente",
+            request=request
+        )
+    else:
+        # Fallback a respuesta básica
+        return {
+            "success": True,
+            "message": "API funcionando correctamente",
+            "data": data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
 
 @app.get("/system/redis", tags=["System"])
-async def redis_status():
+async def redis_status(request: Request):
     """Estado detallado de Redis"""
     try:
         from cache.redis_client import redis_client
@@ -215,8 +200,7 @@ async def redis_status():
         # Obtener health check detallado
         health_info = await redis_client.health_check()
         
-        return {
-            "timestamp": datetime.utcnow().isoformat(),
+        data = {
             "redis_status": health_info,
             "client_info": {
                 "is_available": redis_client.is_available,
@@ -225,19 +209,134 @@ async def redis_status():
             }
         }
         
-    except Exception as e:
-        return {
-            "timestamp": datetime.utcnow().isoformat(),
-            "redis_status": {
-                "status": "error",
-                "available": False,
-                "error": str(e)
-            },
-            "client_info": {
-                "is_available": False,
-                "location": "cache.redis_client",
-                "error": "Failed to import or initialize"
+        if RESPONSE_MANAGER_AVAILABLE:
+            if health_info.get("available", False):
+                return ResponseManager.success(
+                    data=data,
+                    message="Redis funcionando correctamente",
+                    request=request
+                )
+            else:
+                return ResponseManager.service_unavailable(
+                    message="Redis no disponible",
+                    details=health_info.get("error", "Estado desconocido"),
+                    request=request
+                )
+        else:
+            # Fallback a respuesta básica
+            return {
+                "success": health_info.get("available", False),
+                "message": "Redis funcionando correctamente" if health_info.get("available") else "Redis no disponible",
+                "data": data,
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
+        
+    except Exception as e:
+        error_details = str(e)
+        
+        if RESPONSE_MANAGER_AVAILABLE:
+            return ResponseManager.service_unavailable(
+                message="Error al verificar Redis",
+                details=error_details,
+                request=request
+            )
+        else:
+            # Fallback a respuesta básica
+            return {
+                "success": False,
+                "message": "Error al verificar Redis",
+                "data": {
+                    "redis_status": {
+                        "status": "error",
+                        "available": False,
+                        "error": error_details
+                    },
+                    "client_info": {
+                        "is_available": False,
+                        "location": "cache.redis_client",
+                        "error": "Failed to import or initialize"
+                    }
+                },
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+
+@app.get("/system/status", tags=["System"])
+async def system_status(request: Request):
+    """Estado general del sistema"""
+    
+    # Verificar estado de componentes
+    components = {}
+    overall_healthy = True
+    
+    # 1. Estado de routers
+    components["routers"] = {
+        "status": "healthy" if failed_count == 0 else "degraded",
+        "loaded": loaded_count,
+        "failed": failed_count,
+        "total": total_count
+    }
+    
+    if failed_count > 0:
+        overall_healthy = False
+    
+    # 2. Estado de Redis
+    try:
+        from cache.redis_client import redis_client
+        health_info = await redis_client.health_check()
+        components["redis"] = {
+            "status": "healthy" if health_info.get("available") else "unhealthy",
+            "available": health_info.get("available", False),
+            "details": health_info
+        }
+        if not health_info.get("available"):
+            overall_healthy = False
+    except Exception as e:
+        components["redis"] = {
+            "status": "unhealthy",
+            "available": False,
+            "error": str(e)
+        }
+        overall_healthy = False
+    
+    # 3. Estado de ResponseManager
+    components["response_manager"] = {
+        "status": "healthy" if RESPONSE_MANAGER_AVAILABLE else "unavailable",
+        "available": RESPONSE_MANAGER_AVAILABLE
+    }
+    
+    data = {
+        "overall_status": "healthy" if overall_healthy else "degraded",
+        "components": components,
+        "system_info": {
+            "uptime_check": True,
+            "memory_usage": "N/A",  # Podrías agregar psutil aquí
+            "disk_usage": "N/A"
+        }
+    }
+    
+    if RESPONSE_MANAGER_AVAILABLE:
+        if overall_healthy:
+            return ResponseManager.success(
+                data=data,
+                message="Sistema funcionando correctamente",
+                request=request
+            )
+        else:
+            return ResponseManager.error(
+                message="Sistema con problemas detectados",
+                error_code=ErrorCode.SYSTEM_SERVICE_UNAVAILABLE if RESPONSE_MANAGER_AVAILABLE else None,
+                error_type=ErrorType.SYSTEM_ERROR if RESPONSE_MANAGER_AVAILABLE else None,
+                details="Uno o más componentes presentan problemas",
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE if RESPONSE_MANAGER_AVAILABLE else 503,
+                request=request
+            )
+    else:
+        # Fallback a respuesta básica
+        return {
+            "success": overall_healthy,
+            "message": "Sistema funcionando correctamente" if overall_healthy else "Sistema con problemas",
+            "data": data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
 # ==========================================
@@ -247,21 +346,34 @@ async def redis_status():
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Manejador global de excepciones"""
-    return JSONResponse(
-        status_code=500,
-        content={
-            "success": False,
-            "status": 500,
-            "message": "Error interno del servidor",
-            "error": {
-                "code": "INTERNAL_SERVER_ERROR",
-                "details": str(exc) if app.debug else "Ha ocurrido un error inesperado"
-            },
-            "path": str(request.url.path),
-            "method": request.method,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    )
+    
+    # Obtener stack trace para desarrollo
+    stack_trace = traceback.format_exc()
+    
+    if RESPONSE_MANAGER_AVAILABLE:
+        return ResponseManager.internal_server_error(
+            message="Error interno del servidor",
+            details=str(exc),
+            request=request,
+            stack_trace=stack_trace
+        )
+    else:
+        # Fallback a respuesta básica
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "status": 500,
+                "message": "Error interno del servidor",
+                "error": {
+                    "code": "INTERNAL_SERVER_ERROR",
+                    "details": str(exc) if app.debug else "Ha ocurrido un error inesperado"
+                },
+                "path": str(request.url.path),
+                "method": request.method,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+        )
 
 # ==========================================
 # EVENTOS DE STARTUP/SHUTDOWN
@@ -271,6 +383,12 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def startup_event():
     """Eventos de inicio"""
     print("🚀 API iniciando...")
+    
+    # Verificar ResponseManager
+    if RESPONSE_MANAGER_AVAILABLE:
+        print("✅ ResponseManager cargado correctamente")
+    else:
+        print("⚠️  ResponseManager no disponible - usando respuestas básicas")
     
     # Verificar Redis con la ubicación correcta
     try:

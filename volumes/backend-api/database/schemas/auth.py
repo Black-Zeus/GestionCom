@@ -2,7 +2,7 @@
 Schemas Pydantic para autenticación JWT - Login, Refresh, Logout
 Integrado con tu arquitectura de validaciones y respuestas
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 import re

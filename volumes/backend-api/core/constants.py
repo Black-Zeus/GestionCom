@@ -233,3 +233,7 @@ PASSWORD_REGEX = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$"
 TRACE_ID_HEADER = "X-Trace-ID"
 REQUEST_ID_HEADER = "X-Request-ID"
 API_VERSION_HEADER = "X-API-Version"
+
+# Rutas que requieren autenticación
+PRIVATE_ROUTES = ["/users", "/inventory", "/admin", "/reports"]
+RESPONSE_MANAGER_AVAILABLE = True

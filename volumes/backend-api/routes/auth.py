@@ -140,7 +140,7 @@ def create_response(data: Any = None, message: str = "Operación exitosa", statu
                 "status": status_code,
                 "message": message,
                 "data": data,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc)
             }
         )
 
@@ -159,7 +159,7 @@ def create_error_response(message: str = "Error", status_code: int = 500, detail
                     "code": f"ERROR_{status_code}",
                     "details": details or message
                 },
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc)
             }
         )
 

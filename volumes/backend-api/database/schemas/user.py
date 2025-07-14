@@ -1,7 +1,7 @@
 """
 Schemas Pydantic para el modelo User
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from decimal import Decimal
 from pydantic import BaseModel, Field, EmailStr, validator, ConfigDict

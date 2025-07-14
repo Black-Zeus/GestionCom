@@ -2,7 +2,7 @@
 Schemas Pydantic para manejo específico de tokens JWT
 Complementa schemas/auth.py con funcionalidades avanzadas de tokens
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, ConfigDict
