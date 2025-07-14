@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 
@@ -16,7 +16,7 @@ async def create_docx():
         "status": "Success",
         "message": "El documento se cargó satisfactoriamente.",
         "document_id": document_id,  # ID único generado para el documento
-        "uploaded_at": datetime.utcnow().isoformat(),  # Timestamp de la carga
+        "uploaded_at": datetime.now(timezone.utc),  # Timestamp de la carga
         "details": {
             "filename": "dummy_document.docx",  # Nombre del archivo simulado
             "size": "1024KB",  # Tamaño simulado

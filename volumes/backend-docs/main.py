@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from datetime import datetime
+from datetime import datetime, timezone
 from routes import uploads
 
 # Configuración de la aplicación
@@ -26,6 +26,6 @@ async def health_check():
         "name": "API Documental",
         "role": "Gestión de carga y manejo de documentos",
         "status": "active",  # Estado general de la API
-        "timestamp": datetime.utcnow().isoformat(),  # Fecha y hora actual
+        "timestamp": datetime.now(timezone.utc),  # Fecha y hora actual
         "version": "1.0.0",  # Versión de la API
     }
