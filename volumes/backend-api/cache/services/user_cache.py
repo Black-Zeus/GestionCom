@@ -145,33 +145,25 @@ class UserCacheService:
     
     async def _fetch_user_secret_from_db(self, user_id: int) -> Optional[str]:
         """
-        Obtener user secret desde base de datos - VERSIÓN CORREGIDA
+        Obtener user secret desde base de datos - VERSIÓN CORREGIDA 2
         """
         try:
-            # ✅ Query directa (RECOMENDADO)
-            from database.models.user import User
-            from sqlalchemy.ext.asyncio import AsyncSession
             from sqlalchemy import select
-            from database.db_manager import db_manager
+            from database.models.user import User
+            from database import get_async_session
             
-            async with db_manager.get_session() as session:
-                stmt = select(User.user_secret).where(User.id == user_id)
+            # CORRECCIÓN: Usar async for para el generador
+            async for session in get_async_session():
+                stmt = select(User.secret).where(User.id == user_id)
                 result = await session.execute(stmt)
-                user_secret = result.scalar_one_or_none()
+                user_secret = result.scalar()
+                
+                logger.debug(f"Fetched user secret from DB for user {user_id}: {'found' if user_secret else 'not found'}")
                 return user_secret
-            
+                
         except Exception as e:
             logger.error(f"Error fetching user secret from DB for {user_id}: {e}")
-            
-            # ✅ Fallback - generar nuevo secret
-            import secrets
-            new_secret = secrets.token_urlsafe(32)
-            logger.warning(f"Generated fallback secret for user {user_id}")
-            
-            # Cachear el nuevo secret
-            await self._cache_user_secret(user_id, new_secret)
-            
-            return new_secret
+            return None
     
     # ==========================================
     # USER BASIC DATA CACHE
@@ -292,7 +284,7 @@ class UserCacheService:
             # ✅ Query directa
             from database.models.user import User
             from sqlalchemy import select
-            from database.db_manager import db_manager
+            from database.database import db_manager
             
             async with db_manager.get_session() as session:
                 stmt = select(
@@ -426,13 +418,13 @@ class UserCacheService:
         try:
             # ✅ Query directa con JOINs
             from database.models.user import User
-            from database.models.user_role import UserRole
-            from database.models.role import Role
-            from database.models.user_permission import UserPermission
-            from database.models.permission import Permission
-            from database.models.role_permission import RolePermission
+            from database.models.user_roles import UserRole
+            from database.models.roles import Role
+            from database.models.user_permissions import UserPermission
+            from database.models.permissions import Permission
+            from database.models.role_permissions import RolePermission
             from sqlalchemy import select, and_
-            from database.db_manager import db_manager
+            from database.database import db_manager
             
             async with db_manager.get_session() as session:
                 # Obtener roles del usuario
@@ -551,10 +543,10 @@ class UserCacheService:
             # ✅ Query directa con IN clause
             from database.models.user import User
             from sqlalchemy import select
-            from database.db_manager import db_manager
+            from database.database import db_manager
             
             async with db_manager.get_session() as session:
-                stmt = select(User.id, User.user_secret).where(User.id.in_(user_ids))
+                stmt = select(User.id, User.secret).where(User.id.in_(user_ids))
                 result = await session.execute(stmt)
                 
                 # Convertir a dict

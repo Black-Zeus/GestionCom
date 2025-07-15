@@ -144,7 +144,87 @@ class AuditMixin:
         """Establecer quién modificó el registro"""
         self.updated_by_user_id = user_id
 
+# ========================================
+# AGREGAR QueryHelperMixin A database/models/base.py
+# ========================================
 
+# Agregar esta clase después de AuditMixin y antes de BaseModel:
+
+class QueryHelperMixin:
+    """
+    Mixin para agregar métodos de ayuda para queries comunes
+    """
+    
+    @classmethod
+    def get_by_id(cls, session, id_value):
+        """Obtener registro por ID"""
+        return session.query(cls).filter(cls.id == id_value).first()
+    
+    @classmethod
+    def get_all_active(cls, session):
+        """Obtener todos los registros activos"""
+        query = session.query(cls)
+        
+        # Si tiene soft delete, filtrar por no eliminados
+        if hasattr(cls, 'deleted_at'):
+            query = query.filter(cls.deleted_at.is_(None))
+        
+        # Si tiene campo is_active, filtrar por activos
+        if hasattr(cls, 'is_active'):
+            query = query.filter(cls.is_active == True)
+        
+        return query.all()
+    
+    @classmethod
+    def exists_by_id(cls, session, id_value):
+        """Verificar si existe un registro por ID"""
+        return session.query(cls.id).filter(cls.id == id_value).first() is not None
+    
+    @classmethod
+    def count_all(cls, session):
+        """Contar todos los registros"""
+        query = session.query(cls)
+        
+        # Si tiene soft delete, excluir eliminados
+        if hasattr(cls, 'deleted_at'):
+            query = query.filter(cls.deleted_at.is_(None))
+        
+        return query.count()
+    
+    @classmethod
+    def count_active(cls, session):
+        """Contar registros activos"""
+        query = session.query(cls)
+        
+        # Si tiene soft delete, excluir eliminados
+        if hasattr(cls, 'deleted_at'):
+            query = query.filter(cls.deleted_at.is_(None))
+        
+        # Si tiene campo is_active, filtrar por activos
+        if hasattr(cls, 'is_active'):
+            query = query.filter(cls.is_active == True)
+        
+        return query.count()
+    
+    def save(self, session):
+        """Guardar el registro"""
+        session.add(self)
+        session.commit()
+        return self
+    
+    def delete(self, session):
+        """Eliminar el registro (hard delete)"""
+        session.delete(self)
+        session.commit()
+    
+    def soft_delete_if_supported(self, session):
+        """Realizar soft delete si está soportado, sino hard delete"""
+        if hasattr(self, 'soft_delete'):
+            self.soft_delete()
+            session.commit()
+        else:
+            self.delete(session)
+            
 # ==========================================
 # BASE MODEL COMPLETA
 # ==========================================

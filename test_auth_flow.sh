@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ===========================================
-# Simple Auth API Tester
-# Test de endpoints de autenticación sin dependencias
+# Simple Auth API Tester - FIXED VERSION
+# Test de endpoints de autenticación - UNA SOLA PETICIÓN POR ENDPOINT
 # ===========================================
 
 # Configuración por defecto
@@ -55,7 +55,7 @@ EJEMPLOS:
 NOTAS:
   - Para 'all', 'login', 'strength' se requieren -u y -p
   - Para 'validate' y 'logout' se requiere -t
-  - El script es nativo bash, no requiere jq ni otras dependencias
+  - OPTIMIZADO: Una sola petición HTTP por endpoint
 EOF
 }
 
@@ -105,22 +105,67 @@ check_success() {
     fi
 }
 
+# Función mejorada para hacer UNA SOLA petición y obtener tanto response como HTTP code
+make_request() {
+    local method="$1"
+    local url="$2"
+    local data="$3"
+    
+    # Archivo temporal para guardar la respuesta completa
+    local temp_file="/tmp/curl_complete_$"
+    
+    # Hacer UNA SOLA petición curl y capturar código HTTP + respuesta
+    if [[ -n "$data" ]]; then
+        # POST con datos
+        local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -X "$method" "$url" \
+            -H "Content-Type: application/json" \
+            -d "$data")
+    else
+        # GET sin datos
+        local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+            -X "$method" "$url" \
+            -H "Content-Type: application/json")
+    fi
+    
+    # Separar HTTP code y response body
+    export HTTP_CODE=$(echo "$full_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+    export RESPONSE_BODY=$(echo "$full_response" | sed 's/HTTPSTATUS:[0-9]*$//')
+}
+
+# Función específica para logout que necesita Authorization header
+make_request_with_auth() {
+    local method="$1"
+    local url="$2"
+    local token="$3"
+    
+    # Hacer petición con Authorization header
+    local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
+        -X "$method" "$url" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $token")
+    
+    # Separar HTTP code y response body
+    export HTTP_CODE=$(echo "$full_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
+    export RESPONSE_BODY=$(echo "$full_response" | sed 's/HTTPSTATUS:[0-9]*$//')
+}
+
 # ===========================================
-# TESTS DE ENDPOINTS
+# TESTS DE ENDPOINTS - VERSIÓN OPTIMIZADA
 # ===========================================
 
 test_info() {
     print_step "Probando GET /auth/ - Información del sistema"
     
-    local response=$(curl -s -X GET "$API_URL/" -H "Content-Type: application/json")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$API_URL/")
+    # UNA SOLA petición
+    make_request "GET" "$API_URL/"
     
-    echo "HTTP Code: $http_code"
-    echo "Response: $response"
+    echo "HTTP Code: $HTTP_CODE"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Info endpoint funcionando correctamente"
-        local version=$(extract_value "$response" "version")
+        local version=$(extract_value "$RESPONSE_BODY" "version")
         print_info "Versión: $version"
         return 0
     else
@@ -132,13 +177,13 @@ test_info() {
 test_health() {
     print_step "Probando GET /auth/health - Estado del sistema"
     
-    local response=$(curl -s -X GET "$API_URL/health" -H "Content-Type: application/json")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$API_URL/health")
+    # UNA SOLA petición
+    make_request "GET" "$API_URL/health"
     
-    echo "HTTP Code: $http_code"
-    echo "Response: $response"
+    echo "HTTP Code: $HTTP_CODE"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Health check exitoso"
         return 0
     else
@@ -150,15 +195,15 @@ test_health() {
 test_password_requirements() {
     print_step "Probando GET /auth/password-requirements"
     
-    local response=$(curl -s -X GET "$API_URL/password-requirements" -H "Content-Type: application/json")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$API_URL/password-requirements")
+    # UNA SOLA petición
+    make_request "GET" "$API_URL/password-requirements"
     
-    echo "HTTP Code: $http_code"
-    echo "Response: $response"
+    echo "HTTP Code: $HTTP_CODE"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Password requirements obtenidos"
-        local min_length=$(extract_value "$response" "min_length")
+        local min_length=$(extract_value "$RESPONSE_BODY" "min_length")
         print_info "Longitud mínima: $min_length caracteres"
         return 0
     else
@@ -176,21 +221,18 @@ test_password_strength() {
     fi
     
     local payload="{\"password\": \"$PASSWORD\"}"
-    local response=$(curl -s -X POST "$API_URL/password-strength" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/password-strength" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
     
-    echo "HTTP Code: $http_code"
+    # UNA SOLA petición
+    make_request "POST" "$API_URL/password-strength" "$payload"
+    
+    echo "HTTP Code: $HTTP_CODE"
     echo "Payload: $payload"
-    echo "Response: $response"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Password strength verificado"
-        local score=$(extract_value "$response" "score")
-        local is_valid=$(extract_bool "$response" "is_valid")
+        local score=$(extract_value "$RESPONSE_BODY" "score")
+        local is_valid=$(extract_bool "$RESPONSE_BODY" "is_valid")
         print_info "Score: $score/100, Válida: $is_valid"
         return 0
     else
@@ -208,22 +250,19 @@ test_login() {
     fi
     
     local payload="{\"username\": \"$USERNAME\", \"password\": \"$PASSWORD\", \"remember_me\": false}"
-    local response=$(curl -s -X POST "$API_URL/login" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/login" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
     
-    echo "HTTP Code: $http_code"
+    # UNA SOLA petición
+    make_request "POST" "$API_URL/login" "$payload"
+    
+    echo "HTTP Code: $HTTP_CODE"
     echo "Payload: $payload"
-    echo "Response: $response"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Login exitoso"
         
         # Extraer token
-        local access_token=$(extract_value "$response" "access_token")
+        local access_token=$(extract_value "$RESPONSE_BODY" "access_token")
         if [[ -n "$access_token" && "$access_token" != "null" ]]; then
             print_info "Access Token: ${access_token:0:50}..."
             
@@ -232,8 +271,8 @@ test_login() {
             print_info "Token guardado en /tmp/auth_token_simple.env"
         fi
         
-        local user_id=$(extract_value "$response" "id")
-        local username=$(extract_value "$response" "username")
+        local user_id=$(extract_value "$RESPONSE_BODY" "id")
+        local username=$(extract_value "$RESPONSE_BODY" "username")
         print_info "Usuario: $username (ID: $user_id)"
         
         return 0
@@ -258,20 +297,17 @@ test_validate_token() {
     fi
     
     local payload="{\"token\": \"$TOKEN\"}"
-    local response=$(curl -s -X POST "$API_URL/validate-token" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/validate-token" \
-        -H "Content-Type: application/json" \
-        -d "$payload")
     
-    echo "HTTP Code: $http_code"
+    # UNA SOLA petición
+    make_request "POST" "$API_URL/validate-token" "$payload"
+    
+    echo "HTTP Code: $HTTP_CODE"
     echo "Token: ${TOKEN:0:30}..."
-    echo "Response: $response"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
-        local valid=$(extract_bool "$response" "valid")
-        local status=$(extract_value "$response" "status")
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
+        local valid=$(extract_bool "$RESPONSE_BODY" "valid")
+        local status=$(extract_value "$RESPONSE_BODY" "status")
         
         if [[ "$valid" == "true" ]]; then
             print_success "Token válido (status: $status)"
@@ -300,18 +336,14 @@ test_logout() {
         return 1
     fi
     
-    local response=$(curl -s -X POST "$API_URL/logout" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $TOKEN")
-    local http_code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/logout" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $TOKEN")
+    # UNA SOLA petición con Authorization header
+    make_request_with_auth "POST" "$API_URL/logout" "$TOKEN"
     
-    echo "HTTP Code: $http_code"
+    echo "HTTP Code: $HTTP_CODE"
     echo "Token: ${TOKEN:0:30}..."
-    echo "Response: $response"
+    echo "Response: $RESPONSE_BODY"
     
-    if [[ "$http_code" == "200" ]] && check_success "$response"; then
+    if [[ "$HTTP_CODE" == "200" ]] && check_success "$RESPONSE_BODY"; then
         print_success "Logout exitoso"
         
         # Limpiar archivo temporal
@@ -326,7 +358,7 @@ test_logout() {
 }
 
 test_all() {
-    print_step "EJECUTANDO TODOS LOS TESTS"
+    print_step "EJECUTANDO TODOS LOS TESTS - VERSIÓN OPTIMIZADA"
     
     if [[ -z "$USERNAME" || -z "$PASSWORD" ]]; then
         print_error "Se requieren username (-u) y password (-p) para test completo"
@@ -336,7 +368,7 @@ test_all() {
     local success_count=0
     local total_count=7
     
-    echo -e "\n${BLUE}=== INICIANDO BATERÍA DE TESTS ===${NC}"
+    echo -e "\n${BLUE}=== INICIANDO BATERÍA DE TESTS (UNA PETICIÓN POR ENDPOINT) ===${NC}"
     
     # Test 1: Info
     if test_info; then
@@ -379,6 +411,7 @@ test_all() {
     # Resumen
     echo -e "\n${BLUE}=== RESUMEN DE TESTS ===${NC}"
     echo "Tests exitosos: $success_count/$total_count"
+    echo "Peticiones HTTP totales: $total_count"
     
     if [[ $success_count -eq $total_count ]]; then
         print_success "TODOS LOS TESTS PASARON"
@@ -394,6 +427,7 @@ test_all() {
 # ===========================================
 
 # Procesar opciones
+clear
 while getopts "u:p:t:a:h" opt; do
     case $opt in
         u) USERNAME="$OPTARG" ;;
@@ -418,13 +452,11 @@ if ! command -v curl &> /dev/null; then
 fi
 
 # Mostrar configuración
-echo -e "${BLUE}=== AUTH API TESTER ===${NC}"
+echo -e "${BLUE}=== AUTH API TESTER - OPTIMIZADO ===${NC}"
 echo "API URL: $API_URL"
 echo "Username: ${USERNAME:-'no especificado'}"
 echo "Password: ${PASSWORD:+'[OCULTO]'}"
 echo "Token: ${TOKEN:0:20}${TOKEN:+...}"
-
-clear
 echo "Comando: $COMMAND"
 
 # ===========================================

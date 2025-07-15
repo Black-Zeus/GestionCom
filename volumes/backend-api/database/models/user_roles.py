@@ -4,14 +4,14 @@ SQLAlchemy model for user_roles table
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Index
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
-from database.core.base import Base
-from database.mixins.timestamp_mixin import TimestampMixin
-from database.mixins.query_helper_mixin import QueryHelperMixin
+from database import Base
+from database.models.base import TimestampMixin
+from database.models.base import QueryHelperMixin
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from database.models.user import User
-    from database.models.role import Role
+    from database.models.roles import Role
 
 
 class UserRole(Base, TimestampMixin, QueryHelperMixin):
@@ -146,7 +146,7 @@ class UserRole(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def user_has_role_code(cls, session, user_id: int, role_code: str) -> bool:
         """Check if a user has a role by role code"""
-        from database.models.role import Role
+        from database.models.roles import Role
         return session.query(cls).join(Role).filter(
             cls.user_id == user_id,
             Role.role_code == role_code,
@@ -156,7 +156,7 @@ class UserRole(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def count_active_assignments(cls, session) -> int:
         """Count total active role assignments"""
-        from database.models.role import Role
+        from database.models.roles import Role
         from database.models.user import User
         return session.query(cls).join(Role).join(User).filter(
             Role.is_active == True,

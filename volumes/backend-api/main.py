@@ -4,6 +4,7 @@ Sistema de carga de routers con lista específica y configuración centralizada
 """
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from fastapi.openapi.utils import get_openapi  # ✅ AGREGAR ESTE IMPORT
 from starlette.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 import traceback
@@ -11,6 +12,7 @@ from middleware.main_middleware import TraceMiddleware, SimpleAuthMiddleware
 from core.response import ResponseManager
 from core.constants import HTTPStatus, ErrorCode, ErrorType
 from core.constants import RESPONSE_MANAGER_AVAILABLE 
+from core.constants import PRIVATE_ROUTES
 
 # ==========================================
 # CONFIGURACIÓN DE LA APLICACIÓN
@@ -23,7 +25,66 @@ app = FastAPI(
     docs_url="/swagger",
     redoc_url=None,
     openapi_url="/openapi.json",
+    # ✅ CONFIGURACIÓN CORRECTA DE SEGURIDAD JWT
+    openapi_components={
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
 )
+
+# ==========================================
+# CONFIGURACIÓN AUTOMÁTICA DE SEGURIDAD
+# ==========================================
+
+def customize_openapi():
+    """
+    Personalizar OpenAPI para agregar seguridad automáticamente 
+    a rutas que estén en PRIVATE_ROUTES
+    """
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    # Generar schema base
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # Agregar esquemas de seguridad
+    openapi_schema["components"]["securitySchemes"] = {
+        "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT"
+        }
+    }
+    
+    # ✅ AGREGAR SEGURIDAD AUTOMÁTICAMENTE A RUTAS PROTEGIDAS
+    for route_path in openapi_schema.get("paths", {}):
+        # Verificar si la ruta está en PRIVATE_ROUTES
+        if any(route_path.startswith(private_route) for private_route in PRIVATE_ROUTES):
+            for method in openapi_schema["paths"][route_path]:
+                if method.lower() in ["get", "post", "put", "delete", "patch"]:
+                    # Agregar requerimiento de seguridad
+                    if "security" not in openapi_schema["paths"][route_path][method]:
+                        openapi_schema["paths"][route_path][method]["security"] = [{"bearerAuth": []}]
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+# Aplicar la personalización
+app.openapi = customize_openapi
+
+# ==========================================
+# MIDDLEWARE CONFIGURATION
+# ==========================================
 
 # CORS
 app.add_middleware(
@@ -34,9 +95,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Agregar middleware de trace
 app.add_middleware(TraceMiddleware)
+
+# Agregar middleware de autenticación
+app.add_middleware(SimpleAuthMiddleware)
 
 # ==========================================
 # CONFIGURACIÓN DE ROUTERS
@@ -66,11 +129,6 @@ ROUTERS_TO_LOAD = [
     #     "tags": ["Products"]
     # },
 ]
-
-
-
-# Agregar middleware
-app.add_middleware(SimpleAuthMiddleware)
 
 # ==========================================
 # CARGA DE ROUTERS
@@ -124,7 +182,7 @@ for router_config in ROUTERS_TO_LOAD:
         error_msg = str(e)
         
         router_stats["failed"][router_name] = error_msg
-        print(f"│ {router_name} │ ❌ ERROR   │ {error_msg} │")
+        print(f"│ {router_name:<19} │ ❌ ERROR   │ {error_msg:<31} │")
 
 # Cerrar tabla
 print("└─────────────────────┴────────────┴─────────────────────────────────┘")
@@ -172,7 +230,8 @@ async def root(request: Request):
         "features": {
             "response_manager": RESPONSE_MANAGER_AVAILABLE,
             "auth_middleware": True,
-            "trace_middleware": True
+            "trace_middleware": True,
+            "private_routes": PRIVATE_ROUTES
         }
     }
     
@@ -406,6 +465,7 @@ async def startup_event():
         print(f"⚠️  Redis no disponible: {e}")
     
     print("✅ API iniciada correctamente")
+    print(f"🔒 Rutas protegidas configuradas: {PRIVATE_ROUTES}")
 
 @app.on_event("shutdown")
 async def shutdown_event():

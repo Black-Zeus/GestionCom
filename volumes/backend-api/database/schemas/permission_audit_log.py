@@ -4,17 +4,17 @@ SQLAlchemy model for permission_audit_log table
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Enum, Text, String, Index
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
-from database.core.base import Base
-from database.mixins.timestamp_mixin import TimestampMixin
-from database.mixins.query_helper_mixin import QueryHelperMixin
+from database import Base
+from database.models.base import TimestampMixin
+from database.models.base import QueryHelperMixin
 from typing import TYPE_CHECKING, Optional, List, Dict, Any
 import enum
 
 if TYPE_CHECKING:
     from database.models.user import User
-    from database.models.role import Role
-    from database.models.permission import Permission
-    from database.models.warehouse import Warehouse
+    from database.models.roles import Role
+    from database.models.permissions import Permission
+    from database.models.warehouses import Warehouse
 
 
 class ActionType(enum.Enum):

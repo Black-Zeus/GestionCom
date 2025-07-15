@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 from typing import AsyncGenerator, Generator
+from database.database import Base
 import logging
 
 # ==========================================
@@ -340,6 +341,7 @@ __all__ = [
     
     # Clases
     'DatabaseManager',
+    'Base',  
     
     # SQLAlchemy exports
     'AsyncSession',

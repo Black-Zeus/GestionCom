@@ -3,10 +3,10 @@ SQLAlchemy model for warehouses table
 """
 from sqlalchemy import Column, BigInteger, ForeignKey, String, Text, Boolean, Enum, Index
 from sqlalchemy.orm import relationship, validates
-from database.core.base import Base
-from database.mixins.timestamp_mixin import TimestampMixin
-from database.mixins.soft_delete_mixin import SoftDeleteMixin
-from database.mixins.query_helper_mixin import QueryHelperMixin
+from database import Base
+from database.models.base import TimestampMixin
+from database.models.base import SoftDeleteMixin
+from database.models.base import QueryHelperMixin
 from typing import TYPE_CHECKING, Optional, List
 import enum
 

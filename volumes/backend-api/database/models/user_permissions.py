@@ -4,15 +4,15 @@ SQLAlchemy model for user_permissions table
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Enum, Index
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
-from database.core.base import Base
-from database.mixins.timestamp_mixin import TimestampMixin
-from database.mixins.query_helper_mixin import QueryHelperMixin
+from database import Base
+from database.models.base import TimestampMixin
+from database.models.base import QueryHelperMixin
 from typing import TYPE_CHECKING, Optional, List
 import enum
 
 if TYPE_CHECKING:
     from database.models.user import User
-    from database.models.permission import Permission
+    from database.models.permissions import Permission
 
 
 class PermissionType(enum.Enum):
@@ -214,7 +214,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def user_has_permission_code(cls, session, user_id: int, permission_code: str, check_expired: bool = True) -> Optional["UserPermission"]:
         """Check if a user has a permission by permission code"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         query = session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
             Permission.permission_code == permission_code,
@@ -232,7 +232,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_active_user_permissions(cls, session, user_id: int) -> List["UserPermission"]:
         """Get active permissions for a user (not expired and permission is active)"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
@@ -263,7 +263,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_permissions_by_group_for_user(cls, session, user_id: int, permission_group: str) -> List["UserPermission"]:
         """Get permissions of a specific group for a user"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,
@@ -305,7 +305,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def count_active_assignments(cls, session) -> int:
         """Count total active permission assignments to users"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             Permission.is_active == True,
@@ -315,7 +315,7 @@ class UserPermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def count_permissions_for_user(cls, session, user_id: int) -> int:
         """Count total active permissions assigned to a user"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         from datetime import datetime, timezone
         return session.query(cls).join(Permission).filter(
             cls.user_id == user_id,

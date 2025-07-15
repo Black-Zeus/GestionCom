@@ -4,14 +4,14 @@ SQLAlchemy model for role_permissions table
 from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Index
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
-from database.core.base import Base
-from database.mixins.timestamp_mixin import TimestampMixin
-from database.mixins.query_helper_mixin import QueryHelperMixin
+from database import Base
+from database.models.base import TimestampMixin
+from database.models.base import QueryHelperMixin
 from typing import TYPE_CHECKING, Optional, List
 
 if TYPE_CHECKING:
-    from database.models.role import Role
-    from database.models.permission import Permission
+    from database.models.roles import Role
+    from database.models.permissions import Permission
     from database.models.user import User
 
 
@@ -147,7 +147,7 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def role_has_permission_code(cls, session, role_id: int, permission_code: str) -> bool:
         """Check if a role has a permission by permission code"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         return session.query(cls).join(Permission).filter(
             cls.role_id == role_id,
             Permission.permission_code == permission_code,
@@ -157,8 +157,8 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_active_role_permissions(cls, session, role_id: int) -> List["RolePermission"]:
         """Get active permissions for a role (both role and permission must be active)"""
-        from database.models.role import Role
-        from database.models.permission import Permission
+        from database.models.roles import Role
+        from database.models.permissions import Permission
         return session.query(cls).join(Role).join(Permission).filter(
             cls.role_id == role_id,
             Role.is_active == True,
@@ -168,7 +168,7 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_permissions_by_group_for_role(cls, session, role_id: int, permission_group: str) -> List["RolePermission"]:
         """Get permissions of a specific group for a role"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         return session.query(cls).join(Permission).filter(
             cls.role_id == role_id,
             Permission.permission_group == permission_group,
@@ -178,7 +178,7 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_roles_with_permission_group(cls, session, permission_group: str) -> List["RolePermission"]:
         """Get all roles that have permissions from a specific group"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         return session.query(cls).join(Permission).filter(
             Permission.permission_group == permission_group,
             Permission.is_active == True
@@ -187,8 +187,8 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def count_active_assignments(cls, session) -> int:
         """Count total active permission assignments to roles"""
-        from database.models.role import Role
-        from database.models.permission import Permission
+        from database.models.roles import Role
+        from database.models.permissions import Permission
         return session.query(cls).join(Role).join(Permission).filter(
             Role.is_active == True,
             Permission.is_active == True
@@ -197,7 +197,7 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def count_permissions_for_role(cls, session, role_id: int) -> int:
         """Count total permissions assigned to a role"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         return session.query(cls).join(Permission).filter(
             cls.role_id == role_id,
             Permission.is_active == True
@@ -206,7 +206,7 @@ class RolePermission(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_permission_distribution(cls, session) -> dict:
         """Get distribution of permissions across roles"""
-        from database.models.permission import Permission
+        from database.models.permissions import Permission
         from sqlalchemy import func
         
         result = session.query(

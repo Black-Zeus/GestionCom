@@ -235,5 +235,16 @@ REQUEST_ID_HEADER = "X-Request-ID"
 API_VERSION_HEADER = "X-API-Version"
 
 # Rutas que requieren autenticación
-PRIVATE_ROUTES = ["/users", "/inventory", "/admin", "/reports"]
+# En core/constants.py
+PRIVATE_ROUTES = [
+    # Rutas principales del sistema
+    "/users",              # Gestión de usuarios
+    "/inventory",          # Gestión de inventarios
+    "/admin",              # Panel administrativo
+    "/reports",            # Reportes y estadísticas
+    
+    # Rutas de autenticación que requieren JWT
+    "/auth/logout",        # Logout requiere token activo
+    "/auth/validate-token" # Validación requiere el token a verificar
+]
 RESPONSE_MANAGER_AVAILABLE = True
