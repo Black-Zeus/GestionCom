@@ -758,6 +758,24 @@ drop_persistence() {
         echo -e " ${RED}[No existe]${NC}"
       fi
 
+
+      # Eliminar carpetas __pycache__ en todo el proyecto
+      echo -n "Eliminando carpetas __pycache__..."
+      found=$(find . -type d -name "__pycache__")
+
+      if [ -n "$found" ]; then
+        find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
+        if [ $? -eq 0 ]; then
+          echo -e " ${GREEN}[OK]${NC}"
+        else
+          echo -e " ${RED}[Error al eliminar]${NC}"
+        fi
+      else
+        echo -e " ${RED}[No se encontraron]${NC}"
+      fi
+
+
+
       echo ""
       echo "======================================="
       echo -e "${GREEN}✅ Limpieza completada.${NC}"
