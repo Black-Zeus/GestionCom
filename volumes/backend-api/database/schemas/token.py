@@ -1,4 +1,5 @@
 """
+volumes/backend-api/database/schemas/token.py
 Schemas Pydantic para manejo específico de tokens JWT
 Complementa schemas/auth.py con funcionalidades avanzadas de tokens
 """

@@ -1,170 +1,136 @@
 """
-SQLAlchemy model for user_roles table
+volumes/backend-api/database/models/user_roles.py
+Modelo SQLAlchemy para la tabla user_roles
 """
-from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Index
-from sqlalchemy.orm import relationship, validates
-from sqlalchemy.sql import func
-from database import Base
-from database.models.base import TimestampMixin
-from database.models.base import QueryHelperMixin
-from typing import TYPE_CHECKING, Optional
+from datetime import datetime, timezone
+from sqlalchemy import Column, BigInteger, ForeignKey, TIMESTAMP, Index, UniqueConstraint
+from sqlalchemy.orm import validates, relationship
 
-if TYPE_CHECKING:
-    from database.models.user import User
-    from database.models.roles import Role
+from .base import BaseModel
 
 
-class UserRole(Base, TimestampMixin, QueryHelperMixin):
-    """
-    Model for user_roles table - Many-to-many relationship between users and roles
-    
-    Attributes:
-        id: Primary key
-        user_id: Foreign key to users table
-        role_id: Foreign key to roles table
-        assigned_at: Timestamp when role was assigned
-        assigned_by_user_id: Foreign key to user who assigned the role
-    """
+class UserRole(BaseModel):
+    """Modelo para relación usuarios-roles"""
     
     __tablename__ = "user_roles"
     
-    # Primary Key
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    # CAMPOS DE RELACIÓN
     
-    # Foreign Keys
     user_id = Column(
-        BigInteger, 
-        ForeignKey("users.id", ondelete="CASCADE"), 
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         comment="Usuario al que se le asigna el rol"
     )
     
     role_id = Column(
-        BigInteger, 
-        ForeignKey("roles.id", ondelete="CASCADE"), 
+        BigInteger,
+        ForeignKey("roles.id", ondelete="CASCADE"),
         nullable=False,
         comment="Rol asignado al usuario"
     )
     
     assigned_by_user_id = Column(
-        BigInteger, 
-        ForeignKey("users.id", ondelete="SET NULL"), 
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         comment="Usuario que realizó la asignación"
     )
     
-    # Timestamps
+    # CAMPOS DE AUDITORÍA
+    
     assigned_at = Column(
-        DateTime(timezone=True), 
-        nullable=False, 
-        default=func.now(),
+        TIMESTAMP,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
         comment="Fecha y hora de asignación del rol"
     )
     
-    # Relationships
-    user = relationship(
-        "User", 
-        foreign_keys=[user_id],
-        back_populates="user_roles",
-        lazy="select"
-    )
+    # ÍNDICES Y RESTRICCIONES
     
-    role = relationship(
-        "Role", 
-        foreign_keys=[role_id],
-        back_populates="user_roles",
-        lazy="select"
-    )
-    
-    assigned_by_user = relationship(
-        "User", 
-        foreign_keys=[assigned_by_user_id],
-        lazy="select"
-    )
-    
-    # Indexes (matching database schema)
     __table_args__ = (
-        Index('uk_user_role', 'user_id', 'role_id', unique=True),
+        UniqueConstraint('user_id', 'role_id', name='uk_user_role'),
         Index('idx_user_id', 'user_id'),
         Index('idx_role_id', 'role_id'),
+        Index('idx_assigned_by_user_id', 'assigned_by_user_id'),
+        Index('idx_assigned_at', 'assigned_at'),
+        Index('idx_user_roles_composite', 'user_id', 'role_id'),
     )
     
-    # Validators
+    # VALIDADORES
+    
     @validates('user_id')
-    def validate_user_id(self, key, value):
-        """Validate user_id is positive"""
-        if value is not None and value <= 0:
-            raise ValueError("user_id debe ser un número positivo")
-        return value
+    def validate_user_id(self, key, user_id):
+        """Validar user_id"""
+        if not user_id:
+            raise ValueError("User ID es requerido")
+        
+        if user_id <= 0:
+            raise ValueError("User ID debe ser mayor a 0")
+        
+        return user_id
     
     @validates('role_id')
-    def validate_role_id(self, key, value):
-        """Validate role_id is positive"""
-        if value is not None and value <= 0:
-            raise ValueError("role_id debe ser un número positivo")
-        return value
+    def validate_role_id(self, key, role_id):
+        """Validar role_id"""
+        if not role_id:
+            raise ValueError("Role ID es requerido")
+        
+        if role_id <= 0:
+            raise ValueError("Role ID debe ser mayor a 0")
+        
+        return role_id
     
     @validates('assigned_by_user_id')
-    def validate_assigned_by_user_id(self, key, value):
-        """Validate assigned_by_user_id is positive when provided"""
-        if value is not None and value <= 0:
-            raise ValueError("assigned_by_user_id debe ser un número positivo")
-        return value
+    def validate_assigned_by_user_id(self, key, assigned_by_user_id):
+        """Validar assigned_by_user_id"""
+        if assigned_by_user_id is not None and assigned_by_user_id <= 0:
+            raise ValueError("Assigned by User ID debe ser mayor a 0")
+        
+        return assigned_by_user_id
     
-    # Class Methods
-    @classmethod
-    def get_by_user_and_role(cls, session, user_id: int, role_id: int) -> Optional["UserRole"]:
-        """Get user role assignment by user_id and role_id"""
-        return session.query(cls).filter(
-            cls.user_id == user_id,
-            cls.role_id == role_id
-        ).first()
+    # PROPIEDADES
     
-    @classmethod
-    def get_user_roles(cls, session, user_id: int) -> list["UserRole"]:
-        """Get all roles assigned to a user"""
-        return session.query(cls).filter(cls.user_id == user_id).all()
+    @property
+    def assignment_info(self) -> str:
+        """Información de la asignación"""
+        if self.assigned_by_user_id:
+            return f"Asignado el {self.assigned_at.strftime('%Y-%m-%d %H:%M')}"
+        else:
+            return f"Asignado automáticamente el {self.assigned_at.strftime('%Y-%m-%d %H:%M')}"
     
-    @classmethod
-    def get_role_users(cls, session, role_id: int) -> list["UserRole"]:
-        """Get all users assigned to a role"""
-        return session.query(cls).filter(cls.role_id == role_id).all()
+    @property
+    def is_system_assignment(self) -> bool:
+        """Verificar si fue asignado por el sistema"""
+        return self.assigned_by_user_id is None
     
-    @classmethod
-    def get_assignments_by_assigner(cls, session, assigned_by_user_id: int) -> list["UserRole"]:
-        """Get all role assignments made by a specific user"""
-        return session.query(cls).filter(cls.assigned_by_user_id == assigned_by_user_id).all()
-    
-    @classmethod
-    def user_has_role(cls, session, user_id: int, role_id: int) -> bool:
-        """Check if a user has a specific role"""
-        return session.query(cls).filter(
-            cls.user_id == user_id,
-            cls.role_id == role_id
-        ).first() is not None
-    
-    @classmethod
-    def user_has_role_code(cls, session, user_id: int, role_code: str) -> bool:
-        """Check if a user has a role by role code"""
-        from database.models.roles import Role
-        return session.query(cls).join(Role).filter(
-            cls.user_id == user_id,
-            Role.role_code == role_code,
-            Role.is_active == True
-        ).first() is not None
-    
-    @classmethod
-    def count_active_assignments(cls, session) -> int:
-        """Count total active role assignments"""
-        from database.models.roles import Role
-        from database.models.user import User
-        return session.query(cls).join(Role).join(User).filter(
-            Role.is_active == True,
-            User.is_active == True
-        ).count()
+    @property
+    def is_self_assignment(self) -> bool:
+        """Verificar si el usuario se asignó el rol a sí mismo"""
+        return (
+            self.assigned_by_user_id is not None and 
+            self.assigned_by_user_id == self.user_id
+        )
     
     def __repr__(self) -> str:
-        return f"<UserRole(id={self.id}, user_id={self.user_id}, role_id={self.role_id})>"
+        """Representación string del objeto"""
+        return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
     
-    def __str__(self) -> str:
-        return f"UserRole {self.id}: User {self.user_id} -> Role {self.role_id}"
+    # Relaciones
+    user = relationship(
+        "User",
+        foreign_keys="UserRole.user_id",
+        viewonly=True
+    )
+
+    role = relationship(
+        "Role", 
+        foreign_keys="UserRole.role_id",
+        viewonly=True
+    )
+
+    assigned_by_user = relationship(
+        "User",
+        foreign_keys="UserRole.assigned_by_user_id",
+        viewonly=True
+    )

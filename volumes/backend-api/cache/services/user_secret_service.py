@@ -1,27 +1,24 @@
 """
+volumes/backend-api/cache/services/user_secret_service.py
 Servicio para gestión de user secrets - Generación, regeneración y poblado
 Integrado con tu arquitectura de cache y base de datos
 """
 import secrets
-import hashlib
-import logging
+from utils.log_helper import setup_logger
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any
 
 from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, and_
-from sqlalchemy.orm import selectinload
-
-from core.config import settings
 from core.exceptions import SystemException, ValidationException, DatabaseException
 from core.constants import ErrorCode
 from cache.services.user_cache import user_cache_service
-from database.models.user import User
+from database.models.users import User
 
 
 # Configurar logger
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class UserSecretService:

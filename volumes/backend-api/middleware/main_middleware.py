@@ -1,9 +1,12 @@
+"""
+volumes/backend-api/middleware/main_middleware.py
+"""
 
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from core.response import ResponseManager
-from core.constants import PRIVATE_ROUTES, RESPONSE_MANAGER_AVAILABLE 
+from core.constants import PRIVATE_ROUTES, RESPONSE_MANAGER_AVAILABLE, HTTPStatus
 import time
 
 # ==========================================
@@ -69,10 +72,10 @@ class SimpleAuthMiddleware(BaseHTTPMiddleware):
                     )
                 else:
                     return JSONResponse(
-                        status_code=500,
+                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                         content={
                             "success": False,
-                            "status": 500,
+                            "status": HTTPStatus.INTERNAL_SERVER_ERROR,
                             "message": "Error interno de autenticación",
                             "error": {"code": "AUTH_SYSTEM_ERROR", "details": str(e)}
                         }

@@ -1,7 +1,8 @@
 """
+volumes/backend-api/database/schemas/permission_audit_log.py
 SQLAlchemy model for permission_audit_log table
 """
-from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Enum, Text, String, Index
+from sqlalchemy import Column, BigInteger, ForeignKey, Enum, Text, String, Index
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.sql import func
 from database import Base
@@ -11,10 +12,7 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 import enum
 
 if TYPE_CHECKING:
-    from database.models.user import User
-    from database.models.roles import Role
-    from database.models.permissions import Permission
-    from database.models.warehouses import Warehouse
+    pass
 
 
 class ActionType(enum.Enum):
@@ -354,7 +352,7 @@ class PermissionAuditLog(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_recent_actions(cls, session, days: int = 30, limit: Optional[int] = None) -> List["PermissionAuditLog"]:
         """Get recent audit actions within specified days"""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta
         cutoff_date = datetime.now() - timedelta(days=days)
         query = session.query(cls).filter(cls.created_at >= cutoff_date).order_by(cls.created_at.desc())
         if limit:
@@ -396,7 +394,7 @@ class PermissionAuditLog(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def get_audit_statistics(cls, session, days: int = 30) -> Dict[str, Any]:
         """Get audit statistics for the specified period"""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta
         from sqlalchemy import func
         
         cutoff_date = datetime.now() - timedelta(days=days)
@@ -432,7 +430,7 @@ class PermissionAuditLog(Base, TimestampMixin, QueryHelperMixin):
     @classmethod
     def cleanup_old_logs(cls, session, days_to_keep: int = 365) -> int:
         """Remove audit logs older than specified days"""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta
         cutoff_date = datetime.now() - timedelta(days=days_to_keep)
         count = session.query(cls).filter(cls.created_at < cutoff_date).delete()
         return count

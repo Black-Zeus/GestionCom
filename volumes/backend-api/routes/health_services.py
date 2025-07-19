@@ -1,4 +1,5 @@
 """
+volumes/backend-api/routes/health_services.py
 Router de health check - Endpoints para verificar estado de la API y servicios
 """
 from fastapi import APIRouter, HTTPException, Depends, Header, Request
@@ -53,30 +54,10 @@ def get_db():
 # ==========================================
 
 @router.get("/")
-async def health_check(request: Request):
-    """
-    Endpoint para verificar el estado básico de la API.
-    """
-    data = {
-        "name": settings.APP_NAME,
-        "role": "Gestión y acceso a la base de datos del sistema",
-        "status": "active",
-        "version": settings.API_VERSION,
-        "environment": settings.ENVIRONMENT
-    }
-    
-    if RESPONSE_MANAGER_AVAILABLE:
-        return ResponseManager.success(
-            data=data,
-            message="Health check exitoso",
-            request=request
-        )
-    else:
-        return JSONResponse(content={
-            **data,
-            "success": True,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+async def auth_services(request: Request):
+    """Información básica del sistema de autenticación"""
+    from utils.routes_helper import get_health_info
+    return await  get_health_info(router, request)
 
 @router.get("/db")
 async def health_db(request: Request, db: Session = Depends(get_db)):
@@ -92,7 +73,7 @@ async def health_db(request: Request, db: Session = Depends(get_db)):
             )
         else:
             return JSONResponse(
-                status_code=503,
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
                 content={
                     "name": "Base de Datos",
                     "status": "not_configured",
@@ -133,7 +114,7 @@ async def health_db(request: Request, db: Session = Depends(get_db)):
                 request=request
             )
         else:
-            raise HTTPException(status_code=500, detail={
+            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail={
                 "name": "Base de Datos",
                 "status": "disconnected",
                 "error": str(e),
@@ -188,7 +169,7 @@ async def health_redis(request: Request):
             )
         else:
             return JSONResponse(
-                status_code=503,
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
                 content={
                     "name": "Redis",
                     "status": "not_configured",
@@ -206,7 +187,7 @@ async def health_redis(request: Request):
             )
         else:
             return JSONResponse(
-                status_code=503,
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
                 content={
                     "name": "Redis", 
                     "status": "error",
@@ -341,7 +322,7 @@ async def show_db_config(request: Request):
             )
         else:
             raise HTTPException(
-                status_code=403, 
+                status_code=HTTPStatus.FORBIDDEN, 
                 detail="Este endpoint solo está disponible en entornos de desarrollo."
             )
 
@@ -382,7 +363,7 @@ async def show_redis_config(request: Request):
             )
         else:
             raise HTTPException(
-                status_code=403, 
+                status_code=HTTPStatus.FORBIDDEN, 
                 detail="Este endpoint solo está disponible en entornos de desarrollo."
             )
 
@@ -421,7 +402,7 @@ async def validate_jwt(request: Request, authorization: str = Header(None)):
             )
         else:
             raise HTTPException(
-                status_code=403, 
+                status_code=HTTPStatus.FORBIDDEN, 
                 detail="Este endpoint solo está disponible en entornos de desarrollo."
             )
 
@@ -434,7 +415,7 @@ async def validate_jwt(request: Request, authorization: str = Header(None)):
             )
         else:
             raise HTTPException(
-                status_code=401, 
+                status_code=HTTPStatus.UNAUTHORIZED, 
                 detail="Token de autenticación faltante o inválido"
             )
 
@@ -473,7 +454,7 @@ async def validate_jwt(request: Request, authorization: str = Header(None)):
             )
         else:
             return JSONResponse(
-                status_code=503,
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
                 content={
                     "message": "Error: utils.security no disponible",
                     "error": "Módulo de seguridad no configurado",
@@ -488,7 +469,7 @@ async def validate_jwt(request: Request, authorization: str = Header(None)):
                 request=request
             )
         else:
-            raise HTTPException(status_code=403, detail=str(e))
+            raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=str(e))
     except Exception as e:
         if RESPONSE_MANAGER_AVAILABLE:
             return ResponseManager.internal_server_error(
@@ -497,7 +478,7 @@ async def validate_jwt(request: Request, authorization: str = Header(None)):
                 request=request
             )
         else:
-            raise HTTPException(status_code=500, detail=f"Error validando token: {str(e)}")
+            raise HTTPException(status_code=HTTPStatus.INTERNAL_SERVER_ERROR, detail=f"Error validando token: {str(e)}")
 
 @router.get("/system-info")
 async def system_info(request: Request):
@@ -514,7 +495,7 @@ async def system_info(request: Request):
             )
         else:
             raise HTTPException(
-                status_code=403, 
+                status_code=HTTPStatus.FORBIDDEN, 
                 detail="Este endpoint solo está disponible en entornos de desarrollo."
             )
 

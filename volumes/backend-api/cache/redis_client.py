@@ -1,28 +1,24 @@
 """
+volumes/backend-api/cache/redis_client.py
 Cliente Redis configurado con connection pooling, fallback y manejo de errores
 """
 import asyncio
 import json
-import logging
-from typing import Optional, Union, Dict, Any, List
+from utils.log_helper import setup_logger
+from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
-
-import redis.asyncio as aioredis
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import (
     ConnectionError as RedisConnectionError,
     TimeoutError as RedisTimeoutError,
-    ResponseError,
     RedisError
 )
 
 from core.config import settings
 from core.exceptions import CacheException
-from core.constants import RedisKeys
-
 
 # Configurar logger
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class RedisClient:

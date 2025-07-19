@@ -42,3 +42,6 @@ click==8.1.8              # CLI utilities
 
 # Type Annotations
 typing_extensions==4.12.2 # Extensiones de typing
+
+# Logging
+python-json-logger==3.3.0       # Formateador JSON para logs de Python (logging estructurado)

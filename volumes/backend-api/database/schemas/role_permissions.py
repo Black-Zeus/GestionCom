@@ -1,8 +1,9 @@
 """
+volumes/backend-api/database/schemas/role_permissions.py
 Pydantic schemas for RolePermission model
 """
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
 

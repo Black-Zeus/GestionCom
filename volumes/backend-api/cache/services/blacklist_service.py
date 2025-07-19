@@ -1,21 +1,18 @@
 """
+volumes/backend-api/cache/services/blacklist_service.py
 Servicio de blacklist para tokens JWT - Invalidación y verificación
 Integrado con Redis y tu arquitectura de cache existente
 """
-import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any, List, Set
+from utils.log_helper import setup_logger
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List
 
 from cache.redis_client import redis_client
-from core.config import settings
-from core.security import jwt_manager
-from core.constants import RedisKeys
-from core.exceptions import CacheException, SystemException
 from database.schemas.token import BlacklistReason, TokenType
 import json
 
 # Configurar logger
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class BlacklistService:

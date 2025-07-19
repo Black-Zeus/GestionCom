@@ -1,9 +1,10 @@
 """
+volumes/backend-api/cache/services/auth_service.py
 AuthService refactorizado - Separación de responsabilidades
 Solo maneja el flujo principal de autenticación, delega el resto
 """
 import secrets
-import logging
+from utils.log_helper import setup_logger
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,10 +14,10 @@ from core.security import jwt_manager
 from core.exceptions import AuthenticationException, SystemException
 from core.constants import ErrorCode
 
-from database.schemas.auth import LoginRequest, LoginResponse, UserAuthInfo
+from database.schemas.auth import LoginRequest
 from cache.services.user_cache import user_cache_service
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class AuthService:
@@ -228,7 +229,7 @@ class UserService:
     
     async def authenticate_credentials(self, username: str, password: str):
         """Autenticar credenciales de usuario"""
-        from database.models.user import User
+        from database.models.users import User
         from sqlalchemy import select, and_, or_
         from core.password_manager import verify_user_password
         
@@ -265,7 +266,7 @@ class UserService:
     
     async def get_active_user(self, user_id: int):
         """Obtener usuario activo por ID"""
-        from database.models.user import User
+        from database.models.users import User
         from sqlalchemy import select, and_
         
         stmt = select(User).where(
@@ -285,7 +286,7 @@ class UserService:
     
     async def handle_successful_login(self, user_id: int):
         """Manejar post-login exitoso"""
-        from database.models.user import User
+        from database.models.users import User
         from sqlalchemy import update
         
         try:

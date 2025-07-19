@@ -1,4 +1,5 @@
 """
+volumes/backend-api/database/__init__.py
 Database package initialization
 Exporta las funciones y clases principales para uso en toda la aplicación
 """
@@ -8,40 +9,40 @@ Exporta las funciones y clases principales para uso en toda la aplicación
 # ==========================================
 
 try:
-    # Intentar importar configuración principal
+    # Usar tu configuración real que lee desde .env
     from core.config import settings
     CONFIG_AVAILABLE = True
-except ImportError:
-    print("⚠️  Warning: core.config no disponible, usando configuración básica")
-    CONFIG_AVAILABLE = False
-    # Configuración básica de fallback
-    class BasicSettings:
-        DB_HOST = "mariadb"
-        DB_PORT = 3306
-        DB_NAME = "inventario"
-        DB_USER = "root"
-        DB_PASSWORD = "password"
-        
-        @property
-        def database_connection_url(self):
-            return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
-    settings = BasicSettings()
+    # Validar configuración al importar
+    settings.validate()
+    logger = None  # Se inicializará después
+    
+except ImportError as e:
+    print(f"❌ Error crítico: No se pudo cargar la configuración desde config.py")
+    print(f"Detalles: {e}")
+    raise ImportError("La configuración es requerida para el funcionamiento del sistema")
+    
+except ValueError as e:
+    print(f"❌ Error de configuración: {e}")
+    if hasattr(settings, 'is_production') and settings.is_production:
+        raise  # En producción, fallar inmediatamente
+    else:
+        print("⚠️  Continuando en modo desarrollo con configuración incompleta")
+        CONFIG_AVAILABLE = True
 
 # Imports de SQLAlchemy
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import SQLAlchemyError
 from typing import AsyncGenerator, Generator
 from database.database import Base
-import logging
+from utils.log_helper import setup_logger
 
 # ==========================================
 # CONFIGURACIÓN DE LOGGING
 # ==========================================
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # ==========================================
 # CONFIGURACIÓN DE ENGINES Y SESSIONS
@@ -67,13 +68,11 @@ class DatabaseManager:
             return
         
         try:
-            # URLs de conexión
-            if CONFIG_AVAILABLE:
-                sync_url = settings.database_connection_url
-                async_url = settings.database_connection_url.replace("mysql+pymysql", "mysql+aiomysql")
-            else:
-                sync_url = settings.database_connection_url
-                async_url = sync_url.replace("mysql+pymysql", "mysql+aiomysql")
+            # URLs de conexión usando tu configuración real
+            sync_url = settings.database_connection_url
+            async_url = sync_url.replace("mysql+pymysql", "mysql+aiomysql")
+            
+            logger.info(f"Conectando a base de datos: {settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}")
             
             # Engine síncrono
             self._engine = create_engine(
@@ -82,7 +81,10 @@ class DatabaseManager:
                 pool_recycle=3600,
                 pool_size=10,
                 max_overflow=20,
-                echo=False  # Cambiar a True para debug SQL
+                echo=settings.DEBUG_MODE if hasattr(settings, 'DEBUG_MODE') else False,
+                connect_args={
+                    "charset": "utf8mb4"
+                }
             )
             
             # Engine asíncrono
@@ -92,7 +94,10 @@ class DatabaseManager:
                 pool_recycle=3600,
                 pool_size=10,
                 max_overflow=20,
-                echo=False  # Cambiar a True para debug SQL
+                echo=settings.DEBUG_MODE if hasattr(settings, 'DEBUG_MODE') else False,
+                connect_args={
+                    "charset": "utf8mb4"
+                }
             )
             
             # Session factories
@@ -259,13 +264,19 @@ async def database_health_check() -> dict:
             return {
                 "status": "healthy",
                 "message": "Database connection successful",
-                "connected": True
+                "connected": True,
+                "database_host": settings.MYSQL_HOST,
+                "database_port": settings.MYSQL_PORT,
+                "database_name": settings.MYSQL_DATABASE,
+                "environment": settings.ENVIRONMENT
             }
         else:
             return {
                 "status": "unhealthy", 
                 "message": "Database connection failed",
-                "connected": False
+                "connected": False,
+                "database_host": settings.MYSQL_HOST,
+                "database_port": settings.MYSQL_PORT
             }
             
     except Exception as e:
@@ -346,7 +357,11 @@ __all__ = [
     # SQLAlchemy exports
     'AsyncSession',
     'Session',
-    'text'
+    'text',
+    
+    # Configuración
+    'settings',
+    'CONFIG_AVAILABLE'
 ]
 
 # ==========================================
@@ -370,13 +385,17 @@ async def create_test_async_session():
     return _db_manager._async_session_factory()
 
 # ==========================================
-# AUTO-INITIALIZATION (Opcional)
+# AUTO-INITIALIZATION (Controlada)
 # ==========================================
 
-# Inicializar automáticamente si se desea
-# Comentado por defecto para control manual
-try:
-    _db_manager.initialize()
-    print("✅ Database auto-initialized")
-except Exception as e:
-    print(f"⚠️  Database auto-initialization failed: {e}")
+# Solo mostrar información de configuración, no auto-inicializar
+if CONFIG_AVAILABLE:
+    debug_info = settings.get_debug_info()
+    logger.info(f"📊 Database configuration loaded: {debug_info['mysql_host']}:{debug_info['mysql_port']}/{debug_info['mysql_database']}")
+    
+    if settings.is_development:
+        logger.debug("🔧 Running in development mode")
+    elif settings.is_production:
+        logger.info("🚀 Running in production mode")
+else:
+    logger.warning("⚠️  Database configuration not fully available")

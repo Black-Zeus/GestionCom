@@ -1,7 +1,8 @@
 """
+volumes/backend-api/database/schemas/permissions.py
 Schemas Pydantic para el modelo Permission
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, validator, ConfigDict
 

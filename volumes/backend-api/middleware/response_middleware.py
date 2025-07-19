@@ -1,4 +1,5 @@
 """
+volumes/backend-api/middleware/response_middleware.py
 Middleware para manejo unificado de respuestas y trazabilidad
 """
 import time
@@ -12,9 +13,11 @@ from pydantic import ValidationError
 
 from core.response import ResponseManager
 from core.exceptions import BaseAppException
-from core.constants import HTTPStatus, ErrorCode, ErrorType, TRACE_ID_HEADER
+from core.constants import TRACE_ID_HEADER
 from core.config import settings
 
+from utils.log_helper import setup_logger
+logger = setup_logger(__name__)
 
 class ResponseMiddleware(BaseHTTPMiddleware):
     """
@@ -170,13 +173,35 @@ class ResponseMiddleware(BaseHTTPMiddleware):
     
     def _log_exception(self, exception: Exception, request: Request, error_type: str):
         """
-        Log de excepciones (implementar según tu sistema de logging)
+        Log de excepciones usando el sistema de logging configurado
         """
-        # TODO: Implementar logging real según tus necesidades
+                
+        # Información básica del error
+        error_msg = f"[{error_type}] {type(exception).__name__}: {str(exception)}"
+        
+        # Contexto del request
+        context = {
+            "path": request.url.path,
+            "method": request.method,
+            "ip_address": getattr(request.state, 'ip_address', 'unknown'),
+            "trace_id": getattr(request.state, 'trace_id', 'unknown')
+        }
+        
+        # Log según severidad del error
+        if error_type in ["VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND"]:
+            logger.warning(f"{error_msg} - {context}")
+        elif error_type in ["UNAUTHORIZED", "FORBIDDEN", "RATE_LIMIT_EXCEEDED"]:
+            logger.warning(f"{error_msg} - {context}")
+        else:
+            # Errores inesperados
+            logger.error(f"{error_msg} - {context}", exc_info=settings.ENABLE_STACK_TRACE)
+        
+        # En debug mode, log adicional con más detalle
         if settings.DEBUG_MODE:
-            print(f"[{error_type}] {type(exception).__name__}: {str(exception)}")
-            print(f"Path: {request.url.path}")
-            print(f"Method: {request.method}")
-            print(f"IP: {getattr(request.state, 'ip_address', 'unknown')}")
-            print(f"Trace ID: {getattr(request.state, 'trace_id', 'unknown')}")
-            print("=" * 50)
+            debug_details = (
+                f"[{error_type}] {type(exception).__name__}: {str(exception)} | "
+                f"Path: {request.url.path} | Method: {request.method} | "
+                f"IP: {getattr(request.state, 'ip_address', 'unknown')} | "
+                f"Trace ID: {getattr(request.state, 'trace_id', 'unknown')}"
+            )
+            logger.debug(debug_details)

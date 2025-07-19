@@ -1,21 +1,24 @@
 """
+volumes/backend-api/database/database.py
 Configuración de SQLAlchemy para la base de datos
 """
-import logging
-from typing import AsyncGenerator, Optional
+from utils.log_helper import setup_logger
+from typing import AsyncGenerator
 from contextlib import asynccontextmanager
+import logging
 
-from sqlalchemy import create_engine, event, pool
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 
+# Usar tu configuración real
 from core.config import settings
 from core.exceptions import DatabaseException
 
 # Configurar logger
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 # ==========================================
 # BASE DECLARATIVA
@@ -51,8 +54,10 @@ class DatabaseManager:
             # ENGINE SÍNCRONO
             # ==========================================
             
-            # URL de conexión síncrona (para operaciones que lo requieran)
+            # URL de conexión síncrona usando tu configuración
             sync_database_url = settings.database_connection_url
+            
+            logger.info(f"Inicializando conexión a base de datos: {settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}")
             
             self._engine = create_engine(
                 sync_database_url,
@@ -64,7 +69,7 @@ class DatabaseManager:
                 poolclass=QueuePool,      # Tipo de pool
                 connect_args={
                     "charset": "utf8mb4",
-                    "connect_timeout": settings.DATABASE_TIMEOUT if hasattr(settings, 'DATABASE_TIMEOUT') else 10,
+                    "connect_timeout": 10,
                     "autocommit": False
                 }
             )
@@ -85,7 +90,7 @@ class DatabaseManager:
                 pool_recycle=3600,
                 connect_args={
                     "charset": "utf8mb4",
-                    "connect_timeout": settings.DATABASE_TIMEOUT if hasattr(settings, 'DATABASE_TIMEOUT') else 10,
+                    "connect_timeout": 10,
                     "autocommit": False
                 }
             )
@@ -120,10 +125,10 @@ class DatabaseManager:
             self._setup_event_listeners()
             
             self._is_initialized = True
-            logger.info("Database manager initialized successfully")
+            logger.info("✅ Database manager initialized successfully")
             
         except Exception as e:
-            logger.error(f"Error initializing database manager: {e}")
+            logger.error(f"❌ Error initializing database manager: {e}")
             raise DatabaseException(f"Failed to initialize database: {str(e)}")
     
     def _setup_event_listeners(self):
@@ -256,11 +261,6 @@ class DatabaseManager:
                     "error": "Database manager not initialized"
                 }
             
-            # Test de conexión síncrona
-            async with self.get_session() as session:
-                result = session.execute("SELECT 1 as test").fetchone()
-                sync_test = result[0] == 1 if result else False
-            
             # Test de conexión asíncrona
             async with self.get_async_session() as session:
                 result = await session.execute("SELECT 1 as test")
@@ -276,18 +276,22 @@ class DatabaseManager:
             }
             
             return {
-                "status": "healthy" if sync_test and async_test else "unhealthy",
-                "sync_connection": sync_test,
+                "status": "healthy" if async_test else "unhealthy",
                 "async_connection": async_test,
                 "pool_info": pool_info,
-                "database_url": settings.DB_HOST + ":" + str(settings.DB_PORT) + "/" + settings.DB_NAME
+                "database_host": settings.MYSQL_HOST,
+                "database_port": settings.MYSQL_PORT,
+                "database_name": settings.MYSQL_DATABASE,
+                "environment": settings.ENVIRONMENT
             }
             
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             return {
                 "status": "error",
-                "error": str(e)
+                "error": str(e),
+                "database_host": settings.MYSQL_HOST,
+                "database_port": settings.MYSQL_PORT
             }
     
     async def close(self):
@@ -302,7 +306,7 @@ class DatabaseManager:
                 self._engine.dispose()
             
             self._is_initialized = False
-            logger.info("Database connections closed successfully")
+            logger.info("✅ Database connections closed successfully")
             
         except Exception as e:
             logger.error(f"Error closing database connections: {e}")
@@ -434,3 +438,17 @@ if settings.DEBUG_MODE:
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
     logging.getLogger('sqlalchemy.dialects').setLevel(logging.DEBUG)
     logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
+    logger.info("🔧 SQL logging habilitado en modo debug")
+
+# ==========================================
+# INFORMACIÓN DE CONFIGURACIÓN
+# ==========================================
+
+# Mostrar información de configuración al cargar
+logger.info(f"📊 Database configuration: {settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}")
+logger.info(f"🌍 Environment: {settings.ENVIRONMENT}")
+
+if settings.is_development:
+    logger.debug("🔧 Running in development mode")
+elif settings.is_production:
+    logger.info("🚀 Running in production mode")

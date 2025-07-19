@@ -1,366 +1,270 @@
 """
-Dynamic Router Loader - Cargador dinámico de routers
-Descubre y carga automáticamente todos los routers desde el directorio routes/
+utils/router_loader.py
+Módulo para cargar routers dinámicamente con estadísticas y reporte visual
 """
-import os
-import importlib
-import inspect
-from pathlib import Path
-from typing import Dict, List, Optional, Any
-from fastapi import APIRouter
-import logging
+from typing import List, Dict, Any
+from fastapi import FastAPI
 
-logger = logging.getLogger(__name__)
+
+class RouterStats:
+    """Clase para manejar estadísticas de carga de routers"""
+    
+    def __init__(self, total_configured: int):
+        self.loaded = []
+        self.failed = {}
+        self.total_configured = total_configured
+    
+    @property
+    def loaded_count(self) -> int:
+        return len(self.loaded)
+    
+    @property
+    def failed_count(self) -> int:
+        return len(self.failed)
+    
+    @property
+    def success_percentage(self) -> float:
+        if self.total_configured == 0:
+            return 0.0
+        return (self.loaded_count / self.total_configured) * 100
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convertir estadísticas a diccionario"""
+        return {
+            "loaded": self.loaded,
+            "failed": self.failed,
+            "total_configured": self.total_configured,
+            "loaded_count": self.loaded_count,
+            "failed_count": self.failed_count,
+            "success_percentage": self.success_percentage
+        }
+
 
 class RouterLoader:
-    """
-    Cargador dinámico de routers FastAPI
-    """
+    """Cargador de routers con reporte visual"""
     
-    def __init__(self, routes_directory: str = "routes", exclude_files: List[str] = None):
+    def __init__(self, app: FastAPI, routers_config: List[Dict[str, Any]], verbose: bool = True):
         """
         Inicializar el cargador de routers
         
         Args:
-            routes_directory: Directorio donde están los routers
-            exclude_files: Archivos a excluir de la carga automática
+            app: Instancia de FastAPI
+            routers_config: Lista de configuraciones de routers
+            verbose: Si mostrar output detallado
         """
-        self.routes_directory = routes_directory
-        self.exclude_files = exclude_files or ["__init__.py", "__pycache__"]
-        self.loaded_routers: Dict[str, Any] = {}
-        self.failed_imports: Dict[str, str] = {}
-        self.router_configs: Dict[str, Dict] = {}
+        self.app = app
+        self.routers_config = self._sort_routers_by_tags(routers_config)
+        self.verbose = verbose
+        self.stats = RouterStats(len(self.routers_config))
     
-    def discover_router_files(self) -> List[str]:
-        """
-        Descubrir automáticamente archivos de router en el directorio
-        
-        Returns:
-            Lista de nombres de archivos de router (sin extensión)
-        """
-        router_files = []
-        routes_path = Path(self.routes_directory)
-        
-        if not routes_path.exists():
-            logger.warning(f"📁 Directorio {self.routes_directory} no existe")
-            return []
-        
-        for file_path in routes_path.glob("*.py"):
-            filename = file_path.stem  # Nombre sin extensión
-            
-            # Excluir archivos especificados
-            if f"{filename}.py" in self.exclude_files:
-                continue
-            
-            router_files.append(filename)
-        
-        return sorted(router_files)
+    @staticmethod
+    def _sort_routers_by_tags(routers_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Ordenar routers por tags alfabéticamente"""
+        return sorted(routers_list, key=lambda x: x["tags"][0].lower())
     
-    def load_router_from_module(self, module_name: str) -> Optional[APIRouter]:
+    def _print_header(self):
+        """Imprimir header del reporte"""
+        if not self.verbose:
+            return
+            
+        print("🚀 Iniciando carga de routers...")
+        print(f"📋 Routers configurados: {len(self.routers_config)}")
+        print()
+        print("┌─────────────────────┬────────────┬─────────────────────────────────┐")
+        print("│ Módulo              │ Estado     │ Detalles                        │")
+        print("├─────────────────────┼────────────┼─────────────────────────────────┤")
+    
+    def _print_router_result(self, router_name: str, success: bool, details: str):
+        """Imprimir resultado de carga de un router"""
+        if not self.verbose:
+            return
+            
+        status = "✅ EXITOSO" if success else "❌ ERROR  "
+        print(f"│ {router_name:<19} │ {status} │ {details:<31} │")
+    
+    def _print_footer(self):
+        """Imprimir footer del reporte"""
+        if not self.verbose:
+            return
+            
+        print("└─────────────────────┴────────────┴─────────────────────────────────┘")
+        print()
+    
+    def _print_summary(self):
+        """Imprimir resumen final"""
+        if not self.verbose:
+            return
+            
+        print("📊 RESUMEN DE CARGA:")
+        print(f"   ✅ Routers exitosos: {self.stats.loaded_count}")
+        print(f"   ❌ Routers con error: {self.stats.failed_count}")
+        print(f"   📈 Total procesados: {self.stats.total_configured}")
+        print(f"   🎯 Tasa de éxito: {self.stats.success_percentage:.1f}%")
+        
+        if self.stats.failed_count > 0:
+            print(f"\n❌ ERRORES DETALLADOS:")
+            for router_name, error in self.stats.failed.items():
+                print(f"   └─ {router_name}: {error}")
+        
+        print(f"\n🚀 API lista para usar - {self.stats.loaded_count} routers activos")
+        print("=" * 60)
+    
+    def _load_single_router(self, router_config: Dict[str, Any]) -> bool:
         """
-        Cargar router desde un módulo específico
+        Cargar un router individual
         
         Args:
-            module_name: Nombre del módulo (ej: "auth", "users")
+            router_config: Configuración del router
             
         Returns:
-            APIRouter si se carga exitosamente, None si falla
+            bool: True si se cargó exitosamente
         """
+        router_name = router_config["name"]
+        prefix = router_config["prefix"]
+        tags = router_config["tags"]
+        
         try:
-            print(f"  ├─ Importando routes.{module_name}...")
-            
             # Importar el módulo
-            module = importlib.import_module(f"{self.routes_directory}.{module_name}")
+            module = __import__(f"routes.{router_name}", fromlist=[router_name])
             
-            # Buscar el router en el módulo
-            router = None
-            
-            # Buscar atributo 'router' (convención estándar)
             if hasattr(module, 'router'):
-                router = getattr(module, 'router')
+                # Registrar el router
+                self.app.include_router(module.router, prefix=prefix, tags=tags)
                 
-            # Si no encuentra 'router', buscar cualquier instancia de APIRouter
-            if router is None:
-                for attr_name in dir(module):
-                    attr = getattr(module, attr_name)
-                    if isinstance(attr, APIRouter):
-                        router = attr
-                        break
-            
-            if router is None:
-                raise AttributeError(f"No se encontró router en el módulo {module_name}")
-            
-            # Obtener información del router
-            router_info = self._extract_router_info(router, module_name)
-            self.router_configs[module_name] = router_info
-            
-            print(f"  ✅ {module_name} importado correctamente")
-            logger.info(f"Router {module_name} cargado: {router_info['endpoints']} endpoints")
-            
-            return router
-            
+                # Agregar a estadísticas de éxito
+                self.stats.loaded.append({
+                    "name": router_name,
+                    "prefix": prefix,
+                    "tags": tags
+                })
+                
+                # Inyectar estadísticas en el router de system
+                if router_name == "system" and hasattr(module, 'set_router_stats'):
+                    module.set_router_stats(self.stats.to_dict())
+                
+                # Contar endpoints
+                endpoint_count = len(getattr(module.router, 'routes', []))
+                details = f"{prefix} ({endpoint_count} endpoints)"
+                
+                self._print_router_result(router_name, True, details)
+                return True
+                
+            else:
+                error_msg = "No tiene atributo 'router'"
+                self.stats.failed[router_name] = error_msg
+                self._print_router_result(router_name, False, error_msg)
+                return False
+                
         except Exception as e:
             error_msg = str(e)
-            print(f"  ❌ Error importando {module_name}: {error_msg}")
-            logger.error(f"Failed to load router {module_name}: {error_msg}")
-            self.failed_imports[module_name] = error_msg
-            return None
+            self.stats.failed[router_name] = error_msg
+            self._print_router_result(router_name, False, error_msg)
+            return False
     
-    def load_all_routers(self, router_list: Optional[List[str]] = None) -> Dict[str, APIRouter]:
+    def load_all_routers(self) -> RouterStats:
         """
-        Cargar todos los routers especificados o descubiertos automáticamente
+        Cargar todos los routers configurados
         
-        Args:
-            router_list: Lista específica de routers a cargar. Si es None, descubre automáticamente.
-            
         Returns:
-            Diccionario con routers cargados exitosamente
+            RouterStats: Estadísticas de carga
         """
-        print("🔍 Iniciando carga dinámica de routers...")
+        self._print_header()
         
-        # Determinar qué routers cargar
-        if router_list is None:
-            router_names = self.discover_router_files()
-            print(f"📁 Routers descubiertos automáticamente: {router_names}")
-        else:
-            router_names = router_list
-            print(f"📋 Routers especificados manualmente: {router_names}")
+        for router_config in self.routers_config:
+            self._load_single_router(router_config)
         
-        # Cargar cada router
-        for router_name in router_names:
-            router = self.load_router_from_module(router_name)
-            if router:
-                self.loaded_routers[router_name] = router
+        self._print_footer()
+        self._print_summary()
         
-        # Resumen de carga
-        self._print_loading_summary()
-        
-        return self.loaded_routers
+        return self.stats
     
-    def _extract_router_info(self, router: APIRouter, module_name: str) -> Dict:
+    def load_routers_silent(self) -> RouterStats:
         """
-        Extraer información útil del router
+        Cargar routers sin output (modo silencioso)
+        
+        Returns:
+            RouterStats: Estadísticas de carga
         """
-        routes_info = []
+        original_verbose = self.verbose
+        self.verbose = False
         
-        for route in router.routes:
-            if hasattr(route, 'methods') and hasattr(route, 'path'):
-                methods = list(route.methods) if route.methods else ['GET']
-                routes_info.append({
-                    'methods': methods,
-                    'path': route.path,
-                    'name': getattr(route, 'name', 'unnamed')
-                })
+        for router_config in self.routers_config:
+            self._load_single_router(router_config)
         
-        return {
-            'module': module_name,
-            'prefix': getattr(router, 'prefix', ''),
-            'tags': getattr(router, 'tags', []),
-            'endpoints': len(routes_info),
-            'routes': routes_info
-        }
-    
-    def _print_loading_summary(self):
-        """
-        Imprimir resumen de la carga de routers
-        """
-        total_routers = len(self.loaded_routers) + len(self.failed_imports)
-        successful = len(self.loaded_routers)
-        failed = len(self.failed_imports)
-        
-        print(f"\n📊 Resumen de carga de routers:")
-        print(f"   Total procesados: {total_routers}")
-        print(f"   ✅ Exitosos: {successful}")
-        print(f"   ❌ Fallidos: {failed}")
-        
-        if self.loaded_routers:
-            print(f"\n✅ Routers cargados exitosamente:")
-            for name, router in self.loaded_routers.items():
-                config = self.router_configs.get(name, {})
-                endpoints = config.get('endpoints', 0)
-                prefix = config.get('prefix', '')
-                print(f"   └─ {name}: {endpoints} endpoints{f' (prefix: {prefix})' if prefix else ''}")
-        
-        if self.failed_imports:
-            print(f"\n❌ Routers que fallaron:")
-            for name, error in self.failed_imports.items():
-                print(f"   └─ {name}: {error}")
-        
-        print(f"🔍 Carga de routers completada\n")
-    
-    def get_router_status(self) -> Dict[str, Any]:
-        """
-        Obtener estado detallado de todos los routers
-        """
-        return {
-            "loaded_routers": list(self.loaded_routers.keys()),
-            "failed_imports": self.failed_imports,
-            "router_configs": self.router_configs,
-            "total_endpoints": sum(
-                config.get('endpoints', 0) 
-                for config in self.router_configs.values()
-            )
-        }
-    
-    def register_routers_to_app(self, app, include_failed_placeholders: bool = False):
-        """
-        Registrar todos los routers cargados a la aplicación FastAPI
-        
-        Args:
-            app: Instancia de FastAPI
-            include_failed_placeholders: Si crear endpoints placeholder para routers fallidos
-        """
-        print("🔌 Registrando routers en la aplicación...")
-        
-        for name, router in self.loaded_routers.items():
-            config = self.router_configs.get(name, {})
-            prefix = config.get('prefix') or f"/{name}"
-            tags = config.get('tags') or [name.title()]
-            
-            try:
-                app.include_router(router, prefix=prefix, tags=tags)
-                print(f"   ✅ Router {name} registrado en {prefix}")
-            except Exception as e:
-                print(f"   ❌ Error registrando {name}: {e}")
-        
-        # Crear placeholders para routers fallidos (opcional)
-        if include_failed_placeholders:
-            self._create_failed_router_placeholders(app)
-        
-        print("🔌 Registro de routers completado\n")
-    
-    def _create_failed_router_placeholders(self, app):
-        """
-        Crear endpoints placeholder para routers que fallaron al cargar
-        """
-        for failed_router_name, error in self.failed_imports.items():
-            placeholder_router = APIRouter(
-                prefix=f"/{failed_router_name}",
-                tags=[f"{failed_router_name.title()} (No disponible)"]
-            )
-            
-            @placeholder_router.get("/")
-            async def placeholder_endpoint():
-                return {
-                    "status": "unavailable",
-                    "message": f"Router {failed_router_name} no está disponible",
-                    "error": error,
-                    "suggestion": "Verifica las dependencias y configuración"
-                }
-            
-            app.include_router(placeholder_router)
-            print(f"   🔄 Placeholder creado para {failed_router_name}")
+        self.verbose = original_verbose
+        return self.stats
+
 
 # ==========================================
 # FUNCIONES DE CONVENIENCIA
 # ==========================================
 
-def load_routers_automatically(
-    app,
-    routes_directory: str = "routes",
-    router_list: Optional[List[str]] = None,
-    include_placeholders: bool = False,
-    exclude_files: Optional[List[str]] = None
-) -> Dict[str, Any]:
+def load_routers(app: FastAPI, routers_config: List[Dict[str, Any]], verbose: bool = True) -> RouterStats:
     """
-    Función de conveniencia para cargar y registrar routers automáticamente
+    Función de conveniencia para cargar routers
     
     Args:
         app: Instancia de FastAPI
-        routes_directory: Directorio de routers
-        router_list: Lista específica de routers (None = autodescubrir)
-        include_placeholders: Si crear placeholders para routers fallidos
-        exclude_files: Archivos a excluir
+        routers_config: Lista de configuraciones de routers
+        verbose: Si mostrar output detallado
         
     Returns:
-        Status de la carga
+        RouterStats: Estadísticas de carga
     """
-    loader = RouterLoader(
-        routes_directory=routes_directory,
-        exclude_files=exclude_files
-    )
-    
-    # Cargar routers
-    loaded_routers = loader.load_all_routers(router_list)
-    
-    # Registrar en la app
-    loader.register_routers_to_app(app, include_placeholders)
-    
-    # Retornar status
-    return loader.get_router_status()
+    loader = RouterLoader(app, routers_config, verbose)
+    return loader.load_all_routers()
 
-def load_specific_routers(
-    app,
-    router_configs: List[Dict[str, Any]],
-    routes_directory: str = "routes"
-) -> Dict[str, Any]:
+
+def load_routers_silent(app: FastAPI, routers_config: List[Dict[str, Any]]) -> RouterStats:
     """
-    Cargar routers con configuración específica
+    Función de conveniencia para cargar routers en modo silencioso
     
     Args:
         app: Instancia de FastAPI
-        router_configs: Lista de configuraciones de router
-            Ejemplo: [
-                {"name": "auth", "prefix": "/api/auth", "tags": ["Authentication"]},
-                {"name": "users", "prefix": "/api/users", "tags": ["Users"]}
-            ]
-        routes_directory: Directorio de routers
+        routers_config: Lista de configuraciones de routers
         
     Returns:
-        Status de la carga
+        RouterStats: Estadísticas de carga
     """
-    loader = RouterLoader(routes_directory=routes_directory)
+    loader = RouterLoader(app, routers_config, verbose=False)
+    return loader.load_routers_silent()
+
+
+def sort_routers_by_tags(routers_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Ordenar lista de routers por tags alfabéticamente
     
-    print("🔍 Cargando routers con configuración específica...")
-    
-    for config in router_configs:
-        router_name = config["name"]
-        router = loader.load_router_from_module(router_name)
+    Args:
+        routers_list: Lista de configuraciones de routers
         
-        if router:
-            prefix = config.get("prefix", f"/{router_name}")
-            tags = config.get("tags", [router_name.title()])
-            
-            try:
-                app.include_router(router, prefix=prefix, tags=tags)
-                print(f"   ✅ {router_name} registrado en {prefix}")
-                loader.loaded_routers[router_name] = router
-            except Exception as e:
-                print(f"   ❌ Error registrando {router_name}: {e}")
-                loader.failed_imports[router_name] = str(e)
-    
-    loader._print_loading_summary()
-    return loader.get_router_status()
+    Returns:
+        Lista ordenada por tags
+    """
+    return RouterLoader._sort_routers_by_tags(routers_list)
+
 
 # ==========================================
-# DECORADOR PARA REGISTRO AUTOMÁTICO
+# EJEMPLO DE USO
 # ==========================================
 
-def auto_discover_routers(
-    routes_directory: str = "routes",
-    include_placeholders: bool = False,
-    exclude_files: Optional[List[str]] = None
-):
-    """
-    Decorador para auto-descubrir y registrar routers en una app FastAPI
+if __name__ == "__main__":
+    # Ejemplo de configuración (normalmente viene de main.py)
+    EXAMPLE_ROUTERS = [
+        {"name": "health_services", "prefix": "/health", "tags": ["Health Check"]},
+        {"name": "users", "prefix": "/users", "tags": ["Users"]},
+        {"name": "auth", "prefix": "/auth", "tags": ["Authentication"]},
+        {"name": "warehouses", "prefix": "/warehouses", "tags": ["Warehouses"]},
+        {"name": "system", "prefix": "/system", "tags": ["System"]}
+    ]
     
-    Usage:
-        @auto_discover_routers()
-        def create_app():
-            app = FastAPI()
-            return app
-    """
-    def decorator(create_app_func):
-        def wrapper(*args, **kwargs):
-            app = create_app_func(*args, **kwargs)
-            
-            load_routers_automatically(
-                app=app,
-                routes_directory=routes_directory,
-                include_placeholders=include_placeholders,
-                exclude_files=exclude_files
-            )
-            
-            return app
-        return wrapper
-    return decorator
+    # Ejemplo de uso (requiere app FastAPI real)
+    # from fastapi import FastAPI
+    # app = FastAPI()
+    # stats = load_routers(app, EXAMPLE_ROUTERS)
+    # print(f"Cargados: {stats.loaded_count}/{stats.total_configured}")
+    
+    # Ejemplo de solo ordenamiento
+    sorted_routers = sort_routers_by_tags(EXAMPLE_ROUTERS)
+    print("Routers ordenados por tags:")
+    for router in sorted_routers:
+        print(f"  - {router['tags'][0]}: {router['name']}")

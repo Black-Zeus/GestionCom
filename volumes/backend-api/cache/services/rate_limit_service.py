@@ -1,18 +1,16 @@
 """
+volumes/backend-api/cache/services/rate_limit_service.py
 Servicio de rate limiting usando Redis con algoritmo sliding window
 """
 import time
-import logging
-from datetime import datetime, timezone
+from utils.log_helper import setup_logger
 from typing import Optional, Dict, Any, Tuple, List
 
 from cache.redis_client import redis_client, redis_fallback
 from core.config import settings
-from core.constants import RedisKeys
-from core.exceptions import CacheException
 
 
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class RateLimitService:

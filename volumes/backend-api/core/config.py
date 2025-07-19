@@ -1,4 +1,7 @@
-# volumes/backend-api/config.py
+"""
+volumes/backend-api/config.py
+Configuración centralizada de la aplicación con validaciones y propiedades computadas
+"""
 import os
 from typing import Optional
 from dotenv import load_dotenv
@@ -51,17 +54,28 @@ class Settings:
     TASKS_API_URL: Optional[str] = os.getenv("TASKS_API_URL")
     
     # ====== Configuraciones adicionales ======
-    DEBUG_MODE: bool = os.getenv("DEBUG_MODE", "false").lower() == "true"
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
-    LOG_FORMAT: str = os.getenv("LOG_FORMAT", "json")
-    
+    DEBUG_MODE: bool = os.getenv("BACKEND_API_DEBUG_MODE", "false").lower() == "true"
+    LOG_DIR = os.getenv("BACKEND_API_LOG_DIR", "/var/log/app")
+    LOG_LEVEL = os.getenv("BACKEND_API_LOG_LEVEL", "INFO").upper()
+    LOG_FILE_NAME = os.getenv("BACKEND_API_LOG_FILE_NAME", "app.log")
+    LOG_ROTATE_WHEN = os.getenv("BACKEND_API_LOG_ROTATE_WHEN", "midnight")
+    LOG_ROTATE_INTERVAL = int(os.getenv("BACKEND_API_LOG_ROTATE_INTERVAL", 1))
+    LOG_BACKUP_COUNT = int(os.getenv("BACKEND_API_LOG_BACKUP_COUNT", 7))
+    LOG_FORMAT = os.getenv("BACKEND_API_LOG_FORMAT", "txt").lower()
+
     # ====== Security Settings ======
     RATE_LIMIT_REQUESTS_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_REQUESTS_PER_MINUTE") or "60")
     RATE_LIMIT_LOGIN_ATTEMPTS_PER_HOUR: int = int(os.getenv("RATE_LIMIT_LOGIN_ATTEMPTS_PER_HOUR") or "10")
     RATE_LIMIT_WINDOW: int = int(os.getenv("RATE_LIMIT_WINDOW") or "60")
     MAX_LOGIN_ATTEMPTS: int = int(os.getenv("MAX_LOGIN_ATTEMPTS") or "5")
     LOCKOUT_DURATION_MINUTES: int = int(os.getenv("LOCKOUT_DURATION_MINUTES") or "15")
+
+    REDIS_TTL_RESETPASS: int = int(os.getenv("REDIS_TTL_RESETPASS") or "15")
+    RESET_PASSWORD_REQUESTS_PER_HOUR: int = int(os.getenv("RESET_PASSWORD_REQUESTS_PER_HOUR") or "3")
+    RESET_PASSWORD_CODE_LENGTH: int = int(os.getenv("RESET_PASSWORD_CODE_LENGTH") or "6")
+    RESET_PASSWORD_CODE_EXPIRE_MINUTES: int = int(os.getenv("RESET_PASSWORD_CODE_EXPIRE_MINUTES") or "15")
     
+
     # ====== Cache TTLs ======
     USER_SECRET_CACHE_TTL: int = int(os.getenv("USER_SECRET_CACHE_TTL") or "3600")
     TOKEN_BLACKLIST_TTL: int = int(os.getenv("TOKEN_BLACKLIST_TTL") or "1800")

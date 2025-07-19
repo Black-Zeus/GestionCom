@@ -1,8 +1,10 @@
 """
-Pydantic schemas for UserWarehouseAccess model
+volumes/backend-api/database/schemas/user_warehouse_access.py
+Pydantic schemas for UserWarehouseAccess model - FIXED VERSION
+Solo usa model_config, compatible con Pydantic v2
 """
 from pydantic import BaseModel, Field, ConfigDict, field_validator
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
@@ -10,7 +12,7 @@ from enum import Enum
 class AccessTypeEnum(str, Enum):
     """Access type enum for warehouse access"""
     FULL = "FULL"
-    READ_ONLY = "read_ONLY"
+    READ_ONLY = "READ_ONLY"  # ✅ Corregido: era "read_ONLY"
     DENIED = "DENIED"
 
 
@@ -42,8 +44,8 @@ class UserWarehouseAccessBase(BaseModel):
 class UserWarehouseAccessCreate(UserWarehouseAccessBase):
     """Schema for creating a new user warehouse access"""
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 1,
                 "warehouse_id": 2,
@@ -51,6 +53,7 @@ class UserWarehouseAccessCreate(UserWarehouseAccessBase):
                 "granted_by_user_id": 3
             }
         }
+    )
 
 
 class UserWarehouseAccessUpdate(BaseModel):
@@ -65,13 +68,14 @@ class UserWarehouseAccessUpdate(BaseModel):
             raise ValueError('granted_by_user_id debe ser un número positivo')
         return v
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "access_type": "READ_ONLY",
                 "granted_by_user_id": 3
             }
         }
+    )
 
 
 class UserWarehouseAccessResponse(UserWarehouseAccessBase):
@@ -88,8 +92,9 @@ class UserWarehouseAccessResponse(UserWarehouseAccessBase):
     can_write: bool = Field(..., description="Si puede escribir/modificar")
     can_read: bool = Field(..., description="Si puede leer")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "user_id": 1,
@@ -106,6 +111,7 @@ class UserWarehouseAccessResponse(UserWarehouseAccessBase):
                 "can_read": True
             }
         }
+    )
 
 
 class UserWarehouseAccessDetailResponse(UserWarehouseAccessResponse):
@@ -121,8 +127,8 @@ class UserWarehouseAccessDetailResponse(UserWarehouseAccessResponse):
     user_is_active: Optional[bool] = Field(None, description="Si el usuario está activo")
     warehouse_is_active: Optional[bool] = Field(None, description="Si el almacén está activo")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "user_id": 1,
@@ -149,6 +155,7 @@ class UserWarehouseAccessDetailResponse(UserWarehouseAccessResponse):
                 "warehouse_is_active": True
             }
         }
+    )
 
 
 class UserWarehouseAccessSummary(BaseModel):
@@ -163,10 +170,9 @@ class UserWarehouseAccessSummary(BaseModel):
     granted_at: datetime = Field(..., description="Fecha cuando se otorgó")
     status: WarehouseAccessStatus = Field(..., description="Estado del acceso")
     
-    model_config = ConfigDict(from_attributes=True)
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "user_id": 1,
@@ -179,6 +185,7 @@ class UserWarehouseAccessSummary(BaseModel):
                 "status": "active"
             }
         }
+    )
 
 
 class UserWarehouseAccessFilters(BaseModel):
@@ -204,8 +211,8 @@ class UserWarehouseAccessFilters(BaseModel):
             raise ValueError('La fecha no puede ser futura para filtros de búsqueda')
         return v
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "user_id": 1,
                 "access_type": "FULL",
@@ -215,6 +222,7 @@ class UserWarehouseAccessFilters(BaseModel):
                 "location": "Santiago"
             }
         }
+    )
 
 
 class UserWarehouseAccessListResponse(BaseModel):
@@ -225,8 +233,8 @@ class UserWarehouseAccessListResponse(BaseModel):
     size: int = Field(..., ge=1, le=100, description="Tamaño de página")
     pages: int = Field(..., ge=0, description="Total de páginas")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "items": [
                     {
@@ -261,55 +269,7 @@ class UserWarehouseAccessListResponse(BaseModel):
                 "pages": 1
             }
         }
-
-
-class UserWarehouseAccessStatsResponse(BaseModel):
-    """Schema for user warehouse access statistics"""
-    total_accesses: int = Field(..., ge=0, description="Total de accesos configurados")
-    full_access_count: int = Field(..., ge=0, description="Accesos completos")
-    read_only_count: int = Field(..., ge=0, description="Accesos de solo lectura")
-    denied_count: int = Field(..., ge=0, description="Accesos denegados")
-    unique_users_with_access: int = Field(..., ge=0, description="Usuarios únicos con acceso")
-    unique_warehouses_accessible: int = Field(..., ge=0, description="Almacenes únicos accesibles")
-    access_distribution: Dict[str, int] = Field(
-        ..., 
-        description="Distribución de accesos por tipo"
     )
-    warehouses_with_most_users: List[Dict[str, Any]] = Field(
-        ..., 
-        description="Almacenes con más usuarios"
-    )
-    users_with_most_warehouses: List[Dict[str, Any]] = Field(
-        ..., 
-        description="Usuarios con acceso a más almacenes"
-    )
-    recent_access_grants: int = Field(..., ge=0, description="Accesos otorgados en los últimos 30 días")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "total_accesses": 45,
-                "full_access_count": 20,
-                "read_only_count": 18,
-                "denied_count": 7,
-                "unique_users_with_access": 15,
-                "unique_warehouses_accessible": 8,
-                "access_distribution": {
-                    "FULL": 20,
-                    "READ_ONLY": 18,
-                    "DENIED": 7
-                },
-                "warehouses_with_most_users": [
-                    {"warehouse_name": "Almacén Central", "warehouse_code": "AC001", "users_count": 12},
-                    {"warehouse_name": "Almacén Norte", "warehouse_code": "AN002", "users_count": 8}
-                ],
-                "users_with_most_warehouses": [
-                    {"username": "john.doe", "full_name": "John Doe", "warehouses_count": 6},
-                    {"username": "jane.smith", "full_name": "Jane Smith", "warehouses_count": 4}
-                ],
-                "recent_access_grants": 8
-            }
-        }
 
 
 class BulkWarehouseAccessCreate(BaseModel):
@@ -333,8 +293,8 @@ class BulkWarehouseAccessCreate(BaseModel):
             seen.add(key)
         return v
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "accesses": [
                     {"user_id": 1, "warehouse_id": 2, "access_type": "FULL", "granted_by_user_id": 3},
@@ -342,6 +302,7 @@ class BulkWarehouseAccessCreate(BaseModel):
                 ]
             }
         }
+    )
 
 
 class BulkWarehouseAccessResponse(BaseModel):
@@ -354,8 +315,8 @@ class BulkWarehouseAccessResponse(BaseModel):
     total_updated: int = Field(..., ge=0, description="Total de registros actualizados")
     total_errors: int = Field(..., ge=0, description="Total de errores")
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "created": [
                     {
@@ -382,190 +343,21 @@ class BulkWarehouseAccessResponse(BaseModel):
                 "total_errors": 0
             }
         }
-
-
-class UserWarehouseMatrix(BaseModel):
-    """Schema for user-warehouse access matrix"""
-    user_id: int = Field(..., description="ID del usuario")
-    user_username: str = Field(..., description="Username del usuario")
-    user_full_name: str = Field(..., description="Nombre completo del usuario")
-    warehouse_accesses: Dict[str, Dict[str, Any]] = Field(
-        ..., 
-        description="Accesos por almacén (key: warehouse_code)"
     )
-    total_warehouses: int = Field(..., ge=0, description="Total de almacenes con acceso")
-    full_access_count: int = Field(..., ge=0, description="Almacenes con acceso completo")
-    read_only_count: int = Field(..., ge=0, description="Almacenes con acceso de lectura")
-    denied_count: int = Field(..., ge=0, description="Almacenes con acceso denegado")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "user_id": 1,
-                "user_username": "john.doe",
-                "user_full_name": "John Doe",
-                "warehouse_accesses": {
-                    "AC001": {
-                        "warehouse_id": 2,
-                        "warehouse_name": "Almacén Central",
-                        "access_type": "FULL",
-                        "granted_at": "2024-01-15T10:30:00Z"
-                    },
-                    "AN002": {
-                        "warehouse_id": 3,
-                        "warehouse_name": "Almacén Norte",
-                        "access_type": "READ_ONLY",
-                        "granted_at": "2024-01-16T14:20:00Z"
-                    }
-                },
-                "total_warehouses": 2,
-                "full_access_count": 1,
-                "read_only_count": 1,
-                "denied_count": 0
-            }
-        }
 
 
-class WarehouseUserMatrix(BaseModel):
-    """Schema for warehouse-user access matrix"""
-    warehouse_id: int = Field(..., description="ID del almacén")
-    warehouse_code: str = Field(..., description="Código del almacén")
-    warehouse_name: str = Field(..., description="Nombre del almacén")
-    user_accesses: Dict[str, Dict[str, Any]] = Field(
-        ..., 
-        description="Accesos por usuario (key: username)"
-    )
-    total_users: int = Field(..., ge=0, description="Total de usuarios con acceso")
-    full_access_users: int = Field(..., ge=0, description="Usuarios con acceso completo")
-    read_only_users: int = Field(..., ge=0, description="Usuarios con acceso de lectura")
-    denied_users: int = Field(..., ge=0, description="Usuarios con acceso denegado")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "warehouse_id": 2,
-                "warehouse_code": "AC001",
-                "warehouse_name": "Almacén Central",
-                "user_accesses": {
-                    "john.doe": {
-                        "user_id": 1,
-                        "user_full_name": "John Doe",
-                        "access_type": "FULL",
-                        "granted_at": "2024-01-15T10:30:00Z"
-                    },
-                    "jane.smith": {
-                        "user_id": 2,
-                        "user_full_name": "Jane Smith",
-                        "access_type": "READ_ONLY",
-                        "granted_at": "2024-01-16T14:20:00Z"
-                    }
-                },
-                "total_users": 2,
-                "full_access_users": 1,
-                "read_only_users": 1,
-                "denied_users": 0
-            }
-        }
+# ==========================================
+# CONSTANTES Y VALIDACIONES
+# ==========================================
 
+# Valores válidos para access_type
+ACCESS_TYPES = ["FULL", "READ_ONLY", "DENIED"]
 
-class WarehouseAccessCopyRequest(BaseModel):
-    """Schema for copying warehouse access from one user to another"""
-    source_user_id: int = Field(..., gt=0, description="ID del usuario origen")
-    target_user_id: int = Field(..., gt=0, description="ID del usuario destino")
-    warehouse_ids: Optional[List[int]] = Field(
-        None, 
-        description="IDs específicos de almacenes a copiar (opcional, si no se especifica se copian todos)"
-    )
-    access_types: Optional[List[AccessTypeEnum]] = Field(
-        None,
-        description="Tipos de acceso a copiar (FULL, READ_ONLY, DENIED)"
-    )
-    granted_by_user_id: int = Field(..., gt=0, description="ID del usuario que realiza la copia")
-    overwrite_existing: bool = Field(
-        False, 
-        description="Si True, sobrescribe accesos existentes; si False, solo agrega nuevos"
-    )
-    
-    @field_validator('target_user_id')
-    @classmethod
-    def validate_different_users(cls, v, values):
-        if 'source_user_id' in values.data and v == values.data['source_user_id']:
-            raise ValueError('El usuario origen y destino no pueden ser el mismo')
-        return v
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "source_user_id": 1,
-                "target_user_id": 2,
-                "warehouse_ids": [2, 3, 4],
-                "access_types": ["FULL", "READ_ONLY"],
-                "granted_by_user_id": 3,
-                "overwrite_existing": False
-            }
-        }
-
-
-class WarehouseAccessReport(BaseModel):
-    """Schema for warehouse access report"""
-    report_date: datetime = Field(..., description="Fecha del reporte")
-    total_users: int = Field(..., ge=0, description="Total de usuarios en el sistema")
-    users_with_warehouse_access: int = Field(..., ge=0, description="Usuarios con acceso a almacenes")
-    users_without_access: int = Field(..., ge=0, description="Usuarios sin acceso a almacenes")
-    total_warehouses: int = Field(..., ge=0, description="Total de almacenes")
-    warehouses_with_users: int = Field(..., ge=0, description="Almacenes con usuarios asignados")
-    access_summary: Dict[str, int] = Field(..., description="Resumen de accesos por tipo")
-    top_accessed_warehouses: List[Dict[str, Any]] = Field(
-        ..., 
-        description="Almacenes más accedidos"
-    )
-    users_with_most_access: List[Dict[str, Any]] = Field(
-        ..., 
-        description="Usuarios con más accesos"
-    )
-    recent_changes: int = Field(..., ge=0, description="Cambios en los últimos 30 días")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "report_date": "2024-01-15T10:30:00Z",
-                "total_users": 50,
-                "users_with_warehouse_access": 35,
-                "users_without_access": 15,
-                "total_warehouses": 8,
-                "warehouses_with_users": 6,
-                "access_summary": {
-                    "FULL": 25,
-                    "READ_ONLY": 40,
-                    "DENIED": 10
-                },
-                "top_accessed_warehouses": [
-                    {"warehouse_name": "Almacén Central", "warehouse_code": "AC001", "users_count": 20},
-                    {"warehouse_name": "Almacén Norte", "warehouse_code": "AN002", "users_count": 15}
-                ],
-                "users_with_most_access": [
-                    {"username": "admin", "full_name": "Administrator", "warehouses_count": 8},
-                    {"username": "manager", "full_name": "Manager User", "warehouses_count": 6}
-                ],
-                "recent_changes": 12
-            }
-        }
-
-
-# Constants for validation
-MIN_USER_ID = 1
-MAX_USER_ID = 9223372036854775807  # Max BIGINT
-MIN_WAREHOUSE_ID = 1
-MAX_WAREHOUSE_ID = 9223372036854775807  # Max BIGINT
-
-# Query helpers
+# Límites de paginación
 USER_WAREHOUSE_ACCESS_DEFAULT_PAGE_SIZE = 20
 USER_WAREHOUSE_ACCESS_MAX_PAGE_SIZE = 100
 
-# Access type constants
-ACCESS_TYPES = ["FULL", "READ_ONLY", "DENIED"]
-
-# Access hierarchy for comparison (higher number = more access)
+# Jerarquía de accesos (mayor número = más acceso)
 ACCESS_HIERARCHY = {
     "DENIED": 0,
     "READ_ONLY": 1,

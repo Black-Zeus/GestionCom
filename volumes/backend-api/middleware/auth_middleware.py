@@ -1,14 +1,14 @@
 """
+volumes/backend-api/middleware/auth_middleware.py
 Middleware de autenticación JWT con doble secreto integrado a tu estructura existente
 """
-import asyncio
 from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from core.security import jwt_manager
 from core.response import ResponseManager
-from core.constants import ErrorCode, ErrorType, HTTPStatus
+from core.constants import ErrorCode
 from core.exceptions import (
     TokenMissingException,
     TokenInvalidException,

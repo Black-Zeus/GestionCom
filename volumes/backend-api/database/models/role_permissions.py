@@ -1,253 +1,129 @@
 """
-SQLAlchemy model for role_permissions table
+volumes/backend-api/database/models/role_permissions.py
+Modelo SQLAlchemy para la tabla role_permissions
 """
-from sqlalchemy import Column, BigInteger, ForeignKey, DateTime, Index
-from sqlalchemy.orm import relationship, validates
-from sqlalchemy.sql import func
-from database import Base
-from database.models.base import TimestampMixin
-from database.models.base import QueryHelperMixin
-from typing import TYPE_CHECKING, Optional, List
+from datetime import datetime, timezone
+from sqlalchemy import Column, BigInteger, ForeignKey, TIMESTAMP, Index, UniqueConstraint
+from sqlalchemy.orm import validates, relationship
 
-if TYPE_CHECKING:
-    from database.models.roles import Role
-    from database.models.permissions import Permission
-    from database.models.user import User
+from .base import BaseModel
 
 
-class RolePermission(Base, TimestampMixin, QueryHelperMixin):
-    """
-    Model for role_permissions table - Many-to-many relationship between roles and permissions
-    
-    Attributes:
-        id: Primary key
-        role_id: Foreign key to roles table
-        permission_id: Foreign key to permissions table
-        granted_at: Timestamp when permission was granted to role
-        granted_by_user_id: Foreign key to user who granted the permission
-    """
+class RolePermission(BaseModel):
+    """Modelo para relación roles-permisos"""
     
     __tablename__ = "role_permissions"
     
-    # Primary Key
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    # CAMPOS DE RELACIÓN
     
-    # Foreign Keys
     role_id = Column(
-        BigInteger, 
-        ForeignKey("roles.id", ondelete="CASCADE"), 
+        BigInteger,
+        ForeignKey("roles.id", ondelete="CASCADE"),
         nullable=False,
         comment="Rol al que se otorga el permiso"
     )
     
     permission_id = Column(
-        BigInteger, 
-        ForeignKey("permissions.id", ondelete="CASCADE"), 
+        BigInteger,
+        ForeignKey("permissions.id", ondelete="CASCADE"),
         nullable=False,
         comment="Permiso otorgado al rol"
     )
     
     granted_by_user_id = Column(
-        BigInteger, 
-        ForeignKey("users.id", ondelete="SET NULL"), 
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         comment="Usuario que otorgó el permiso"
     )
     
-    # Timestamps
+    # CAMPOS DE AUDITORÍA
+    
     granted_at = Column(
-        DateTime(timezone=True), 
-        nullable=False, 
-        default=func.now(),
+        TIMESTAMP,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
         comment="Fecha y hora cuando se otorgó el permiso"
     )
     
-    # Relationships
-    role = relationship(
-        "Role", 
-        foreign_keys=[role_id],
-        back_populates="role_permissions",
-        lazy="select"
-    )
+    # ÍNDICES Y RESTRICCIONES
     
-    permission = relationship(
-        "Permission", 
-        foreign_keys=[permission_id],
-        back_populates="role_permissions",
-        lazy="select"
-    )
-    
-    granted_by_user = relationship(
-        "User", 
-        foreign_keys=[granted_by_user_id],
-        lazy="select"
-    )
-    
-    # Indexes (matching database schema)
     __table_args__ = (
-        Index('uk_role_permission', 'role_id', 'permission_id', unique=True),
+        UniqueConstraint('role_id', 'permission_id', name='uk_role_permission'),
         Index('idx_role_id', 'role_id'),
         Index('idx_permission_id', 'permission_id'),
+        Index('idx_granted_by_user_id', 'granted_by_user_id'),
+        Index('idx_granted_at', 'granted_at'),
+        Index('idx_role_permissions_composite', 'role_id', 'permission_id'),
     )
     
-    # Validators
+    # VALIDADORES
+    
     @validates('role_id')
-    def validate_role_id(self, key, value):
-        """Validate role_id is positive"""
-        if value is not None and value <= 0:
-            raise ValueError("role_id debe ser un número positivo")
-        return value
+    def validate_role_id(self, key, role_id):
+        """Validar role_id"""
+        if not role_id:
+            raise ValueError("Role ID es requerido")
+        
+        if role_id <= 0:
+            raise ValueError("Role ID debe ser mayor a 0")
+        
+        return role_id
     
     @validates('permission_id')
-    def validate_permission_id(self, key, value):
-        """Validate permission_id is positive"""
-        if value is not None and value <= 0:
-            raise ValueError("permission_id debe ser un número positivo")
-        return value
+    def validate_permission_id(self, key, permission_id):
+        """Validar permission_id"""
+        if not permission_id:
+            raise ValueError("Permission ID es requerido")
+        
+        if permission_id <= 0:
+            raise ValueError("Permission ID debe ser mayor a 0")
+        
+        return permission_id
     
     @validates('granted_by_user_id')
-    def validate_granted_by_user_id(self, key, value):
-        """Validate granted_by_user_id is positive when provided"""
-        if value is not None and value <= 0:
-            raise ValueError("granted_by_user_id debe ser un número positivo")
-        return value
-    
-    # Class Methods
-    @classmethod
-    def get_by_role_and_permission(cls, session, role_id: int, permission_id: int) -> Optional["RolePermission"]:
-        """Get role permission assignment by role_id and permission_id"""
-        return session.query(cls).filter(
-            cls.role_id == role_id,
-            cls.permission_id == permission_id
-        ).first()
-    
-    @classmethod
-    def get_role_permissions(cls, session, role_id: int) -> List["RolePermission"]:
-        """Get all permissions assigned to a role"""
-        return session.query(cls).filter(cls.role_id == role_id).all()
-    
-    @classmethod
-    def get_permission_roles(cls, session, permission_id: int) -> List["RolePermission"]:
-        """Get all roles that have a specific permission"""
-        return session.query(cls).filter(cls.permission_id == permission_id).all()
-    
-    @classmethod
-    def get_permissions_by_granter(cls, session, granted_by_user_id: int) -> List["RolePermission"]:
-        """Get all permission assignments made by a specific user"""
-        return session.query(cls).filter(cls.granted_by_user_id == granted_by_user_id).all()
-    
-    @classmethod
-    def role_has_permission(cls, session, role_id: int, permission_id: int) -> bool:
-        """Check if a role has a specific permission"""
-        return session.query(cls).filter(
-            cls.role_id == role_id,
-            cls.permission_id == permission_id
-        ).first() is not None
-    
-    @classmethod
-    def role_has_permission_code(cls, session, role_id: int, permission_code: str) -> bool:
-        """Check if a role has a permission by permission code"""
-        from database.models.permissions import Permission
-        return session.query(cls).join(Permission).filter(
-            cls.role_id == role_id,
-            Permission.permission_code == permission_code,
-            Permission.is_active == True
-        ).first() is not None
-    
-    @classmethod
-    def get_active_role_permissions(cls, session, role_id: int) -> List["RolePermission"]:
-        """Get active permissions for a role (both role and permission must be active)"""
-        from database.models.roles import Role
-        from database.models.permissions import Permission
-        return session.query(cls).join(Role).join(Permission).filter(
-            cls.role_id == role_id,
-            Role.is_active == True,
-            Permission.is_active == True
-        ).all()
-    
-    @classmethod
-    def get_permissions_by_group_for_role(cls, session, role_id: int, permission_group: str) -> List["RolePermission"]:
-        """Get permissions of a specific group for a role"""
-        from database.models.permissions import Permission
-        return session.query(cls).join(Permission).filter(
-            cls.role_id == role_id,
-            Permission.permission_group == permission_group,
-            Permission.is_active == True
-        ).all()
-    
-    @classmethod
-    def get_roles_with_permission_group(cls, session, permission_group: str) -> List["RolePermission"]:
-        """Get all roles that have permissions from a specific group"""
-        from database.models.permissions import Permission
-        return session.query(cls).join(Permission).filter(
-            Permission.permission_group == permission_group,
-            Permission.is_active == True
-        ).distinct(cls.role_id).all()
-    
-    @classmethod
-    def count_active_assignments(cls, session) -> int:
-        """Count total active permission assignments to roles"""
-        from database.models.roles import Role
-        from database.models.permissions import Permission
-        return session.query(cls).join(Role).join(Permission).filter(
-            Role.is_active == True,
-            Permission.is_active == True
-        ).count()
-    
-    @classmethod
-    def count_permissions_for_role(cls, session, role_id: int) -> int:
-        """Count total permissions assigned to a role"""
-        from database.models.permissions import Permission
-        return session.query(cls).join(Permission).filter(
-            cls.role_id == role_id,
-            Permission.is_active == True
-        ).count()
-    
-    @classmethod
-    def get_permission_distribution(cls, session) -> dict:
-        """Get distribution of permissions across roles"""
-        from database.models.permissions import Permission
-        from sqlalchemy import func
+    def validate_granted_by_user_id(self, key, granted_by_user_id):
+        """Validar granted_by_user_id"""
+        if granted_by_user_id is not None and granted_by_user_id <= 0:
+            raise ValueError("User ID debe ser mayor a 0")
         
-        result = session.query(
-            Permission.permission_group,
-            func.count(cls.id).label('assignment_count')
-        ).join(Permission).filter(
-            Permission.is_active == True
-        ).group_by(Permission.permission_group).all()
-        
-        return {row.permission_group: row.assignment_count for row in result}
+        return granted_by_user_id
     
-    @classmethod
-    def bulk_assign_permissions(cls, session, role_id: int, permission_ids: List[int], granted_by_user_id: Optional[int] = None) -> List["RolePermission"]:
-        """Bulk assign multiple permissions to a role"""
-        assignments = []
-        for permission_id in permission_ids:
-            # Check if assignment already exists
-            existing = cls.get_by_role_and_permission(session, role_id, permission_id)
-            if not existing:
-                assignment = cls(
-                    role_id=role_id,
-                    permission_id=permission_id,
-                    granted_by_user_id=granted_by_user_id
-                )
-                session.add(assignment)
-                assignments.append(assignment)
-        
-        session.flush()  # To get the IDs
-        return assignments
+    # PROPIEDADES
     
-    @classmethod
-    def bulk_revoke_permissions(cls, session, role_id: int, permission_ids: List[int]) -> int:
-        """Bulk revoke multiple permissions from a role"""
-        count = session.query(cls).filter(
-            cls.role_id == role_id,
-            cls.permission_id.in_(permission_ids)
-        ).delete(synchronize_session=False)
-        return count
+    @property
+    def grant_info(self) -> str:
+        """Información del otorgamiento"""
+        if self.granted_by_user_id:
+            return f"Otorgado el {self.granted_at.strftime('%Y-%m-%d %H:%M')}"
+        else:
+            return f"Otorgado automáticamente el {self.granted_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    @property
+    def is_system_grant(self) -> bool:
+        """Verificar si fue otorgado por el sistema"""
+        return self.granted_by_user_id is None
     
     def __repr__(self) -> str:
-        return f"<RolePermission(id={self.id}, role_id={self.role_id}, permission_id={self.permission_id})>"
+        """Representación string del objeto"""
+        return f"<RolePermission(role_id={self.role_id}, permission_id={self.permission_id})>"
     
-    def __str__(self) -> str:
-        return f"RolePermission {self.id}: Role {self.role_id} -> Permission {self.permission_id}"
+    # Relaciones
+
+    role = relationship(
+        "Role",
+        foreign_keys="RolePermission.role_id", 
+        viewonly=True
+    )
+
+    permission = relationship(
+        "Permission",
+        foreign_keys="RolePermission.permission_id",
+        viewonly=True
+    )
+
+    granted_by_user = relationship(
+        "User",
+        foreign_keys="RolePermission.granted_by_user_id",
+        viewonly=True
+    )

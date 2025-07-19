@@ -1,467 +1,460 @@
 """
-Schemas Pydantic para el modelo User
+volumes/backend-api/database/schemas/user.py
+Schemas Pydantic para Users - Compatible con Pydantic v2
 """
-from datetime import datetime, timezone
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, field_validator
 from typing import Optional, List
+from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, Field, EmailStr, validator, ConfigDict
+import re
 
 
 # ==========================================
-# SCHEMAS BASE
+# USER SCHEMAS
 # ==========================================
 
 class UserBase(BaseModel):
-    """Schema base para User con campos comunes"""
+    """Schema base para User"""
+    username: str = Field(..., min_length=3, max_length=50, description="Nombre de usuario único")
+    email: EmailStr = Field(..., description="Email único del usuario")
+    first_name: str = Field(..., min_length=2, max_length=100, description="Nombre(s) del usuario")
+    last_name: str = Field(..., min_length=2, max_length=100, description="Apellido(s) del usuario")
+    phone: Optional[str] = Field(None, max_length=20, description="Teléfono de contacto")
+    is_active: bool = Field(default=True, description="Si el usuario está activo")
+    petty_cash_limit: Optional[Decimal] = Field(None, ge=0, description="Límite máximo para gastos de caja chica")
     
-    username: str = Field(
-        ...,
-        min_length=3,
-        max_length=50,
-        description="Nombre de usuario único",
-        example="juan.perez"
-    )
-    
-    email: EmailStr = Field(
-        ...,
-        description="Correo electrónico único",
-        example="juan.perez@empresa.com"
-    )
-    
-    first_name: str = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        description="Nombre del usuario",
-        example="Juan"
-    )
-    
-    last_name: str = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        description="Apellido del usuario",
-        example="Pérez"
-    )
-    
-    phone: Optional[str] = Field(
-        None,
-        max_length=20,
-        description="Número de teléfono",
-        example="+56912345678"
-    )
-    
-    is_active: bool = Field(
-        True,
-        description="Si el usuario está activo"
-    )
-    
-    petty_cash_limit: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Límite máximo para gastos de caja chica",
-        example=50000.00
-    )
-    
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
-        """Validar username"""
+        """Validar formato del username"""
         if not v:
-            raise ValueError('Username es requerido')
+            raise ValueError("Username es requerido")
         
         v = v.strip().lower()
         
-        # Solo caracteres alfanuméricos y algunos especiales
-        import re
-        if not re.match(r'^[a-zA-Z0-9._-]+$', v):
-            raise ValueError('Username solo puede contener letras, números, puntos, guiones y guiones bajos')
+        # Solo letras, números, puntos y guiones bajos
+        if not re.match(r'^[a-z0-9._]+$', v):
+            raise ValueError("Username solo puede contener letras, números, puntos y guiones bajos")
+        
+        # No puede empezar o terminar con punto o guión bajo
+        if v.startswith(('.', '_')) or v.endswith(('.', '_')):
+            raise ValueError("Username no puede empezar o terminar con punto o guión bajo")
         
         return v
     
-    @validator('email')
-    def validate_email(cls, v):
-        """Validar y normalizar email"""
-        return v.lower().strip()
-    
-    @validator('phone')
+    @field_validator('phone')
+    @classmethod
     def validate_phone(cls, v):
-        """Validar teléfono"""
+        """Validar formato del teléfono"""
         if not v:
             return None
         
-        # Remover espacios y caracteres especiales excepto +
-        import re
-        v = re.sub(r'[^\d+]', '', v.strip())
+        v = v.strip()
         
-        if len(v) < 8:
-            raise ValueError('Número de teléfono muy corto')
+        # Formato chileno básico: +56912345678 o 912345678
+        if not re.match(r'^(\+56)?[0-9]{8,9}$', v):
+            raise ValueError("Formato de teléfono inválido (formato chileno)")
         
         return v
     
-    @validator('first_name', 'last_name')
+    @field_validator('first_name', 'last_name')
+    @classmethod
     def validate_names(cls, v):
-        """Validar nombres"""
-        return v.strip()
+        """Validar nombres y apellidos"""
+        if not v:
+            raise ValueError("Campo requerido")
+        
+        v = v.strip()
+        
+        # Solo letras, espacios, acentos y apostrofes
+        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s']+$", v):
+            raise ValueError("Solo se permiten letras, espacios y apostrofes")
+        
+        return v
 
-
-# ==========================================
-# SCHEMAS PARA REQUESTS
-# ==========================================
 
 class UserCreate(UserBase):
-    """Schema para crear usuario"""
+    """Schema para crear User"""
+    password: str = Field(..., min_length=8, max_length=100, description="Contraseña del usuario")
+    confirm_password: str = Field(..., description="Confirmación de contraseña")
     
-    password: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Contraseña del usuario",
-        example="MiPassword123!"
-    )
-    
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         """Validar fortaleza de contraseña"""
         if len(v) < 8:
-            raise ValueError('La contraseña debe tener al menos 8 caracteres')
+            raise ValueError("Contraseña debe tener al menos 8 caracteres")
         
-        if not any(c.islower() for c in v):
-            raise ValueError('La contraseña debe contener al menos una letra minúscula')
+        # Al menos una mayúscula
+        if not re.search(r'[A-Z]', v):
+            raise ValueError("Contraseña debe tener al menos una mayúscula")
         
-        if not any(c.isupper() for c in v):
-            raise ValueError('La contraseña debe contener al menos una letra mayúscula')
+        # Al menos una minúscula
+        if not re.search(r'[a-z]', v):
+            raise ValueError("Contraseña debe tener al menos una minúscula")
         
-        if not any(c.isdigit() for c in v):
-            raise ValueError('La contraseña debe contener al menos un número')
+        # Al menos un número
+        if not re.search(r'\d', v):
+            raise ValueError("Contraseña debe tener al menos un número")
+        
+        # Al menos un carácter especial
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError("Contraseña debe tener al menos un carácter especial")
         
         return v
+    
+    def model_post_init(self, __context):
+        """Validación después de inicialización"""
+        if self.password != self.confirm_password:
+            raise ValueError("Las contraseñas no coinciden")
 
 
 class UserUpdate(BaseModel):
-    """Schema para actualizar usuario"""
+    """Schema para actualizar User"""
+    email: Optional[EmailStr] = None
+    first_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    last_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    phone: Optional[str] = Field(None, max_length=20)
+    is_active: Optional[bool] = None
+    petty_cash_limit: Optional[Decimal] = Field(None, ge=0)
     
-    username: Optional[str] = Field(
-        None,
-        min_length=3,
-        max_length=50,
-        description="Nombre de usuario único"
-    )
-    
-    email: Optional[EmailStr] = Field(
-        None,
-        description="Correo electrónico único"
-    )
-    
-    first_name: Optional[str] = Field(
-        None,
-        min_length=1,
-        max_length=100,
-        description="Nombre del usuario"
-    )
-    
-    last_name: Optional[str] = Field(
-        None,
-        min_length=1,
-        max_length=100,
-        description="Apellido del usuario"
-    )
-    
-    phone: Optional[str] = Field(
-        None,
-        max_length=20,
-        description="Número de teléfono"
-    )
-    
-    is_active: Optional[bool] = Field(
-        None,
-        description="Si el usuario está activo"
-    )
-    
-    petty_cash_limit: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Límite máximo para gastos de caja chica"
-    )
-    
-    # Aplicar mismos validadores que UserBase
-    _validate_username = validator('username', allow_reuse=True)(UserBase.validate_username)
-    _validate_email = validator('email', allow_reuse=True)(UserBase.validate_email)
-    _validate_phone = validator('phone', allow_reuse=True)(UserBase.validate_phone)
-    _validate_names = validator('first_name', 'last_name', allow_reuse=True)(UserBase.validate_names)
-
-
-class UserChangePassword(BaseModel):
-    """Schema para cambio de contraseña"""
-    
-    current_password: str = Field(
-        ...,
-        description="Contraseña actual",
-        example="MiPasswordAntiguo123!"
-    )
-    
-    new_password: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Nueva contraseña",
-        example="MiPasswordNuevo123!"
-    )
-    
-    confirm_password: str = Field(
-        ...,
-        description="Confirmación de nueva contraseña",
-        example="MiPasswordNuevo123!"
-    )
-    
-    @validator('confirm_password')
-    def passwords_match(cls, v, values):
-        """Validar que las contraseñas coincidan"""
-        if 'new_password' in values and v != values['new_password']:
-            raise ValueError('Las contraseñas no coinciden')
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v):
+        """Validar formato del teléfono"""
+        if not v:
+            return None
+        
+        v = v.strip()
+        
+        # Formato chileno básico: +56912345678 o 912345678
+        if not re.match(r'^(\+56)?[0-9]{8,9}$', v):
+            raise ValueError("Formato de teléfono inválido (formato chileno)")
+        
         return v
     
-    # Aplicar validador de contraseña
-    _validate_password = validator('new_password', allow_reuse=True)(UserCreate.validate_password)
+    @field_validator('first_name', 'last_name')
+    @classmethod
+    def validate_names(cls, v):
+        """Validar nombres y apellidos"""
+        if v is None:
+            return None
+        
+        v = v.strip()
+        
+        # Solo letras, espacios, acentos y apostrofes
+        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s']+$", v):
+            raise ValueError("Solo se permiten letras, espacios y apostrofes")
+        
+        return v
 
 
-# ==========================================
-# SCHEMAS PARA RESPONSES
-# ==========================================
+class UserPasswordChange(BaseModel):
+    """Schema para cambio de contraseña"""
+    current_password: str = Field(..., description="Contraseña actual")
+    new_password: str = Field(..., min_length=8, max_length=100, description="Nueva contraseña")
+    confirm_password: str = Field(..., description="Confirmación de nueva contraseña")
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v):
+        """Validar fortaleza de contraseña"""
+        if len(v) < 8:
+            raise ValueError("Contraseña debe tener al menos 8 caracteres")
+        
+        # Al menos una mayúscula
+        if not re.search(r'[A-Z]', v):
+            raise ValueError("Contraseña debe tener al menos una mayúscula")
+        
+        # Al menos una minúscula
+        if not re.search(r'[a-z]', v):
+            raise ValueError("Contraseña debe tener al menos una minúscula")
+        
+        # Al menos un número
+        if not re.search(r'\d', v):
+            raise ValueError("Contraseña debe tener al menos un número")
+        
+        # Al menos un carácter especial
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError("Contraseña debe tener al menos un carácter especial")
+        
+        return v
+    
+    def model_post_init(self, __context):
+        """Validación después de inicialización"""
+        if self.new_password != self.confirm_password:
+            raise ValueError("Las contraseñas no coinciden")
 
-class UserResponse(UserBase):
-    """Schema para respuesta de usuario (sin datos sensibles)"""
+
+class UserResponse(BaseModel):
+    """Schema de respuesta para User"""
+    id: int
+    username: str
+    email: str
+    first_name: str
+    last_name: str
+    full_name: str
+    display_name: str
+    initials: str
+    phone: Optional[str]
+    is_active: bool
+    is_authenticated: bool
+    petty_cash_limit: Optional[Decimal]
+    last_login_at: Optional[datetime]
+    last_login_ip: Optional[str]
+    password_changed_at: datetime
+    password_age_days: int
+    needs_password_change: bool
+    has_recent_login: bool
     
-    id: int = Field(..., description="ID único del usuario")
+    # Información de roles y permisos
+    role_names: List[str]
+    permission_codes: List[str]
+    has_admin_role: bool
+    has_manager_role: bool
+    is_cashier: bool
+    is_supervisor: bool
     
-    full_name: str = Field(..., description="Nombre completo")
-    display_name: str = Field(..., description="Nombre para mostrar")
+    # Información de bodegas
+    warehouse_count: int
+    responsible_warehouse_count: int
     
-    can_login: bool = Field(..., description="Si el usuario puede hacer login")
-    
-    last_login_at: Optional[datetime] = Field(
-        None,
-        description="Última vez que el usuario se conectó"
-    )
-    
-    password_changed_at: datetime = Field(
-        ...,
-        description="Última vez que se cambió la contraseña"
-    )
-    
-    created_at: datetime = Field(..., description="Fecha de creación")
-    updated_at: datetime = Field(..., description="Última actualización")
-    deleted_at: Optional[datetime] = Field(None, description="Fecha de eliminación")
-    
-    is_deleted: bool = Field(..., description="Si el usuario está eliminado")
-    days_since_password_change: Optional[int] = Field(
-        None,
-        description="Días desde el último cambio de contraseña"
-    )
+    created_at: datetime
+    updated_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
 
 
-class UserSummary(BaseModel):
-    """Schema resumido de usuario para listas"""
-    
-    id: int = Field(..., description="ID único del usuario")
-    username: str = Field(..., description="Nombre de usuario")
-    email: str = Field(..., description="Correo electrónico")
-    full_name: str = Field(..., description="Nombre completo")
-    is_active: bool = Field(..., description="Si el usuario está activo")
-    last_login_at: Optional[datetime] = Field(None, description="Último login")
-    
-    model_config = ConfigDict(from_attributes=True)
-
-
-class UserAuth(BaseModel):
-    """Schema específico para autenticación JWT"""
-    
-    id: int = Field(..., description="ID único del usuario")
-    username: str = Field(..., description="Nombre de usuario")
-    email: str = Field(..., description="Correo electrónico")
-    first_name: str = Field(..., description="Nombre")
-    last_name: str = Field(..., description="Apellido")
-    full_name: str = Field(..., description="Nombre completo")
-    is_active: bool = Field(..., description="Si el usuario está activo")
-    can_login: bool = Field(..., description="Si puede hacer login")
-    last_login_at: Optional[datetime] = Field(None, description="Último login")
+class UserPublicResponse(BaseModel):
+    """Schema de respuesta pública para User (sin información sensible)"""
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    full_name: str
+    initials: str
+    is_active: bool
     
     model_config = ConfigDict(from_attributes=True)
-
-
-class UserProfile(UserResponse):
-    """Schema extendido para perfil de usuario"""
-    
-    is_password_expired: bool = Field(
-        ...,
-        description="Si la contraseña ha expirado"
-    )
-    
-    roles: List[str] = Field(
-        default_factory=list,
-        description="Roles asignados al usuario"
-    )
-    
-    permissions: List[str] = Field(
-        default_factory=list,
-        description="Permisos específicos del usuario"
-    )
-
-
-# ==========================================
-# SCHEMAS PARA OPERACIONES ADMINISTRATIVAS
-# ==========================================
-
-class UserBulkUpdate(BaseModel):
-    """Schema para actualización masiva de usuarios"""
-    
-    user_ids: List[int] = Field(
-        ...,
-        min_items=1,
-        description="Lista de IDs de usuarios a actualizar"
-    )
-    
-    is_active: Optional[bool] = Field(
-        None,
-        description="Activar/desactivar usuarios"
-    )
-    
-    petty_cash_limit: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Nuevo límite de caja chica"
-    )
-
-
-class UserSecurityInfo(BaseModel):
-    """Schema para información de seguridad (logs)"""
-    
-    user_id: int = Field(..., description="ID del usuario")
-    username: str = Field(..., description="Username")
-    email_masked: str = Field(..., description="Email enmascarado")
-    is_active: bool = Field(..., description="Estado activo")
-    last_login: Optional[str] = Field(None, description="Último login ISO")
-    password_age_days: Optional[int] = Field(None, description="Edad de contraseña en días")
-    
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ==========================================
-# SCHEMAS PARA FILTROS Y BÚSQUEDAS
-# ==========================================
-
-class UserSearchFilters(BaseModel):
-    """Schema para filtros de búsqueda de usuarios"""
-    
-    search: Optional[str] = Field(
-        None,
-        description="Buscar en username, email, nombre o apellido"
-    )
-    
-    is_active: Optional[bool] = Field(
-        None,
-        description="Filtrar por estado activo"
-    )
-    
-    created_after: Optional[datetime] = Field(
-        None,
-        description="Usuarios creados después de esta fecha"
-    )
-    
-    created_before: Optional[datetime] = Field(
-        None,
-        description="Usuarios creados antes de esta fecha"
-    )
-    
-    last_login_after: Optional[datetime] = Field(
-        None,
-        description="Usuarios con último login después de esta fecha"
-    )
-    
-    has_phone: Optional[bool] = Field(
-        None,
-        description="Usuarios con/sin teléfono"
-    )
-    
-    min_petty_cash_limit: Optional[Decimal] = Field(
-        None,
-        ge=0,
-        description="Límite mínimo de caja chica"
-    )
 
 
 class UserListResponse(BaseModel):
-    """Schema para respuesta de lista de usuarios con paginación"""
-    
-    users: List[UserSummary] = Field(..., description="Lista de usuarios")
-    total: int = Field(..., description="Total de usuarios")
-    page: int = Field(..., description="Página actual")
-    size: int = Field(..., description="Tamaño de página")
-    pages: int = Field(..., description="Total de páginas")
+    """Schema para lista de usuarios"""
+    users: List[UserResponse]
+    pagination: dict
+    filters_applied: dict
 
 
 # ==========================================
-# SCHEMAS PARA VALIDACIONES ESPECÍFICAS
+# AUTHENTICATION SCHEMAS
 # ==========================================
 
-class UsernameAvailability(BaseModel):
-    """Schema para verificar disponibilidad de username"""
-    
-    username: str = Field(..., description="Username a verificar")
-    available: bool = Field(..., description="Si está disponible")
-    suggestions: List[str] = Field(
-        default_factory=list,
-        description="Sugerencias si no está disponible"
-    )
+class UserLogin(BaseModel):
+    """Schema para login de usuario"""
+    username_or_email: str = Field(..., description="Username o email del usuario")
+    password: str = Field(..., description="Contraseña del usuario")
+    remember_me: bool = Field(default=False, description="Recordar sesión")
 
 
-class EmailAvailability(BaseModel):
-    """Schema para verificar disponibilidad de email"""
-    
-    email: EmailStr = Field(..., description="Email a verificar")
-    available: bool = Field(..., description="Si está disponible")
+class UserLoginResponse(BaseModel):
+    """Schema de respuesta para login"""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: UserPublicResponse
+    permissions: List[str] = Field(default_factory=list)
+    warehouses: List[dict] = Field(default_factory=list)
+
+
+class UserTokenRefresh(BaseModel):
+    """Schema para refresh de token"""
+    refresh_token: str = Field(..., description="Token de refresh")
 
 
 # ==========================================
-# SCHEMAS PARA OPERACIONES DE RECUPERACIÓN
+# USER MANAGEMENT SCHEMAS
 # ==========================================
 
-class PasswordResetRequest(BaseModel):
-    """Schema para solicitar reset de contraseña"""
-    
-    email: EmailStr = Field(
-        ...,
-        description="Email del usuario"
-    )
+class UserActivationToggle(BaseModel):
+    """Schema para activar/desactivar usuario"""
+    is_active: bool = Field(..., description="Nuevo estado de activación")
+    reason: Optional[str] = Field(None, max_length=500, description="Razón del cambio")
 
 
-class PasswordReset(BaseModel):
-    """Schema para resetear contraseña con token"""
+class UserPasswordReset(BaseModel):
+    """Schema para reset de contraseña"""
+    email: EmailStr = Field(..., description="Email del usuario")
+
+
+class UserPasswordResetConfirm(BaseModel):
+    """Schema para confirmar reset de contraseña"""
+    token: str = Field(..., description="Token de reset")
+    new_password: str = Field(..., min_length=8, max_length=100, description="Nueva contraseña")
+    confirm_password: str = Field(..., description="Confirmación de nueva contraseña")
     
-    token: str = Field(
-        ...,
-        description="Token de recuperación"
-    )
-    
-    new_password: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Nueva contraseña"
-    )
-    
-    confirm_password: str = Field(
-        ...,
-        description="Confirmación de contraseña"
-    )
-    
-    @validator('confirm_password')
-    def passwords_match(cls, v, values):
-        """Validar que las contraseñas coincidan"""
-        if 'new_password' in values and v != values['new_password']:
-            raise ValueError('Las contraseñas no coinciden')
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v):
+        """Validar fortaleza de contraseña"""
+        if len(v) < 8:
+            raise ValueError("Contraseña debe tener al menos 8 caracteres")
+        
+        # Al menos una mayúscula
+        if not re.search(r'[A-Z]', v):
+            raise ValueError("Contraseña debe tener al menos una mayúscula")
+        
+        # Al menos una minúscula
+        if not re.search(r'[a-z]', v):
+            raise ValueError("Contraseña debe tener al menos una minúscula")
+        
+        # Al menos un número
+        if not re.search(r'\d', v):
+            raise ValueError("Contraseña debe tener al menos un número")
+        
+        # Al menos un carácter especial
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError("Contraseña debe tener al menos un carácter especial")
+        
         return v
     
-    # Aplicar validador de contraseña
-    _validate_password = validator('new_password', allow_reuse=True)(UserCreate.validate_password)
+    def model_post_init(self, __context):
+        """Validación después de inicialización"""
+        if self.new_password != self.confirm_password:
+            raise ValueError("Las contraseñas no coinciden")
+
+
+# ==========================================
+# SCHEMAS DE RESPUESTA PAGINADA
+# ==========================================
+
+class PaginationInfo(BaseModel):
+    """Información de paginación"""
+    page: int = Field(..., ge=1)
+    limit: int = Field(..., ge=1, le=100)
+    total: int = Field(..., ge=0)
+    pages: int = Field(..., ge=0)
+
+
+class UserListWithPagination(BaseModel):
+    """Lista de usuarios con paginación"""
+    users: List[UserResponse]
+    pagination: PaginationInfo
+    filters_applied: dict
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==========================================
+# USER WITH RELATIONS SCHEMAS
+# ==========================================
+
+class UserWithRoles(UserResponse):
+    """Usuario con información detallada de roles"""
+    roles: List[dict] = Field(default_factory=list, description="Roles asignados al usuario")
+
+
+class UserWithPermissions(UserResponse):
+    """Usuario con información detallada de permisos"""
+    direct_permissions: List[dict] = Field(default_factory=list, description="Permisos directos del usuario")
+    role_permissions: List[dict] = Field(default_factory=list, description="Permisos heredados de roles")
+
+
+class UserWithWarehouses(UserResponse):
+    """Usuario con información de acceso a bodegas"""
+    warehouse_accesses: List[dict] = Field(default_factory=list, description="Accesos a bodegas")
+    responsible_warehouses: List[dict] = Field(default_factory=list, description="Bodegas de las que es responsable")
+
+
+class UserDetailedResponse(UserResponse):
+    """Usuario con toda la información relacionada"""
+    roles: List[dict] = Field(default_factory=list)
+    direct_permissions: List[dict] = Field(default_factory=list)
+    warehouse_accesses: List[dict] = Field(default_factory=list)
+    responsible_warehouses: List[dict] = Field(default_factory=list)
+
+
+# ==========================================
+# ROLE ASSIGNMENT SCHEMAS
+# ==========================================
+
+class UserRoleAssignment(BaseModel):
+    """Schema para asignar rol a usuario"""
+    user_id: int = Field(..., gt=0, description="ID del usuario")
+    role_id: int = Field(..., gt=0, description="ID del rol a asignar")
+    reason: Optional[str] = Field(None, max_length=500, description="Razón de la asignación")
+
+
+class UserRoleRemoval(BaseModel):
+    """Schema para remover rol de usuario"""
+    user_id: int = Field(..., gt=0, description="ID del usuario")
+    role_id: int = Field(..., gt=0, description="ID del rol a remover")
+    reason: Optional[str] = Field(None, max_length=500, description="Razón de la remoción")
+
+
+# ==========================================
+# PERMISSION ASSIGNMENT SCHEMAS
+# ==========================================
+
+class UserPermissionAssignment(BaseModel):
+    """Schema para asignar permiso directo a usuario"""
+    user_id: int = Field(..., gt=0, description="ID del usuario")
+    permission_id: int = Field(..., gt=0, description="ID del permiso")
+    permission_type: str = Field(default="GRANT", description="Tipo de permiso (GRANT/DENY)")
+    expires_at: Optional[datetime] = Field(None, description="Fecha de expiración")
+    reason: Optional[str] = Field(None, max_length=500, description="Razón de la asignación")
+
+
+# ==========================================
+# WAREHOUSE ACCESS SCHEMAS
+# ==========================================
+
+class UserWarehouseAccessGrant(BaseModel):
+    """Schema para otorgar acceso a bodega"""
+    user_id: int = Field(..., gt=0, description="ID del usuario")
+    warehouse_id: int = Field(..., gt=0, description="ID de la bodega")
+    access_type: str = Field(..., description="Tipo de acceso (FULL/READ_ONLY/DENIED)")
+    reason: Optional[str] = Field(None, max_length=500, description="Razón del otorgamiento")
+
+
+class UserWarehouseAccessSummary(BaseModel):
+    """Resumen de accesos de usuario a bodegas"""
+    user: UserPublicResponse
+    total_warehouses: int
+    full_access_count: int
+    read_only_count: int
+    denied_count: int
+    responsible_warehouses: List[dict]
+
+
+# ==========================================
+# SCHEMAS ADICIONALES
+# ==========================================
+
+class UserStats(BaseModel):
+    """Estadísticas de usuario"""
+    total_users: int
+    active_users: int
+    inactive_users: int
+    users_with_recent_login: int
+    users_need_password_change: int
+
+
+class UserSession(BaseModel):
+    """Información de sesión de usuario"""
+    user_id: int
+    username: str
+    session_id: str
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    created_at: datetime
+    last_activity: datetime
+    is_active: bool
+
+
+class UserActivitySummary(BaseModel):
+    """Resumen de actividad de usuario"""
+    user: UserPublicResponse
+    last_login: Optional[datetime]
+    total_sessions: int
+    active_sessions: int
+    last_activity: Optional[datetime]

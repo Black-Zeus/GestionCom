@@ -1,7 +1,8 @@
 """
+volumes/backend-api/database/schemas/roles.py
 Schemas Pydantic para el modelo Role
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator, ConfigDict
 

@@ -1,13 +1,12 @@
 """
+volumes/backend-api/core/password_manager.py
 Sistema de gestión de contraseñas con bcrypt integrado a tu arquitectura
 """
 import re
 import secrets
 import bcrypt
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
-
-from .config import settings
 from .exceptions import ValidationException, SystemException
 from .constants import ErrorCode
 
@@ -83,10 +82,11 @@ class PasswordManager:
         # Validar contraseña antes de hacer hash
         validation_result = cls.validate_password_strength(password)
         if not validation_result.is_valid:
+            mensajes = validation_result.errors + validation_result.suggestions
             raise ValidationException(
-                message="Contraseña no cumple los requisitos de seguridad",
+                message=mensajes,
                 error_code=ErrorCode.VALIDATION_PASSWORD_WEAK,
-                details=validation_result.errors
+                details=f"{validation_result.score} - {validation_result.errors} - {validation_result.suggestions}"
             )
         
         try:

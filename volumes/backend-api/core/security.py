@@ -1,21 +1,20 @@
 """
+volumes/backend-api/core/security.py
 Utilidades de seguridad para JWT con doble secreto y manejo de contraseñas
 """
 import secrets
 import hashlib
 import uuid
-from datetime import datetime, timezone, timedelta, timezone
-from typing import Optional, Dict, Any, Union
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from passlib.hash import bcrypt
 
 from .config import settings
-from .constants import JWTClaims, TokenType, ErrorCode
+from .constants import JWTClaims, TokenType
 from .exceptions import (
     TokenExpiredException,
     TokenInvalidException,
-    AuthenticationException,
     SystemException
 )
 

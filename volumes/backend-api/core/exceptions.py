@@ -1,4 +1,5 @@
 """
+volumes/backend-api/core/exceptions.py
 Excepciones personalizadas del sistema
 """
 from typing import Optional, Dict, Any

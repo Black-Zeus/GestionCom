@@ -1,4 +1,5 @@
 """
+volumes/backend-api/core/response.py
 Manejador de respuestas unificadas para toda la aplicación
 """
 import uuid
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from .constants import HTTPStatus, ErrorCode, ErrorType
+from .constants import HTTPStatus, ErrorCode, ErrorType, ERROR_MESSAGES 
 from .exceptions import BaseAppException
 from .config import settings
 
@@ -18,6 +19,7 @@ class ErrorInfo(BaseModel):
     """Información de error en la respuesta"""
     code: Optional[str] = None
     type: Optional[str] = None
+    description: Optional[str] = None
     details: Optional[str] = None
     field: Optional[str] = None
     stack: Optional[str] = None
@@ -120,6 +122,11 @@ class ResponseManager:
         """
         path, method = cls._get_path_and_method(request)
         
+        # ✅ AGREGAR: Obtener descripción del error desde ERROR_MESSAGES
+        error_description = None
+        if error_code and error_code in ERROR_MESSAGES:
+            error_description = ERROR_MESSAGES[error_code]
+        
         # Solo incluir stack trace en desarrollo
         include_stack = settings.ENABLE_STACK_TRACE and settings.is_development
         
@@ -134,6 +141,7 @@ class ResponseManager:
             error=ErrorInfo(
                 code=error_code,
                 type=error_type,
+                description=error_description,
                 details=details,
                 field=field,
                 stack=stack_trace if include_stack else None

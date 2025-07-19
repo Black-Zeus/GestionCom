@@ -1,19 +1,20 @@
 """
+volumes/backend-api/cache/services/user_cache.py
 Servicio de cache para datos de usuarios - User secrets, permisos y información básica
 Integrado con tu arquitectura Redis existente
 """
-import logging
+from utils.log_helper import setup_logger
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List
 
 from cache.redis_client import redis_client
 from core.config import settings
 from core.constants import RedisKeys
-from core.exceptions import CacheException, SystemException
+from core.exceptions import CacheException
 
 
 # Configurar logger
-logger = logging.getLogger(__name__)
+logger = setup_logger(__name__)
 
 
 class UserCacheService:
@@ -149,7 +150,7 @@ class UserCacheService:
         """
         try:
             from sqlalchemy import select
-            from database.models.user import User
+            from database.models.users import User
             from database import get_async_session
             
             # CORRECCIÓN: Usar async for para el generador
@@ -282,7 +283,7 @@ class UserCacheService:
         """
         try:
             # ✅ Query directa
-            from database.models.user import User
+            from database.models.users import User
             from sqlalchemy import select
             from database.database import db_manager
             
@@ -329,12 +330,20 @@ class UserCacheService:
             Dict con 'roles' y 'permissions' como listas
         """
         try:
+
             cache_key = f"user:permissions:{user_id}"
             cached_permissions = await redis_client.get(cache_key)
             
             if cached_permissions:
-                logger.debug(f"User permissions cache HIT for user {user_id}")
-                return cached_permissions
+                # Verificar que el cache tenga datos útiles (roles o permisos no vacíos)
+                roles = cached_permissions.get("roles", [])
+                permissions = cached_permissions.get("permissions", [])
+                
+                if roles or permissions:  # Solo retornar si tiene al menos roles o permisos
+                    logger.debug(f"User permissions cache HIT for user {user_id}")
+                    return cached_permissions
+                else:
+                    logger.debug(f"User permissions cache HIT but empty for user {user_id}, falling back to DB")
             
             logger.debug(f"User permissions cache MISS for user {user_id}")
             
@@ -356,13 +365,13 @@ class UserCacheService:
             except Exception as db_error:
                 logger.error(f"Database fallback failed for user permissions {user_id}: {db_error}")
                 return {"roles": [], "permissions": []}
-    
+            
     async def cache_user_permissions(
         self,
         user_id: int,
-        roles: List[str],
-        permissions: List[str]
-    ) -> bool:
+            roles: List[str],
+            permissions: List[str]
+        ) -> bool:
         """
         Cachear roles y permisos de usuario
         """
@@ -370,7 +379,7 @@ class UserCacheService:
             "roles": roles,
             "permissions": permissions
         }
-        
+            
         return await self._cache_user_permissions(user_id, permissions_data)
     
     async def invalidate_user_permissions(self, user_id: int) -> bool:
@@ -412,74 +421,28 @@ class UserCacheService:
             return False
 
     async def _fetch_user_permissions_from_db(self, user_id: int) -> Dict[str, List[str]]:
-        """
-        Obtener permisos y roles desde base de datos - VERSIÓN CORREGIDA
-        """
+        """Delegar a PermissionsService - VERSIÓN CORREGIDA"""
         try:
-            # ✅ Query directa con JOINs
-            from database.models.user import User
-            from database.models.user_roles import UserRole
-            from database.models.roles import Role
-            from database.models.user_permissions import UserPermission
-            from database.models.permissions import Permission
-            from database.models.role_permissions import RolePermission
-            from sqlalchemy import select, and_
-            from database.database import db_manager
+            # ✅ IMPORTS AL INICIO
+            from datetime import datetime, timezone
+            from services.permissions_service import permissions_service
             
-            async with db_manager.get_session() as session:
-                # Obtener roles del usuario
-                roles_stmt = select(Role.role_code).select_from(
-                    UserRole.__table__.join(Role.__table__)
-                ).where(
-                    and_(
-                        UserRole.user_id == user_id,
-                        Role.is_active == True
-                    )
-                )
-                
-                roles_result = await session.execute(roles_stmt)
-                roles = [row[0] for row in roles_result.fetchall()]
-                
-                # Obtener permisos directos del usuario
-                user_perms_stmt = select(Permission.permission_code).select_from(
-                    UserPermission.__table__.join(Permission.__table__)
-                ).where(
-                    and_(
-                        UserPermission.user_id == user_id,
-                        Permission.is_active == True
-                    )
-                )
-                
-                user_perms_result = await session.execute(user_perms_stmt)
-                user_permissions = [row[0] for row in user_perms_result.fetchall()]
-                
-                # Obtener permisos por roles
-                role_perms_stmt = select(Permission.permission_code).select_from(
-                    UserRole.__table__.join(Role.__table__).join(
-                        RolePermission.__table__
-                    ).join(Permission.__table__)
-                ).where(
-                    and_(
-                        UserRole.user_id == user_id,
-                        Role.is_active == True,
-                        Permission.is_active == True
-                    )
-                )
-                
-                role_perms_result = await session.execute(role_perms_stmt)
-                role_permissions = [row[0] for row in role_perms_result.fetchall()]
-                
-                # Combinar todos los permisos sin duplicados
-                all_permissions = list(set(user_permissions + role_permissions))
-                
-                return {
-                    "roles": roles,
-                    "permissions": all_permissions
-                }
+            result = await permissions_service.get_user_permissions(user_id)
+            result["_cached_at"] = datetime.now(timezone.utc).isoformat()
+            
+            return result
             
         except Exception as e:
+            # ✅ IMPORTS DENTRO DEL EXCEPT TAMBIÉN
+            from datetime import datetime, timezone
+            
             logger.error(f"Error fetching user permissions from DB for {user_id}: {e}")
-            return {"roles": [], "permissions": []}
+            return {
+                "roles": [],
+                "permissions": [],
+                "_cached_at": datetime.now(timezone.utc).isoformat()
+            }
+
 
     # ==========================================
     # OPERACIONES BATCH Y OPTIMIZACIÓN
@@ -541,7 +504,7 @@ class UserCacheService:
         """
         try:
             # ✅ Query directa con IN clause
-            from database.models.user import User
+            from database.models.users import User
             from sqlalchemy import select
             from database.database import db_manager
             
