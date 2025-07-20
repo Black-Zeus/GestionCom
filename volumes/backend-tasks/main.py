@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from datetime import datetime
+from datetime import datetime, timezone
 from routes import task_routes  # Importar las rutas específicas para las tareas
 
 # Configuración de la aplicación
@@ -26,6 +26,6 @@ async def health_check():
         "name": "API de Tareas en Segundo Plano",
         "role": "Gestión de colas de trabajo y procesamiento en segundo plano",
         "status": "active",  # Estado general de la API
-        "timestamp": datetime.utcnow().isoformat(),  # Fecha y hora actual
+        "timestamp": datetime.now(timezone.utc),  # Fecha y hora actual
         "version": "1.0.0",  # Versión de la API
     }

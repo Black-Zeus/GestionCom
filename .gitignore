@@ -55,6 +55,7 @@ env/
 # Solo ignorar .env en la raíz del proyecto
 /.env
 /.env.*
+env.zip
 
 # Mantener ejemplos de configuración en cualquier lugar
 !**/.env.example

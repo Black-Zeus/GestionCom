@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from services import task_service
+from cache.services import task_service
 
 router = APIRouter()
 

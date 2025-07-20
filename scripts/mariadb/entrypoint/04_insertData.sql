@@ -25,7 +25,6 @@ INSERT INTO permissions (permission_code, permission_name, permission_group) VAL
 ('STOCK_VIEW', 'Ver stock', 'INVENTORY'),
 ('STOCK_ADJUST', 'Ajustar stock', 'INVENTORY'),
 ('STOCK_TRANSFER', 'Transferir stock', 'INVENTORY'),
-('WAREHOUSES_MANAGE', 'Gestionar bodegas', 'INVENTORY'),
 ('MOVEMENTS_VIEW', 'Ver movimientos', 'INVENTORY'),
 
 -- Precios
