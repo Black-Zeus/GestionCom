@@ -156,10 +156,11 @@ async def root(request: Request):
         "status": "active",
         "docs_url": "/swagger",
         "routers": {
-            "loaded": [r["name"] for r in router_stats["loaded"]],
-            "failed": list(router_stats["failed"].keys()),
-            "success_rate": f"{len(router_stats['loaded'])}/{router_stats['total_configured']}",
-            "success_percentage": f"{(len(router_stats['loaded']) / router_stats['total_configured'] * 100) if router_stats['total_configured'] > 0 else 0:.1f}%"
+            # FIX: Usar atributos de la clase en lugar de acceso de diccionario
+            "loaded": [r["name"] for r in router_stats.loaded],
+            "failed": list(router_stats.failed.keys()),
+            "success_rate": f"{router_stats.loaded_count}/{router_stats.total_configured}",
+            "success_percentage": f"{router_stats.success_percentage:.1f}%"
         },
         "features": {
             "response_manager": RESPONSE_MANAGER_AVAILABLE,
