@@ -132,6 +132,16 @@ ROUTERS_TO_LOAD = [
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]
+    },
+    {
+        "name": "menu_items",
+        "prefix": "/menu-items",
+        "tags": ["Menu Items"]
+    },
+    {
+        "name": "user_menus",
+        "prefix": "/user-menus", 
+        "tags": ["User Menus"]
     }
 ]
 

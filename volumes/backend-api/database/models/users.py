@@ -280,6 +280,15 @@ class User(BaseModel):
         back_populates="responsible_user",
         lazy="select"
     )
+
+    # Relación con favoritos de menú
+    menu_favorites = relationship(
+        "UserMenuFavorite",
+        foreign_keys="UserMenuFavorite.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="select"
+    )
     
     # ==========================================
     # RELACIONES COMENTADAS - MODELOS PRÓXIMOS
