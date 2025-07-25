@@ -1,0 +1,893 @@
+{
+  "price_list_groups": [
+    {
+      "id": 1,
+      "group_code": "RETAIL",
+      "group_name": "Precios Retail",
+      "group_description": "Listas de precios para venta al detalle",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "group_code": "WHOLESALE",
+      "group_name": "Precios Mayorista",
+      "group_description": "Listas de precios para venta al por mayor",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "group_code": "SPECIAL",
+      "group_name": "Precios Especiales",
+      "group_description": "Listas de precios para clientes especiales y promociones",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z"
+    }
+  ],
+  
+  "price_lists": [
+    {
+      "id": 1,
+      "price_list_group_id": 1,
+      "price_list_code": "RETAIL_GENERAL",
+      "price_list_name": "Lista General Retail",
+      "base_price_list_id": null,
+      "base_adjustment_type": null,
+      "base_adjustment_value": null,
+      "currency_code": "CLP",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "priority": 1,
+      "applies_to": "ALL_PRODUCTS",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "price_list_group_id": 1,
+      "price_list_code": "RETAIL_PREMIUM",
+      "price_list_name": "Lista Premium Retail",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": 15.00,
+      "currency_code": "CLP",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "priority": 2,
+      "applies_to": "ALL_PRODUCTS",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "price_list_group_id": 2,
+      "price_list_code": "WHOLESALE_BASIC",
+      "price_list_name": "Lista Mayorista Básica",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -10.00,
+      "currency_code": "CLP",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "priority": 1,
+      "applies_to": "ALL_PRODUCTS",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 4,
+      "price_list_group_id": 2,
+      "price_list_code": "WHOLESALE_VIP",
+      "price_list_name": "Lista Mayorista VIP",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -20.00,
+      "currency_code": "CLP",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "priority": 1,
+      "applies_to": "ALL_PRODUCTS",
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "price_list_group_id": 3,
+      "price_list_code": "PROMO_ENERO",
+      "price_list_name": "Promoción Enero 2025",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -25.00,
+      "currency_code": "CLP",
+      "valid_from": "2025-01-01",
+      "valid_to": "2025-01-31",
+      "priority": 3,
+      "applies_to": "CATEGORY",
+      "is_active": true,
+      "created_at": "2024-12-15T10:00:00Z",
+      "updated_at": "2024-12-15T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "price_list_group_id": 3,
+      "price_list_code": "BLACK_FRIDAY",
+      "price_list_name": "Black Friday 2024",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -35.00,
+      "currency_code": "CLP",
+      "valid_from": "2024-11-29",
+      "valid_to": "2024-12-02",
+      "priority": 5,
+      "applies_to": "SPECIFIC",
+      "is_active": false,
+      "created_at": "2024-11-01T10:00:00Z",
+      "updated_at": "2024-12-03T10:00:00Z"
+    }
+  ],
+
+  "categories": [
+    {
+      "id": 1,
+      "parent_id": null,
+      "category_code": "TECH",
+      "category_name": "Tecnología",
+      "category_description": "Productos tecnológicos y electrónicos",
+      "category_level": 1,
+      "category_path": "/TECH",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "parent_id": 1,
+      "category_code": "COMPUTERS",
+      "category_name": "Computación",
+      "category_description": "Computadoras, laptops y accesorios",
+      "category_level": 2,
+      "category_path": "/TECH/COMPUTERS",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "parent_id": 1,
+      "category_code": "PHONES",
+      "category_name": "Telefonía",
+      "category_description": "Smartphones y accesorios móviles",
+      "category_level": 2,
+      "category_path": "/TECH/PHONES",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "parent_id": 1,
+      "category_code": "ACCESSORIES",
+      "category_name": "Accesorios",
+      "category_description": "Accesorios tecnológicos diversos",
+      "category_level": 2,
+      "category_path": "/TECH/ACCESSORIES",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "parent_id": null,
+      "category_code": "HOME",
+      "category_name": "Hogar",
+      "category_description": "Productos para el hogar",
+      "category_level": 1,
+      "category_path": "/HOME",
+      "sort_order": 2,
+      "is_active": true
+    }
+  ],
+
+  "measurement_units": [
+    {
+      "id": 1,
+      "unit_code": "UNI",
+      "unit_name": "Unidad",
+      "unit_symbol": "un",
+      "unit_type": "BASE",
+      "base_unit_id": null,
+      "conversion_factor": 1.000000,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "unit_code": "PAR",
+      "unit_name": "Par",
+      "unit_symbol": "par",
+      "unit_type": "BASE",
+      "base_unit_id": null,
+      "conversion_factor": 1.000000,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "unit_code": "KG",
+      "unit_name": "Kilogramo",
+      "unit_symbol": "kg",
+      "unit_type": "BASE",
+      "base_unit_id": null,
+      "conversion_factor": 1.000000,
+      "allow_decimals": true,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "unit_code": "CAJA",
+      "unit_name": "Caja",
+      "unit_symbol": "cj",
+      "unit_type": "DERIVED",
+      "base_unit_id": 1,
+      "conversion_factor": 12.000000,
+      "allow_decimals": false,
+      "is_active": true
+    }
+  ],
+
+  "products": [
+    {
+      "id": 1,
+      "category_id": 2,
+      "product_code": "PROD001",
+      "product_name": "Notebook HP Pavilion 15.6\" Intel Core i5",
+      "product_description": "Laptop HP Pavilion con procesador Intel Core i5, 8GB RAM, 256GB SSD",
+      "brand": "HP",
+      "model": "Pavilion 15-eg0001la",
+      "base_measurement_unit_id": 1,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "has_location_tracking": true
+    },
+    {
+      "id": 2,
+      "category_id": 4,
+      "product_code": "PROD002",
+      "product_name": "Mouse Inalámbrico Logitech MX Master 3",
+      "product_description": "Mouse inalámbrico ergonómico con sensor de alta precisión",
+      "brand": "Logitech",
+      "model": "MX Master 3",
+      "base_measurement_unit_id": 1,
+      "has_variants": true,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false
+    },
+    {
+      "id": 3,
+      "category_id": 4,
+      "product_code": "PROD003",
+      "product_name": "Teclado Mecánico Corsair K95 RGB",
+      "product_description": "Teclado mecánico gaming con iluminación RGB",
+      "brand": "Corsair",
+      "model": "K95 RGB Platinum XT",
+      "base_measurement_unit_id": 1,
+      "has_variants": true,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false
+    },
+    {
+      "id": 4,
+      "category_id": 3,
+      "product_code": "PROD004",
+      "product_name": "Smartphone Samsung Galaxy A54 128GB",
+      "product_description": "Smartphone Samsung Galaxy A54 con 128GB de almacenamiento",
+      "brand": "Samsung",
+      "model": "Galaxy A54 5G",
+      "base_measurement_unit_id": 1,
+      "has_variants": true,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "has_location_tracking": true
+    },
+    {
+      "id": 5,
+      "category_id": 4,
+      "product_code": "PROD005",
+      "product_name": "Cargador Inalámbrico Samsung 15W",
+      "product_description": "Cargador inalámbrico rápido de 15W compatible con smartphones",
+      "brand": "Samsung",
+      "model": "EP-P1300",
+      "base_measurement_unit_id": 1,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false
+    },
+    {
+      "id": 6,
+      "category_id": 2,
+      "product_code": "PROD006",
+      "product_name": "Monitor LG UltraWide 34\" 1440p USB-C",
+      "product_description": "Monitor ultrawide de 34 pulgadas con resolución 1440p y conectividad USB-C",
+      "brand": "LG",
+      "model": "34WN80C-B",
+      "base_measurement_unit_id": 1,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "has_location_tracking": true
+    },
+    {
+      "id": 7,
+      "category_id": 4,
+      "product_code": "PROD007",
+      "product_name": "Webcam Logitech C920 Pro HD",
+      "product_description": "Cámara web Full HD 1080p con micrófono estéreo",
+      "brand": "Logitech",
+      "model": "C920",
+      "base_measurement_unit_id": 1,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false
+    },
+    {
+      "id": 8,
+      "category_id": 4,
+      "product_code": "PROD008",
+      "product_name": "Docking Station USB-C Universal",
+      "product_description": "Hub USB-C con múltiples puertos para conectividad extendida",
+      "brand": "Dell",
+      "model": "WD19S",
+      "base_measurement_unit_id": 1,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false
+    }
+  ],
+
+  "product_variants": [
+    {
+      "id": 1,
+      "product_id": 1,
+      "variant_sku": "PROD001-001",
+      "variant_name": "Notebook HP Pavilion 15.6\" Intel Core i5 - Negro",
+      "variant_description": "Variante en color negro",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "product_id": 2,
+      "variant_sku": "PROD002-001",
+      "variant_name": "Mouse Logitech MX Master 3 - Negro",
+      "variant_description": "Variante en color negro",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "product_id": 2,
+      "variant_sku": "PROD002-002",
+      "variant_name": "Mouse Logitech MX Master 3 - Blanco",
+      "variant_description": "Variante en color blanco",
+      "is_default_variant": false,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "product_id": 3,
+      "variant_sku": "PROD003-001",
+      "variant_name": "Teclado Corsair K95 RGB - Switch Cherry MX Red",
+      "variant_description": "Con switches Cherry MX Red",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "product_id": 3,
+      "variant_sku": "PROD003-002",
+      "variant_name": "Teclado Corsair K95 RGB - Switch Cherry MX Blue",
+      "variant_description": "Con switches Cherry MX Blue",
+      "is_default_variant": false,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "product_id": 4,
+      "variant_sku": "PROD004-001",
+      "variant_name": "Samsung Galaxy A54 128GB - Negro",
+      "variant_description": "Variante en color negro",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "product_id": 4,
+      "variant_sku": "PROD004-002",
+      "variant_name": "Samsung Galaxy A54 128GB - Blanco",
+      "variant_description": "Variante en color blanco",
+      "is_default_variant": false,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "product_id": 4,
+      "variant_sku": "PROD004-003",
+      "variant_name": "Samsung Galaxy A54 128GB - Violeta",
+      "variant_description": "Variante en color violeta",
+      "is_default_variant": false,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "product_id": 5,
+      "variant_sku": "PROD005-001",
+      "variant_name": "Cargador Inalámbrico Samsung 15W - Negro",
+      "variant_description": "Variante en color negro",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "product_id": 6,
+      "variant_sku": "PROD006-001",
+      "variant_name": "Monitor LG UltraWide 34\" 1440p USB-C",
+      "variant_description": "Variante estándar",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "product_id": 7,
+      "variant_sku": "PROD007-001",
+      "variant_name": "Webcam Logitech C920 Pro HD",
+      "variant_description": "Variante estándar",
+      "is_default_variant": true,
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "product_id": 8,
+      "variant_sku": "PROD008-001",
+      "variant_name": "Docking Station USB-C Universal",
+      "variant_description": "Variante estándar",
+      "is_default_variant": true,
+      "is_active": true
+    }
+  ],
+
+  "price_list_items": [
+    {
+      "id": 1,
+      "price_list_id": 1,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 450000.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": 28.89,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "price_list_id": 1,
+      "product_variant_id": 2,
+      "measurement_unit_id": 1,
+      "base_price": 89990.0000,
+      "sale_price": 89990.0000,
+      "cost_price": 65000.0000,
+      "margin_percentage": 27.78,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "price_list_id": 1,
+      "product_variant_id": 3,
+      "measurement_unit_id": 1,
+      "base_price": 89990.0000,
+      "sale_price": 94990.0000,
+      "cost_price": 65000.0000,
+      "margin_percentage": 31.58,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 4,
+      "price_list_id": 1,
+      "product_variant_id": 4,
+      "measurement_unit_id": 1,
+      "base_price": 189990.0000,
+      "sale_price": 189990.0000,
+      "cost_price": 135000.0000,
+      "margin_percentage": 28.95,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "price_list_id": 1,
+      "product_variant_id": 5,
+      "measurement_unit_id": 1,
+      "base_price": 199990.0000,
+      "sale_price": 199990.0000,
+      "cost_price": 135000.0000,
+      "margin_percentage": 32.50,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "price_list_id": 1,
+      "product_variant_id": 6,
+      "measurement_unit_id": 1,
+      "base_price": 299990.0000,
+      "sale_price": 299990.0000,
+      "cost_price": 220000.0000,
+      "margin_percentage": 26.67,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 7,
+      "price_list_id": 1,
+      "product_variant_id": 7,
+      "measurement_unit_id": 1,
+      "base_price": 299990.0000,
+      "sale_price": 319990.0000,
+      "cost_price": 220000.0000,
+      "margin_percentage": 31.25,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 8,
+      "price_list_id": 1,
+      "product_variant_id": 8,
+      "measurement_unit_id": 1,
+      "base_price": 299990.0000,
+      "sale_price": 339990.0000,
+      "cost_price": 220000.0000,
+      "margin_percentage": 35.29,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 9,
+      "price_list_id": 1,
+      "product_variant_id": 9,
+      "measurement_unit_id": 1,
+      "base_price": 45990.0000,
+      "sale_price": 45990.0000,
+      "cost_price": 32000.0000,
+      "margin_percentage": 30.42,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 10,
+      "price_list_id": 1,
+      "product_variant_id": 10,
+      "measurement_unit_id": 1,
+      "base_price": 520000.0000,
+      "sale_price": 520000.0000,
+      "cost_price": 380000.0000,
+      "margin_percentage": 26.92,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 11,
+      "price_list_id": 1,
+      "product_variant_id": 11,
+      "measurement_unit_id": 1,
+      "base_price": 89990.0000,
+      "sale_price": 89990.0000,
+      "cost_price": 65000.0000,
+      "margin_percentage": 27.78,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 12,
+      "price_list_id": 1,
+      "product_variant_id": 12,
+      "measurement_unit_id": 1,
+      "base_price": 159990.0000,
+      "sale_price": 159990.0000,
+      "cost_price": 115000.0000,
+      "margin_percentage": 28.13,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 13,
+      "price_list_id": 2,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 517500.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": 38.16,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 14,
+      "price_list_id": 2,
+      "product_variant_id": 6,
+      "measurement_unit_id": 1,
+      "base_price": 299990.0000,
+      "sale_price": 344989.0000,
+      "cost_price": 220000.0000,
+      "margin_percentage": 36.20,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 15,
+      "price_list_id": 3,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 405000.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": 20.99,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 16,
+      "price_list_id": 3,
+      "product_variant_id": 6,
+      "measurement_unit_id": 1,
+      "base_price": 299990.0000,
+      "sale_price": 269991.0000,
+      "cost_price": 220000.0000,
+      "margin_percentage": 18.52,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 17,
+      "price_list_id": 4,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 360000.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": 11.11,
+      "is_active": true,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 18,
+      "price_list_id": 5,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 337500.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": 5.19,
+      "is_active": true,
+      "created_at": "2024-12-15T10:00:00Z",
+      "updated_at": "2024-12-15T10:00:00Z"
+    },
+    {
+      "id": 19,
+      "price_list_id": 5,
+      "product_variant_id": 2,
+      "measurement_unit_id": 1,
+      "base_price": 89990.0000,
+      "sale_price": 67492.0000,
+      "cost_price": 65000.0000,
+      "margin_percentage": 3.83,
+      "is_active": true,
+      "created_at": "2024-12-15T10:00:00Z",
+      "updated_at": "2024-12-15T10:00:00Z"
+    },
+    {
+      "id": 20,
+      "price_list_id": 6,
+      "product_variant_id": 1,
+      "measurement_unit_id": 1,
+      "base_price": 450000.0000,
+      "sale_price": 292500.0000,
+      "cost_price": 320000.0000,
+      "margin_percentage": -8.59,
+      "is_active": false,
+      "created_at": "2024-11-01T10:00:00Z",
+      "updated_at": "2024-12-03T10:00:00Z"
+    }
+  ],
+
+  "system_config": {
+    "company_info": {
+      "name": "TechStore Chile S.A.",
+      "rut": "76543210-K",
+      "address": "Av. Providencia 1234, Santiago",
+      "phone": "+56 2 2234 5678",
+      "email": "info@techstore.cl"
+    },
+    "currency_settings": {
+      "default_currency": "CLP",
+      "currency_symbol": "$",
+      "decimal_places": 0,
+      "thousands_separator": ".",
+      "decimal_separator": ","
+    },
+    "price_list_settings": {
+      "auto_calculate_margins": true,
+      "default_margin_percentage": 30.0,
+      "allow_negative_margins": false,
+      "price_rounding_rule": "ROUND_UP",
+      "minimum_price_threshold": 100,
+      "require_cost_price": true,
+      "enable_bulk_updates": true,
+      "max_bulk_update_items": 1000,
+      "enable_price_history": true,
+      "history_retention_days": 365
+    },
+    "user_preferences": {
+      "items_per_page": 50,
+      "default_view": "list",
+      "show_cost_prices": true,
+      "show_margins": true,
+      "highlight_changes": true,
+      "auto_save_enabled": true,
+      "confirmation_required": true
+    }
+  },
+
+  "price_change_history": [
+    {
+      "id": 1,
+      "price_list_id": 1,
+      "product_variant_id": 1,
+      "old_price": 420000.0000,
+      "new_price": 450000.0000,
+      "change_type": "MANUAL_UPDATE",
+      "change_reason": "Ajuste por inflación",
+      "changed_by_user": "admin",
+      "change_date": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "price_list_id": 1,
+      "product_variant_id": 6,
+      "old_price": 289990.0000,
+      "new_price": 299990.0000,
+      "change_type": "BULK_UPDATE",
+      "change_reason": "Actualización masiva Q1 2024",
+      "changed_by_user": "manager",
+      "change_date": "2024-01-10T09:30:00Z"
+    },
+    {
+      "id": 3,
+      "price_list_id": 2,
+      "product_variant_id": 1,
+      "old_price": 495000.0000,
+      "new_price": 517500.0000,
+      "change_type": "FORMULA_UPDATE",
+      "change_reason": "Actualización automática por cambio en lista base",
+      "changed_by_user": "system",
+      "change_date": "2024-01-15T10:05:00Z"
+    }
+  ],
+
+  "statistics": {
+    "total_price_lists": 6,
+    "active_price_lists": 5,
+    "total_products": 8,
+    "total_variants": 12,
+    "total_price_items": 20,
+    "price_lists_by_group": {
+      "RETAIL": 2,
+      "WHOLESALE": 2,
+      "SPECIAL": 2
+    },
+    "coverage_stats": {
+      "products_with_prices": 8,
+      "products_without_prices": 0,
+      "coverage_percentage": 100
+    },
+    "margin_analysis": {
+      "average_margin": 25.8,
+      "highest_margin": 38.16,
+      "lowest_margin": -8.59,
+      "products_with_negative_margin": 1
+    },
+    "recent_changes": {
+      "last_7_days": 2,
+      "last_30_days": 5,
+      "last_90_days": 12
+    }
+  },
+
+  "user_session": {
+    "user_id": 1,
+    "username": "admin",
+    "full_name": "Administrador Sistema",
+    "role": "PRICE_MANAGER",
+    "permissions": [
+      "VIEW_PRICE_LISTS",
+      "CREATE_PRICE_LISTS",
+      "EDIT_PRICE_LISTS",
+      "DELETE_PRICE_LISTS",
+      "BULK_UPDATE_PRICES",
+      "VIEW_COST_PRICES",
+      "EDIT_COST_PRICES",
+      "APPROVE_PRICE_CHANGES",
+      "VIEW_PRICE_HISTORY",
+      "EXPORT_PRICE_DATA",
+      "IMPORT_PRICE_DATA"
+    ],
+    "last_login": "2025-01-24T08:30:00Z",
+    "session_expires": "2025-01-24T18:30:00Z"
+  },
+
+  "validation_rules": {
+    "price_constraints": {
+      "minimum_price": 1,
+      "maximum_price": 99999999,
+      "price_increment": 10,
+      "require_positive_margin": false,
+      "minimum_margin_percentage": -50.0,
+      "maximum_margin_percentage": 500.0
+    },
+    "list_constraints": {
+      "minimum_valid_days": 1,
+      "maximum_valid_days": 3650,
+      "require_unique_codes": true,
+      "require_base_adjustment": false,
+      "allow_circular_dependencies": false
+    },
+    "business_rules": {
+      "require_approval_for_high_discounts": true,
+      "high_discount_threshold": 30.0,
+      "require_approval_for_negative_margins": true,
+      "block_overlapping_promotion_dates": true,
+      "enforce_minimum_quantities": false
+    }
+  }
+}

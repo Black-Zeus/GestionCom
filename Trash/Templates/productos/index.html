@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Productos - Sistema de Inventario</title>
+    <meta
+      name="description"
+      content="Sistema de gestión de productos con variantes, atributos y control de stock"
+    />
+    <meta name="author" content="Sistema de Inventario" />
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Favicons -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏷️%3C/text%3E%3C/svg%3E"
+    />
+  </head>
+
+  <body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>🏷️ Gestión de Productos</h1>
+        <div class="header-actions">
+          <button
+            class="btn btn-success"
+            onclick="clearProductForm()"
+            title="Nuevo Producto (Escape)"
+          >
+            ➕ Nuevo Producto
+          </button>
+          <button
+            class="btn btn-info"
+            onclick="exportProducts()"
+            title="Exportar Datos"
+          >
+            📤 Exportar
+          </button>
+          <button
+            class="btn btn-secondary"
+            onclick="importProducts()"
+            title="Importar Datos"
+          >
+            📥 Importar
+          </button>
+        </div>
+      </div>
+
+      <!-- Navegación por Pestañas -->
+      <div class="main-tabs">
+        <button
+          class="tab-button active"
+          title="Gestionar productos principales (Alt+1)"
+        >
+          <span class="tab-icon">📦</span>
+          <span>Productos</span>
+        </button>
+        <button
+          class="tab-button"
+          title="Gestionar variantes de productos (Alt+2)"
+        >
+          <span class="tab-icon">🎨</span>
+          <span>Variantes</span>
+        </button>
+        <button
+          class="tab-button"
+          title="Herramientas de gestión masiva (Alt+3)"
+        >
+          <span class="tab-icon">⚙️</span>
+          <span>Herramientas</span>
+        </button>
+      </div>
+
+      <!-- Contenido de Pestañas -->
+      <div class="tab-content">
+        <!-- ============================================== -->
+        <!-- PESTAÑA: PRODUCTOS PRINCIPALES -->
+        <!-- ============================================== -->
+        <div id="products-tab" class="tab-panel active">
+          <!-- Formulario de Producto -->
+          <div class="product-form">
+            <h3>📦 Crear/Editar Producto Principal</h3>
+
+            <!-- Información Básica -->
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="product-code">Código del Producto *</label>
+                <input
+                  type="text"
+                  id="product-code"
+                  class="form-control"
+                  placeholder="Ej: CAM-001"
+                  required
+                  maxlength="50"
+                  pattern="[A-Za-z0-9\-_]+"
+                  title="Solo letras, números, guiones y guiones bajos"
+                />
+              </div>
+              <div class="form-group">
+                <label for="product-name">Nombre del Producto *</label>
+                <input
+                  type="text"
+                  id="product-name"
+                  class="form-control"
+                  placeholder="Ej: Camiseta Básica Algodón"
+                  required
+                  maxlength="255"
+                />
+              </div>
+            </div>
+
+            <div class="form-grid-3">
+              <div class="form-group">
+                <label for="product-brand">Marca</label>
+                <input
+                  type="text"
+                  id="product-brand"
+                  class="form-control"
+                  placeholder="Ej: Nike"
+                  maxlength="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="product-model">Modelo</label>
+                <input
+                  type="text"
+                  id="product-model"
+                  class="form-control"
+                  placeholder="Ej: Air Max 2024"
+                  maxlength="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="product-category">Categoría *</label>
+                <select id="product-category" class="form-control" required>
+                  <option value="">Seleccionar categoría...</option>
+                  <!-- Las opciones se cargan dinámicamente -->
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="product-description">Descripción</label>
+              <textarea
+                id="product-description"
+                class="form-control"
+                rows="3"
+                placeholder="Descripción detallada del producto..."
+                maxlength="1000"
+              ></textarea>
+            </div>
+
+            <!-- Unidad de Medida Base -->
+            <div class="form-group">
+              <label for="base-unit"
+                >Unidad de Medida Base *
+                <span
+                  class="help-icon"
+                  data-tooltip="Unidad principal del producto para cálculos internos de inventario. Esta es la unidad de referencia en la que se almacena el stock en el sistema (ej: si vendes por docenas pero inventario en unidades, la base sería 'Unidad')."
+                  >ℹ️</span
+                >
+              </label>
+              <select id="base-unit" class="form-control" required>
+                <option value="">Seleccionar unidad...</option>
+                <!-- Las opciones se cargan dinámicamente -->
+              </select>
+            </div>
+
+            <!-- Configuraciones del Producto -->
+            <div class="product-config">
+              <div class="config-group">
+                <div class="config-title">
+                  🔧 Configuraciones del Producto
+                  <span
+                    class="help-icon"
+                    data-tooltip="Configura las características especiales que tendrá este producto en el sistema"
+                    >ℹ️</span
+                  >
+                </div>
+                <div class="form-grid">
+                  <div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="has-variants"
+                        class="form-check-input"
+                      />
+                      <label for="has-variants" class="form-check-label">
+                        Producto con variantes (color, talla, etc.)
+                        <span
+                          class="help-icon"
+                          data-tooltip="Permite crear múltiples variaciones del producto (ej: misma camiseta en diferentes colores y tallas). Cada variante tendrá su propio SKU y stock independiente."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="has-batch"
+                        class="form-check-input"
+                      />
+                      <label for="has-batch" class="form-check-label">
+                        Control de lotes/lotes
+                        <span
+                          class="help-icon"
+                          data-tooltip="Requiere registrar número de lote en cada ingreso/salida. Útil para trazabilidad y control de calidad (ej: medicamentos, alimentos)."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="has-expiry"
+                        class="form-check-input"
+                      />
+                      <label for="has-expiry" class="form-check-label">
+                        Control de fecha de vencimiento
+                        <span
+                          class="help-icon"
+                          data-tooltip="Requiere registrar fecha de vencimiento en inventario. El sistema alertará sobre productos próximos a vencer (ej: alimentos, medicamentos)."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="has-serial"
+                        class="form-check-input"
+                      />
+                      <label for="has-serial" class="form-check-label">
+                        Control de números de serie
+                        <span
+                          class="help-icon"
+                          data-tooltip="Cada unidad del producto tendrá un número de serie único. Permite trazabilidad individual completa (ej: electrodomésticos, equipos)."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="has-location"
+                        class="form-check-input"
+                        checked
+                      />
+                      <label for="has-location" class="form-check-label">
+                        Seguimiento de ubicación en bodega
+                        <span
+                          class="help-icon"
+                          data-tooltip="Permite asignar ubicaciones específicas en bodega (pasillo, estante, nivel). Facilita la localización rápida del producto."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        id="is-active"
+                        class="form-check-input"
+                        checked
+                      />
+                      <label for="is-active" class="form-check-label">
+                        Producto activo
+                        <span
+                          class="help-icon"
+                          data-tooltip="Determina si el producto está disponible para operaciones. Los productos inactivos no aparecen en ventas pero mantienen su historial."
+                          >ℹ️</span
+                        >
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Configuración de Vencimiento (Condicional) -->
+                <div
+                  id="expiry-config"
+                  class="conditional-section expiry-config"
+                >
+                  <div class="config-title">
+                    📅 Configuración de Vencimiento
+                  </div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="default-expiry-days"
+                        >Días de vencimiento por defecto
+                        <span
+                          class="help-icon"
+                          data-tooltip="Días desde la fecha de ingreso hasta el vencimiento. Se usará por defecto al ingresar mercadería sin fecha específica."
+                          >ℹ️</span
+                        >
+                      </label>
+                      <input
+                        type="number"
+                        id="default-expiry-days"
+                        class="form-control"
+                        placeholder="365"
+                        min="1"
+                        max="9999"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label for="expiry-alert-days"
+                        >Días de alerta antes del vencimiento
+                        <span
+                          class="help-icon"
+                          data-tooltip="Cuántos días antes del vencimiento se debe generar alerta. Permite preparar liquidaciones o devoluciones."
+                          >ℹ️</span
+                        >
+                      </label>
+                      <input
+                        type="number"
+                        id="expiry-alert-days"
+                        class="form-control"
+                        placeholder="30"
+                        min="1"
+                        max="365"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Control de Stock Crítico -->
+            <div class="stock-critical-section">
+              <div class="config-title">
+                ⚠️ Control de Stock Crítico
+                <span
+                  class="help-icon"
+                  data-tooltip="Configura alertas automáticas cuando el stock llegue a niveles críticos. Ayuda a evitar quiebres de stock."
+                  >ℹ️</span
+                >
+              </div>
+
+              <div class="form-check mb-3">
+                <input
+                  type="checkbox"
+                  id="enable-stock-alerts"
+                  class="form-check-input"
+                />
+                <label
+                  for="enable-stock-alerts"
+                  class="form-check-label font-weight-bold"
+                >
+                  Habilitar control de stock crítico
+                </label>
+              </div>
+
+              <div id="stock-config" class="conditional-section stock-config">
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label for="minimum-stock"
+                      >Stock Mínimo
+                      <span
+                        class="help-icon"
+                        data-tooltip="Cantidad mínima que debe mantenerse en stock. Al llegar a este nivel se generará alerta."
+                        >ℹ️</span
+                      >
+                    </label>
+                    <input
+                      type="number"
+                      id="minimum-stock"
+                      class="form-control"
+                      placeholder="10"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="safety-stock"
+                      >Stock de Seguridad
+                      <span
+                        class="help-icon"
+                        data-tooltip="Stock adicional para cubrir variaciones imprevistas en la demanda o demoras en aprovisionamiento."
+                        >ℹ️</span
+                      >
+                    </label>
+                    <input
+                      type="number"
+                      id="safety-stock"
+                      class="form-control"
+                      placeholder="5"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="reorder-quantity"
+                      >Cantidad de Reorden
+                      <span
+                        class="help-icon"
+                        data-tooltip="Cantidad sugerida para solicitar cuando se llegue al punto de reorden."
+                        >ℹ️</span
+                      >
+                    </label>
+                    <input
+                      type="number"
+                      id="reorder-quantity"
+                      class="form-control"
+                      placeholder="50"
+                      min="1"
+                      step="0.1"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label for="lead-time-days"
+                      >Días de Lead Time
+                      <span
+                        class="help-icon"
+                        data-tooltip="Días que toma el proveedor en entregar el pedido desde que se solicita."
+                        >ℹ️</span
+                      >
+                    </label>
+                    <input
+                      type="number"
+                      id="lead-time-days"
+                      class="form-control"
+                      placeholder="7"
+                      min="1"
+                      max="365"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="alert-frequency"
+                      >Frecuencia de Alertas (horas)
+                      <span
+                        class="help-icon"
+                        data-tooltip="Cada cuántas horas se pueden repetir las alertas de stock crítico para evitar spam."
+                        >ℹ️</span
+                      >
+                    </label>
+                    <input
+                      type="number"
+                      id="alert-frequency"
+                      class="form-control"
+                      placeholder="24"
+                      min="1"
+                      max="168"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="global-stock-config"
+                    class="form-check-input"
+                    checked
+                  />
+                  <label for="global-stock-config" class="form-check-label">
+                    Configuración global (aplicar a todas las bodegas)
+                    <span
+                      class="help-icon"
+                      data-tooltip="Si está marcado, esta configuración se aplica a todas las bodegas. Si no, se debe configurar individualmente por bodega."
+                      >ℹ️</span
+                    >
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unidades de Medida Adicionales -->
+            <div class="units-section">
+              <div class="config-title">
+                📏 Unidades de Medida Adicionales del Producto
+                <span
+                  class="help-icon"
+                  data-tooltip="Además de la unidad base, puedes configurar unidades alternativas para diferentes operaciones (compra, venta, inventario) con sus factores de conversión correspondientes."
+                  >ℹ️</span
+                >
+              </div>
+              <div class="alert alert-info">
+                <strong
+                  >Diferencia entre Unidad Base y Unidades Adicionales:</strong
+                ><br />
+                • <strong>Unidad Base:</strong> Unidad de referencia interna del
+                sistema para cálculos de stock<br />
+                • <strong>Unidades Adicionales:</strong> Unidades alternativas
+                para operaciones específicas con factores de conversión
+              </div>
+
+              <div class="unit-row header">
+                <div><strong>Unidad</strong></div>
+                <div>
+                  <strong
+                    >Factor de Conversión
+                    <span
+                      class="help-icon"
+                      data-tooltip="Cuántas unidades base equivalen a 1 de esta unidad. Ej: si base=Unidad y agregas Docena, factor=12 (12 unidades = 1 docena)"
+                      >ℹ️</span
+                    >
+                  </strong>
+                </div>
+                <div>
+                  <strong
+                    >Compra
+                    <span
+                      class="help-icon"
+                      data-tooltip="Permite usar esta unidad al registrar compras/entradas de mercancía. Ej: comprar por cajas pero vender por unidades."
+                      >ℹ️</span
+                    >
+                  </strong>
+                </div>
+                <div>
+                  <strong
+                    >Venta
+                    <span
+                      class="help-icon"
+                      data-tooltip="Permite usar esta unidad en documentos de venta. Ej: vender por metros pero tener stock en rollos."
+                      >ℹ️</span
+                    >
+                  </strong>
+                </div>
+                <div>
+                  <strong
+                    >Inventario
+                    <span
+                      class="help-icon"
+                      data-tooltip="Permite usar esta unidad en reportes de inventario y conteos físicos. Útil para facilitar conteos."
+                      >ℹ️</span
+                    >
+                  </strong>
+                </div>
+                <div><strong>Acciones</strong></div>
+              </div>
+
+              <div class="unit-row" id="unit-template">
+                <select class="form-control unit-select">
+                  <option value="">Seleccionar unidad...</option>
+                  <!-- Las opciones se cargan dinámicamente -->
+                </select>
+                <input
+                  type="number"
+                  class="form-control conversion-factor"
+                  placeholder="1.0"
+                  step="0.000001"
+                  title="Factor de conversión respecto a la unidad base"
+                  min="0.000001"
+                />
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input is-purchase-unit"
+                    title="Usar en compras"
+                  />
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input is-sale-unit"
+                    title="Usar en ventas"
+                  />
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    class="form-check-input is-inventory-unit"
+                    title="Usar en inventarios"
+                  />
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-success add-unit-btn"
+                    title="Agregar unidad"
+                  >
+                    ➕
+                  </button>
+                </div>
+              </div>
+
+              <div id="additional-units-list">
+                <!-- Las unidades adicionales se agregan aquí dinámicamente -->
+              </div>
+
+              <div class="mt-2">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  id="calculate-factors-btn"
+                  title="Ver ejemplos de factores de conversión"
+                >
+                  📊 Ayuda: Calcular Factores
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <button
+                type="button"
+                class="btn btn-success btn-lg"
+                onclick="saveCurrentProduct()"
+                title="Guardar producto (Ctrl+S)"
+              >
+                💾 Guardar Producto
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="clearProductForm()"
+                title="Limpiar formulario (Escape)"
+              >
+                🔄 Limpiar
+              </button>
+              <button
+                type="button"
+                class="btn btn-warning"
+                id="btn-create-variants"
+                style="display: none"
+                onclick="manageVariants(ProductsApp.currentProduct?.id)"
+                title="Ir a gestión de variantes"
+              >
+                🎨 Crear Variantes
+              </button>
+            </div>
+          </div>
+
+          <!-- Filtros -->
+          <div class="filters-section">
+            <h4>🔍 Filtros de Productos</h4>
+            <div class="form-grid-4">
+              <div class="form-group">
+                <label for="search-products">Buscar</label>
+                <input
+                  type="text"
+                  id="search-products"
+                  class="form-control"
+                  placeholder="Código, nombre, marca o modelo..."
+                  autocomplete="off"
+                  title="Búsqueda inteligente con scoring"
+                />
+              </div>
+              <div class="form-group">
+                <label for="filter-category">Categoría</label>
+                <select id="filter-category" class="form-control">
+                  <option value="">Todas las categorías</option>
+                  <!-- Las opciones se cargan dinámicamente -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filter-status">Estado</label>
+                <select id="filter-status" class="form-control">
+                  <option value="">Todos</option>
+                  <option value="active">Activos</option>
+                  <option value="inactive">Inactivos</option>
+                  <option value="has_variants">Con variantes</option>
+                  <option value="no_variants">Sin variantes</option>
+                  <option value="stock_critical">Con stock crítico</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="applyFilters()"
+                  title="Aplicar filtros"
+                >
+                  🔍 Filtrar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de Productos -->
+          <div class="data-table">
+            <table id="products-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Marca/Modelo</th>
+                  <th>Categoría</th>
+                  <th>Unidad Base</th>
+                  <th>Variantes</th>
+                  <th>Stock Crítico</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Los productos se cargan dinámicamente -->
+              </tbody>
+            </table>
+
+            <div id="empty-products" class="empty-state" style="display: none">
+              <div class="empty-state-icon">📦</div>
+              <h3>No hay productos registrados</h3>
+              <p>
+                Crea tu primer producto para comenzar a gestionar tu inventario
+              </p>
+              <button
+                type="button"
+                class="btn btn-success"
+                onclick="clearProductForm()"
+              >
+                ➕ Crear Primer Producto
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PESTAÑA: VARIANTES -->
+        <!-- ============================================== -->
+        <div id="variants-tab" class="tab-panel">
+          <!-- Selector de Producto -->
+          <div class="product-form">
+            <h3>🎨 Gestión de Variantes</h3>
+            <div class="form-group">
+              <label for="select-product">Producto Principal</label>
+              <select id="select-product" class="form-control">
+                <option value="">Seleccionar producto...</option>
+                <!-- Las opciones se cargan dinámicamente -->
+              </select>
+            </div>
+
+            <div class="alert alert-info">
+              <strong>📌 Información:</strong> Selecciona un producto para
+              gestionar sus variantes. Solo se mostrarán productos configurados
+              para tener variantes.
+            </div>
+
+            <div class="selected-product-info" style="display: none">
+              <!-- Información del producto seleccionado se muestra aquí -->
+            </div>
+          </div>
+
+          <!-- Formulario de Variante Individual -->
+          <div class="variant-form" id="variant-form" style="display: none">
+            <h4>✏️ Editar Variante Individual</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="variant-sku">SKU de Variante *</label>
+                <input
+                  type="text"
+                  id="variant-sku"
+                  class="form-control"
+                  placeholder="Se genera automáticamente"
+                  readonly
+                  title="SKU único de la variante"
+                />
+              </div>
+              <div class="form-group">
+                <label for="variant-name"
+                  >Nombre de la Variante *
+                  <span
+                    class="help-icon"
+                    data-tooltip="Nombre descriptivo de esta variante específica (ej: 'Camiseta Básica Algodón - Rojo Talla M')"
+                    >ℹ️</span
+                  >
+                </label>
+                <input
+                  type="text"
+                  id="variant-name"
+                  class="form-control"
+                  placeholder="Ej: Camiseta Básica - Rojo M"
+                  required
+                  maxlength="255"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="variant-description"
+                >Descripción de la Variante
+                <span
+                  class="help-icon"
+                  data-tooltip="Descripción específica de esta variante, adicional a la descripción del producto base"
+                  >ℹ️</span
+                >
+              </label>
+              <textarea
+                id="variant-description"
+                class="form-control"
+                rows="2"
+                placeholder="Descripción específica de esta variante..."
+                maxlength="500"
+              ></textarea>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  id="is-default-variant"
+                  class="form-check-input"
+                />
+                <label for="is-default-variant" class="form-check-label">
+                  <strong>Variante predeterminada del producto</strong>
+                  <span
+                    class="help-icon"
+                    data-tooltip="Esta variante se seleccionará por defecto en ventas y será la representativa del producto en listados"
+                    >ℹ️</span
+                  >
+                </label>
+              </div>
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  id="is-active-variant"
+                  class="form-check-input"
+                  checked
+                />
+                <label for="is-active-variant" class="form-check-label">
+                  <strong>Variante activa</strong>
+                  <span
+                    class="help-icon"
+                    data-tooltip="Las variantes inactivas no aparecen en ventas pero mantienen su historial y stock"
+                    >ℹ️</span
+                  >
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <button
+                type="button"
+                class="btn btn-success"
+                onclick="saveVariant()"
+              >
+                💾 Guardar Variante
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="cancelVariantEdit()"
+              >
+                🔄 Cancelar
+              </button>
+            </div>
+          </div>
+
+          <!-- Generador de Variantes basado en Atributos -->
+          <div class="variant-generator">
+            <h4>⚙️ Generador de Variantes por Atributos</h4>
+
+            <div class="alert alert-warning">
+              <strong>⚠️ Importante:</strong> Solo los atributos marcados como
+              "Afecta SKU" generarán combinaciones de variantes automáticamente.
+              Los otros atributos se aplicarán a todas las variantes generadas.
+            </div>
+
+            <!-- Los grupos de atributos se cargan dinámicamente aquí -->
+
+            <!-- Vista Previa de Variantes -->
+            <div
+              class="variants-preview"
+              id="variants-preview"
+              style="display: none"
+            >
+              <h5>📋 Vista Previa de Variantes a Generar</h5>
+              <div id="variants-list">
+                <!-- Las variantes se generan dinámicamente aquí -->
+              </div>
+              <div class="mt-3">
+                <strong
+                  >Total de variantes:
+                  <span id="variants-count">0</span></strong
+                >
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <button
+                type="button"
+                class="btn btn-success"
+                id="btn-generate-variants"
+                title="Generar variantes definitivamente"
+              >
+                🔧 Generar Variantes
+              </button>
+              <button
+                type="button"
+                class="btn btn-info"
+                id="btn-preview-variants"
+                title="Ver vista previa de las variantes"
+              >
+                👁️ Vista Previa
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                id="btn-clear-selection"
+                title="Limpiar selección de atributos"
+              >
+                🗑️ Limpiar Selección
+              </button>
+            </div>
+          </div>
+
+          <!-- Acciones Masivas para Variantes -->
+          <div
+            class="filters-section"
+            id="variant-mass-actions"
+            style="display: none"
+          >
+            <h4>⚡ Acciones Masivas</h4>
+            <div class="form-grid-4">
+              <button
+                type="button"
+                class="btn btn-success btn-sm"
+                onclick="activateAllVariants(document.getElementById('select-product').value)"
+                title="Activar todas las variantes del producto"
+              >
+                🔓 Activar Todas
+              </button>
+              <button
+                type="button"
+                class="btn btn-warning btn-sm"
+                onclick="deactivateAllVariants(document.getElementById('select-product').value)"
+                title="Desactivar variantes (mantiene 1 activa)"
+              >
+                🔒 Desactivar Múltiples
+              </button>
+              <button
+                type="button"
+                class="btn btn-info btn-sm"
+                onclick="bulkEditVariants()"
+                title="Editar múltiples variantes"
+              >
+                ✏️ Edición Masiva
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                onclick="exportVariants()"
+                title="Exportar variantes del producto"
+              >
+                📤 Exportar Variantes
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabla de Variantes Existentes -->
+          <div class="data-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU Variante</th>
+                  <th>Nombre de Variante</th>
+                  <th>Atributos</th>
+                  <th>Predeterminada</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="variants-tbody">
+                <!-- Las variantes se cargan dinámicamente -->
+              </tbody>
+            </table>
+
+            <div id="empty-variants" class="empty-state">
+              <div class="empty-state-icon">🎨</div>
+              <h3>Selecciona un producto para ver sus variantes</h3>
+              <p>
+                Elige un producto de la lista superior para gestionar sus
+                variantes
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PESTAÑA: HERRAMIENTAS -->
+        <!-- ============================================== -->
+        <div id="tools-tab" class="tab-panel">
+          <div class="form-grid">
+            <!-- Importación Masiva -->
+            <div class="filters-section">
+              <h4>📥 Importar Productos</h4>
+              <div class="form-group">
+                <label for="import-file">Archivo CSV/Excel</label>
+                <input
+                  type="file"
+                  id="import-file"
+                  class="form-control"
+                  accept=".csv,.xlsx,.xls,.json"
+                  title="Seleccionar archivo para importar"
+                />
+              </div>
+              <div class="form-group">
+                <label for="import-type">Tipo de Importación</label>
+                <select id="import-type" class="form-control">
+                  <option value="products">Productos Principales</option>
+                  <option value="variants">Variantes</option>
+                  <option value="attributes">Atributos y Valores</option>
+                  <option value="units">Unidades de Medida</option>
+                  <option value="stock_config">
+                    Configuración de Stock Crítico
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Opciones de Importación</label>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="update-existing"
+                    class="form-check-input"
+                    checked
+                  />
+                  <label for="update-existing" class="form-check-label">
+                    Actualizar productos existentes
+                    <span
+                      class="help-icon"
+                      data-tooltip="Si está marcado, los productos con el mismo código se actualizarán. Si no, se omitirán los duplicados."
+                      >ℹ️</span
+                    >
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="validate-before-import"
+                    class="form-check-input"
+                    checked
+                  />
+                  <label for="validate-before-import" class="form-check-label">
+                    Validar datos antes de importar
+                    <span
+                      class="help-icon"
+                      data-tooltip="Realiza validaciones completas antes de procesar. Recomendado para evitar errores."
+                      >ℹ️</span
+                    >
+                  </label>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button
+                  type="button"
+                  class="btn btn-primary"
+                  onclick="processImportFile()"
+                  title="Procesar archivo de importación"
+                >
+                  📤 Procesar Importación
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-info"
+                  onclick="downloadImportTemplate()"
+                  title="Descargar plantilla de ejemplo"
+                >
+                  📋 Descargar Plantilla
+                </button>
+              </div>
+            </div>
+
+            <!-- Exportación -->
+            <div class="filters-section">
+              <h4>📤 Exportar Datos</h4>
+              <div class="form-group">
+                <label for="export-format">Formato de Exportación</label>
+                <select id="export-format" class="form-control">
+                  <option value="json">JSON (Completo)</option>
+                  <option value="csv">CSV (Solo productos)</option>
+                  <option value="xlsx">Excel (Con variantes)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Datos a Exportar</label>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="export-products"
+                    class="form-check-input"
+                    checked
+                  />
+                  <label for="export-products" class="form-check-label">
+                    Productos principales
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="export-variants"
+                    class="form-check-input"
+                    checked
+                  />
+                  <label for="export-variants" class="form-check-label">
+                    Variantes de productos
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="export-attributes"
+                    class="form-check-input"
+                  />
+                  <label for="export-attributes" class="form-check-label">
+                    Atributos y valores
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="export-categories"
+                    class="form-check-input"
+                  />
+                  <label for="export-categories" class="form-check-label">
+                    Categorías
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    type="checkbox"
+                    id="export-stock-config"
+                    class="form-check-input"
+                  />
+                  <label for="export-stock-config" class="form-check-label">
+                    Configuración de stock crítico
+                  </label>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button
+                  type="button"
+                  class="btn btn-success"
+                  onclick="exportProducts()"
+                  title="Exportar datos seleccionados"
+                >
+                  💾 Exportar Datos
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Herramientas de Mantenimiento -->
+          <div class="filters-section">
+            <h4>🔧 Herramientas de Mantenimiento</h4>
+            <div class="form-grid">
+              <div>
+                <h5>🧹 Limpieza de Datos</h5>
+                <p class="text-muted">
+                  Herramientas para mantener la integridad de los datos
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-warning"
+                  onclick="validateDataIntegrity()"
+                  title="Validar integridad de datos"
+                >
+                  🔍 Validar Integridad
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  onclick="cleanOrphanedRecords()"
+                  title="Limpiar registros huérfanos"
+                >
+                  🧽 Limpiar Huérfanos
+                </button>
+              </div>
+              <div>
+                <h5>📊 Generación de Reportes</h5>
+                <p class="text-muted">
+                  Generar reportes detallados del inventario
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-info"
+                  onclick="generateProductReport()"
+                  title="Reporte de productos"
+                >
+                  📈 Reporte Productos
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-info"
+                  onclick="generateVariantsReport()"
+                  title="Reporte de variantes"
+                >
+                  📊 Reporte Variantes
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Configuración del Sistema -->
+          <div class="filters-section">
+            <h4>⚙️ Configuración del Sistema</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="auto-generate-sku">
+                  <input
+                    type="checkbox"
+                    id="auto-generate-sku"
+                    class="form-check-input"
+                    checked
+                  />
+                  Auto-generar SKUs para variantes
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="sku-separator">Separador de SKU</label>
+                <input
+                  type="text"
+                  id="sku-separator"
+                  class="form-control"
+                  value="-"
+                  maxlength="1"
+                  title="Carácter separador para SKUs de variantes"
+                />
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="require-variant-name">
+                  <input
+                    type="checkbox"
+                    id="require-variant-name"
+                    class="form-check-input"
+                    checked
+                  />
+                  Requerir nombre para variantes
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="allow-negative-stock">
+                  <input
+                    type="checkbox"
+                    id="allow-negative-stock"
+                    class="form-check-input"
+                  />
+                  Permitir stock negativo
+                </label>
+              </div>
+            </div>
+            <div class="mt-3">
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="saveSystemConfiguration()"
+                title="Guardar configuración del sistema"
+              >
+                💾 Guardar Configuración
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="resetSystemConfiguration()"
+                title="Restaurar configuración por defecto"
+              >
+                🔄 Restaurar Defecto
+              </button>
+            </div>
+          </div>
+
+          <!-- Log de Actividades -->
+          <div class="filters-section">
+            <h4>📝 Log de Actividades Recientes</h4>
+            <div class="data-table">
+              <table id="activity-log-table">
+                <thead>
+                  <tr>
+                    <th>Fecha/Hora</th>
+                    <th>Acción</th>
+                    <th>Tipo</th>
+                    <th>Detalles</th>
+                    <th>Usuario</th>
+                  </tr>
+                </thead>
+                <tbody id="activity-log-tbody">
+                  <tr>
+                    <td>2024-07-25 14:30:15</td>
+                    <td>Producto creado</td>
+                    <td><span class="badge badge-success">CREAR</span></td>
+                    <td>CAM-001 - Camiseta Básica Algodón</td>
+                    <td>Sistema</td>
+                  </tr>
+                  <tr>
+                    <td>2024-07-25 14:25:08</td>
+                    <td>Variantes generadas</td>
+                    <td><span class="badge badge-info">GENERAR</span></td>
+                    <td>4 variantes para PAN-002</td>
+                    <td>Sistema</td>
+                  </tr>
+                  <tr>
+                    <td>2024-07-25 14:20:45</td>
+                    <td>Configuración actualizada</td>
+                    <td><span class="badge badge-warning">ACTUALIZAR</span></td>
+                    <td>Stock crítico para ZAP-003</td>
+                    <td>Sistema</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmación (se crea dinámicamente si es necesario) -->
+    <div id="confirmation-modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 id="modal-title">Confirmación</h4>
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            onclick="closeModal()"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="modal-message">¿Estás seguro de realizar esta acción?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-success" id="modal-confirm">
+            Confirmar
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            onclick="closeModal()"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="scripts.js"></script>
+
+    <!-- Funciones adicionales para la pestaña de herramientas -->
+    <script>
+      // Funciones específicas para herramientas
+      function processImportFile() {
+        const fileInput = document.getElementById("import-file");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          showAlert("Selecciona un archivo para importar", "warning");
+          return;
+        }
+
+        const importType = document.getElementById("import-type").value;
+        const updateExisting =
+          document.getElementById("update-existing").checked;
+        const validateFirst = document.getElementById(
+          "validate-before-import"
+        ).checked;
+
+        showLoading("Procesando archivo de importación...");
+
+        // Simular procesamiento
+        setTimeout(() => {
+          hideLoading();
+          showAlert(
+            `Archivo procesado: ${file.name} (${importType})`,
+            "success"
+          );
+        }, 2000);
+      }
+
+      function downloadImportTemplate() {
+        const importType = document.getElementById("import-type").value;
+
+        // Crear plantilla según el tipo
+        let templateData = "";
+        let fileName = "";
+
+        switch (importType) {
+          case "products":
+            templateData =
+              "product_code,product_name,brand,model,category_id,base_unit_id,has_variants\nCAM-001,Camiseta Ejemplo,Nike,Basic,1,1,true";
+            fileName = "plantilla_productos.csv";
+            break;
+          case "variants":
+            templateData =
+              "product_id,variant_sku,variant_name,color,size\n1,CAM-001-R-S,Camiseta Roja S,R,S";
+            fileName = "plantilla_variantes.csv";
+            break;
+          default:
+            templateData = "Plantilla no disponible para este tipo";
+            fileName = "plantilla.txt";
+        }
+
+        const blob = new Blob([templateData], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showAlert("Plantilla descargada", "success");
+      }
+
+      function validateDataIntegrity() {
+        showLoading("Validando integridad de datos...");
+
+        // Simular validación
+        setTimeout(() => {
+          hideLoading();
+          showAlert(
+            "Validación completada: No se encontraron errores",
+            "success"
+          );
+        }, 3000);
+      }
+
+      function cleanOrphanedRecords() {
+        if (
+          !confirm(
+            "¿Estás seguro de limpiar registros huérfanos? Esta acción no se puede deshacer."
+          )
+        ) {
+          return;
+        }
+
+        showLoading("Limpiando registros huérfanos...");
+
+        // Simular limpieza
+        setTimeout(() => {
+          hideLoading();
+          showAlert("Limpieza completada: 0 registros eliminados", "info");
+        }, 2000);
+      }
+
+      function generateProductReport() {
+        showLoading("Generando reporte de productos...");
+
+        // Simular generación
+        setTimeout(() => {
+          hideLoading();
+
+          const reportData = {
+            total_products: ProductsApp.data.products.length,
+            active_products: ProductsApp.data.products.filter(
+              (p) => p.is_active
+            ).length,
+            products_with_variants: ProductsApp.data.products.filter(
+              (p) => p.has_variants
+            ).length,
+            generated_at: new Date().toISOString(),
+          };
+
+          const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+            type: "application/json",
+          });
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `reporte_productos_${
+            new Date().toISOString().split("T")[0]
+          }.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          showAlert("Reporte generado y descargado", "success");
+        }, 1500);
+      }
+
+      function generateVariantsReport() {
+        showLoading("Generando reporte de variantes...");
+
+        // Simular generación
+        setTimeout(() => {
+          hideLoading();
+
+          const reportData = {
+            total_variants: ProductsApp.data.product_variants.length,
+            active_variants: ProductsApp.data.product_variants.filter(
+              (v) => v.is_active
+            ).length,
+            generated_at: new Date().toISOString(),
+          };
+
+          const blob = new Blob([JSON.stringify(reportData, null, 2)], {
+            type: "application/json",
+          });
+
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `reporte_variantes_${
+            new Date().toISOString().split("T")[0]
+          }.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          showAlert("Reporte generado y descargado", "success");
+        }, 1500);
+      }
+
+      function saveSystemConfiguration() {
+        const config = {
+          auto_generate_sku:
+            document.getElementById("auto-generate-sku").checked,
+          sku_separator: document.getElementById("sku-separator").value,
+          require_variant_name: document.getElementById("require-variant-name")
+            .checked,
+          allow_negative_stock: document.getElementById("allow-negative-stock")
+            .checked,
+        };
+
+        // Simular guardado
+        localStorage.setItem("system_config", JSON.stringify(config));
+        showAlert("Configuración guardada", "success");
+      }
+
+      function resetSystemConfiguration() {
+        if (
+          !confirm(
+            "¿Restaurar la configuración por defecto? Se perderán los cambios actuales."
+          )
+        ) {
+          return;
+        }
+
+        // Restaurar valores por defecto
+        document.getElementById("auto-generate-sku").checked = true;
+        document.getElementById("sku-separator").value = "-";
+        document.getElementById("require-variant-name").checked = true;
+        document.getElementById("allow-negative-stock").checked = false;
+
+        localStorage.removeItem("system_config");
+        showAlert("Configuración restaurada", "info");
+      }
+
+      // Modal utilities
+      function showModal(title, message, onConfirm) {
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-message").textContent = message;
+        document.getElementById("confirmation-modal").style.display = "flex";
+
+        document.getElementById("modal-confirm").onclick = function () {
+          closeModal();
+          if (onConfirm) onConfirm();
+        };
+      }
+
+      function closeModal() {
+        document.getElementById("confirmation-modal").style.display = "none";
+      }
+
+      // Cargar configuración guardada al inicializar
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedConfig = localStorage.getItem("system_config");
+        if (savedConfig) {
+          try {
+            const config = JSON.parse(savedConfig);
+            document.getElementById("auto-generate-sku").checked =
+              config.auto_generate_sku;
+            document.getElementById("sku-separator").value =
+              config.sku_separator;
+            document.getElementById("require-variant-name").checked =
+              config.require_variant_name;
+            document.getElementById("allow-negative-stock").checked =
+              config.allow_negative_stock;
+          } catch (error) {
+            console.error("Error cargando configuración:", error);
+          }
+        }
+      });
+    </script>
+
+    <!-- Estilos adicionales para el modal -->
+    <style>
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10001;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        padding: 20px 20px 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 20px;
+      }
+
+      .modal-header h4 {
+        margin: 0;
+        color: #495057;
+      }
+
+      .modal-body {
+        padding: 0 20px;
+      }
+
+      .modal-footer {
+        padding: 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid #e9ecef;
+        margin-top: 20px;
+      }
+
+      @media (max-width: 768px) {
+        .modal-content {
+          width: 95%;
+          margin: 20px;
+        }
+
+        .modal-footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </body>
+</html>

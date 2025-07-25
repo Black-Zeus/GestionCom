@@ -1,0 +1,477 @@
+/* ====================================
+   FOOTER.CSS - PIE DE PÁGINA MINIMALISTA
+   Footer profesional para Sistema de Inventario y Punto de Venta
+==================================== */
+
+/* ====================================
+   CONTENEDOR PRINCIPAL DEL FOOTER
+==================================== */
+.footer {
+    grid-area: footer;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--spacing-3xl);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    height: var(--footer-height);
+    min-width: 0;
+    position: relative;
+    z-index: var(--z-sticky);
+    transition: all var(--transition-normal);
+    flex-shrink: 0;
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .footer {
+    background: var(--bg-dark);
+    border-top-color: var(--border-color-dark);
+    color: var(--text-secondary);
+}
+
+/* ====================================
+   SECCIÓN IZQUIERDA - COPYRIGHT Y ENLACES
+==================================== */
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+/* Copyright */
+.footer-copyright {
+    color: var(--text-muted);
+    font-weight: var(--font-weight-medium);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.footer-copyright::before {
+    content: '©';
+    font-weight: var(--font-weight-bold);
+    color: var(--text-secondary);
+}
+
+/* Enlaces del footer */
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    min-width: 0;
+}
+
+.footer-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-normal);
+    padding: var(--spacing-xs) 0;
+    position: relative;
+    white-space: nowrap;
+}
+
+.footer-link:hover {
+    color: var(--primary-color);
+}
+
+.footer-separator {
+    color: var(--text-muted);
+    margin: 0 var(--spacing-xs);
+    user-select: none;
+}
+
+/* ====================================
+   SECCIÓN DERECHA - INFORMACIÓN OPERATIVA
+==================================== */
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    min-width: 0;
+    flex-shrink: 0;
+    font-weight: var(--font-weight-medium);
+}
+
+.footer-info-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    white-space: nowrap;
+}
+
+.footer-label {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.footer-value {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-sm);
+}
+
+.footer-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    margin: 0 var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+body.dark-mode .footer-divider {
+    background: var(--border-color-dark);
+}
+
+/* ====================================
+   ESTADOS ESPECIALES DE VALORES
+==================================== */
+.footer-value.highlight {
+    color: var(--primary-color);
+}
+
+.footer-value.success {
+    color: var(--success-color);
+}
+
+.footer-value.warning {
+    color: var(--warning-color);
+}
+
+.footer-value.danger {
+    color: var(--danger-color);
+}
+
+/* ====================================
+   INDICADORES DE ESTADO
+==================================== */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    margin-left: var(--spacing-xs);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--border-radius-full);
+    background: var(--success-color);
+    flex-shrink: 0;
+    transition: all var(--transition-normal);
+}
+
+.status-dot.warning {
+    background: var(--warning-color);
+}
+
+.status-dot.danger {
+    background: var(--danger-color);
+}
+
+.status-dot.pulse {
+    animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 4px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* ====================================
+   INFORMACIÓN DE SESIÓN
+==================================== */
+.session-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.session-time {
+    font-family: 'Courier New', monospace;
+    background: var(--bg-secondary);
+    padding: 2px var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .session-time {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color-dark);
+}
+
+/* ====================================
+   RESPONSIVE PARA FOOTER
+==================================== */
+@media (max-width: 1200px) {
+    .footer {
+        padding: 0 var(--spacing-xl);
+    }
+    
+    .footer-left,
+    .footer-right {
+        gap: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 0 var(--spacing-lg);
+        font-size: var(--font-size-xs);
+    }
+    
+    .footer-links {
+        display: none;
+    }
+    
+    .footer-left {
+        gap: var(--spacing-md);
+    }
+    
+    .footer-right {
+        gap: var(--spacing-md);
+    }
+    
+    .footer-divider {
+        display: none;
+    }
+    
+    .footer-info-group {
+        gap: 2px;
+    }
+    
+    .footer-label,
+    .footer-value {
+        font-size: var(--font-size-xs);
+    }
+}
+
+@media (max-width: 480px) {
+    .footer {
+        flex-direction: column;
+        height: auto;
+        min-height: var(--footer-height);
+        padding: var(--spacing-sm) var(--spacing-md);
+        gap: var(--spacing-xs);
+    }
+    
+    .footer-left,
+    .footer-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .footer-right {
+        border-top: 1px solid var(--border-color);
+        padding-top: var(--spacing-xs);
+        gap: var(--spacing-sm);
+    }
+    
+    body.dark-mode .footer-right {
+        border-top-color: var(--border-color-dark);
+    }
+    
+    .footer-copyright {
+        font-size: 10px;
+    }
+    
+    .footer-label,
+    .footer-value {
+        font-size: 10px;
+    }
+}
+
+/* ====================================
+   EFECTOS Y ANIMACIONES
+==================================== */
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.footer {
+    animation: slideInUp 0.3s ease-out 0.2s both;
+}
+
+/* Efecto hover en grupos de información */
+.footer-info-group:hover .footer-value {
+    color: var(--primary-color);
+    transition: color var(--transition-normal);
+}
+
+/* ====================================
+   ESTADOS ESPECIALES DEL FOOTER
+==================================== */
+.footer.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.footer.updating::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* ====================================
+   NOTIFICACIONES DEL FOOTER
+==================================== */
+.footer-notification {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--success-color);
+    color: white;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    box-shadow: var(--shadow-lg);
+    z-index: calc(var(--z-sticky) + 1);
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-normal);
+    white-space: nowrap;
+}
+
+.footer-notification.show {
+    opacity: 1;
+    visibility: visible;
+    animation: slideInUp 0.3s ease-out;
+}
+
+.footer-notification.warning {
+    background: var(--warning-color);
+    color: var(--bg-dark);
+}
+
+.footer-notification.danger {
+    background: var(--danger-color);
+}
+
+.footer-notification.info {
+    background: var(--primary-color);
+}
+
+/* ====================================
+   ACCESIBILIDAD
+==================================== */
+.footer-link:focus,
+.footer-info-group:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-sm);
+}
+
+/* Indicador para lectores de pantalla */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ====================================
+   MODO PRINT
+==================================== */
+@media print {
+    .footer {
+        border-top: 1px solid #ccc !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        position: relative !important;
+    }
+    
+    .footer-notification {
+        display: none !important;
+    }
+    
+    .footer-link {
+        color: black !important;
+    }
+    
+    .status-dot {
+        display: none !important;
+    }
+}
+
+/* ====================================
+   UTILIDADES ESPECÍFICAS DEL FOOTER
+==================================== */
+.footer-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 1px var(--spacing-xs);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: var(--spacing-xs);
+}
+
+.footer-badge.success {
+    background: var(--success-color);
+}
+
+.footer-badge.warning {
+    background: var(--warning-color);
+    color: var(--bg-dark);
+}
+
+.footer-badge.danger {
+    background: var(--danger-color);
+}
+
+/* Separador visual mejorado */
+.footer-separator-line {
+    width: 1px;
+    height: 12px;
+    background: linear-gradient(to bottom, transparent, var(--border-color), transparent);
+    margin: 0 var(--spacing-sm);
+}
+
+body.dark-mode .footer-separator-line {
+    background: linear-gradient(to bottom, transparent, var(--border-color-dark), transparent);
+}

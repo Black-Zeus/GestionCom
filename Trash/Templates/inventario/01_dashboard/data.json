@@ -1,0 +1,631 @@
+{
+  "warehouses": [
+    {
+      "id": 1,
+      "warehouse_code": "BOD-PRINCIPAL",
+      "warehouse_name": "Bodega Principal Santiago",
+      "address": "Av. Libertador Bernardo O'Higgins 1234, Santiago",
+      "city": "Santiago",
+      "region": "Metropolitana",
+      "is_active": true,
+      "total_products": 1247,
+      "total_value": 45234567.89,
+      "critical_alerts": 23,
+      "out_of_stock": 12
+    },
+    {
+      "id": 2,
+      "warehouse_code": "BOD-VALPO",
+      "warehouse_name": "Bodega Valparaíso",
+      "address": "Calle Condell 567, Valparaíso",
+      "city": "Valparaíso",
+      "region": "Valparaíso",
+      "is_active": true,
+      "total_products": 892,
+      "total_value": 28456123.45,
+      "critical_alerts": 15,
+      "out_of_stock": 8
+    },
+    {
+      "id": 3,
+      "warehouse_code": "BOD-CONCE",
+      "warehouse_name": "Bodega Concepción",
+      "address": "Av. Pedro de Valdivia 890, Concepción",
+      "city": "Concepción",
+      "region": "Biobío",
+      "is_active": true,
+      "total_products": 634,
+      "total_value": 19823456.78,
+      "critical_alerts": 9,
+      "out_of_stock": 4
+    }
+  ],
+  "warehouse_zones": [
+    {
+      "id": 1,
+      "warehouse_id": 1,
+      "zone_code": "A01",
+      "zone_name": "Zona A - Electrónicos",
+      "zone_description": "Productos electrónicos y tecnología",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "warehouse_id": 1,
+      "zone_code": "B01",
+      "zone_name": "Zona B - Ropa",
+      "zone_description": "Textiles y vestuario",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "warehouse_id": 1,
+      "zone_code": "C01",
+      "zone_name": "Zona C - Hogar",
+      "zone_description": "Artículos para el hogar",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "warehouse_id": 2,
+      "zone_code": "A01",
+      "zone_name": "Zona A - General",
+      "zone_description": "Productos generales",
+      "is_active": true
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "category_code": "ELECTRONICS",
+      "category_name": "Electrónicos",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "category_code": "CLOTHING",
+      "category_name": "Ropa y Calzado",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "category_code": "HOME",
+      "category_name": "Hogar y Jardín",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "category_code": "SPORTS",
+      "category_name": "Deportes",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "category_code": "BOOKS",
+      "category_name": "Libros y Medios",
+      "is_active": true
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "product_code": "LAPTOP-HP-001",
+      "product_name": "Laptop HP Pavilion 15",
+      "category_id": 1,
+      "brand": "HP",
+      "model": "Pavilion 15-eh1234",
+      "is_active": true,
+      "has_variants": true,
+      "has_batch_control": true,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "unit_cost": 450000.0
+    },
+    {
+      "id": 2,
+      "product_code": "CAM-NIKE-001",
+      "product_name": "Camiseta Nike Dri-FIT",
+      "category_id": 2,
+      "brand": "Nike",
+      "model": "Dri-FIT 2024",
+      "is_active": true,
+      "has_variants": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "unit_cost": 25000.0
+    },
+    {
+      "id": 3,
+      "product_code": "SILLA-OFF-001",
+      "product_name": "Silla Oficina Ergonómica",
+      "category_id": 3,
+      "brand": "ErgoChair",
+      "model": "Executive Pro",
+      "is_active": true,
+      "has_variants": false,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "unit_cost": 120000.0
+    },
+    {
+      "id": 4,
+      "product_code": "BICI-TREK-001",
+      "product_name": "Bicicleta Trek Mountain",
+      "category_id": 4,
+      "brand": "Trek",
+      "model": "X-Caliber 8",
+      "is_active": true,
+      "has_variants": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "unit_cost": 850000.0
+    },
+    {
+      "id": 5,
+      "product_code": "LIBRO-001",
+      "product_name": "Libro Gestión Empresarial",
+      "category_id": 5,
+      "brand": "Editorial Planeta",
+      "model": "2024 Edition",
+      "is_active": true,
+      "has_variants": false,
+      "has_batch_control": true,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "unit_cost": 18000.0
+    }
+  ],
+  "product_variants": [
+    {
+      "id": 1,
+      "product_id": 1,
+      "variant_sku": "LAPTOP-HP-001-8GB-256",
+      "variant_name": "HP Pavilion 15 - 8GB RAM, 256GB SSD",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "product_id": 1,
+      "variant_sku": "LAPTOP-HP-001-16GB-512",
+      "variant_name": "HP Pavilion 15 - 16GB RAM, 512GB SSD",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "product_id": 2,
+      "variant_sku": "CAM-NIKE-001-R-M",
+      "variant_name": "Camiseta Nike Roja Talla M",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "product_id": 2,
+      "variant_sku": "CAM-NIKE-001-A-L",
+      "variant_name": "Camiseta Nike Azul Talla L",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "product_id": 3,
+      "variant_sku": "SILLA-OFF-001",
+      "variant_name": "Silla Oficina Ergonómica",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "product_id": 4,
+      "variant_sku": "BICI-TREK-001-M-AZUL",
+      "variant_name": "Trek X-Caliber 8 Azul Talla M",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "product_id": 5,
+      "variant_sku": "LIBRO-001",
+      "variant_name": "Libro Gestión Empresarial",
+      "is_active": true
+    }
+  ],
+  "stock": [
+    {
+      "id": 1,
+      "product_variant_id": 1,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "current_quantity": 25,
+      "reserved_quantity": 3,
+      "minimum_stock": 10,
+      "maximum_stock": 50,
+      "last_movement_date": "2024-07-24T14:30:00Z",
+      "last_movement_type": "IN",
+      "rotation_category": "MEDIUM",
+      "last_sale_date": "2024-07-23",
+      "avg_monthly_sales": 8.5,
+      "unit_cost": 450000.0,
+      "batch_lot_number": "HP2024001",
+      "expiry_date": null,
+      "location": "A01-P1-E3"
+    },
+    {
+      "id": 2,
+      "product_variant_id": 2,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "current_quantity": 8,
+      "reserved_quantity": 2,
+      "minimum_stock": 15,
+      "maximum_stock": 40,
+      "last_movement_date": "2024-07-24T09:15:00Z",
+      "last_movement_type": "OUT",
+      "rotation_category": "FAST",
+      "last_sale_date": "2024-07-24",
+      "avg_monthly_sales": 12.3,
+      "unit_cost": 520000.0,
+      "batch_lot_number": "HP2024002",
+      "expiry_date": null,
+      "location": "A01-P1-E4"
+    },
+    {
+      "id": 3,
+      "product_variant_id": 3,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 2,
+      "current_quantity": 45,
+      "reserved_quantity": 5,
+      "minimum_stock": 20,
+      "maximum_stock": 100,
+      "last_movement_date": "2024-07-22T16:45:00Z",
+      "last_movement_type": "IN",
+      "rotation_category": "FAST",
+      "last_sale_date": "2024-07-24",
+      "avg_monthly_sales": 28.7,
+      "unit_cost": 25000.0,
+      "batch_lot_number": null,
+      "expiry_date": null,
+      "location": "B01-P2-E1"
+    },
+    {
+      "id": 4,
+      "product_variant_id": 4,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 2,
+      "current_quantity": 32,
+      "reserved_quantity": 1,
+      "minimum_stock": 15,
+      "maximum_stock": 80,
+      "last_movement_date": "2024-07-20T11:20:00Z",
+      "last_movement_type": "OUT",
+      "rotation_category": "MEDIUM",
+      "last_sale_date": "2024-07-20",
+      "avg_monthly_sales": 15.2,
+      "unit_cost": 25000.0,
+      "batch_lot_number": null,
+      "expiry_date": null,
+      "location": "B01-P2-E2"
+    },
+    {
+      "id": 5,
+      "product_variant_id": 5,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 3,
+      "current_quantity": 12,
+      "reserved_quantity": 0,
+      "minimum_stock": 8,
+      "maximum_stock": 30,
+      "last_movement_date": "2024-07-18T13:30:00Z",
+      "last_movement_type": "IN",
+      "rotation_category": "SLOW",
+      "last_sale_date": "2024-07-15",
+      "avg_monthly_sales": 3.5,
+      "unit_cost": 120000.0,
+      "batch_lot_number": null,
+      "expiry_date": null,
+      "location": "C01-P1-E1"
+    },
+    {
+      "id": 6,
+      "product_variant_id": 6,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "current_quantity": 3,
+      "reserved_quantity": 1,
+      "minimum_stock": 5,
+      "maximum_stock": 20,
+      "last_movement_date": "2024-07-19T08:45:00Z",
+      "last_movement_type": "OUT",
+      "rotation_category": "MEDIUM",
+      "last_sale_date": "2024-07-19",
+      "avg_monthly_sales": 2.8,
+      "unit_cost": 850000.0,
+      "batch_lot_number": null,
+      "expiry_date": null,
+      "location": "A01-P3-E1"
+    },
+    {
+      "id": 7,
+      "product_variant_id": 7,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 3,
+      "current_quantity": 0,
+      "reserved_quantity": 0,
+      "minimum_stock": 10,
+      "maximum_stock": 50,
+      "last_movement_date": "2024-07-10T15:20:00Z",
+      "last_movement_type": "OUT",
+      "rotation_category": "SLOW",
+      "last_sale_date": "2024-07-10",
+      "avg_monthly_sales": 4.2,
+      "unit_cost": 18000.0,
+      "batch_lot_number": "LIB2024001",
+      "expiry_date": null,
+      "location": "C01-P2-E3"
+    }
+  ],
+  "stock_alerts": [
+    {
+      "id": 1,
+      "product_variant_id": 2,
+      "warehouse_id": 1,
+      "alert_type": "LOW_STOCK",
+      "alert_level": "CRITICAL",
+      "current_stock": 8,
+      "minimum_stock": 15,
+      "alert_title": "Stock Crítico - Laptop HP 16GB",
+      "alert_message": "Stock actual (8) por debajo del mínimo (15). Reorden urgente requerido.",
+      "suggested_action": "Solicitar 32 unidades al proveedor HP",
+      "days_until_stockout": 3.2,
+      "created_at": "2024-07-24T10:00:00Z",
+      "is_resolved": false
+    },
+    {
+      "id": 2,
+      "product_variant_id": 6,
+      "warehouse_id": 1,
+      "alert_type": "LOW_STOCK",
+      "alert_level": "WARNING",
+      "current_stock": 3,
+      "minimum_stock": 5,
+      "alert_title": "Stock Bajo - Bicicleta Trek Azul M",
+      "alert_message": "Stock actual (3) por debajo del mínimo (5).",
+      "suggested_action": "Considerar reorden de 15 unidades",
+      "days_until_stockout": 5.4,
+      "created_at": "2024-07-24T08:30:00Z",
+      "is_resolved": false
+    },
+    {
+      "id": 3,
+      "product_variant_id": 7,
+      "warehouse_id": 1,
+      "alert_type": "OUT_OF_STOCK",
+      "alert_level": "URGENT",
+      "current_stock": 0,
+      "minimum_stock": 10,
+      "alert_title": "Sin Stock - Libro Gestión Empresarial",
+      "alert_message": "Producto completamente agotado. Ventas perdidas potenciales.",
+      "suggested_action": "Reorden inmediato de 30 unidades",
+      "days_until_stockout": 0,
+      "created_at": "2024-07-10T16:00:00Z",
+      "is_resolved": false
+    },
+    {
+      "id": 4,
+      "product_variant_id": 5,
+      "warehouse_id": 1,
+      "alert_type": "NO_MOVEMENT",
+      "alert_level": "INFO",
+      "current_stock": 12,
+      "minimum_stock": 8,
+      "alert_title": "Sin Movimiento - Silla Oficina",
+      "alert_message": "No hay ventas en los últimos 30 días. Evaluar estrategia comercial.",
+      "suggested_action": "Revisar precios o promociones especiales",
+      "days_until_stockout": 137.0,
+      "created_at": "2024-07-20T12:00:00Z",
+      "is_resolved": false
+    }
+  ],
+  "stock_movements": [
+    {
+      "id": 1,
+      "product_variant_id": 1,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "movement_type": "IN",
+      "reference_type": "PURCHASE",
+      "reference_document_id": "PO-2024-001",
+      "quantity": 15,
+      "quantity_before": 10,
+      "quantity_after": 25,
+      "unit_cost": 450000.0,
+      "total_cost": 6750000.0,
+      "batch_lot_number": "HP2024001",
+      "notes": "Ingreso por compra - Proveedor HP Chile",
+      "created_by_user": "Juan Pérez",
+      "created_at": "2024-07-24T14:30:00Z"
+    },
+    {
+      "id": 2,
+      "product_variant_id": 2,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "movement_type": "OUT",
+      "reference_type": "SALE",
+      "reference_document_id": "VT-2024-156",
+      "quantity": -2,
+      "quantity_before": 10,
+      "quantity_after": 8,
+      "unit_cost": 520000.0,
+      "total_cost": -1040000.0,
+      "batch_lot_number": "HP2024002",
+      "notes": "Venta a cliente - Factura 156",
+      "created_by_user": "María González",
+      "created_at": "2024-07-24T09:15:00Z"
+    },
+    {
+      "id": 3,
+      "product_variant_id": 3,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 2,
+      "movement_type": "IN",
+      "reference_type": "PURCHASE",
+      "reference_document_id": "PO-2024-002",
+      "quantity": 20,
+      "quantity_before": 25,
+      "quantity_after": 45,
+      "unit_cost": 25000.0,
+      "total_cost": 500000.0,
+      "batch_lot_number": null,
+      "notes": "Reposición stock camisetas Nike",
+      "created_by_user": "Carlos Silva",
+      "created_at": "2024-07-22T16:45:00Z"
+    },
+    {
+      "id": 4,
+      "product_variant_id": 7,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 3,
+      "movement_type": "OUT",
+      "reference_type": "SALE",
+      "reference_document_id": "VT-2024-142",
+      "quantity": -5,
+      "quantity_before": 5,
+      "quantity_after": 0,
+      "unit_cost": 18000.0,
+      "total_cost": -90000.0,
+      "batch_lot_number": "LIB2024001",
+      "notes": "Venta última unidad disponible",
+      "created_by_user": "Ana Torres",
+      "created_at": "2024-07-10T15:20:00Z"
+    },
+    {
+      "id": 5,
+      "product_variant_id": 4,
+      "warehouse_id": 1,
+      "warehouse_zone_id": 2,
+      "movement_type": "OUT",
+      "reference_type": "SALE",
+      "reference_document_id": "VT-2024-151",
+      "quantity": -3,
+      "quantity_before": 35,
+      "quantity_after": 32,
+      "unit_cost": 25000.0,
+      "total_cost": -75000.0,
+      "batch_lot_number": null,
+      "notes": "Venta camisetas azules talla L",
+      "created_by_user": "Pedro Morales",
+      "created_at": "2024-07-20T11:20:00Z"
+    }
+  ],
+  "daily_movements_summary": [
+    {
+      "date": "2024-07-24",
+      "total_in": 45,
+      "total_out": 67,
+      "total_adjustments": 3,
+      "net_movement": -22,
+      "total_value_in": 8250000.0,
+      "total_value_out": -2890000.0
+    },
+    {
+      "date": "2024-07-23",
+      "total_in": 32,
+      "total_out": 43,
+      "total_adjustments": 1,
+      "net_movement": -11,
+      "total_value_in": 5640000.0,
+      "total_value_out": -1850000.0
+    },
+    {
+      "date": "2024-07-22",
+      "total_in": 58,
+      "total_out": 29,
+      "total_adjustments": 2,
+      "net_movement": 29,
+      "total_value_in": 9850000.0,
+      "total_value_out": -1245000.0
+    },
+    {
+      "date": "2024-07-21",
+      "total_in": 23,
+      "total_out": 38,
+      "total_adjustments": 0,
+      "net_movement": -15,
+      "total_value_in": 3200000.0,
+      "total_value_out": -2100000.0
+    },
+    {
+      "date": "2024-07-20",
+      "total_in": 41,
+      "total_out": 52,
+      "total_adjustments": 4,
+      "net_movement": -11,
+      "total_value_in": 7450000.0,
+      "total_value_out": -2890000.0
+    }
+  ],
+  "rotation_analysis": [
+    {
+      "category": "FAST",
+      "products_count": 127,
+      "percentage": 45.2,
+      "avg_days_inventory": 15.8,
+      "total_value": 18500000.0
+    },
+    {
+      "category": "MEDIUM",
+      "products_count": 89,
+      "percentage": 31.7,
+      "avg_days_inventory": 45.3,
+      "total_value": 15200000.0
+    },
+    {
+      "category": "SLOW",
+      "products_count": 52,
+      "percentage": 18.5,
+      "avg_days_inventory": 89.2,
+      "total_value": 8900000.0
+    },
+    {
+      "category": "NO_MOVEMENT",
+      "products_count": 13,
+      "percentage": 4.6,
+      "avg_days_inventory": 180.0,
+      "total_value": 2634567.89
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "jperez",
+      "full_name": "Juan Pérez",
+      "role": "Jefe de Bodega",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "username": "mgonzalez",
+      "full_name": "María González",
+      "role": "Operario de Bodega",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "username": "csilva",
+      "full_name": "Carlos Silva",
+      "role": "Supervisor",
+      "is_active": true
+    }
+  ],
+  "dashboard_config": {
+    "refresh_interval_seconds": 30,
+    "alerts_auto_refresh": true,
+    "show_value_in_currency": "CLP",
+    "default_warehouse_id": 1,
+    "max_alerts_display": 5,
+    "chart_days_history": 30,
+    "critical_stock_threshold_percentage": 50,
+    "low_stock_threshold_percentage": 75
+  }
+}

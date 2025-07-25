@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Inventario - Dashboard Profesional">
+    <meta name="theme-color" content="#3498db">
+    <title>Enhanced Sidebar Layout - Professional Template</title>
+    <link rel="icon" href="favicon.ico">
+
+    <!-- CSS Modulares en orden correcto -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/side.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/header-dropdown.css">
+    <link rel="stylesheet" href="css/footer.css">
+    <link rel="stylesheet" href="css/content.css">
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Sidebar Mejorado -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Botón de Toggle Circular -->
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Contraer/Expandir menú">
+                <span class="toggle-arrow">◀</span>
+            </button>
+
+            <!-- Brand del Sistema -->
+            <div class="sidebar-brand">
+                <div class="brand-logo">S</div>
+                <div class="brand-text">Sistema</div>
+            </div>
+
+            <!-- Navegación Principal -->
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Principal</div>
+                    <a href="#" class="nav-item active" data-tooltip="Dashboard">
+                        <span class="icon">📊</span>
+                        <span class="text">Dashboard</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tooltip="Notificaciones">
+                        <span class="icon">🔔</span>
+                        <span class="text">Notificaciones</span>
+                        <span class="badge">5</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Inventario</div>
+                    <a href="#" class="nav-item has-submenu" data-tooltip="Productos">
+                        <span class="icon">📦</span>
+                        <span class="text">Productos</span>
+                        <span class="submenu-arrow">▶</span>
+                    </a>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-item" data-tooltip="Lista de Productos">
+                            <span class="icon">📝</span>
+                            <span class="text">Lista de Productos</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Categorías">
+                            <span class="icon">📁</span>
+                            <span class="text">Categorías</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Códigos de Barras">
+                            <span class="icon">🏷️</span>
+                            <span class="text">Códigos de Barras</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Listas de Precios">
+                            <span class="icon">💰</span>
+                            <span class="text">Listas de Precios</span>
+                        </a>
+                    </div>
+
+                    <a href="#" class="nav-item has-submenu" data-tooltip="Control de Stock">
+                        <span class="icon">📊</span>
+                        <span class="text">Control de Stock</span>
+                        <span class="submenu-arrow">▶</span>
+                    </a>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-item" data-tooltip="Stock Actual">
+                            <span class="icon">📈</span>
+                            <span class="text">Stock Actual</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Movimientos">
+                            <span class="icon">🔄</span>
+                            <span class="text">Movimientos</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Alertas de Stock">
+                            <span class="icon">⚠️</span>
+                            <span class="text">Alertas de Stock</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Transferencias">
+                            <span class="icon">🚚</span>
+                            <span class="text">Transferencias</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Sugerencias de Reorden">
+                            <span class="icon">📋</span>
+                            <span class="text">Sugerencias Reorden</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Ventas</div>
+                    <a href="#" class="nav-item" data-tooltip="Punto de Venta">
+                        <span class="icon">💰</span>
+                        <span class="text">Punto de Venta</span>
+                    </a>
+                    <a href="#" class="nav-item has-submenu" data-tooltip="Documentos">
+                        <span class="icon">📄</span>
+                        <span class="text">Documentos</span>
+                        <span class="submenu-arrow">▶</span>
+                    </a>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-item" data-tooltip="Facturas">
+                            <span class="icon">🧾</span>
+                            <span class="text">Facturas</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Boletas">
+                            <span class="icon">🎫</span>
+                            <span class="text">Boletas</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Guías de Despacho">
+                            <span class="icon">📦</span>
+                            <span class="text">Guías de Despacho</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Notas de Crédito">
+                            <span class="icon">📋</span>
+                            <span class="text">Notas de Crédito</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Cotizaciones">
+                            <span class="icon">💱</span>
+                            <span class="text">Cotizaciones</span>
+                        </a>
+                    </div>
+                    <a href="#" class="nav-item" data-tooltip="Devoluciones">
+                        <span class="icon">🔄</span>
+                        <span class="text">Devoluciones</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Clientes</div>
+                    <a href="#" class="nav-item" data-tooltip="Gestión de Clientes">
+                        <span class="icon">👥</span>
+                        <span class="text">Gestión de Clientes</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tooltip="Cuentas por Cobrar">
+                        <span class="icon">💳</span>
+                        <span class="text">Cuentas por Cobrar</span>
+                        <span class="badge">12</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tooltip="Límites de Crédito">
+                        <span class="icon">🏦</span>
+                        <span class="text">Límites de Crédito</span>
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Financiero</div>
+                    <a href="#" class="nav-item" data-tooltip="Control de Caja">
+                        <span class="icon">💵</span>
+                        <span class="text">Control de Caja</span>
+                    </a>
+                    <a href="#" class="nav-item" data-tooltip="Caja Chica">
+                        <span class="icon">💰</span>
+                        <span class="text">Caja Chica</span>
+                    </a>
+                    <a href="#" class="nav-item has-submenu" data-tooltip="Reportes">
+                        <span class="icon">📈</span>
+                        <span class="text">Reportes</span>
+                        <span class="submenu-arrow">▶</span>
+                    </a>
+                    <div class="nav-submenu">
+                        <a href="#" class="nav-item" data-tooltip="Reportes de Ventas">
+                            <span class="icon">💹</span>
+                            <span class="text">Reportes de Ventas</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Análisis de Inventario">
+                            <span class="icon">📊</span>
+                            <span class="text">Análisis de Inventario</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Rendimiento de Vendedores">
+                            <span class="icon">👤</span>
+                            <span class="text">Rendimiento Vendedores</span>
+                        </a>
+                        <a href="#" class="nav-item" data-tooltip="Reportes Financieros">
+                            <span class="icon">💰</span>
+                            <span class="text">Reportes Financieros</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Controles del Sidebar (al final) -->
+            <div class="sidebar-controls">
+                <!-- Perfil de Usuario en Sidebar -->
+                <div class="sidebar-user-profile">
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar">JD</div>
+                        <div class="user-details">
+                            <div class="user-name">Juan Díaz</div>
+                            <div class="user-role">Administrador</div>
+                        </div>
+                        <span class="profile-dropdown-arrow">▼</span>
+                    </div>
+
+                    <!-- Menú Contextual del Perfil -->
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <a href="#" class="profile-dropdown-item" data-action="profile">
+                            <i>👤</i>
+                            Ver Perfil
+                        </a>
+                        <a href="#" class="profile-dropdown-item" data-action="settings">
+                            <i>⚙️</i>
+                            Configuraciones
+                        </a>
+                        <a href="#" class="profile-dropdown-item" data-action="preferences">
+                            <i>🎛️</i>
+                            Preferencias
+                        </a>
+                        <a href="#" class="profile-dropdown-item" data-action="help">
+                            <i>❓</i>
+                            Ayuda y Soporte
+                        </a>
+                        <a href="#" class="profile-dropdown-item danger" data-action="logout">
+                            <i>🚪</i>
+                            Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+
+                <div class="control-item">
+                    <span class="icon">🌙</span>
+                    <span class="text">Modo Oscuro</span>
+                    <div class="theme-toggle" id="themeToggle"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Header con Dropdowns CORREGIDO -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+                    ☰
+                </button>
+                <nav class="breadcrumb">
+                    <a href="#" class="breadcrumb-link">Inicio</a>
+                    <span class="breadcrumb-separator">›</span>
+                    <span class="breadcrumb-current">Dashboard</span>
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="Buscar productos, clientes..."
+                        aria-label="Búsqueda global">
+                    <i class="search-icon" aria-hidden="true">🔍</i>
+                </div>
+
+                <div class="header-actions">
+                    <!-- Dropdown de Notificaciones -->
+                    <div class="header-dropdown-container">
+                        <button class="action-btn" id="notificationsBtn" title="Notificaciones"
+                            aria-label="3 notificaciones nuevas">
+                            <span class="icon">🔔</span>
+                            <span class="badge">3</span>
+                        </button>
+
+                        <div class="header-dropdown" id="notificationsDropdown">
+                            <div class="dropdown-header">
+                                <h3 class="dropdown-title">Notificaciones</h3>
+                                <div class="dropdown-actions">
+                                    <span class="dropdown-badge">3</span>
+                                    <button class="dropdown-action-btn" title="Marcar todas como leídas">
+                                        ✓ Todas
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-content">
+                                <div class="dropdown-item unread">
+                                    <div class="dropdown-icon notification">⚠️</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Stock Crítico Detectado</div>
+                                        <div class="dropdown-item-message">El producto "Teclado Mecánico" tiene solo 3
+                                            unidades en stock.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 5 min</span>
+                                            <span class="dropdown-item-status urgent">Urgente</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item unread">
+                                    <div class="dropdown-icon notification">💰</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Cliente Excedió Límite</div>
+                                        <div class="dropdown-item-message">Empresa ABC ha superado su límite de crédito
+                                            autorizado.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 15 min</span>
+                                            <span class="dropdown-item-status urgent">Urgente</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item">
+                                    <div class="dropdown-icon notification">📊</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Reporte Mensual Listo</div>
+                                        <div class="dropdown-item-message">El reporte de ventas de diciembre está
+                                            disponible para descargar.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 2 horas</span>
+                                            <span class="dropdown-item-status normal">Normal</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item">
+                                    <div class="dropdown-icon system">🔄</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Actualización del Sistema</div>
+                                        <div class="dropdown-item-message">Nueva versión 2.1.1 disponible con mejoras de
+                                            seguridad.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Ayer</span>
+                                            <span class="dropdown-item-status low">Info</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-footer">
+                                <a href="#" class="dropdown-footer-link">Ver todas las notificaciones</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dropdown de Mensajes -->
+                    <div class="header-dropdown-container">
+                        <button class="action-btn" id="messagesBtn" title="Mensajes" aria-label="7 mensajes nuevos">
+                            <span class="icon">✉️</span>
+                            <span class="badge new">7</span>
+                        </button>
+
+                        <div class="header-dropdown" id="messagesDropdown">
+                            <div class="dropdown-header">
+                                <h3 class="dropdown-title">Mensajes</h3>
+                                <div class="dropdown-actions">
+                                    <span class="dropdown-badge">7</span>
+                                    <button class="dropdown-action-btn" title="Redactar mensaje">
+                                        ✏️ Nuevo
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-content">
+                                <div class="dropdown-item unread">
+                                    <div class="dropdown-avatar">MG</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">María García</div>
+                                        <div class="dropdown-item-message">¿Podrías revisar el inventario de la bodega
+                                            norte? Creo que hay discrepancias...</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 10 min</span>
+                                            <span class="dropdown-item-status normal">Nuevo</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item unread">
+                                    <div class="dropdown-avatar">CL</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Carlos López</div>
+                                        <div class="dropdown-item-message">El cliente Empresa XYZ está solicitando una
+                                            cotización urgente para 500 unidades.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 30 min</span>
+                                            <span class="dropdown-item-status urgent">Urgente</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item unread">
+                                    <div class="dropdown-avatar">AR</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Ana Rodríguez</div>
+                                        <div class="dropdown-item-message">He completado el cierre de caja. Todo cuadra
+                                            perfecto.</div>
+                                        <div class="dropdown-item-meta">
+                                            <span class="dropdown-item-time">Hace 1 hora</span>
+                                            <span class="dropdown-item-status normal">Nuevo</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-footer">
+                                <a href="#" class="dropdown-footer-link">Ver todos los mensajes</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dropdown de Configuración -->
+                    <div class="header-dropdown-container">
+                        <button class="action-btn" id="settingsBtn" title="Configuración rápida"
+                            aria-label="Configuración rápida">
+                            <span class="icon">⚙️</span>
+                        </button>
+
+                        <div class="header-dropdown" id="settingsDropdown">
+                            <div class="dropdown-header">
+                                <h3 class="dropdown-title">Configuración Rápida</h3>
+                            </div>
+
+                            <div class="dropdown-content">
+                                <div class="config-option">
+                                    <div class="config-option-label">
+                                        <span class="icon">🔔</span>
+                                        Notificaciones Push
+                                    </div>
+                                    <div class="config-option-control">
+                                        <div class="config-toggle active" data-setting="notifications"></div>
+                                    </div>
+                                </div>
+
+                                <div class="config-option">
+                                    <div class="config-option-label">
+                                        <span class="icon">🔊</span>
+                                        Sonidos del Sistema
+                                    </div>
+                                    <div class="config-option-control">
+                                        <div class="config-toggle" data-setting="sounds"></div>
+                                    </div>
+                                </div>
+
+                                <div class="config-option">
+                                    <div class="config-option-label">
+                                        <span class="icon">💾</span>
+                                        Autoguardado
+                                    </div>
+                                    <div class="config-option-control">
+                                        <div class="config-toggle active" data-setting="autosave"></div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item">
+                                    <div class="dropdown-icon settings">🌙</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Cambiar Tema</div>
+                                        <div class="dropdown-item-message">Alternar entre modo claro y oscuro</div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item">
+                                    <div class="dropdown-icon settings">🔧</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Configuración Avanzada</div>
+                                        <div class="dropdown-item-message">Acceder a todas las configuraciones del
+                                            sistema</div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown-item">
+                                    <div class="dropdown-icon settings">📊</div>
+                                    <div class="dropdown-item-content">
+                                        <div class="dropdown-item-title">Personalizar Dashboard</div>
+                                        <div class="dropdown-item-message">Organizar widgets y métricas</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-footer">
+                                <a href="#" class="dropdown-footer-link">Ir a Configuración Completa</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-dropdown-container">
+                    <div class="user-profile" id="headerUserProfile" tabindex="0" role="button"
+                        aria-label="Perfil de usuario">
+                        <div class="user-avatar">JD</div>
+                        <div class="user-info">
+                            <div class="user-name">Juan Díaz</div>
+                            <div class="user-role">Administrador</div>
+                        </div>
+                    </div>
+
+                    <!-- AGREGAR ESTE DROPDOWN: -->
+                    <div class="header-dropdown" id="userProfileDropdown">
+                        <div class="dropdown-header">
+                            <h3 class="dropdown-title">Perfil de Usuario</h3>
+                        </div>
+
+                        <div class="dropdown-content">
+                            <div class="dropdown-item">
+                                <div class="dropdown-icon settings">👤</div>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Ver Perfil</div>
+                                    <div class="dropdown-item-message">Gestionar información personal</div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-item">
+                                <div class="dropdown-icon settings">⚙️</div>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Configuraciones</div>
+                                    <div class="dropdown-item-message">Preferencias de la cuenta</div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-item">
+                                <div class="dropdown-icon settings">🔔</div>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title">Notificaciones</div>
+                                    <div class="dropdown-item-message">Configurar alertas</div>
+                                </div>
+                            </div>
+
+                            <div class="dropdown-item"
+                                style="border-top: 1px solid var(--border-color); margin-top: var(--spacing-sm);">
+                                <div class="dropdown-icon settings">🚪</div>
+                                <div class="dropdown-item-content">
+                                    <div class="dropdown-item-title" style="color: var(--danger-color);">Cerrar Sesión
+                                    </div>
+                                    <div class="dropdown-item-message">Salir del sistema</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Overlay para cerrar dropdowns al hacer clic fuera -->
+        <div class="dropdown-overlay" id="dropdownOverlay"></div>
+
+        <!-- Main Content -->
+        <main class="main" role="main">
+            <div class="content-header">
+                <h1 class="page-title">Dashboard Principal</h1>
+                <p class="page-subtitle">Vista general del sistema y métricas principales</p>
+
+                <div class="content-header-actions">
+                    <button class="header-action-btn">
+                        <span class="icon">📊</span>
+                        Exportar Datos
+                    </button>
+                    <button class="header-action-btn secondary">
+                        <span class="icon">⚙️</span>
+                        Configurar
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- Demo de funcionalidad de dropdowns -->
+                <div class="demo-content">
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h4 class="card-title">✅ Dropdowns Funcionales</h4>
+                            <div class="card-actions">
+                                <button class="card-action-btn" onclick="testDropdowns()">Probar</button>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Los dropdowns del header ahora funcionan correctamente:</strong></p>
+                            <ul>
+                                <li>🔔 <strong>Notificaciones:</strong> Haz clic en el ícono de campana</li>
+                                <li>✉️ <strong>Mensajes:</strong> Haz clic en el ícono de correo</li>
+                                <li>⚙️ <strong>Configuración:</strong> Haz clic en el ícono de engranaje</li>
+                                <li>🎚️ <strong>Toggles funcionales:</strong> Los switches de configuración responden
+                                </li>
+                                <li>📝 <strong>Interacciones:</strong> Clics en elementos marcan como leídos</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="content-card success">
+                        <div class="card-header">
+                            <h4 class="card-title">🔧 Funcionalidades Corregidas</h4>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Problemas solucionados:</strong></p>
+                            <ul>
+                                <li>✅ Inicialización automática de dropdowns</li>
+                                <li>✅ Event listeners correctamente configurados</li>
+                                <li>✅ Compatibilidad con sidebar</li>
+                                <li>✅ Cerrar con Escape y clic fuera</li>
+                                <li>✅ Animaciones y transiciones</li>
+                                <li>✅ Badges dinámicos</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="content-card info">
+                        <div class="card-header">
+                            <h4 class="card-title">🎮 Controles de Prueba</h4>
+                        </div>
+                        <div class="card-content">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+                                <button class="content-btn" onclick="openDropdown('notifications')">
+                                    🔔 Abrir Notificaciones
+                                </button>
+                                <button class="content-btn" onclick="openDropdown('messages')">
+                                    ✉️ Abrir Mensajes
+                                </button>
+                                <button class="content-btn" onclick="openDropdown('settings')">
+                                    ⚙️ Abrir Configuración
+                                </button>
+                                <button class="content-btn secondary" onclick="closeAllDropdowns()">
+                                    ❌ Cerrar Todos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estado de prueba -->
+                <div class="alert info">
+                    <div class="alert-icon">🧪</div>
+                    <div class="alert-content">
+                        <div class="alert-title">Estado de Prueba</div>
+                        <div class="alert-message">
+                            Los dropdowns del header están completamente funcionales. Prueba hacer clic en los íconos
+                            de la parte superior derecha (🔔, ✉️, ⚙️) para ver los menús desplegables en acción.
+                            <br><br>
+                            <strong>Funcionalidades implementadas:</strong>
+                            <ul style="margin-top: 10px; margin-left: 20px;">
+                                <li>Apertura/cierre con animaciones</li>
+                                <li>Marcar notificaciones como leídas</li>
+                                <li>Toggles de configuración interactivos</li>
+                                <li>Badges que se actualizan dinámicamente</li>
+                                <li>Simulación de nuevos mensajes y notificaciones</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer Minimalista Integrado -->
+        <footer class="footer" id="systemFooter">
+            <!-- Notificación flotante del footer -->
+            <div class="footer-notification" id="footerNotification">
+                <span id="footerNotificationText">Sistema listo para operar</span>
+            </div>
+
+            <!-- Sección Izquierda - Copyright y Enlaces -->
+            <div class="footer-left">
+                <div class="footer-copyright">
+                    2025 Sistema de Inventario y Punto de Venta
+                </div>
+                <div class="footer-links">
+                    
+                    <a href="#" class="footer-link" data-action="support">Soporte</a>
+                    <span class="footer-separator">|</span>
+                    <a href="#" class="footer-link" data-action="help">Ayuda</a>
+                </div>
+            </div>
+
+            <!-- Sección Derecha - Información Operativa -->
+            <div class="footer-right">
+                <!-- Sucursal -->
+                <div class="footer-info-group" title="Sucursal actual">
+                    <span class="footer-label">Sucursal:</span>
+                    <span class="footer-value highlight" id="currentBranch">Central</span>
+                </div>
+
+                <div class="footer-divider"></div>
+
+                <!-- Caja -->
+                <div class="footer-info-group" title="Caja registradora activa">
+                    <span class="footer-label">Caja:</span>
+                    <span class="footer-value" id="currentCashRegister">#1234</span>
+                </div>
+
+                <div class="footer-divider"></div>
+
+                <!-- Usuario -->
+                <div class="footer-info-group" title="Usuario activo">
+                    <span class="footer-label">Usuario:</span>
+                    <span class="footer-value" id="currentUsername">vsoto</span>
+                    <span class="footer-label">(<span id="currentUserRole">Admin</span>)</span>
+                </div>
+
+                <div class="footer-divider"></div>
+
+                <!-- Turno -->
+                <div class="footer-info-group" title="Turno de trabajo actual">
+                    <span class="footer-label">Turno:</span>
+                    <span class="footer-value success" id="currentShift">Mañana</span>
+                    <div class="status-indicator">
+                        <div class="status-dot pulse" id="shiftStatusDot"></div>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Overlay para móvil -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Botón scroll to top -->
+    <button class="scroll-to-top" id="scrollToTop" aria-label="Volver arriba">
+        <span>↑</span>
+    </button>
+
+    <!-- Skip navigation para accesibilidad -->
+    <a href="#main-content" class="skip-nav">Saltar al contenido principal</a>
+
+    <!-- Scripts separados como deberían estar -->
+    <script src="js/script.js"></script>
+    <script src="js/script.header-dropdown.js"></script>
+    <script src="js/script.footer.js"></script>
+
+    <!-- Inicialización final -->
+    <script>
+        // ====================================
+        // INICIALIZACIÓN FINAL DEL SISTEMA
+        // ====================================
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('🎯 Inicializando sistema desde archivos separados...');
+
+            // Inicializar sidebar
+            if (window.SidebarAPI) {
+                window.SidebarAPI.init();
+                console.log('✅ Sidebar inicializado');
+            }
+
+            // Inicializar header dropdowns  
+            if (window.HeaderDropdownsAPI) {
+                window.HeaderDropdownsAPI.init();
+                console.log('✅ Header Dropdowns inicializados');
+            }
+            // Inicializar footer del sistema
+            if (window.SystemFooterAPI) {
+                window.SystemFooterAPI.init();
+                console.log('✅ Footer del sistema inicializado');
+            }
+
+            console.log('🚀 Sistema completamente listo');
+        });
+    </script>
+</body>
+
+</html>

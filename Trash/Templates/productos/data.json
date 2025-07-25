@@ -1,0 +1,799 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "parent_id": null,
+      "category_code": "ROPA",
+      "category_name": "Ropa",
+      "category_level": 1,
+      "category_path": "/ropa",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "parent_id": 1,
+      "category_code": "ROPA_CAMISETAS",
+      "category_name": "Camisetas",
+      "category_level": 2,
+      "category_path": "/ropa/camisetas",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "parent_id": 2,
+      "category_code": "ROPA_CAMISETAS_MANGA_CORTA",
+      "category_name": "Manga Corta",
+      "category_level": 3,
+      "category_path": "/ropa/camisetas/manga-corta",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "parent_id": 1,
+      "category_code": "ROPA_PANTALONES",
+      "category_name": "Pantalones",
+      "category_level": 2,
+      "category_path": "/ropa/pantalones",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "parent_id": 4,
+      "category_code": "ROPA_PANTALONES_JEANS",
+      "category_name": "Jeans",
+      "category_level": 3,
+      "category_path": "/ropa/pantalones/jeans",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "parent_id": null,
+      "category_code": "CALZADO",
+      "category_name": "Calzado",
+      "category_level": 1,
+      "category_path": "/calzado",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "parent_id": 6,
+      "category_code": "CALZADO_DEPORTIVO",
+      "category_name": "Deportivo",
+      "category_level": 2,
+      "category_path": "/calzado/deportivo",
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "parent_id": 7,
+      "category_code": "CALZADO_DEPORTIVO_RUNNING",
+      "category_name": "Running",
+      "category_level": 3,
+      "category_path": "/calzado/deportivo/running",
+      "is_active": true
+    }
+  ],
+  "measurement_units": [
+    {
+      "id": 1,
+      "unit_code": "UN",
+      "unit_name": "Unidad",
+      "unit_symbol": "UN",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "unit_code": "KG",
+      "unit_name": "Kilogramo",
+      "unit_symbol": "KG",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": true,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "unit_code": "L",
+      "unit_name": "Litro",
+      "unit_symbol": "L",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": true,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "unit_code": "M",
+      "unit_name": "Metro",
+      "unit_symbol": "M",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": true,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "unit_code": "CJA",
+      "unit_name": "Caja",
+      "unit_symbol": "CJA",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "unit_code": "PAR",
+      "unit_name": "Par",
+      "unit_symbol": "PAR",
+      "unit_type": "BASE",
+      "conversion_factor": 1.0,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "unit_code": "DOC",
+      "unit_name": "Docena",
+      "unit_symbol": "DOC",
+      "unit_type": "DERIVED",
+      "base_unit_id": 1,
+      "conversion_factor": 12.0,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "unit_code": "PAL",
+      "unit_name": "Pallet",
+      "unit_symbol": "PAL",
+      "unit_type": "DERIVED",
+      "base_unit_id": 1,
+      "conversion_factor": 1000.0,
+      "allow_decimals": false,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "unit_code": "GR",
+      "unit_name": "Gramo",
+      "unit_symbol": "GR",
+      "unit_type": "DERIVED",
+      "base_unit_id": 2,
+      "conversion_factor": 0.001,
+      "allow_decimals": true,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "unit_code": "CM",
+      "unit_name": "Centímetro",
+      "unit_symbol": "CM",
+      "unit_type": "DERIVED",
+      "base_unit_id": 4,
+      "conversion_factor": 0.01,
+      "allow_decimals": true,
+      "is_active": true
+    }
+  ],
+  "attribute_groups": [
+    {
+      "id": 1,
+      "group_code": "APPEARANCE",
+      "group_name": "Apariencia",
+      "group_description": "Atributos relacionados con la apariencia visual del producto",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "group_code": "SIZE",
+      "group_name": "Tamaño",
+      "group_description": "Atributos relacionados con dimensiones y tallas",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "group_code": "TECHNICAL",
+      "group_name": "Técnico",
+      "group_description": "Especificaciones técnicas del producto",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "group_code": "MATERIAL",
+      "group_name": "Material",
+      "group_description": "Materiales y composición del producto",
+      "sort_order": 4,
+      "is_active": true
+    }
+  ],
+  "attributes": [
+    {
+      "id": 1,
+      "attribute_group_id": 1,
+      "attribute_code": "COLOR",
+      "attribute_name": "Color",
+      "attribute_type": "SELECT",
+      "is_required": false,
+      "affects_sku": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "attribute_group_id": 2,
+      "attribute_code": "SIZE",
+      "attribute_name": "Talla",
+      "attribute_type": "SELECT",
+      "is_required": false,
+      "affects_sku": true,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "attribute_group_id": 4,
+      "attribute_code": "MATERIAL",
+      "attribute_name": "Material",
+      "attribute_type": "SELECT",
+      "is_required": false,
+      "affects_sku": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "attribute_group_id": 3,
+      "attribute_code": "WEIGHT",
+      "attribute_name": "Peso (gramos)",
+      "attribute_type": "NUMBER",
+      "is_required": false,
+      "affects_sku": false,
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "attribute_group_id": 2,
+      "attribute_code": "SHOE_SIZE",
+      "attribute_name": "Talla de Calzado",
+      "attribute_type": "SELECT",
+      "is_required": false,
+      "affects_sku": true,
+      "sort_order": 2,
+      "is_active": true
+    }
+  ],
+  "attribute_values": [
+    {
+      "id": 1,
+      "attribute_id": 1,
+      "value_code": "R",
+      "value_name": "Rojo",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "attribute_id": 1,
+      "value_code": "A",
+      "value_name": "Azul",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "attribute_id": 1,
+      "value_code": "N",
+      "value_name": "Negro",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "attribute_id": 1,
+      "value_code": "B",
+      "value_name": "Blanco",
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "attribute_id": 1,
+      "value_code": "V",
+      "value_name": "Verde",
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "attribute_id": 1,
+      "value_code": "AM",
+      "value_name": "Amarillo",
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "attribute_id": 2,
+      "value_code": "XS",
+      "value_name": "XS",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "attribute_id": 2,
+      "value_code": "S",
+      "value_name": "S",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "attribute_id": 2,
+      "value_code": "M",
+      "value_name": "M",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "attribute_id": 2,
+      "value_code": "L",
+      "value_name": "L",
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "attribute_id": 2,
+      "value_code": "XL",
+      "value_name": "XL",
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "attribute_id": 2,
+      "value_code": "XXL",
+      "value_name": "XXL",
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "attribute_id": 3,
+      "value_code": "100COTTON",
+      "value_name": "100% Algodón",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "attribute_id": 3,
+      "value_code": "COTTON_POLY",
+      "value_name": "Algodón/Poliéster",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "attribute_id": 3,
+      "value_code": "DENIM",
+      "value_name": "Denim",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "attribute_id": 3,
+      "value_code": "POLYESTER",
+      "value_name": "Poliéster",
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "attribute_id": 5,
+      "value_code": "35",
+      "value_name": "35",
+      "sort_order": 1,
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "attribute_id": 5,
+      "value_code": "36",
+      "value_name": "36",
+      "sort_order": 2,
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "attribute_id": 5,
+      "value_code": "37",
+      "value_name": "37",
+      "sort_order": 3,
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "attribute_id": 5,
+      "value_code": "38",
+      "value_name": "38",
+      "sort_order": 4,
+      "is_active": true
+    },
+    {
+      "id": 21,
+      "attribute_id": 5,
+      "value_code": "39",
+      "value_name": "39",
+      "sort_order": 5,
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "attribute_id": 5,
+      "value_code": "40",
+      "value_name": "40",
+      "sort_order": 6,
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "attribute_id": 5,
+      "value_code": "41",
+      "value_name": "41",
+      "sort_order": 7,
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "attribute_id": 5,
+      "value_code": "42",
+      "value_name": "42",
+      "sort_order": 8,
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "attribute_id": 5,
+      "value_code": "43",
+      "value_name": "43",
+      "sort_order": 9,
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "attribute_id": 5,
+      "value_code": "44",
+      "value_name": "44",
+      "sort_order": 10,
+      "is_active": true
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "category_id": 3,
+      "product_code": "CAM-001",
+      "product_name": "Camiseta Básica Algodón",
+      "product_description": "Camiseta básica de algodón 100% para uso diario. Cómoda y duradera.",
+      "brand": "Nike",
+      "model": "Air Max 2024",
+      "base_measurement_unit_id": 1,
+      "has_variants": true,
+      "is_active": true,
+      "has_batch_control": true,
+      "has_expiry_date": true,
+      "has_serial_numbers": false,
+      "has_location_tracking": true,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 2,
+      "category_id": 5,
+      "product_code": "PAN-002",
+      "product_name": "Jean Clásico Denim",
+      "product_description": "Jean clásico de corte recto, fabricado en denim de alta calidad.",
+      "brand": "Levis",
+      "model": "501 Classic",
+      "base_measurement_unit_id": 1,
+      "has_variants": true,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": true,
+      "has_location_tracking": true,
+      "created_at": "2024-02-10T08:20:00Z",
+      "updated_at": "2024-07-18T11:30:00Z"
+    },
+    {
+      "id": 3,
+      "category_id": 8,
+      "product_code": "ZAP-003",
+      "product_name": "Zapatillas Running Pro",
+      "product_description": "Zapatillas profesionales para running con tecnología de amortiguación avanzada.",
+      "brand": "Adidas",
+      "model": "UltraBoost 22",
+      "base_measurement_unit_id": 6,
+      "has_variants": false,
+      "is_active": true,
+      "has_batch_control": false,
+      "has_expiry_date": false,
+      "has_serial_numbers": false,
+      "has_location_tracking": false,
+      "created_at": "2024-03-05T14:15:00Z",
+      "updated_at": "2024-07-15T09:20:00Z"
+    }
+  ],
+  "product_measurement_units": [
+    {
+      "id": 1,
+      "product_id": 1,
+      "measurement_unit_id": 1,
+      "conversion_factor": 1.0,
+      "is_purchase_unit": true,
+      "is_sale_unit": true,
+      "is_inventory_unit": true,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "product_id": 1,
+      "measurement_unit_id": 7,
+      "conversion_factor": 12.0,
+      "is_purchase_unit": true,
+      "is_sale_unit": false,
+      "is_inventory_unit": true,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "product_id": 2,
+      "measurement_unit_id": 1,
+      "conversion_factor": 1.0,
+      "is_purchase_unit": true,
+      "is_sale_unit": true,
+      "is_inventory_unit": true,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "product_id": 3,
+      "measurement_unit_id": 6,
+      "conversion_factor": 1.0,
+      "is_purchase_unit": true,
+      "is_sale_unit": true,
+      "is_inventory_unit": true,
+      "is_active": true
+    }
+  ],
+  "product_variants": [
+    {
+      "id": 1,
+      "product_id": 1,
+      "variant_sku": "CAM-001-R-S",
+      "variant_name": "Camiseta Básica - Rojo S",
+      "variant_description": "Camiseta básica de algodón en color rojo, talla S",
+      "is_default_variant": false,
+      "is_active": true,
+      "created_at": "2024-01-15T10:35:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 2,
+      "product_id": 1,
+      "variant_sku": "CAM-001-A-M",
+      "variant_name": "Camiseta Básica - Azul M",
+      "variant_description": "Camiseta básica de algodón en color azul, talla M",
+      "is_default_variant": true,
+      "is_active": true,
+      "created_at": "2024-01-15T10:35:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 3,
+      "product_id": 1,
+      "variant_sku": "CAM-001-N-L",
+      "variant_name": "Camiseta Básica - Negro L",
+      "variant_description": "Camiseta básica de algodón en color negro, talla L",
+      "is_default_variant": false,
+      "is_active": false,
+      "created_at": "2024-01-15T10:35:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 4,
+      "product_id": 1,
+      "variant_sku": "CAM-001-B-M",
+      "variant_name": "Camiseta Básica - Blanco M",
+      "variant_description": "Camiseta básica de algodón en color blanco, talla M",
+      "is_default_variant": false,
+      "is_active": true,
+      "created_at": "2024-01-15T10:35:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 5,
+      "product_id": 2,
+      "variant_sku": "PAN-002-A-32",
+      "variant_name": "Jean Clásico - Azul 32",
+      "variant_description": "Jean clásico denim azul, talla 32",
+      "is_default_variant": true,
+      "is_active": true,
+      "created_at": "2024-02-10T08:25:00Z",
+      "updated_at": "2024-07-18T11:30:00Z"
+    },
+    {
+      "id": 6,
+      "product_id": 2,
+      "variant_sku": "PAN-002-N-34",
+      "variant_name": "Jean Clásico - Negro 34",
+      "variant_description": "Jean clásico denim negro, talla 34",
+      "is_default_variant": false,
+      "is_active": true,
+      "created_at": "2024-02-10T08:25:00Z",
+      "updated_at": "2024-07-18T11:30:00Z"
+    }
+  ],
+  "product_variant_attributes": [
+    {
+      "id": 1,
+      "product_variant_id": 1,
+      "attribute_id": 1,
+      "attribute_value_id": 1,
+      "text_value": null
+    },
+    {
+      "id": 2,
+      "product_variant_id": 1,
+      "attribute_id": 2,
+      "attribute_value_id": 8,
+      "text_value": null
+    },
+    {
+      "id": 3,
+      "product_variant_id": 1,
+      "attribute_id": 3,
+      "attribute_value_id": 13,
+      "text_value": null
+    },
+    {
+      "id": 4,
+      "product_variant_id": 1,
+      "attribute_id": 4,
+      "attribute_value_id": null,
+      "text_value": "180"
+    },
+    {
+      "id": 5,
+      "product_variant_id": 2,
+      "attribute_id": 1,
+      "attribute_value_id": 2,
+      "text_value": null
+    },
+    {
+      "id": 6,
+      "product_variant_id": 2,
+      "attribute_id": 2,
+      "attribute_value_id": 9,
+      "text_value": null
+    },
+    {
+      "id": 7,
+      "product_variant_id": 2,
+      "attribute_id": 3,
+      "attribute_value_id": 13,
+      "text_value": null
+    },
+    {
+      "id": 8,
+      "product_variant_id": 2,
+      "attribute_id": 4,
+      "attribute_value_id": null,
+      "text_value": "185"
+    },
+    {
+      "id": 9,
+      "product_variant_id": 3,
+      "attribute_id": 1,
+      "attribute_value_id": 3,
+      "text_value": null
+    },
+    {
+      "id": 10,
+      "product_variant_id": 3,
+      "attribute_id": 2,
+      "attribute_value_id": 10,
+      "text_value": null
+    },
+    {
+      "id": 11,
+      "product_variant_id": 4,
+      "attribute_id": 1,
+      "attribute_value_id": 4,
+      "text_value": null
+    },
+    {
+      "id": 12,
+      "product_variant_id": 4,
+      "attribute_id": 2,
+      "attribute_value_id": 9,
+      "text_value": null
+    }
+  ],
+  "stock_critical_config": [
+    {
+      "id": 1,
+      "product_variant_id": 1,
+      "warehouse_id": 1,
+      "minimum_stock": 10.0,
+      "maximum_stock": 100.0,
+      "safety_stock": 5.0,
+      "reorder_quantity": 50.0,
+      "lead_time_days": 7,
+      "avg_daily_sales": 2.5,
+      "alert_enabled": true,
+      "alert_frequency_hours": 24,
+      "is_active": true,
+      "created_at": "2024-01-15T10:40:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    },
+    {
+      "id": 2,
+      "product_variant_id": 2,
+      "warehouse_id": 1,
+      "minimum_stock": 15.0,
+      "maximum_stock": 80.0,
+      "safety_stock": 8.0,
+      "reorder_quantity": 40.0,
+      "lead_time_days": 5,
+      "avg_daily_sales": 3.2,
+      "alert_enabled": true,
+      "alert_frequency_hours": 24,
+      "is_active": true,
+      "created_at": "2024-01-15T10:40:00Z",
+      "updated_at": "2024-07-20T15:45:00Z"
+    }
+  ],
+  "warehouses": [
+    {
+      "id": 1,
+      "warehouse_code": "MAIN",
+      "warehouse_name": "Bodega Principal",
+      "address": "Av. Principal 123, Santiago",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "warehouse_code": "SEC",
+      "warehouse_name": "Bodega Secundaria",
+      "address": "Calle Secundaria 456, Valparaíso",
+      "is_active": true
+    }
+  ],
+  "system_config": {
+    "default_expiry_days": 365,
+    "default_expiry_alert_days": 30,
+    "default_lead_time_days": 7,
+    "default_alert_frequency_hours": 24,
+    "auto_generate_sku": true,
+    "sku_separator": "-",
+    "require_variant_name": true,
+    "allow_negative_stock": false,
+    "enable_batch_control": true,
+    "enable_expiry_control": true,
+    "enable_serial_control": true,
+    "enable_location_tracking": true
+  }
+}
