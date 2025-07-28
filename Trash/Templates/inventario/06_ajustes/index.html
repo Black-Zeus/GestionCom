@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Ajustes de Inventario - Sistema de Control de Stock</title>
+    <meta name="description" content="Módulo de ajustes de inventario con workflow de aprobación y conteos cíclicos">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔧%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔧 Ajustes de Inventario</h1>
+            <div class="user-info">
+                <div><strong>Usuario:</strong> Juan Pérez - Jefe de Bodega</div>
+                <div id="current-date-time"></div>
+            </div>
+        </div>
+
+        <!-- Métricas Principales -->
+        <div class="adjustments-dashboard" id="adjustments-metrics">
+            <!-- Las métricas se cargan dinámicamente -->
+        </div>
+
+        <!-- Controles y Filtros -->
+        <div class="adjustments-controls">
+            <div class="controls-header">
+                <h3 class="controls-title">🔍 Filtros y Controles</h3>
+                <div class="quick-actions-adjustments">
+                    <button class="btn btn-primary" onclick="showCreateAdjustmentModal()">
+                        ➕ Nuevo Ajuste
+                    </button>
+                    <button class="btn btn-info" onclick="showCreateCycleCountModal()">
+                        📅 Programar Conteo
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportAdjustmentsReport()">
+                        📊 Exportar
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters-grid">
+                <div class="form-group">
+                    <label>🔍 Buscar:</label>
+                    <input type="text" id="adjustment-search" class="form-control" 
+                           placeholder="Número, descripción...">
+                </div>
+
+                <div class="form-group">
+                    <label>🏪 Bodega:</label>
+                    <select id="warehouse-filter" class="form-control">
+                        <option value="all">Todas las bodegas</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📋 Causal:</label>
+                    <select id="reason-filter" class="form-control">
+                        <option value="all">Todas las causales</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>📅 Desde:</label>
+                    <input type="date" id="date-from-filter" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>📅 Hasta:</label>
+                    <input type="date" id="date-to-filter" class="form-control">
+                </div>
+            </div>
+
+            <div class="status-filter-buttons">
+                <button class="status-filter-btn active" data-status="all">📋 Todos</button>
+                <button class="status-filter-btn pending" data-status="pending">⏳ Pendientes</button>
+                <button class="status-filter-btn approved" data-status="approved">✅ Aprobados</button>
+                <button class="status-filter-btn rejected" data-status="rejected">❌ Rechazados</button>
+                <button class="status-filter-btn" data-status="applied">🔄 Aplicados</button>
+            </div>
+        </div>
+
+        <!-- Tabla de Ajustes -->
+        <div class="adjustments-table-container">
+            <table class="adjustments-table">
+                <thead>
+                    <tr>
+                        <th>📄 Número</th>
+                        <th>📋 Causal</th>
+                        <th>🏷️ Estado</th>
+                        <th>🏪 Bodega</th>
+                        <th>📦 Items</th>
+                        <th>📅 Fecha</th>
+                        <th>👤 Creado Por</th>
+                        <th>📎 Evidencia</th>
+                        <th>⚙️ Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="adjustments-table-body">
+                    <!-- Las filas se cargan dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Layout de Conteos y Reportes -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 25px;">
+            <!-- Conteos Cíclicos -->
+            <div class="cycle-counts-section" id="cycle-counts-container">
+                <!-- Los conteos se cargan dinámicamente -->
+            </div>
+
+            <!-- Reportes y Estadísticas -->
+            <div class="reports-section" id="reports-container">
+                <!-- Los reportes se cargan dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>Módulo de Ajustes de Inventario v1.0.0</strong> - 
+                Sistema completo de ajustes con workflow de aprobación y conteos cíclicos
+            </div>
+            <div>
+                🔧 Gestión de causales y evidencias | 
+                📊 Conteos automáticos | 
+                ⚡ Workflow de aprobación integrado
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================================ -->
+    <!-- MODALES -->
+    <!-- ============================================================================ -->
+
+    <!-- Modal Crear/Editar Ajuste -->
+    <div id="adjustment-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="adjustment-modal-title">➕ Crear Nuevo Ajuste</h2>
+                <button class="close" onclick="closeModal('adjustment-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="adjustment-form" class="adjustment-form">
+                    <!-- Información General -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            📋 Información General
+                        </h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>🏪 Bodega:</label>
+                                <select id="adjustment-warehouse" class="form-control" required>
+                                    <!-- Las opciones se cargan dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>📅 Fecha del Ajuste:</label>
+                                <input type="date" id="adjustment-date" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>📝 Descripción:</label>
+                            <textarea id="adjustment-description" class="form-control" rows="3" 
+                                      placeholder="Describe el motivo del ajuste..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Selección de Causal -->
+                    <div class="form-section">
+                        <h4 class="section-title">
+                            📋 Causal del Ajuste
+                        </h4>
+                        <div id="reason-selector" class="reason-selector">
+                            <!-- Las causales se cargan dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Evidencia -->
+                    <div class="form-section" id="evidence-section" style="display: none;">
+                        <h4 class="section-title">
+                            📎 Evidencia Requerida
+                        </h4>
+                        <div id="evidence-upload-zone" class="evidence-upload">
+                            <div class="upload-icon">📤</div>
+                            <div class="upload-text">Arrastra archivos aquí o haz clic para seleccionar</div>
+                            <div class="upload-hint">Formatos: JPG, PNG, PDF (máx. 10MB cada uno)</div>
+                        </div>
+                        <div id="uploaded-files-list" class="uploaded-files">
+                            <!-- Los archivos se muestran aquí -->
+                        </div>
+                    </div>
+
+                    <!-- Productos a Ajustar -->
+                    <div class="products-to-adjust">
+                        <h4 class="section-title">
+                            📦 Productos a Ajustar
+                        </h4>
+                        
+                        <div class="product-search-section">
+                            <div class="product-search-row">
+                                <div class="product-search-input">
+                                    <input type="text" id="product-search-input" class="form-control" 
+                                           placeholder="Buscar producto por nombre, SKU o código...">
+                                    <div id="search-results-dropdown" class="search-results-dropdown" style="display: none;">
+                                        <!-- Los resultados se muestran aquí -->
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>📊 Vista:</label>
+                                    <select class="form-control">
+                                        <option>Todos</option>
+                                        <option>Con Stock</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-secondary">
+                                    🔍 Buscar
+                                </button>
+                            </div>
+                        </div>
+
+                        <table class="products-table">
+                            <thead>
+                                <tr>
+                                    <th>📦 Producto</th>
+                                    <th>📊 Stock Sistema</th>
+                                    <th>🔢 Cantidad Física</th>
+                                    <th>📈 Diferencia</th>
+                                    <th>📍 Ubicación</th>
+                                    <th>📝 Detalle</th>
+                                    <th>❌ Quitar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body">
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon">📦</div>
+                                            <p>Busca y selecciona productos para ajustar</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Acciones del Modal -->
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('adjustment-modal')">
+                            ❌ Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="saveAdjustment()">
+                            💾 Guardar Ajuste
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Ajuste -->
+    <div id="adjustment-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔍 Detalle de Ajuste</h2>
+                <button class="close" onclick="closeModal('adjustment-detail-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="adjustment-detail-content">
+                    <!-- El contenido se carga dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Conteo Cíclico -->
+    <div id="cycle-count-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📅 Programar Conteo Cíclico</h2>
+                <button class="close" onclick="closeModal('cycle-count-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="cycle-count-form">
+                    <div class="count-form-section">
+                        <h4>📋 Información del Conteo</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📝 Nombre del Conteo:</label>
+                                <input type="text" id="count-name" class="form-control" 
+                                       placeholder="Ej: Conteo Semanal Zona A" required>
+                            </div>
+                            <div class="form-group">
+                                <label>🏪 Bodega:</label>
+                                <select id="count-warehouse" class="form-control" required>
+                                    <!-- Las opciones se cargan dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>📅 Fecha Programada:</label>
+                                <input type="date" id="count-scheduled-date" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>👤 Asignar a:</label>
+                                <select id="count-assigned-user" class="form-control" required>
+                                    <!-- Los usuarios se cargan dinámicamente -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="count-form-section">
+                        <h4>📊 Tipo de Conteo</h4>
+                        <div class="count-type-selector">
+                            <div class="count-type-option" data-type="FULL" onclick="selectCountType('FULL')">
+                                <span class="count-type-icon">🏢</span>
+                                <div class="count-type-name">Completo</div>
+                                <div class="count-type-desc">Toda la bodega</div>
+                            </div>
+                            <div class="count-type-option" data-type="ZONE" onclick="selectCountType('ZONE')">
+                                <span class="count-type-icon">📍</span>
+                                <div class="count-type-name">Por Zona</div>
+                                <div class="count-type-desc">Zona específica</div>
+                            </div>
+                            <div class="count-type-option" data-type="SPECIFIC" onclick="selectCountType('SPECIFIC')">
+                                <span class="count-type-icon">🎯</span>
+                                <div class="count-type-name">Específico</div>
+                                <div class="count-type-desc">Productos seleccionados</div>
+                            </div>
+                            <div class="count-type-option" data-type="RANDOM" onclick="selectCountType('RANDOM')">
+                                <span class="count-type-icon">🎲</span>
+                                <div class="count-type-name">Aleatorio</div>
+                                <div class="count-type-desc">Muestra aleatoria</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="count-form-section" id="zone-selection" style="display: none;">
+                        <h4>📍 Selección de Zona</h4>
+                        <div class="form-group">
+                            <label>Zona a Contar:</label>
+                            <select id="count-zone" class="form-control">
+                                <option value="">Seleccionar zona...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="count-form-section">
+                        <h4>📝 Notas Adicionales</h4>
+                        <div class="form-group">
+                            <textarea id="count-notes" class="form-control" rows="3" 
+                                      placeholder="Instrucciones especiales para el conteo..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('cycle-count-modal')">
+                            ❌ Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="saveCycleCount()">
+                            📅 Programar Conteo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Conteo Cíclico -->
+    <div id="cycle-count-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Detalle de Conteo Cíclico</h2>
+                <button class="close" onclick="closeModal('cycle-count-detail-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="cycle-count-detail-content">
+                    <!-- El contenido se carga dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script src="extra.js"></script>
+    
+    <!-- Script para mostrar fecha/hora actual -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElement = document.getElementById('current-date-time');
+            if (dateTimeElement) {
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                dateTimeElement.textContent = now.toLocaleDateString('es-CL', options);
+            }
+        }
+        
+        // Actualizar fecha/hora cada segundo
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Ejecutar inmediatamente
+    </script>
+
+    <!-- Configuraciones adicionales -->
+    <script>
+        // Logging para análisis de uso
+        console.log('🔧 Módulo de Ajustes de Inventario iniciado:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            }
+        });
+
+        // Configurar teclas de acceso rápido específicas del módulo
+        document.addEventListener('keydown', (e) => {
+            // Ctrl + N para nuevo ajuste
+            if (e.ctrlKey && e.key === 'n') {
+                e.preventDefault();
+                showCreateAdjustmentModal();
+            }
+
+            // Ctrl + E para exportar
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                exportAdjustmentsReport();
+            }
+
+            // Ctrl + K para focus en búsqueda
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                const searchInput = document.getElementById('adjustment-search');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+        });
+
+        // Prevenir pérdida de datos en formularios
+        let formChanged = false;
+        
+        document.addEventListener('input', (e) => {
+            if (e.target.closest('#adjustment-form, #cycle-count-form')) {
+                formChanged = true;
+            }
+        });
+
+        window.addEventListener('beforeunload', (e) => {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = '¿Estás seguro de salir? Los cambios no guardados se perderán.';
+            }
+        });
+
+        // Resetear flag cuando se guardan los formularios
+        function resetFormChangedFlag() {
+            formChanged = false;
+        }
+
+        // Helper para debug en desarrollo
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            window.AdjustmentsDebug = {
+                showAllModals: () => {
+                    document.querySelectorAll('.modal').forEach(modal => modal.classList.add('show'));
+                },
+                hideAllModals: () => {
+                    document.querySelectorAll('.modal').forEach(modal => modal.classList.remove('show'));
+                },
+                getAppState: () => AdjustmentsApp,
+                simulateData: () => console.log('Datos simulados cargados')
+            };
+            console.log('🛠️ Modo desarrollo activado. Usa AdjustmentsDebug para testing.');
+        }
+    </script>
+
+    <!-- Meta tags específicos del módulo -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ajustes Inventario">
+
+</body>
+</html>

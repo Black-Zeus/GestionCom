@@ -16,6 +16,8 @@ let InventoryApp = {
     chartPeriod: '7d'
 };
 
+let data_json = "../data.json"
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -59,7 +61,7 @@ async function initializeApp() {
 
 async function loadData() {
     try {
-        const response = await fetch('data.json');
+        const response = await fetch(data_json);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -1264,7 +1266,7 @@ function loadFallbackData() {
 async function loadDataWithFallback() {
     try {
         console.log('🔄 Intentando cargar data.json...');
-        const response = await fetch('data.json');
+        const response = await fetch(data_json);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

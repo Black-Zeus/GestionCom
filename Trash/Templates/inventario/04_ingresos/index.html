@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Ingreso Manual de Mercadería - Sistema de Control de Stock</title>
+    <meta name="description" content="Módulo para ingreso manual de existencias al inventario">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📦%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        
+        <!-- Header del Módulo -->
+        <div class="ingreso-header">
+            <h1>📦 Ingreso Manual de Mercadería</h1>
+            <p class="subtitle">Sistema para adición manual de existencias al inventario</p>
+            <div class="header-actions">
+                <button class="header-btn" id="btn-view-history" title="Ver historial de ingresos">
+                    📋 Historial
+                </button>
+                <button class="header-btn" onclick="window.print()" title="Imprimir vista actual">
+                    🖨️ Imprimir
+                </button>
+                <button class="header-btn" onclick="window.location.href='../'" title="Volver al dashboard">
+                    🏠 Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Layout Principal -->
+        <div class="ingreso-container">
+            
+            <!-- Panel Principal -->
+            <div class="main-panel">
+                
+                <!-- Configuración Inicial -->
+                <div class="config-section">
+                    <h3>⚙️ Configuración del Ingreso</h3>
+                    <div class="config-grid">
+                        <div class="form-group">
+                            <label for="warehouse-select">Bodega de Destino *</label>
+                            <select id="warehouse-select" class="form-control" required>
+                                <option value="">Seleccionar bodega...</option>
+                                <!-- Las opciones se cargan dinámicamente -->
+                            </select>
+                        </div>
+                        <div class="documento-info">
+                            <div class="documento-numero" id="document-number">Generando...</div>
+                            <div class="documento-fecha" id="document-date">--/--/---- --:--:--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección Agregar Item -->
+                <div class="add-item-section">
+                    <h3>🔍 Buscar y Agregar Producto</h3>
+                    
+                    <!-- Búsqueda de Producto -->
+                    <div class="search-product-row">
+                        <div class="product-search-input">
+                            <input type="text" id="product-search-input" class="product-search-field" 
+                                   placeholder="Escriba código del producto o SKU..." disabled>
+                            <span class="search-icon">🔍</span>
+                        </div>
+                        <button type="button" id="btn-search-product" class="btn-search-product">
+                            🔍 Buscar en Catálogo
+                        </button>
+                    </div>
+
+                    <!-- Preview del Producto Seleccionado -->
+                    <div id="selected-product-preview" class="selected-product-preview">
+                        <!-- El contenido se genera dinámicamente -->
+                    </div>
+
+                    <!-- Formulario de Item -->
+                    <div class="item-form-grid">
+                        <div class="form-group">
+                            <label for="quantity-input">Cantidad *</label>
+                            <input type="number" id="quantity-input" class="quantity-input" 
+                                   placeholder="0" min="0.01" step="0.01" disabled>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="motivo-select">Motivo de Ingreso *</label>
+                            <select id="motivo-select" class="form-control" disabled>
+                                <option value="">Seleccionar motivo...</option>
+                                <!-- Las opciones se cargan dinámicamente -->
+                            </select>
+                        </div>
+                        
+                        <button type="button" id="btn-add-item" class="btn-add-item" disabled>
+                            ➕ Agregar
+                        </button>
+                    </div>
+
+                    <!-- Justificación -->
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="justification-textarea">Justificación / Evidencia *</label>
+                        <textarea id="justification-textarea" class="form-control" rows="3" 
+                                  placeholder="Describe el motivo del ingreso..." 
+                                  maxlength="500" disabled></textarea>
+                        <small class="text-muted">Mínimo 10 caracteres, máximo 500 caracteres</small>
+                    </div>
+                </div>
+
+                <!-- Items Pendientes -->
+                <div class="items-pending-section">
+                    <h3>
+                        📦 Items Pendientes de Ingreso
+                        <span class="items-counter" id="items-counter">0</span>
+                    </h3>
+                    
+                    <div class="items-table-container">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th style="width: 120px; text-align: center;">Cantidad</th>
+                                    <th style="width: 250px;">Motivo y Justificación</th>
+                                    <th style="width: 100px; text-align: center;">Agregado</th>
+                                    <th style="width: 60px; text-align: center;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-table-body">
+                                <tr>
+                                    <td colspan="5" class="empty-items">
+                                        <div class="empty-items-icon">📦</div>
+                                        <h4>No hay items pendientes</h4>
+                                        <p>Agregue productos para crear el ingreso de mercadería</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Panel Lateral -->
+            <div class="side-panel">
+                
+                <!-- Resumen del Ingreso -->
+                <div class="summary-card">
+                    <h3>📊 Resumen del Ingreso</h3>
+                    
+                    <div class="summary-row">
+                        <span class="summary-label">Bodega:</span>
+                        <span class="summary-value" id="summary-warehouse">No seleccionada</span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span class="summary-label">Documento:</span>
+                        <span class="summary-value" id="summary-document">Generando...</span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span class="summary-label">Total Items:</span>
+                        <span class="summary-value highlight" id="summary-total-items">0</span>
+                    </div>
+                    
+                    <div class="summary-row total-row">
+                        <span class="summary-label">Cantidad Total:</span>
+                        <span class="summary-value" id="summary-total-quantity">0</span>
+                    </div>
+                </div>
+
+                <!-- Acciones Principales -->
+                <div class="actions-card">
+                    <h3>🚀 Acciones</h3>
+                    
+                    <div class="action-buttons">
+                        <button type="button" id="btn-process-ingreso" class="btn-primary-action" disabled>
+                            ✅ Procesar Ingreso
+                        </button>
+                        
+                        <button type="button" id="btn-clear-all" class="btn-warning-action">
+                            🧹 Limpiar Todo
+                        </button>
+                        
+                        <button type="button" class="btn-secondary-action" onclick="window.location.href='../'">
+                            🏠 Volver al Dashboard
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Historial Reciente -->
+                <div class="recent-history-card">
+                    <h3>📋 Ingresos Recientes</h3>
+                    <div class="history-list" id="recent-history-list">
+                        <!-- El contenido se carga dinámicamente -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>Módulo de Ingreso Manual v1.0.0</strong> - 
+                Sistema de adición de existencias al inventario
+            </div>
+            <div>
+                📦 Actualización automática de stock | 
+                📝 Registro de movimientos | 
+                🔒 Validaciones de seguridad | 
+                📊 Trazabilidad completa
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    
+    <!-- Script para fecha/hora en tiempo real -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElements = document.querySelectorAll('[data-live-time]');
+            
+            dateTimeElements.forEach(element => {
+                const options = {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                element.textContent = now.toLocaleDateString('es-CL', options);
+            });
+        }
+        
+        // Actualizar cada segundo
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+    </script>
+
+    <!-- PWA y configuraciones adicionales -->
+    <script>
+        // Detectar capacidades del navegador
+        if ('serviceWorker' in navigator) {
+            console.log('🔧 Service Worker disponible');
+        }
+        
+        // Prevenir zoom accidental en inputs numéricos
+        document.addEventListener('wheel', function(e) {
+            if (document.activeElement.type === 'number') {
+                document.activeElement.blur();
+            }
+        });
+        
+        // Logging de uso del módulo
+        console.log('📦 Módulo de Ingreso de Mercadería iniciado:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent.substring(0, 100),
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            },
+            connection: navigator.connection ? {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink
+            } : 'unknown'
+        });
+        
+        // Prevenir pérdida de datos accidental
+        let hasUnsavedChanges = false;
+        
+        window.addEventListener('beforeunload', function(e) {
+            // Solo mostrar advertencia si hay items pendientes
+            if (typeof IngresoApp !== 'undefined' && 
+                IngresoApp.pendingItems && 
+                IngresoApp.pendingItems.length > 0) {
+                
+                const message = 'Tiene items pendientes de procesar. ¿Está seguro de salir?';
+                e.returnValue = message;
+                return message;
+            }
+        });
+        
+        // Atajos de teclado útiles
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + Enter para procesar ingreso
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                const processBtn = document.getElementById('btn-process-ingreso');
+                if (processBtn && !processBtn.disabled) {
+                    processBtn.click();
+                }
+            }
+            
+            // F2 para buscar producto
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchBtn = document.getElementById('btn-search-product');
+                if (searchBtn) {
+                    searchBtn.click();
+                }
+            }
+            
+            // Escape para limpiar búsqueda
+            if (e.key === 'Escape') {
+                const searchInput = document.getElementById('product-search-input');
+                if (searchInput && document.activeElement === searchInput) {
+                    searchInput.value = '';
+                    searchInput.blur();
+                }
+            }
+        });
+        
+        // Optimización para dispositivos táctiles
+        if ('ontouchstart' in window) {
+            document.body.classList.add('touch-device');
+            console.log('📱 Dispositivo táctil detectado');
+        }
+    </script>
+
+    <!-- Meta tags para PWA -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ingreso Mercadería">
+    
+    <!-- Configuración de viewport optimizada -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Preload de recursos críticos -->
+    <link rel="preload" href="../style.css" as="style">
+    <link rel="preload" href="extra.css" as="style">
+    <link rel="preload" href="../data.json" as="fetch" crossorigin>
+    <link rel="preload" href="data_extend.json" as="fetch" crossorigin>
+
+</head>
+
+<!-- Scripts adicionales para mejorar UX -->
+<script>
+    // Manejo de errores globales específico del módulo
+    window.addEventListener('error', function(e) {
+        console.error('❌ Error en módulo de ingreso:', e.error);
+        
+        // Mostrar notificación al usuario si la aplicación está cargada
+        if (typeof showError === 'function') {
+            showError('Ha ocurrido un error inesperado. Verifique la consola para más detalles.');
+        }
+    });
+    
+    // Manejo de promesas rechazadas
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('❌ Promesa rechazada en módulo de ingreso:', e.reason);
+        
+        if (typeof showError === 'function') {
+            showError('Error de conectividad. Verifique su conexión a internet.');
+        }
+    });
+    
+    // Función para reportar problemas (desarrollo)
+    function reportIssue(description) {
+        const report = {
+            module: 'ingreso-mercaderia',
+            timestamp: new Date().toISOString(),
+            description: description,
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            }
+        };
+        
+        console.log('📋 Reporte de problema:', report);
+        
+        // En producción, esto se enviaría a un servicio de logging
+        return report;
+    }
+    
+    // Función de ayuda para desarrolladores
+    function showHelp() {
+        const helpText = `
+🔧 ATAJOS DE TECLADO:
+• F2: Abrir búsqueda de productos
+• Ctrl + Enter: Procesar ingreso (si hay items)
+• Escape: Limpiar búsqueda activa
+
+📝 FLUJO DE TRABAJO:
+1. Seleccionar bodega de destino
+2. Buscar producto por código o catálogo
+3. Ingresar cantidad y motivo
+4. Agregar a lista de pendientes
+5. Procesar ingreso cuando esté listo
+
+🐛 DEBUG:
+• window.IngresoDebug: Objeto con funciones de depuración
+• reportIssue('descripción'): Reportar problemas
+        `;
+        
+        console.log(helpText);
+        
+        if (typeof showInfo === 'function') {
+            showInfo('Ayuda mostrada en consola (F12)');
+        }
+    }
+    
+    // Exponer función de ayuda globalmente
+    window.showHelp = showHelp;
+    
+    console.log('💡 Tip: Escriba showHelp() en consola para ver atajos y ayuda');
+</script>
+
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏪 Gestión de Bodegas - Sistema de Control de Inventario</title>
+    <meta name="description" content="Módulo de gestión y administración de bodegas y ubicaciones para control de inventario">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🏪%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        <!-- Header -->
+        <div class="warehouses-header">
+            <h1>🏪 Gestión de Bodegas y Ubicaciones</h1>
+            <p class="subtitle">Administración completa de bodegas, zonas y ubicaciones del inventario</p>
+            
+            <div class="warehouses-actions">
+                <button class="btn btn-success" onclick="showWarehouseForm()">
+                    ➕ Nueva Bodega
+                </button>
+                <button class="btn btn-info" onclick="viewLocationsTable()">
+                    📋 Tabla de Ubicaciones
+                </button>
+                <button class="btn btn-secondary" onclick="goToInventoryDashboard()">
+                    ← Volver al Dashboard
+                </button>
+                <div style="margin-left: auto; font-size: 0.9em; color: #6c757d;">
+                    <span id="current-date-time"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navegación Breadcrumb -->
+        <div class="breadcrumb-nav">
+            <ul class="breadcrumb" id="breadcrumb">
+                <li class="active">Gestión de Bodegas</li>
+            </ul>
+        </div>
+
+        <!-- Estadísticas Generales -->
+        <div class="warehouses-stats" id="general-stats">
+            <!-- Se cargan dinámicamente -->
+        </div>
+
+        <!-- Filtros de Búsqueda -->
+        <div class="warehouses-filters">
+            <div class="filters-header">
+                <h3 class="filters-title">🔍 Filtros de Búsqueda</h3>
+                <button class="filters-toggle" id="filters-toggle">🙈 Ocultar Filtros</button>
+            </div>
+            
+            <div class="filters-content" id="filters-content">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="search-input" 
+                           placeholder="Buscar por nombre, código, ciudad o región...">
+                    <span class="search-icon">🔍</span>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Región</label>
+                    <select class="filter-select" id="region-filter">
+                        <option value="all">Todas las regiones</option>
+                        <option value="Metropolitana">Metropolitana</option>
+                        <option value="Valparaíso">Valparaíso</option>
+                        <option value="Biobío">Biobío</option>
+                        <option value="La Araucanía">La Araucanía</option>
+                        <option value="Los Lagos">Los Lagos</option>
+                        <option value="Antofagasta">Antofagasta</option>
+                        <option value="Tarapacá">Tarapacá</option>
+                        <option value="Atacama">Atacama</option>
+                        <option value="Coquimbo">Coquimbo</option>
+                        <option value="O'Higgins">O'Higgins</option>
+                        <option value="Maule">Maule</option>
+                        <option value="Ñuble">Ñuble</option>
+                        <option value="Los Ríos">Los Ríos</option>
+                        <option value="Aysén">Aysén</option>
+                        <option value="Magallanes">Magallanes</option>
+                        <option value="Arica y Parinacota">Arica y Parinacota</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Estado</label>
+                    <select class="filter-select" id="status-filter">
+                        <option value="all">Todos los estados</option>
+                        <option value="active">Solo activas</option>
+                        <option value="inactive">Solo inactivas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label class="filter-label">Alertas</label>
+                    <select class="filter-select" id="alerts-filter">
+                        <option value="all">Todas</option>
+                        <option value="with_alerts">Con alertas</option>
+                        <option value="no_alerts">Sin alertas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group" style="display: flex; align-items: end;">
+                    <button class="btn btn-warning btn-sm" onclick="clearFilters()">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
+                <span id="results-counter">Cargando...</span>
+            </div>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="main-content">
+            <!-- Grid de Bodegas -->
+            <div class="warehouses-grid" id="warehouses-grid">
+                <!-- Se cargan dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Accesos Rápidos Adicionales -->
+        <div style="background: white; border-radius: 10px; padding: 20px; margin-top: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                🚀 Accesos Rápidos del Sistema
+            </h3>
+            
+            <div class="quick-actions">
+                <a href="../dashboard/" class="quick-action-btn">
+                    <span class="quick-action-icon">📊</span>
+                    <div class="quick-action-title">Dashboard</div>
+                    <div class="quick-action-desc">Panel principal</div>
+                </a>
+                
+                <a href="../consulta-stock/" class="quick-action-btn">
+                    <span class="quick-action-icon">📋</span>
+                    <div class="quick-action-title">Consulta Stock</div>
+                    <div class="quick-action-desc">Ver disponibilidad</div>
+                </a>
+                
+                <a href="../movimientos/" class="quick-action-btn">
+                    <span class="quick-action-icon">📦</span>
+                    <div class="quick-action-title">Movimientos</div>
+                    <div class="quick-action-desc">Historial completo</div>
+                </a>
+                
+                <a href="../alertas/" class="quick-action-btn">
+                    <span class="quick-action-icon">⚠️</span>
+                    <div class="quick-action-title">Centro Alertas</div>
+                    <div class="quick-action-desc">Alertas activas</div>
+                </a>
+                
+                <a href="../ajustes/" class="quick-action-btn">
+                    <span class="quick-action-icon">⚖️</span>
+                    <div class="quick-action-title">Ajustes</div>
+                    <div class="quick-action-desc">Correcciones</div>
+                </a>
+                
+                <a href="../transferencias/" class="quick-action-btn">
+                    <span class="quick-action-icon">🔄</span>
+                    <div class="quick-action-title">Transferencias</div>
+                    <div class="quick-action-desc">Entre bodegas</div>
+                </a>
+                
+                <a href="javascript:void(0)" class="quick-action-btn" onclick="exportLocations()">
+                    <span class="quick-action-icon">📊</span>
+                    <div class="quick-action-title">Exportar Todo</div>
+                    <div class="quick-action-desc">Reporte completo</div>
+                </a>
+                
+                <a href="javascript:void(0)" class="quick-action-btn" onclick="window.print()">
+                    <span class="quick-action-icon">🖨️</span>
+                    <div class="quick-action-title">Imprimir</div>
+                    <div class="quick-action-desc">Vista actual</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>Gestión de Bodegas v1.0.0</strong> - 
+                Módulo de administración de bodegas y ubicaciones del sistema de inventario
+            </div>
+            <div>
+                🏪 CRUD completo de bodegas y zonas | 
+                📋 Tabla de ubicaciones con exportación | 
+                🔍 Búsqueda y filtros avanzados | 
+                📱 Optimizado para escritorio
+            </div>
+            <div style="margin-top: 8px; font-size: 0.85em;">
+                <span>🔧 Funcionalidades:</span> 
+                Crear bodegas • Gestionar zonas • Ver ubicaciones • Activar/Desactivar • Exportar reportes • Filtros inteligentes
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script src="extra.js"></script>
+    
+    <!-- Script para mostrar fecha/hora actual -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElement = document.getElementById('current-date-time');
+            if (dateTimeElement) {
+                const options = {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                };
+                dateTimeElement.textContent = now.toLocaleDateString('es-CL', options);
+            }
+        }
+        
+        // Actualizar fecha/hora cada 30 segundos
+        setInterval(updateDateTime, 30000);
+        updateDateTime(); // Ejecutar inmediatamente
+    </script>
+
+    <!-- Scripts de utilidad adicionales -->
+    <script>
+        // Detectar modo oscuro del sistema
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            console.log('🌙 Modo oscuro detectado en el sistema');
+            // En futuras versiones se podría aplicar tema oscuro
+        }
+        
+        // Detectar si es una aplicación instalada (PWA)
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.body.classList.add('pwa-mode');
+            console.log('📱 Ejecutándose como PWA');
+        }
+        
+        // Manejar instalación PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('💾 PWA disponible para instalación');
+            // En futuras versiones mostrar prompt de instalación
+        });
+        
+        // Logging para análisis de uso
+        console.log('🏪 Gestión de Bodegas iniciada:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            },
+            connection: navigator.connection ? {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink
+            } : 'unknown',
+            language: navigator.language,
+            platform: navigator.platform
+        });
+        
+        // Optimización para pantallas táctiles
+        document.addEventListener('touchstart', function() {}, {passive: true});
+        
+        // Prevenir zoom accidental en formularios
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+        
+        // Manejar errores de carga de recursos
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT') {
+                console.error('❌ Error cargando script:', e.target.src);
+                // En producción se podría mostrar notificación al usuario
+            }
+        });
+        
+        // Detectar pérdida de conexión
+        window.addEventListener('offline', function() {
+            console.log('📡 Conexión perdida - modo offline');
+            // En futuras versiones mostrar banner de offline
+        });
+        
+        window.addEventListener('online', function() {
+            console.log('📡 Conexión restaurada');
+            // En futuras versiones ocultar banner de offline y recargar datos
+        });
+        
+        // Performance monitoring básico
+        window.addEventListener('load', function() {
+            const loadTime = performance.now();
+            console.log(`⚡ Página cargada en ${Math.round(loadTime)}ms`);
+            
+            // Registrar métricas de rendimiento
+            if ('navigation' in performance) {
+                const nav = performance.navigation;
+                console.log('📊 Tipo de navegación:', nav.type === 0 ? 'Normal' : 
+                           nav.type === 1 ? 'Recarga' : 'Navegación hacia atrás/adelante');
+            }
+        });
+        
+        // Funciones de utilidad global
+        window.WarehousesUtils = {
+            // Obtener información del dispositivo
+            getDeviceInfo: function() {
+                return {
+                    isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+                    isTablet: /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent),
+                    isDesktop: !/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+                    touchSupport: 'ontouchstart' in window,
+                    screenSize: {
+                        width: window.screen.width,
+                        height: window.screen.height
+                    },
+                    viewport: {
+                        width: window.innerWidth,
+                        height: window.innerHeight
+                    }
+                };
+            },
+            
+            // Copiar texto al portapapeles
+            copyToClipboard: function(text) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        console.log('📋 Texto copiado al portapapeles');
+                    });
+                } else {
+                    // Fallback para navegadores más antiguos
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    console.log('📋 Texto copiado (fallback)');
+                }
+            },
+            
+            // Obtener información de rendimiento
+            getPerformanceInfo: function() {
+                if (!('performance' in window)) return null;
+                
+                const timing = performance.timing;
+                return {
+                    loadTime: timing.loadEventEnd - timing.navigationStart,
+                    domReady: timing.domContentLoadedEventEnd - timing.navigationStart,
+                    firstPaint: performance.getEntriesByType('paint')[0]?.startTime || 0
+                };
+            }
+        };
+        
+        // Inicializar utilidades al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            const deviceInfo = WarehousesUtils.getDeviceInfo();
+            console.log('📱 Información del dispositivo:', deviceInfo);
+            
+            // Agregar clases CSS según el dispositivo
+            if (deviceInfo.isMobile) {
+                document.body.classList.add('mobile-device');
+            } else if (deviceInfo.isTablet) {
+                document.body.classList.add('tablet-device');
+            } else {
+                document.body.classList.add('desktop-device');
+            }
+            
+            // Configurar comportamiento específico para táctil
+            if (deviceInfo.touchSupport) {
+                document.body.classList.add('touch-device');
+            }
+        });
+    </script>
+
+    <!-- Configuraciones adicionales -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Gestión Bodegas">
+    
+    <!-- SEO y metadatos -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="application-name" content="Sistema de Inventario">
+    
+    <!-- Precargar recursos críticos -->
+    <link rel="preload" href="../style.css" as="style">
+    <link rel="preload" href="extra.css" as="style">
+    
+</body>
+</html>

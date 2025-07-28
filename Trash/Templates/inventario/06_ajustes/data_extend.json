@@ -1,0 +1,570 @@
+{
+  "adjustment_reasons": [
+    {
+      "id": 1,
+      "reason_code": "DIFF_COUNT",
+      "reason_name": "Diferencia de Inventario",
+      "reason_description": "Diferencia encontrada en conteo físico vs sistema",
+      "requires_evidence": true,
+      "is_active": true,
+      "color": "#ffc107"
+    },
+    {
+      "id": 2,
+      "reason_code": "DAMAGED",
+      "reason_name": "Producto Dañado",
+      "reason_description": "Productos dañados o defectuosos no vendibles",
+      "requires_evidence": true,
+      "is_active": true,
+      "color": "#dc3545"
+    },
+    {
+      "id": 3,
+      "reason_code": "EXPIRED",
+      "reason_name": "Producto Vencido",
+      "reason_description": "Productos que superaron su fecha de vencimiento",
+      "requires_evidence": false,
+      "is_active": true,
+      "color": "#fd7e14"
+    },
+    {
+      "id": 4,
+      "reason_code": "THEFT",
+      "reason_name": "Robo/Faltante",
+      "reason_description": "Productos faltantes por robo o pérdida",
+      "requires_evidence": true,
+      "is_active": true,
+      "color": "#e91e63"
+    },
+    {
+      "id": 5,
+      "reason_code": "SHRINKAGE",
+      "reason_name": "Merma Natural",
+      "reason_description": "Pérdida natural del producto (evaporación, etc.)",
+      "requires_evidence": false,
+      "is_active": true,
+      "color": "#6f42c1"
+    },
+    {
+      "id": 6,
+      "reason_code": "SYSTEM_ERROR",
+      "reason_name": "Error de Sistema",
+      "reason_description": "Corrección por error en el sistema",
+      "requires_evidence": false,
+      "is_active": true,
+      "color": "#17a2b8"
+    },
+    {
+      "id": 7,
+      "reason_code": "RETURN_DAMAGE",
+      "reason_name": "Devolución Dañada",
+      "reason_description": "Producto devuelto por cliente en mal estado",
+      "requires_evidence": true,
+      "is_active": true,
+      "color": "#6c757d"
+    }
+  ],
+
+  "inventory_adjustments": [
+    {
+      "id": 1,
+      "adjustment_number": "AJ-2024-0001",
+      "warehouse_id": 1,
+      "reason_id": 1,
+      "adjustment_date": "2024-07-24",
+      "status": "APPROVED",
+      "total_items": 3,
+      "created_by_user_id": 2,
+      "approved_by_user_id": 1,
+      "created_at": "2024-07-24T08:30:00Z",
+      "approved_at": "2024-07-24T10:15:00Z",
+      "applied_at": "2024-07-24T10:20:00Z",
+      "description": "Ajuste por diferencias encontradas en conteo físico semanal",
+      "supervisor_comments": "Diferencias menores, aprobado para aplicar",
+      "evidence_files": [
+        {
+          "file_name": "evidencia_conteo_zona_a.jpg",
+          "file_size": 2458672,
+          "uploaded_at": "2024-07-24T08:35:00Z"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "adjustment_number": "AJ-2024-0002",
+      "warehouse_id": 1,
+      "reason_id": 2,
+      "adjustment_date": "2024-07-23",
+      "status": "PENDING",
+      "total_items": 1,
+      "created_by_user_id": 3,
+      "approved_by_user_id": null,
+      "created_at": "2024-07-23T14:20:00Z",
+      "approved_at": null,
+      "applied_at": null,
+      "description": "Laptops dañadas por filtración de agua en bodega",
+      "supervisor_comments": null,
+      "evidence_files": [
+        {
+          "file_name": "laptops_danadas_agua.jpg",
+          "file_size": 3245891,
+          "uploaded_at": "2024-07-23T14:25:00Z"
+        },
+        {
+          "file_name": "reporte_filtracion.pdf",
+          "file_size": 1856743,
+          "uploaded_at": "2024-07-23T14:30:00Z"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "adjustment_number": "AJ-2024-0003",
+      "warehouse_id": 2,
+      "reason_id": 5,
+      "adjustment_date": "2024-07-22",
+      "status": "REJECTED",
+      "total_items": 2,
+      "created_by_user_id": 2,
+      "approved_by_user_id": 1,
+      "created_at": "2024-07-22T11:45:00Z",
+      "approved_at": "2024-07-22T16:30:00Z",
+      "applied_at": null,
+      "description": "Merma en productos textiles por humedad",
+      "supervisor_comments": "Falta más evidencia del daño. Solicitar inspección adicional antes de aprobar.",
+      "evidence_files": []
+    },
+    {
+      "id": 4,
+      "adjustment_number": "AJ-2024-0004",
+      "warehouse_id": 1,
+      "reason_id": 6,
+      "adjustment_date": "2024-07-21",
+      "status": "APPLIED",
+      "total_items": 1,
+      "created_by_user_id": 1,
+      "approved_by_user_id": 1,
+      "created_at": "2024-07-21T09:15:00Z",
+      "approved_at": "2024-07-21T09:20:00Z",
+      "applied_at": "2024-07-21T09:25:00Z",
+      "description": "Corrección por error en migración de datos",
+      "supervisor_comments": "Error confirmado en migración. Aplicar corrección inmediatamente.",
+      "evidence_files": []
+    },
+    {
+      "id": 5,
+      "adjustment_number": "AJ-2024-0005",
+      "warehouse_id": 3,
+      "reason_id": 4,
+      "adjustment_date": "2024-07-20",
+      "status": "DRAFT",
+      "total_items": 0,
+      "created_by_user_id": 2,
+      "approved_by_user_id": null,
+      "created_at": "2024-07-20T15:40:00Z",
+      "approved_at": null,
+      "applied_at": null,
+      "description": "Faltantes detectados en zona de almacenamiento",
+      "supervisor_comments": null,
+      "evidence_files": []
+    }
+  ],
+
+  "adjustment_items": [
+    {
+      "id": 1,
+      "adjustment_id": 1,
+      "product_variant_id": 1,
+      "current_quantity": 25,
+      "physical_quantity": 23,
+      "adjustment_quantity": -2,
+      "reason_detail": "Diferencia encontrada en conteo físico",
+      "location": "A01-P1-E3"
+    },
+    {
+      "id": 2,
+      "adjustment_id": 1,
+      "product_variant_id": 3,
+      "current_quantity": 45,
+      "physical_quantity": 47,
+      "adjustment_quantity": 2,
+      "reason_detail": "Producto encontrado en ubicación incorrecta",
+      "location": "B01-P2-E1"
+    },
+    {
+      "id": 3,
+      "adjustment_id": 1,
+      "product_variant_id": 4,
+      "current_quantity": 32,
+      "physical_quantity": 31,
+      "adjustment_quantity": -1,
+      "reason_detail": "Unidad faltante no contabilizada",
+      "location": "B01-P2-E2"
+    },
+    {
+      "id": 4,
+      "adjustment_id": 2,
+      "product_variant_id": 2,
+      "current_quantity": 8,
+      "physical_quantity": 6,
+      "adjustment_quantity": -2,
+      "reason_detail": "Laptops dañadas por filtración de agua en zona A",
+      "location": "A01-P1-E4"
+    },
+    {
+      "id": 5,
+      "adjustment_id": 3,
+      "product_variant_id": 3,
+      "current_quantity": 20,
+      "physical_quantity": 18,
+      "adjustment_quantity": -2,
+      "reason_detail": "Camisetas con humedad y manchas",
+      "location": "B01-P2-E1"
+    },
+    {
+      "id": 6,
+      "adjustment_id": 3,
+      "product_variant_id": 4,
+      "current_quantity": 15,
+      "physical_quantity": 14,
+      "adjustment_quantity": -1,
+      "reason_detail": "Camiseta con decoloración por humedad",
+      "location": "B01-P2-E2"
+    },
+    {
+      "id": 7,
+      "adjustment_id": 4,
+      "product_variant_id": 5,
+      "current_quantity": 10,
+      "physical_quantity": 12,
+      "adjustment_quantity": 2,
+      "reason_detail": "Corrección por error en migración de sistema",
+      "location": "C01-P1-E1"
+    }
+  ],
+
+  "cycle_counts": [
+    {
+      "id": 1,
+      "count_code": "CC-2024-W30",
+      "count_name": "Conteo Semanal Zona A - Electrónicos",
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "scheduled_date": "2024-07-29",
+      "assigned_user_id": 2,
+      "count_type": "ZONE",
+      "status": "SCHEDULED",
+      "created_by_user_id": 1,
+      "created_at": "2024-07-24T10:00:00Z",
+      "started_at": null,
+      "completed_at": null,
+      "notes": "Conteo semanal programado para zona de electrónicos",
+      "total_products": 15,
+      "counted_products": 0,
+      "differences_found": 0
+    },
+    {
+      "id": 2,
+      "count_code": "CC-2024-W30-B",
+      "count_name": "Conteo Mensual Zona B - Textiles",
+      "warehouse_id": 1,
+      "warehouse_zone_id": 2,
+      "scheduled_date": "2024-07-31",
+      "assigned_user_id": 3,
+      "count_type": "ZONE",
+      "status": "SCHEDULED",
+      "created_by_user_id": 1,
+      "created_at": "2024-07-24T10:30:00Z",
+      "started_at": null,
+      "completed_at": null,
+      "notes": "Conteo mensual completo de zona textil",
+      "total_products": 8,
+      "counted_products": 0,
+      "differences_found": 0
+    },
+    {
+      "id": 3,
+      "count_code": "CC-2024-W29",
+      "count_name": "Conteo Aleatorio Productos Críticos",
+      "warehouse_id": 1,
+      "warehouse_zone_id": null,
+      "scheduled_date": "2024-07-24",
+      "assigned_user_id": 2,
+      "count_type": "RANDOM",
+      "status": "COMPLETED",
+      "created_by_user_id": 1,
+      "created_at": "2024-07-22T09:00:00Z",
+      "started_at": "2024-07-24T08:00:00Z",
+      "completed_at": "2024-07-24T11:30:00Z",
+      "notes": "Conteo aleatorio generó el ajuste AJ-2024-0001",
+      "total_products": 5,
+      "counted_products": 5,
+      "differences_found": 3,
+      "generated_adjustment_id": 1
+    },
+    {
+      "id": 4,
+      "count_code": "CC-2024-AUDIT",
+      "count_name": "Conteo de Auditoría Trimestral",
+      "warehouse_id": 2,
+      "warehouse_zone_id": null,
+      "scheduled_date": "2024-08-01",
+      "assigned_user_id": 2,
+      "count_type": "FULL",
+      "status": "SCHEDULED",
+      "created_by_user_id": 1,
+      "created_at": "2024-07-20T14:00:00Z",
+      "started_at": null,
+      "completed_at": null,
+      "notes": "Conteo completo trimestral para auditoría externa",
+      "total_products": 25,
+      "counted_products": 0,
+      "differences_found": 0
+    },
+    {
+      "id": 5,
+      "count_code": "CC-2024-SPOT",
+      "count_name": "Conteo Específico - Productos Alto Valor",
+      "warehouse_id": 1,
+      "warehouse_zone_id": 1,
+      "scheduled_date": "2024-07-26",
+      "assigned_user_id": 3,
+      "count_type": "SPECIFIC",
+      "status": "IN_PROGRESS",
+      "created_by_user_id": 1,
+      "created_at": "2024-07-25T15:00:00Z",
+      "started_at": "2024-07-26T08:00:00Z",
+      "completed_at": null,
+      "notes": "Conteo específico de laptops y productos de alto valor",
+      "total_products": 3,
+      "counted_products": 1,
+      "differences_found": 0
+    }
+  ],
+
+  "cycle_count_items": [
+    {
+      "id": 1,
+      "cycle_count_id": 3,
+      "product_variant_id": 1,
+      "expected_quantity": 25,
+      "counted_quantity": 23,
+      "difference": -2,
+      "location": "A01-P1-E3",
+      "counted_by_user_id": 2,
+      "counted_at": "2024-07-24T08:30:00Z",
+      "notes": "Diferencia encontrada, posible error en último movimiento"
+    },
+    {
+      "id": 2,
+      "cycle_count_id": 3,
+      "product_variant_id": 2,
+      "expected_quantity": 8,
+      "counted_quantity": 8,
+      "difference": 0,
+      "location": "A01-P1-E4",
+      "counted_by_user_id": 2,
+      "counted_at": "2024-07-24T09:00:00Z",
+      "notes": "Cantidad correcta"
+    },
+    {
+      "id": 3,
+      "cycle_count_id": 3,
+      "product_variant_id": 3,
+      "expected_quantity": 45,
+      "counted_quantity": 47,
+      "difference": 2,
+      "location": "B01-P2-E1",
+      "counted_by_user_id": 2,
+      "counted_at": "2024-07-24T09:30:00Z",
+      "notes": "Producto encontrado en ubicación incorrecta, movido de zona C"
+    },
+    {
+      "id": 4,
+      "cycle_count_id": 3,
+      "product_variant_id": 4,
+      "expected_quantity": 32,
+      "counted_quantity": 31,
+      "difference": -1,
+      "location": "B01-P2-E2",
+      "counted_by_user_id": 2,
+      "counted_at": "2024-07-24T10:00:00Z",
+      "notes": "Falta una unidad, revisar últimas ventas"
+    },
+    {
+      "id": 5,
+      "cycle_count_id": 3,
+      "product_variant_id": 6,
+      "expected_quantity": 3,
+      "counted_quantity": 3,
+      "difference": 0,
+      "location": "A01-P3-E1",
+      "counted_by_user_id": 2,
+      "counted_at": "2024-07-24T10:30:00Z",
+      "notes": "Cantidad correcta"
+    },
+    {
+      "id": 6,
+      "cycle_count_id": 5,
+      "product_variant_id": 1,
+      "expected_quantity": 23,
+      "counted_quantity": 23,
+      "difference": 0,
+      "location": "A01-P1-E3",
+      "counted_by_user_id": 3,
+      "counted_at": "2024-07-26T08:15:00Z",
+      "notes": "Conteo correcto después del ajuste anterior"
+    }
+  ],
+
+  "adjustment_config": {
+    "auto_approval_enabled": false,
+    "max_amount_auto_approval": 0,
+    "requires_supervisor_all": true,
+    "evidence_required_for_reasons": [1, 2, 4, 7],
+    "notification_settings": {
+      "notify_on_create": true,
+      "notify_on_approve": true,
+      "notify_on_reject": true,
+      "email_supervisors": true
+    },
+    "cycle_count_settings": {
+      "auto_generate_adjustments": true,
+      "min_difference_threshold": 1,
+      "require_recount_for_major_diff": true,
+      "major_difference_threshold": 10
+    }
+  },
+
+  "adjustment_statistics": [
+    {
+      "period": "2024-07",
+      "total_adjustments": 12,
+      "total_items_adjusted": 28,
+      "approved_adjustments": 8,
+      "rejected_adjustments": 2,
+      "pending_adjustments": 2,
+      "by_reason": {
+        "DIFF_COUNT": 6,
+        "DAMAGED": 3,
+        "EXPIRED": 1,
+        "THEFT": 1,
+        "SYSTEM_ERROR": 1
+      },
+      "by_warehouse": {
+        "1": 8,
+        "2": 3,
+        "3": 1
+      },
+      "avg_approval_time_hours": 4.2,
+      "total_positive_adjustments": 15,
+      "total_negative_adjustments": 13
+    },
+    {
+      "period": "2024-06",
+      "total_adjustments": 15,
+      "total_items_adjusted": 35,
+      "approved_adjustments": 12,
+      "rejected_adjustments": 1,
+      "pending_adjustments": 2,
+      "by_reason": {
+        "DIFF_COUNT": 8,
+        "DAMAGED": 4,
+        "EXPIRED": 2,
+        "SHRINKAGE": 1
+      },
+      "by_warehouse": {
+        "1": 10,
+        "2": 4,
+        "3": 1
+      },
+      "avg_approval_time_hours": 3.8,
+      "total_positive_adjustments": 18,
+      "total_negative_adjustments": 17
+    }
+  ],
+
+  "approval_workflow": [
+    {
+      "adjustment_id": 1,
+      "step": 1,
+      "step_name": "Creación",
+      "user_id": 2,
+      "action": "CREATED",
+      "timestamp": "2024-07-24T08:30:00Z",
+      "comments": "Ajuste creado por diferencias en conteo físico"
+    },
+    {
+      "adjustment_id": 1,
+      "step": 2,
+      "step_name": "Envío a Aprobación",
+      "user_id": 2,
+      "action": "SUBMITTED",
+      "timestamp": "2024-07-24T08:45:00Z",
+      "comments": "Enviado para aprobación de supervisor"
+    },
+    {
+      "adjustment_id": 1,
+      "step": 3,
+      "step_name": "Aprobación",
+      "user_id": 1,
+      "action": "APPROVED",
+      "timestamp": "2024-07-24T10:15:00Z",
+      "comments": "Diferencias menores, aprobado para aplicar"
+    },
+    {
+      "adjustment_id": 1,
+      "step": 4,
+      "step_name": "Aplicado",
+      "user_id": 1,
+      "action": "APPLIED",
+      "timestamp": "2024-07-24T10:20:00Z",
+      "comments": "Ajuste aplicado exitosamente al inventario"
+    },
+    {
+      "adjustment_id": 2,
+      "step": 1,
+      "step_name": "Creación",
+      "user_id": 3,
+      "action": "CREATED",
+      "timestamp": "2024-07-23T14:20:00Z",
+      "comments": "Ajuste por productos dañados"
+    },
+    {
+      "adjustment_id": 2,
+      "step": 2,
+      "step_name": "Envío a Aprobación",
+      "user_id": 3,
+      "action": "SUBMITTED",
+      "timestamp": "2024-07-23T14:35:00Z",
+      "comments": "Enviado con evidencia fotográfica"
+    },
+    {
+      "adjustment_id": 3,
+      "step": 1,
+      "step_name": "Creación",
+      "user_id": 2,
+      "action": "CREATED",
+      "timestamp": "2024-07-22T11:45:00Z",
+      "comments": "Ajuste por merma en textiles"
+    },
+    {
+      "adjustment_id": 3,
+      "step": 2,
+      "step_name": "Envío a Aprobación",
+      "user_id": 2,
+      "action": "SUBMITTED",
+      "timestamp": "2024-07-22T12:00:00Z",
+      "comments": "Requiere aprobación por merma"
+    },
+    {
+      "adjustment_id": 3,
+      "step": 3,
+      "step_name": "Rechazo",
+      "user_id": 1,
+      "action": "REJECTED",
+      "timestamp": "2024-07-22T16:30:00Z",
+      "comments": "Falta más evidencia del daño. Solicitar inspección adicional."
+    }
+  ]
+}

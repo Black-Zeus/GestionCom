@@ -1,0 +1,889 @@
+/* ====================================
+           RESET Y CONFIGURACIÓN BASE
+        ==================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* === PALETA DE COLORES PROFESIONAL === */
+    --primary-50: #dbeafe;
+    --primary-100: #bfdbfe;
+    --primary-200: #93c5fd;
+    --primary-300: #60a5fa;
+    --primary-400: #3b82f6;
+    --primary-500: #2563eb;
+    --primary-600: #1d4ed8;
+    --primary-700: #1e40af;
+    --primary-800: #1e3a8a;
+    --primary-900: #1e3a8a;
+
+    --secondary-50: #f8fafc;
+    --secondary-100: #f1f5f9;
+    --secondary-200: #e2e8f0;
+    --secondary-300: #cbd5e1;
+    --secondary-400: #94a3b8;
+    --secondary-500: #64748b;
+    --secondary-600: #475569;
+    --secondary-700: #334155;
+    --secondary-800: #1e293b;
+    --secondary-900: #0f172a;
+
+    --success-500: #22c55e;
+    --success-600: #16a34a;
+    --warning-500: #f59e0b;
+    --danger-500: #ef4444;
+    --danger-600: #dc2626;
+
+    /* === DIMENSIONES === */
+    --header-height: 60px;
+    --footer-height: 40px;
+
+    /* === TRANSICIONES === */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Modo oscuro */
+body.dark-mode {
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --border-color: #334155;
+    --glass-bg: rgba(30, 41, 59, 0.3);
+    --glass-border: rgba(148, 163, 184, 0.2);
+
+    /* === COLORES ESPECÍFICOS PARA HEADER/FOOTER EN MODO OSCURO === */
+    --header-bg: rgba(15, 23, 42, 0.85);
+    --footer-bg: rgba(15, 23, 42, 0.85);
+    --header-border: rgba(148, 163, 184, 0.15);
+    --footer-border: rgba(148, 163, 184, 0.15);
+}
+
+/* Modo claro */
+body {
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --border-color: #e2e8f0;
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.18);
+
+    /* === COLORES ESPECÍFICOS PARA HEADER/FOOTER EN MODO CLARO === */
+    --header-bg: rgba(255, 255, 255, 0.9);
+    --footer-bg: rgba(255, 255, 255, 0.9);
+    --header-border: rgba(226, 232, 240, 0.8);
+    --footer-border: rgba(226, 232, 240, 0.8);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    overflow-x: hidden;
+    transition: var(--transition-smooth);
+
+    /* === IMAGEN DE FONDO WAREHOUSE/BODEGA === */
+    background-image:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(30, 41, 59, 0.2) 100%),
+        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Modo oscuro con overlay más fuerte */
+body.dark-mode {
+    background-image:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.9) 100%),
+        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+}
+
+/* ====================================
+           LAYOUT PRINCIPAL SIN SIDEBAR
+        ==================================== */
+.layout {
+    display: grid;
+    grid-template-areas:
+        "header"
+        "main"
+        "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr var(--footer-height);
+    min-height: 100vh;
+    width: 100%;
+    transition: var(--transition-smooth);
+}
+
+/* ====================================
+           HEADER MEJORADO - MEJOR LEGIBILIDAD
+        ==================================== */
+.header {
+    grid-area: header;
+    background: var(--header-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--header-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    transition: var(--transition-smooth);
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0.6;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.system-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .system-title {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.system-version {
+    background: var(--primary-100);
+    color: var(--primary-700);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+body.dark-mode .system-version {
+    background: var(--primary-900);
+    color: var(--primary-300);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+}
+
+.theme-toggle:hover {
+    background: var(--primary-500);
+    color: white;
+    transform: scale(1.05);
+    border-color: var(--primary-500);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .status-indicator {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-500);
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ====================================
+           MAIN - ÁREA DE RECUPERACIÓN CON GLASSMORPHISM
+        ==================================== */
+.main {
+    grid-area: main;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+/* Elementos geométricos flotantes */
+.main::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.main::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    right: -150px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-20px) rotate(180deg);
+    }
+}
+
+/* ====================================
+           GLASSMORPHISM FORGOT PASSWORD CARD
+        ==================================== */
+.forgot-container {
+    position: relative;
+    z-index: 10;
+    animation: slideInUp 0.8s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.forgot-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 24px;
+    padding: 50px 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        0 2px 8px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+body.dark-mode .forgot-card {
+    background: rgba(15, 23, 42, 0.95);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.forgot-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.25),
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+body.dark-mode .forgot-card:hover {
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.forgot-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.forgot-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+    animation: shimmer 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    50% {
+        transform: rotate(180deg);
+    }
+}
+
+.forgot-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 2;
+}
+
+.forgot-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    background: var(--primary-100);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--primary-600);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+body.dark-mode .forgot-icon {
+    background: var(--primary-900);
+    color: var(--primary-300);
+}
+
+.forgot-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.forgot-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    opacity: 0.8;
+    line-height: 1.5;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+/* ====================================
+           FORMULARIO CON EFECTOS GLASSMORPHISM
+        ==================================== */
+.forgot-form {
+    position: relative;
+    z-index: 2;
+}
+
+.form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    transition: var(--transition-smooth);
+}
+
+.form-input {
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: var(--transition-smooth);
+    outline: none;
+    position: relative;
+}
+
+body.dark-mode .form-input {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.form-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.form-input:focus {
+    border-color: var(--primary-500);
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.15),
+        0 2px 8px rgba(37, 99, 235, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+}
+
+body.dark-mode .form-input:focus {
+    background: rgba(30, 41, 59, 0.95);
+}
+
+/* ====================================
+           BOTÓN PRINCIPAL CON GLASSMORPHISM
+        ==================================== */
+.forgot-button {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+    box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    margin-bottom: 20px;
+}
+
+.forgot-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.forgot-button:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 6px 20px rgba(37, 99, 235, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.forgot-button:hover::before {
+    left: 100%;
+}
+
+.forgot-button:active {
+    transform: translateY(0);
+}
+
+/* Estado de carga */
+.forgot-button.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.forgot-button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ====================================
+           BOTÓN SECUNDARIO (VOLVER AL LOGIN)
+        ==================================== */
+.back-login {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    backdrop-filter: blur(5px);
+}
+
+.back-login:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--primary-500);
+    transform: translateY(-1px);
+}
+
+/* ====================================
+           MENSAJE DE ESTADO
+        ==================================== */
+.status-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    border: 1px solid;
+    display: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: var(--transition-smooth);
+}
+
+.status-message.show {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.status-message.success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: var(--success-500);
+    color: var(--success-600);
+}
+
+.status-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--danger-500);
+    color: var(--danger-600);
+}
+
+/* ====================================
+           FOOTER MEJORADO
+        ==================================== */
+.footer {
+    grid-area: footer;
+    background: var(--footer-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--footer-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    position: relative;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.footer::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    opacity: 0.6;
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    justify-content: flex-start;
+}
+
+.footer-center {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    justify-content: center;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-label {
+    color: var(--text-muted);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .footer-label {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.footer-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .footer-value {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.footer-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    opacity: 0.6;
+}
+
+/* ====================================
+           RESPONSIVE DESIGN
+        ==================================== */
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .header {
+        padding: 0 20px;
+        background: var(--header-bg);
+        backdrop-filter: blur(6px);
+    }
+
+    .footer {
+        padding: 0 20px;
+        font-size: 0.8rem;
+        background: var(--footer-bg);
+        backdrop-filter: blur(6px);
+        flex-direction: column;
+        height: auto;
+        min-height: var(--footer-height);
+        gap: 8px;
+    }
+
+    .footer-left,
+    .footer-center,
+    .footer-right {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .header-left {
+        gap: 15px;
+    }
+
+    .system-title {
+        font-size: 1rem;
+    }
+
+    .forgot-card {
+        margin: 20px;
+        padding: 40px 30px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(20px);
+    }
+
+    body.dark-mode .forgot-card {
+        background: rgba(15, 23, 42, 0.5);
+    }
+
+    .forgot-title {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 0 15px;
+        background: var(--header-bg);
+        backdrop-filter: blur(4px);
+    }
+
+    .forgot-card {
+        margin: 15px;
+        padding: 30px 20px;
+        background: rgba(255, 255, 255, 0.35);
+    }
+
+    body.dark-mode .forgot-card {
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .forgot-title {
+        font-size: 1.3rem;
+    }
+
+    .form-input {
+        padding: 14px 16px;
+    }
+
+    .forgot-button {
+        padding: 14px;
+    }
+
+    .footer {
+        padding: 0 15px;
+        background: var(--footer-bg);
+        backdrop-filter: blur(4px);
+    }
+
+    .footer-divider {
+        display: none;
+    }
+}
+
+/* ====================================
+           ANIMACIONES Y EFECTOS ADICIONALES
+        ==================================== */
+.form-group {
+    animation: fadeInUp 0.6s ease-out;
+    animation-fill-mode: both;
+}
+
+.form-group:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.forgot-button {
+    animation-delay: 0.2s;
+}
+
+.back-login {
+    animation-delay: 0.3s;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-input:focus+.form-label {
+    color: var(--primary-500);
+    transform: translateY(-2px);
+}
+
+/* ====================================
+           ACCESIBILIDAD
+        ==================================== */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.forgot-button:focus-visible,
+.form-input:focus-visible,
+.theme-toggle:focus-visible,
+.back-login:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}

@@ -1,0 +1,194 @@
+{
+  "ingreso_mercaderia_config": {
+    "document_prefix": "ING",
+    "current_number": 1247,
+    "auto_generate_document": true,
+    "require_justification": true,
+    "min_justification_length": 10,
+    "allow_decimal_quantities": true,
+    "default_warehouse_id": 1
+  },
+  "motivos_ingreso": [
+    {
+      "id": 1,
+      "codigo": "INV_INICIAL",
+      "nombre": "Inventario Inicial",
+      "descripcion": "Carga inicial de stock al sistema",
+      "requiere_aprobacion": false,
+      "es_activo": true
+    },
+    {
+      "id": 2,
+      "codigo": "CORRECCION",
+      "nombre": "Corrección de Inventario",
+      "descripcion": "Ajuste por diferencias encontradas en conteo",
+      "requiere_aprobacion": true,
+      "es_activo": true
+    },
+    {
+      "id": 3,
+      "codigo": "DEVOLUCION_CLIENTE",
+      "nombre": "Devolución de Cliente",
+      "descripcion": "Productos devueltos por clientes en buen estado",
+      "requiere_aprobacion": false,
+      "es_activo": true
+    },
+    {
+      "id": 4,
+      "codigo": "RECUPERACION",
+      "nombre": "Recuperación de Merma",
+      "descripcion": "Productos recuperados de merma o daño",
+      "requiere_aprobacion": true,
+      "es_activo": true
+    },
+    {
+      "id": 5,
+      "codigo": "TRANSFERENCIA_INTERNA",
+      "nombre": "Transferencia Interna",
+      "descripcion": "Traslado desde otra bodega o departamento",
+      "requiere_aprobacion": false,
+      "es_activo": true
+    },
+    {
+      "id": 6,
+      "codigo": "ENCONTRADO",
+      "nombre": "Producto Encontrado",
+      "descripcion": "Mercadería encontrada sin registro previo",
+      "requiere_aprobacion": true,
+      "es_activo": true
+    },
+    {
+      "id": 7,
+      "codigo": "REPARACION",
+      "nombre": "Producto Reparado",
+      "descripcion": "Item reparado y devuelto al inventario vendible",
+      "requiere_aprobacion": false,
+      "es_activo": true
+    },
+    {
+      "id": 8,
+      "codigo": "OTRO",
+      "nombre": "Otro Motivo",
+      "descripcion": "Motivo no categorizado - requiere descripción detallada",
+      "requiere_aprobacion": true,
+      "es_activo": true
+    }
+  ],
+  "ingresos_recientes": [
+    {
+      "id": 1,
+      "numero_documento": "ING-001246",
+      "fecha": "2024-07-25",
+      "hora": "14:30:25",
+      "bodega_id": 1,
+      "bodega_nombre": "Bodega Principal Santiago",
+      "usuario": "Juan Pérez",
+      "total_items": 3,
+      "total_cantidad": 25,
+      "motivo_principal": "Inventario Inicial",
+      "estado": "PROCESADO"
+    },
+    {
+      "id": 2,
+      "numero_documento": "ING-001245",
+      "fecha": "2024-07-25",
+      "hora": "11:15:40",
+      "bodega_id": 1,
+      "bodega_nombre": "Bodega Principal Santiago",
+      "usuario": "María González",
+      "total_items": 1,
+      "total_cantidad": 5,
+      "motivo_principal": "Devolución de Cliente",
+      "estado": "PROCESADO"
+    },
+    {
+      "id": 3,
+      "numero_documento": "ING-001244",
+      "fecha": "2024-07-24",
+      "hora": "16:45:12",
+      "bodega_id": 2,
+      "bodega_nombre": "Bodega Valparaíso",
+      "usuario": "Carlos Silva",
+      "total_items": 2,
+      "total_cantidad": 12,
+      "motivo_principal": "Corrección de Inventario",
+      "estado": "PROCESADO"
+    },
+    {
+      "id": 4,
+      "numero_documento": "ING-001243",
+      "fecha": "2024-07-24",
+      "hora": "09:20:33",
+      "bodega_id": 1,
+      "bodega_nombre": "Bodega Principal Santiago",
+      "usuario": "Ana Torres",
+      "total_items": 4,
+      "total_cantidad": 18,
+      "motivo_principal": "Transferencia Interna",
+      "estado": "PROCESADO"
+    },
+    {
+      "id": 5,
+      "numero_documento": "ING-001242",
+      "fecha": "2024-07-23",
+      "hora": "13:55:07",
+      "bodega_id": 3,
+      "bodega_nombre": "Bodega Concepción",
+      "usuario": "Pedro Morales",
+      "total_items": 1,
+      "total_cantidad": 8,
+      "motivo_principal": "Producto Encontrado",
+      "estado": "PROCESADO"
+    }
+  ],
+  "templates_justificacion": [
+    {
+      "motivo_id": 1,
+      "template": "Carga inicial de inventario según conteo físico realizado el {fecha}. Responsable: {usuario}."
+    },
+    {
+      "motivo_id": 2,
+      "template": "Corrección por diferencia detectada en inventario. Diferencia: +{cantidad} unidades. Conteo verificado por {usuario}."
+    },
+    {
+      "motivo_id": 3,
+      "template": "Devolución de cliente procesada. Cliente: {cliente}. Motivo devolución: {motivo_devolucion}. Estado producto: Bueno."
+    },
+    {
+      "motivo_id": 4,
+      "template": "Recuperación de producto desde área de merma. Estado verificado: Apto para venta. Verificado por {usuario}."
+    },
+    {
+      "motivo_id": 5,
+      "template": "Transferencia interna desde {bodega_origen}. Documento transferencia: {documento}. Recibido por {usuario}."
+    },
+    {
+      "motivo_id": 6,
+      "template": "Producto encontrado durante reorganización de bodega. Ubicación: {ubicacion}. Sin registro previo de salida."
+    },
+    {
+      "motivo_id": 7,
+      "template": "Producto reparado por servicio técnico. Orden reparación: {orden}. Estado: Funcional para venta."
+    },
+    {
+      "motivo_id": 8,
+      "template": "Ingreso por motivo especial. Descripción detallada: {descripcion_detallada}."
+    }
+  ],
+  "validaciones": {
+    "cantidad_minima": 0.01,
+    "cantidad_maxima": 99999.99,
+    "justificacion_min_chars": 10,
+    "justificacion_max_chars": 500,
+    "productos_max_por_ingreso": 50,
+    "requiere_supervisor_cantidad_mayor_a": 1000
+  },
+  "configuracion_campos": {
+    "mostrar_costo_unitario": false,
+    "permitir_lotes": true,
+    "permitir_vencimientos": true,
+    "permitir_numeros_serie": true,
+    "generar_codigo_barras": false,
+    "notificar_stock_critico": true
+  }
+}
