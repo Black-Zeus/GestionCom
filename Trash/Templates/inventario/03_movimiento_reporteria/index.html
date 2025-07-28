@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Movimientos de Inventario - Sistema de Reportería</title>
+    <meta name="description" content="Reportería completa de movimientos de inventario con análisis temporal y filtros avanzados">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📦%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📦 Movimientos de Inventario</h1>
+            <div class="user-info">
+                <div><strong>Módulo:</strong> Inventario - Reportería de Movimientos</div>
+                <div id="current-date-time"></div>
+            </div>
+        </div>
+
+        <!-- Panel de Filtros Avanzados -->
+        <div class="filters-panel">
+            <h3>🔍 Filtros de Consulta</h3>
+            
+            <!-- Filtros principales: fechas y tipo -->
+            <div class="filters-main-grid">
+                <div class="filter-group">
+                    <label for="date-range">Rango de Fechas</label>
+                    <div class="date-range-group">
+                        <input 
+                            type="date" 
+                            id="date-from" 
+                            class="date-input" 
+                            title="Fecha de inicio"
+                        >
+                        <input 
+                            type="date" 
+                            id="date-to" 
+                            class="date-input" 
+                            title="Fecha de fin"
+                        >
+                    </div>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="movement-type-filter">Tipo de Movimiento</label>
+                    <select id="movement-type-filter" class="filter-select">
+                        <option value="">Todos los tipos</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="warehouse-filter">Bodega</label>
+                    <select id="warehouse-filter" class="filter-select">
+                        <option value="">Todas las bodegas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="user-filter">Usuario</label>
+                    <select id="user-filter" class="filter-select">
+                        <option value="">Todos los usuarios</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Filtros secundarios -->
+            <div class="filters-secondary-grid">
+                <div class="filter-group" style="grid-column: 1 / -1;">
+                    <label for="search-input">Búsqueda General</label>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        class="filter-input" 
+                        placeholder="Buscar por producto, SKU, documento, lote, serie, observaciones..."
+                    >
+                </div>
+            </div>
+            
+            <div class="filters-actions">
+                <button id="clear-filters-btn" class="clear-filters-btn">
+                    🗑️ Limpiar Filtros
+                </button>
+                <button id="apply-filters-btn" class="apply-filters-btn">
+                    🔍 Aplicar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Cards de Resumen del Período -->
+        <div class="period-summary" id="period-summary">
+            <!-- Los cards se cargan dinámicamente -->
+        </div>
+
+        <!-- Gráfico de Tendencias -->
+        <div class="trends-chart" id="trends-chart">
+            <!-- El gráfico se carga dinámicamente -->
+        </div>
+
+        <!-- Timeline de Movimientos -->
+        <div class="movements-timeline-container">
+            <!-- Header del Timeline -->
+            <div class="timeline-header">
+                <h3 class="timeline-title">
+                    📊 Timeline de Movimientos
+                </h3>
+                <div class="timeline-actions">
+                    <button id="export-btn" class="timeline-btn" title="Exportar movimientos">
+                        📊 Exportar CSV
+                    </button>
+                    <button id="refresh-btn" class="timeline-btn" title="Actualizar datos">
+                        🔄 Actualizar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Información del Timeline -->
+            <div class="timeline-info">
+                <div class="movements-count" id="movements-count">
+                    Cargando movimientos...
+                </div>
+                <div class="period-range" id="period-range">
+                    Período: --
+                </div>
+            </div>
+            
+            <!-- Contenido del Timeline -->
+            <div class="timeline-content" id="timeline-content">
+                <!-- Los movimientos se cargan dinámicamente -->
+            </div>
+            
+            <!-- Paginación del Timeline -->
+            <div class="timeline-pagination">
+                <div class="pagination-info" id="pagination-info">
+                    Mostrando días 0-0 de 0 días
+                </div>
+                <div class="pagination-controls" id="pagination-controls">
+                    <!-- Los controles se cargan dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>📦 Movimientos de Inventario v1.0</strong> - 
+                Sistema de reportería y análisis de movimientos históricos
+            </div>
+            <div>
+                📊 Timeline cronológico | 
+                🔍 Filtros avanzados | 
+                📈 Análisis de tendencias | 
+                📤 Exportación completa |
+                📱 Interfaz optimizada
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8em;">
+                <strong>Tipos de movimiento:</strong>
+                📥 Entradas | 📤 Salidas | 🔄 Transferencias | ⚖️ Ajustes
+            </div>
+            <div style="margin-top: 5px; font-size: 0.8em;">
+                <strong>Atajos de teclado:</strong> 
+                Ctrl+F (Buscar) | F5 (Actualizar) | Ctrl+E (Exportar) | Escape (Limpiar filtros)
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    
+    <!-- Script para mostrar fecha/hora actual -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElement = document.getElementById('current-date-time');
+            if (dateTimeElement) {
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                dateTimeElement.textContent = now.toLocaleDateString('es-CL', options);
+            }
+        }
+        
+        // Actualizar fecha/hora cada segundo
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Ejecutar inmediatamente
+    </script>
+
+    <!-- Configuraciones adicionales -->
+    <script>
+        // Logging para análisis de uso
+        console.log('📦 Movimientos de Inventario iniciados:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            },
+            connection: navigator.connection ? {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink
+            } : 'unknown'
+        });
+
+        // Detectar modo de visualización
+        if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+            console.log('📱 Modo móvil detectado - Timeline adaptado');
+        } else {
+            console.log('🖥️ Modo escritorio detectado - Timeline completo');
+        }
+
+        // Manejo de errores globales específico para este módulo
+        window.addEventListener('error', (e) => {
+            console.error('❌ Error en Movimientos de Inventario:', e.error);
+            
+            if (typeof showError === 'function') {
+                showError('Ha ocurrido un error. Recarga la página si persiste.');
+            }
+        });
+
+        // Optimización de rendimiento para timeline largo
+        if (typeof IntersectionObserver !== 'undefined') {
+            const timelineObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-up');
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            });
+
+            // Observar elementos del timeline cuando se carguen
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    const movementItems = document.querySelectorAll('.movement-item');
+                    movementItems.forEach(item => {
+                        timelineObserver.observe(item);
+                    });
+                }, 2000);
+            });
+        }
+
+        // Configuración de autosave para filtros de fecha
+        function saveFiltersState() {
+            if (typeof MovementsApp !== 'undefined' && MovementsApp.filters) {
+                try {
+                    const filtersToSave = {
+                        dateFrom: MovementsApp.filters.dateFrom,
+                        dateTo: MovementsApp.filters.dateTo,
+                        movementType: MovementsApp.filters.movementType,
+                        warehouse: MovementsApp.filters.warehouse
+                    };
+                    localStorage.setItem('movements_filters', JSON.stringify(filtersToSave));
+                } catch (e) {
+                    console.warn('No se pudieron guardar los filtros:', e);
+                }
+            }
+        }
+
+        function loadFiltersState() {
+            try {
+                const savedFilters = localStorage.getItem('movements_filters');
+                if (savedFilters) {
+                    const filters = JSON.parse(savedFilters);
+                    
+                    // Aplicar solo filtros válidos (no muy antiguos)
+                    const oneMonthAgo = new Date();
+                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                    
+                    if (filters.dateFrom && new Date(filters.dateFrom) > oneMonthAgo) {
+                        Object.keys(filters).forEach(key => {
+                            const element = document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase() + '-filter') || 
+                                          document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase());
+                            if (element && filters[key]) {
+                                element.value = filters[key];
+                            }
+                        });
+                        
+                        console.log('🔍 Filtros de movimientos restaurados');
+                    }
+                }
+            } catch (e) {
+                console.warn('No se pudieron restaurar los filtros:', e);
+            }
+        }
+
+        // Configurar shortcuts de teclado específicos
+        document.addEventListener('keydown', (e) => {
+            // Alt + D para saltar al filtro de fecha
+            if (e.altKey && e.key === 'd') {
+                e.preventDefault();
+                const dateFrom = document.getElementById('date-from');
+                if (dateFrom) dateFrom.focus();
+            }
+            
+            // Alt + T para saltar al filtro de tipo
+            if (e.altKey && e.key === 't') {
+                e.preventDefault();
+                const typeFilter = document.getElementById('movement-type-filter');
+                if (typeFilter) typeFilter.focus();
+            }
+            
+            // Alt + W para saltar al filtro de bodega
+            if (e.altKey && e.key === 'w') {
+                e.preventDefault();
+                const warehouseFilter = document.getElementById('warehouse-filter');
+                if (warehouseFilter) warehouseFilter.focus();
+            }
+        });
+
+        // Configurar auto-actualización periódica (opcional)
+        let autoRefreshInterval;
+        
+        function startAutoRefresh() {
+            // Auto-actualizar cada 5 minutos
+            autoRefreshInterval = setInterval(() => {
+                if (typeof refreshMovements === 'function') {
+                    console.log('🔄 Auto-actualización de movimientos');
+                    refreshMovements();
+                }
+            }, 5 * 60 * 1000);
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // Configurar modo offline
+        window.addEventListener('online', () => {
+            console.log('🌐 Conexión restaurada - reanudando auto-actualización');
+            if (typeof showSuccess === 'function') {
+                showSuccess('Conexión restaurada. Actualizando movimientos...');
+            }
+            if (typeof refreshMovements === 'function') {
+                refreshMovements();
+            }
+            startAutoRefresh();
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📴 Sin conexión - pausando auto-actualización');
+            if (typeof showError === 'function') {
+                showError('Sin conexión. Los datos pueden no estar actualizados.');
+            }
+            stopAutoRefresh();
+        });
+
+        // Configurar auto-save en cambios de filtros
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                // Restaurar filtros guardados
+                loadFiltersState();
+                
+                // Iniciar auto-actualización
+                startAutoRefresh();
+                
+                // Guardar cuando cambien los filtros principales
+                const filterElements = [
+                    'date-from',
+                    'date-to',
+                    'movement-type-filter',
+                    'warehouse-filter'
+                ];
+                
+                filterElements.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.addEventListener('change', saveFiltersState);
+                    }
+                });
+            }, 2000);
+        });
+
+        // Configurar scroll suave para navegación del timeline
+        function smoothScrollToTimeline() {
+            const timeline = document.getElementById('timeline-content');
+            if (timeline) {
+                timeline.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        }
+
+        // Configurar detección de cambios en el timeline para UX
+        let lastTimelineHeight = 0;
+        
+        function checkTimelineChanges() {
+            const timeline = document.getElementById('timeline-content');
+            if (timeline) {
+                const currentHeight = timeline.scrollHeight;
+                if (currentHeight !== lastTimelineHeight && lastTimelineHeight > 0) {
+                    // El timeline cambió, hacer scroll suave
+                    smoothScrollToTimeline();
+                }
+                lastTimelineHeight = currentHeight;
+            }
+        }
+
+        // Verificar cambios cada 2 segundos
+        setInterval(checkTimelineChanges, 2000);
+
+        // Limpieza al salir de la página
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+            saveFiltersState();
+            console.log('🧹 Limpieza de Movimientos de Inventario completada');
+        });
+
+        // Configurar visibilidad de página para pausar/reanudar auto-refresh
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📦 Página oculta - pausando auto-actualización');
+                stopAutoRefresh();
+            } else {
+                console.log('📦 Página visible - reanudando auto-actualización');
+                if (navigator.onLine) {
+                    startAutoRefresh();
+                    // Actualizar inmediatamente al volver a ser visible
+                    if (typeof refreshMovements === 'function') {
+                        refreshMovements();
+                    }
+                }
+            }
+        });
+    </script>
+
+    <!-- Meta tags adicionales para SEO -->
+    <meta name="theme-color" content="#28a745">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Movimientos Inventario">
+    
+    <!-- Configuración de CSP básica -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;">
+</body>
+</html>

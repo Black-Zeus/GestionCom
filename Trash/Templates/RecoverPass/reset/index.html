@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Inventario - Cambio de Contraseña">
+    <title>Sistema de Inventario - Cambiar Contraseña</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="layout">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="system-title">Sistema de Inventario</h1>
+                <span class="system-version">v2.1.0</span>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Sistema Activo</span>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Alternar modo oscuro">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <!-- Main: Área de cambio de contraseña -->
+        <main class="main">
+            <div class="reset-container">
+                <div class="reset-card">
+                    <div class="reset-header">
+   <h2 class="reset-title">Cambiar Contraseña</h2>
+   <div style="display: flex; align-items: center; gap: 16px; margin-top: 16px;">
+       <div class="reset-icon" >
+           🔑
+       </div>
+       <div class="reset-subtitle">
+           Ingresa el código de 8 dígitos que enviamos a tu correo y define tu nueva contraseña
+       </div>
+   </div>
+</div>
+
+                    <!-- Mensaje de estado -->
+                    <div class="status-message" id="statusMessage">
+                        <!-- Mensaje dinámico se mostrará aquí -->
+                    </div>
+
+                    <form class="reset-form" id="resetForm">
+                        <!-- Código de verificación -->
+                        <div class="form-section">
+                            <label class="code-label">Código de 8 dígitos</label>
+                            <div class="code-inputs" id="codeInputs">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                                <input type="text" class="code-input" maxlength="1" inputmode="numeric" pattern="[0-9]"
+                                    autocomplete="off">
+                            </div>
+                        </div>
+
+                        <!-- Nueva contraseña -->
+                        <div class="form-section">
+                            <div class="form-group">
+                                <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="newPassword" name="newPassword" class="form-input"
+                                        placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+                                    <button type="button" class="toggle-password" data-target="newPassword">👁️</button>
+                                </div>
+                                <div class="password-strength" id="passwordStrength">
+                                    <div class="strength-bar">
+                                        <div class="strength-fill" id="strengthFill"></div>
+                                    </div>
+                                    <div class="strength-text" id="strengthText">Ingresa tu contraseña</div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <div class="password-wrapper">
+                                    <input type="password" id="confirmPassword" name="confirmPassword"
+                                        class="form-input" placeholder="Repite la contraseña" required
+                                        autocomplete="new-password">
+                                    <button type="button" class="toggle-password"
+                                        data-target="confirmPassword">👁️</button>
+                                </div>
+                                <small id="confirmHelp" class="field-help">Las contraseñas deben coincidir</small>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="reset-button" id="resetButton" disabled>
+                            <span class="button-text">Cambiar Contraseña</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-left">
+                <div class="footer-info">
+                    <span class="footer-label">Módulos:</span>
+                    <span class="footer-value">Inventario + POS</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Licencia:</span>
+                    <span class="footer-value">Empresarial</span>
+                </div>
+            </div>
+
+            <div class="footer-center">
+                <div class="footer-info">
+                    <span class="footer-label">Entorno:</span>
+                    <span class="footer-value">Producción</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Idioma:</span>
+                    <span class="footer-value">Español</span>
+                </div>
+            </div>
+
+            <div class="footer-right">
+                <div class="footer-info">
+                    <span class="footer-label">Soporte:</span>
+                    <span class="footer-value">soporte@empresa.com</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Última actualización:</span>
+                    <span class="footer-value">Enero 2025</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

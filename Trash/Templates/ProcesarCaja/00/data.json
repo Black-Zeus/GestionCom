@@ -1,0 +1,659 @@
+{
+  "pending_sales": [
+    {
+      "folio": "PV240001",
+      "customer": {
+        "rut": "12345678-9",
+        "name": "Juan Pérez González",
+        "type": "INDIVIDUAL",
+        "email": "juan.perez@email.com",
+        "phone": "+56912345678",
+        "is_credit_customer": false
+      },
+      "buyer": null,
+      "items": [
+        {
+          "code": "PROD001",
+          "name": "Notebook HP Pavilion 15\"",
+          "brand": "HP",
+          "category": "Computadores",
+          "quantity": 1,
+          "unit_price": 699990,
+          "discount_percentage": 5,
+          "line_total": 664990.5
+        },
+        {
+          "code": "PROD002",
+          "name": "Mouse Logitech MX Master 3",
+          "brand": "Logitech",
+          "category": "Accesorios",
+          "quantity": 2,
+          "unit_price": 89990,
+          "discount_percentage": 0,
+          "line_total": 179980
+        }
+      ],
+      "totals": {
+        "total_items": 3,
+        "subtotal": 879970,
+        "line_discounts": 34999.5,
+        "document_discount": 0,
+        "net_amount": 844970.5,
+        "tax_amount": 160584.4,
+        "total_amount": 1005554.9
+      },
+      "sale_info": {
+        "date": "2025-07-24",
+        "time": "14:30:00",
+        "seller_name": "María González",
+        "seller_id": "USR002",
+        "warehouse": "Centro",
+        "terminal": "TERM001"
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente",
+        "description": "Preparada para facturar"
+      },
+      "timestamps": {
+        "created_at": "2025-07-24T14:30:00Z",
+        "prepared_at": "2025-07-24T14:32:15Z",
+        "expires_at": "2025-07-25T14:30:00Z"
+      },
+      "document_discount_percentage": 0,
+      "priority": "NORMAL",
+      "notes": "Cliente solicita boleta",
+      "credit_sale": false
+    },
+    {
+      "folio": "PV240002",
+      "customer": {
+        "rut": "76543210-K",
+        "name": "Tecnología Avanzada SpA",
+        "type": "COMPANY",
+        "email": "contacto@technoadvance.cl",
+        "phone": "+56987654321",
+        "is_credit_customer": true
+      },
+      "buyer": {
+        "id": 1,
+        "name": "Carlos Mendoza Rivera",
+        "rut": "15555555-5",
+        "position": "Gerente General",
+        "email": "carlos.mendoza@technoadvance.cl",
+        "authorization_level": "FULL"
+      },
+      "items": [
+        {
+          "code": "PROD004",
+          "name": "Monitor Samsung 27\" 4K",
+          "brand": "Samsung",
+          "category": "Monitores",
+          "quantity": 2,
+          "unit_price": 429990,
+          "discount_percentage": 0,
+          "line_total": 859980
+        },
+        {
+          "code": "PROD005",
+          "name": "Auriculares Sony WH-1000XM4",
+          "brand": "Sony",
+          "category": "Audio",
+          "quantity": 1,
+          "unit_price": 289990,
+          "discount_percentage": 10,
+          "line_total": 260991
+        }
+      ],
+      "totals": {
+        "total_items": 3,
+        "subtotal": 1149970,
+        "line_discounts": 28999,
+        "document_discount": 0,
+        "net_amount": 1120971,
+        "tax_amount": 212984.49,
+        "total_amount": 1333955.49
+      },
+      "sale_info": {
+        "date": "2025-07-24",
+        "time": "15:45:00",
+        "seller_name": "Roberto Silva",
+        "seller_id": "USR003",
+        "warehouse": "Centro",
+        "terminal": "TERM002"
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente",
+        "description": "Preparada para facturar"
+      },
+      "timestamps": {
+        "created_at": "2025-07-24T15:45:00Z",
+        "prepared_at": "2025-07-24T15:47:22Z",
+        "expires_at": "2025-07-25T15:45:00Z"
+      },
+      "document_discount_percentage": 0,
+      "priority": "HIGH",
+      "notes": "Cliente empresarial - Requiere factura",
+      "credit_sale": false
+    },
+    {
+      "folio": "PV240003",
+      "customer": {
+        "rut": "87654321-0",
+        "name": "Constructora del Sur Limitada",
+        "type": "COMPANY",
+        "email": "info@consur.cl",
+        "phone": "+56922334455",
+        "is_credit_customer": true
+      },
+      "buyer": {
+        "id": 4,
+        "name": "Roberto Silva Peña",
+        "rut": "18888888-8",
+        "position": "Gerente de Obras",
+        "email": "roberto.silva@consur.cl",
+        "authorization_level": "FULL"
+      },
+      "items": [
+        {
+          "code": "LAP001",
+          "name": "Notebook ASUS ROG Strix G15",
+          "brand": "ASUS",
+          "category": "Computadores",
+          "quantity": 1,
+          "unit_price": 1299990,
+          "discount_percentage": 3,
+          "line_total": 1260990.3
+        },
+        {
+          "code": "PROD003",
+          "name": "Teclado Mecánico Corsair K95",
+          "brand": "Corsair",
+          "category": "Accesorios",
+          "quantity": 1,
+          "unit_price": 159990,
+          "discount_percentage": 0,
+          "line_total": 159990
+        },
+        {
+          "code": "MSE001",
+          "name": "Mouse Gamer Razer DeathAdder V3",
+          "brand": "Razer",
+          "category": "Gaming",
+          "quantity": 1,
+          "unit_price": 75990,
+          "discount_percentage": 0,
+          "line_total": 75990
+        }
+      ],
+      "totals": {
+        "total_items": 3,
+        "subtotal": 1535970,
+        "line_discounts": 38999.7,
+        "document_discount": 74898.515,
+        "net_amount": 1422071.785,
+        "tax_amount": 270193.639,
+        "total_amount": 1692265.424
+      },
+      "sale_info": {
+        "date": "2025-07-24",
+        "time": "16:20:00",
+        "seller_name": "Ana López",
+        "seller_id": "USR004",
+        "warehouse": "Centro",
+        "terminal": "TERM001"
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente",
+        "description": "Preparada para facturar"
+      },
+      "timestamps": {
+        "created_at": "2025-07-24T16:20:00Z",
+        "prepared_at": "2025-07-24T16:25:30Z",
+        "expires_at": "2025-07-25T16:20:00Z"
+      },
+      "document_discount_percentage": 5,
+      "priority": "HIGH",
+      "notes": "Venta corporativa con descuento especial",
+      "credit_sale": true,
+      "credit_terms_days": 30
+    },
+    {
+      "folio": "PV240004",
+      "customer": {
+        "rut": "22222222-2",
+        "name": "Ana Patricia Rojas",
+        "type": "INDIVIDUAL",
+        "email": "ana.rojas@email.com",
+        "phone": "+56955667788",
+        "is_credit_customer": false
+      },
+      "buyer": null,
+      "items": [
+        {
+          "code": "TAB001",
+          "name": "Tablet Samsung Galaxy Tab S8",
+          "brand": "Samsung",
+          "category": "Computadores",
+          "quantity": 1,
+          "unit_price": 449990,
+          "discount_percentage": 0,
+          "line_total": 449990
+        },
+        {
+          "code": "PWR001",
+          "name": "Power Bank Anker 20000mAh",
+          "brand": "Anker",
+          "category": "Accesorios",
+          "quantity": 2,
+          "unit_price": 39990,
+          "discount_percentage": 0,
+          "line_total": 79980
+        }
+      ],
+      "totals": {
+        "total_items": 3,
+        "subtotal": 529970,
+        "line_discounts": 0,
+        "document_discount": 0,
+        "net_amount": 529970,
+        "tax_amount": 100694.3,
+        "total_amount": 630664.3
+      },
+      "sale_info": {
+        "date": "2025-07-24",
+        "time": "17:15:00",
+        "seller_name": "Carlos Mendoza",
+        "seller_id": "USR005",
+        "warehouse": "Centro",
+        "terminal": "TERM003"
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente",
+        "description": "Preparada para facturar"
+      },
+      "timestamps": {
+        "created_at": "2025-07-24T17:15:00Z",
+        "prepared_at": "2025-07-24T17:17:45Z",
+        "expires_at": "2025-07-25T17:15:00Z"
+      },
+      "document_discount_percentage": 0,
+      "priority": "NORMAL",
+      "notes": null,
+      "credit_sale": false
+    },
+    {
+      "folio": "PV240005",
+      "customer": {
+        "rut": "95432100-7",
+        "name": "Importadora Digital Chile S.A.",
+        "type": "COMPANY",
+        "email": "ventas@digichile.cl",
+        "phone": "+56233998877",
+        "is_credit_customer": true
+      },
+      "buyer": {
+        "id": 8,
+        "name": "Fernando Castro López",
+        "rut": "23333333-3",
+        "position": "Gerente Comercial",
+        "email": "fernando.castro@digichile.cl",
+        "authorization_level": "FULL"
+      },
+      "items": [
+        {
+          "code": "PRIN001",
+          "name": "Impresora HP LaserJet Pro M404n",
+          "brand": "HP",
+          "category": "Impresoras",
+          "quantity": 2,
+          "unit_price": 179990,
+          "discount_percentage": 0,
+          "line_total": 359980
+        },
+        {
+          "code": "SSD001",
+          "name": "SSD Samsung 980 PRO 1TB",
+          "brand": "Samsung",
+          "category": "Almacenamiento",
+          "quantity": 3,
+          "unit_price": 149990,
+          "discount_percentage": 5,
+          "line_total": 427471.5
+        },
+        {
+          "code": "RAM001",
+          "name": "Memoria RAM Corsair 16GB DDR4",
+          "brand": "Corsair",
+          "category": "Componentes",
+          "quantity": 4,
+          "unit_price": 89990,
+          "discount_percentage": 0,
+          "line_total": 359960
+        }
+      ],
+      "totals": {
+        "total_items": 9,
+        "subtotal": 1169950,
+        "line_discounts": 22498.5,
+        "document_discount": 57362.375,
+        "net_amount": 1090089.125,
+        "tax_amount": 207116.934,
+        "total_amount": 1297206.059
+      },
+      "sale_info": {
+        "date": "2025-07-23",
+        "time": "09:30:00",
+        "seller_name": "Patricia Sánchez",
+        "seller_id": "USR006",
+        "warehouse": "Centro",
+        "terminal": "TERM002"
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente",
+        "description": "Venta de ayer pendiente"
+      },
+      "timestamps": {
+        "created_at": "2025-07-23T09:30:00Z",
+        "prepared_at": "2025-07-23T09:35:12Z",
+        "expires_at": "2025-07-24T09:30:00Z"
+      },
+      "document_discount_percentage": 5,
+      "priority": "URGENT",
+      "notes": "Venta de ayer - Procesar prioritariamente",
+      "credit_sale": true,
+      "credit_terms_days": 15
+    }
+  ],
+  "payment_methods": [
+    {
+      "code": "CASH",
+      "name": "Efectivo",
+      "type": "CASH",
+      "icon": "💵",
+      "requires_details": true,
+      "details_type": "cash",
+      "allows_change": true,
+      "requires_authorization": false,
+      "affects_cash_flow": true,
+      "is_active": true
+    },
+    {
+      "code": "DEBIT",
+      "name": "Tarjeta de Débito",
+      "type": "CARD",
+      "icon": "💳",
+      "requires_details": true,
+      "details_type": "card",
+      "allows_change": false,
+      "requires_authorization": false,
+      "affects_cash_flow": true,
+      "is_active": true
+    },
+    {
+      "code": "CREDIT",
+      "name": "Tarjeta de Crédito",
+      "type": "CARD",
+      "icon": "💳",
+      "requires_details": true,
+      "details_type": "card",
+      "allows_change": false,
+      "requires_authorization": false,
+      "affects_cash_flow": true,
+      "is_active": true
+    },
+    {
+      "code": "TRANSFER",
+      "name": "Transferencia Bancaria",
+      "type": "TRANSFER",
+      "icon": "🏦",
+      "requires_details": true,
+      "details_type": "transfer",
+      "allows_change": false,
+      "requires_authorization": false,
+      "affects_cash_flow": true,
+      "is_active": true
+    },
+    {
+      "code": "CREDIT_ACCOUNT",
+      "name": "Cuenta Corriente",
+      "type": "CREDIT",
+      "icon": "📋",
+      "requires_details": false,
+      "details_type": null,
+      "allows_change": false,
+      "requires_authorization": true,
+      "affects_cash_flow": false,
+      "is_active": true,
+      "default_terms_days": 30
+    },
+    {
+      "code": "CHECK",
+      "name": "Cheque",
+      "type": "CHECK",
+      "icon": "📝",
+      "requires_details": true,
+      "details_type": "check",
+      "allows_change": false,
+      "requires_authorization": true,
+      "affects_cash_flow": false,
+      "is_active": true,
+      "allows_postdated": true
+    }
+  ],
+  "document_types": [
+    {
+      "code": "BOLETA",
+      "name": "Boleta",
+      "description": "Para consumidor final",
+      "icon": "🧾",
+      "dte_code": "39",
+      "requires_rut": false,
+      "max_amount": null,
+      "is_active": true,
+      "default_for_individual": true
+    },
+    {
+      "code": "FACTURA",
+      "name": "Factura",
+      "description": "Para empresas",
+      "icon": "📄",
+      "dte_code": "33",
+      "requires_rut": true,
+      "max_amount": null,
+      "is_active": true,
+      "default_for_company": true
+    },
+    {
+      "code": "NOTA_CREDITO",
+      "name": "Nota de Crédito",
+      "description": "Para devoluciones",
+      "icon": "📝",
+      "dte_code": "61",
+      "requires_rut": true,
+      "max_amount": null,
+      "is_active": true,
+      "default_for_individual": false,
+      "default_for_company": false
+    }
+  ],
+  "cash_register_session": {
+    "session_id": "SES240724001",
+    "session_code": "CAJA01-20250724",
+    "cashier": {
+      "user_id": "USR001",
+      "name": "Ana López Torres",
+      "rut": "16666666-6"
+    },
+    "cash_register": {
+      "id": "REG001",
+      "code": "CAJA01",
+      "name": "Caja Principal",
+      "location": "Centro - Planta Baja"
+    },
+    "session_status": {
+      "code": "ACTIVE",
+      "name": "Activa",
+      "description": "Sesión en funcionamiento"
+    },
+    "opening_info": {
+      "opening_datetime": "2025-07-24T08:00:00Z",
+      "opening_amount": 50000,
+      "opening_notes": "Apertura normal de caja",
+      "supervisor_approval": "SUP001"
+    },
+    "current_totals": {
+      "sales_count": 12,
+      "sales_total": 4567890,
+      "cash_received": 1234567,
+      "card_received": 2345678,
+      "transfer_received": 987645,
+      "theoretical_cash": 1284567,
+      "last_count_datetime": "2025-07-24T14:00:00Z"
+    },
+    "permissions": {
+      "can_process_sales": true,
+      "can_process_returns": true,
+      "can_void_transactions": false,
+      "can_apply_discounts": true,
+      "max_discount_percentage": 10,
+      "requires_supervisor_for_large_amounts": true,
+      "large_amount_threshold": 1000000
+    }
+  },
+  "system_config": {
+    "company": {
+      "name": "TechStore Chile Ltda.",
+      "rut": "96543210-1",
+      "address": "Av. Providencia 1234, Santiago",
+      "phone": "+56223456789",
+      "email": "ventas@techstore.cl",
+      "website": "www.techstore.cl"
+    },
+    "tax_settings": {
+      "iva_rate": 0.19,
+      "currency": "CLP",
+      "currency_symbol": "$",
+      "decimal_places": 0
+    },
+    "cashier_settings": {
+      "auto_refresh_pending": true,
+      "refresh_interval_seconds": 30,
+      "show_expired_sales": false,
+      "require_customer_signature": false,
+      "print_receipt_automatically": true,
+      "allow_partial_payments": false,
+      "require_payment_authorization": false,
+      "session_timeout_minutes": 480
+    },
+    "document_settings": {
+      "default_document_type": "BOLETA",
+      "auto_select_document_type": true,
+      "require_customer_email": false,
+      "print_customer_copy": true,
+      "print_store_copy": true,
+      "electronic_invoice_enabled": true
+    }
+  },
+  "statistics": {
+    "today": {
+      "date": "2025-07-24",
+      "pending_sales": 5,
+      "processed_sales": 12,
+      "total_pending_amount": 4957645.0,
+      "total_processed_amount": 4567890,
+      "average_sale_amount": 380657.5,
+      "largest_sale_amount": 1692265.424,
+      "smallest_sale_amount": 45000,
+      "peak_hour": "15:00-16:00",
+      "busiest_seller": "María González"
+    },
+    "yesterday": {
+      "date": "2025-07-23",
+      "processed_sales": 18,
+      "total_processed_amount": 6789012,
+      "average_sale_amount": 377167.33
+    },
+    "current_week": {
+      "week_start": "2025-07-21",
+      "total_sales": 67,
+      "total_amount": 25434567,
+      "daily_average": 5086913.4
+    }
+  },
+  "alerts": [
+    {
+      "id": "ALT001",
+      "type": "WARNING",
+      "title": "Venta próxima a expirar",
+      "message": "La venta PV240005 expira en 2 horas",
+      "folio": "PV240005",
+      "priority": "HIGH",
+      "created_at": "2025-07-24T16:30:00Z",
+      "is_read": false
+    },
+    {
+      "id": "ALT002",
+      "type": "INFO",
+      "title": "Sesión de caja activa",
+      "message": "Sesión iniciada hace 10 horas",
+      "priority": "LOW",
+      "created_at": "2025-07-24T18:00:00Z",
+      "is_read": true
+    }
+  ],
+  "quick_actions": [
+    {
+      "code": "REFRESH_PENDING",
+      "name": "Actualizar Lista",
+      "icon": "🔄",
+      "description": "Actualizar ventas pendientes",
+      "shortcut": "F5"
+    },
+    {
+      "code": "SEARCH_FOLIO",
+      "name": "Buscar Folio",
+      "icon": "🔍",
+      "description": "Buscar venta por folio",
+      "shortcut": "Ctrl+F"
+    },
+    {
+      "code": "PRINT_SUMMARY",
+      "name": "Resumen del Día",
+      "icon": "🖨️",
+      "description": "Imprimir resumen diario",
+      "shortcut": "Ctrl+P"
+    },
+    {
+      "code": "CLOSE_SESSION",
+      "name": "Cerrar Sesión",
+      "icon": "🔒",
+      "description": "Cerrar sesión de caja",
+      "shortcut": "Ctrl+Q"
+    }
+  ],
+  "recent_transactions": [
+    {
+      "folio": "PV240010",
+      "customer_name": "Pedro González",
+      "amount": 234567,
+      "payment_method": "DEBIT",
+      "document_type": "BOLETA",
+      "processed_at": "2025-07-24T17:45:00Z",
+      "cashier": "Ana López"
+    },
+    {
+      "folio": "PV240009",
+      "customer_name": "Empresa XYZ Ltda.",
+      "amount": 1567890,
+      "payment_method": "TRANSFER",
+      "document_type": "FACTURA",
+      "processed_at": "2025-07-24T17:30:00Z",
+      "cashier": "Ana López"
+    }
+  ]
+}

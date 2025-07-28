@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preparación de Venta - Sistema POS Mejorado</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>📝 Preparación de Venta</h1>
+        <div class="user-info">
+          <strong>Vendedor:</strong> Cargando...<br />
+          <strong>Sucursal:</strong> Cargando... • <strong>Fecha:</strong>
+          <span id="current-date"></span>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <!-- Formulario Principal -->
+        <div class="sales-form">
+          <!-- Sección Cliente -->
+          <div class="customer-section">
+            <h3>👤 Cliente</h3>
+            <div class="customer-row">
+              <div class="form-group">
+                <label for="customer-rut">RUT Cliente</label>
+                <input
+                  type="text"
+                  id="customer-rut"
+                  class="form-control"
+                  placeholder="12345678-9"
+                  onblur="searchByRut()"
+                  onkeypress="handleRutEnter(event)"
+                />
+              </div>
+              <div class="form-group">
+                <label for="customer-name">Razón Social/Nombre</label>
+                <input
+                  type="text"
+                  id="customer-name"
+                  class="form-control"
+                  placeholder="Nombre del cliente"
+                  readonly
+                />
+              </div>
+              <div class="form-group">
+                <button
+                  class="btn btn-secondary"
+                  onclick="openCustomerSearch()"
+                >
+                  🔍 Buscar
+                </button>
+              </div>
+            </div>
+
+            <!-- Detalles del Cliente -->
+            <div
+              id="customer-details"
+              class="customer-details"
+              style="display: none"
+            >
+              <div class="customer-info-grid">
+                <div class="customer-info-item">
+                  <strong>Código:</strong> <span id="customer-code">-</span>
+                </div>
+                <div class="customer-info-item">
+                  <strong>Tipo:</strong> <span id="customer-type">-</span>
+                </div>
+                <div class="customer-info-item">
+                  <strong>Nombre Comercial:</strong>
+                  <span id="commercial-name">-</span>
+                </div>
+                <div class="customer-info-item">
+                  <strong>Contacto:</strong> <span id="contact-person">-</span>
+                </div>
+                <div class="customer-info-item">
+                  <strong>Email:</strong> <span id="customer-email">-</span>
+                </div>
+                <div class="customer-info-item">
+                  <strong>Cliente Crédito:</strong>
+                  <span id="customer-credit">No</span>
+                </div>
+              </div>
+
+              <!-- Selector de Persona Autorizada -->
+              <div
+                id="authorized-buyer-section"
+                class="authorized-buyer-section"
+                style="display: none"
+              >
+                <div class="authorized-buyer-header">
+                  <label>Persona que realiza la compra:</label>
+                  <button
+                    class="btn btn-primary btn-sm"
+                    onclick="openAuthorizedBuyerModal()"
+                  >
+                    Seleccionar Persona
+                  </button>
+                </div>
+                <div id="selected-buyer" class="selected-buyer no-selection">
+                  <div class="buyer-name" id="buyer-name">
+                    Ninguna persona seleccionada
+                  </div>
+                  <div class="buyer-details" id="buyer-details">
+                    Seleccione una persona autorizada para continuar
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ingreso de Productos Mejorado -->
+          <div class="product-entry">
+            <h3>🔍 Agregar Producto</h3>
+            <div class="product-input-enhanced">
+              <div class="form-group">
+                <label for="product-code"
+                  >Código o Descripción del Producto</label
+                >
+                <div class="product-code-group">
+                  <input
+                    type="text"
+                    id="product-code"
+                    class="product-code-input"
+                    placeholder="Código de barras, SKU o buscar por nombre..."
+                    onkeypress="handleProductEnter(event)"
+                    oninput="handleProductInput(event)"
+                  />
+                  <span class="search-icon">🔍</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="quick-actions">
+                  <button
+                    class="btn btn-info btn-sm"
+                    onclick="openProductSearch()"
+                    title="Búsqueda avanzada"
+                  >
+                    📋 Buscar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Preview del Producto -->
+            <div
+              id="product-preview"
+              class="product-preview"
+              style="display: none"
+            >
+              <div class="alert alert-success">
+                <div class="alert-icon">✓</div>
+                <div class="alert-content">
+                  <strong id="preview-name"></strong><br />
+                  <span id="preview-details"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de Items Mejorada -->
+          <div class="items-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Producto</th>
+                  <th>Precio Unit.</th>
+                  <th>Cant.</th>
+                  <th>Desc. %</th>
+                  <th>Subtotal</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="items-tbody">
+                <!-- Items se agregan dinámicamente -->
+              </tbody>
+            </table>
+            <div id="empty-table" class="empty-table">
+              <div class="empty-table-icon">📦</div>
+              <div>No hay productos agregados</div>
+              <small
+                >Ingrese un código de producto o use la búsqueda para
+                comenzar</small
+              >
+            </div>
+          </div>
+
+          <!-- Acciones del Formulario -->
+          <div class="form-actions">
+            <button class="btn btn-warning" onclick="clearAll()">
+              🗑️ Limpiar Todo
+            </button>
+            <button class="btn btn-secondary" onclick="saveDraft()">
+              💾 Guardar Borrador
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel de Resumen -->
+        <div class="summary-panel">
+          <h3>📊 Resumen</h3>
+
+          <div class="summary-row">
+            <span>Items:</span>
+            <span id="total-items">0</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span id="subtotal">$0</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Descuentos línea:</span>
+            <span id="line-discount">$0</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Descuento documento:</span>
+            <div class="summary-row-complex">
+              <input
+                type="number"
+                id="doc-discount"
+                class="form-control"
+                value="0"
+                min="0"
+                max="100"
+                step="0.01"
+                onchange="calculateTotals()"
+              />
+              <span>%</span>
+              <span id="doc-discount-amount">$0</span>
+            </div>
+          </div>
+
+          <div class="summary-row">
+            <span>IVA (19%):</span>
+            <span id="tax">$0</span>
+          </div>
+
+          <div class="summary-row total-row">
+            <span>TOTAL:</span>
+            <span id="total">$0</span>
+          </div>
+
+          <div class="actions">
+            <button
+              class="btn btn-success"
+              onclick="sendToCashier()"
+              id="send-btn"
+              disabled
+            >
+              📤 Enviar a Caja
+            </button>
+          </div>
+
+          <div class="document-info">
+            <div>
+              <strong>Items:</strong>
+              <span id="doc-items">0</span> productos
+            </div>
+            <div>
+              <strong>Cliente:</strong>
+              <span id="doc-customer">No seleccionado</span>
+            </div>
+            <div>
+              <strong>Comprador:</strong>
+              <span id="doc-buyer">No aplica</span>
+            </div>
+            <div>
+              <strong>Preparado por:</strong>
+              <span id="doc-prepared-by">Usuario</span>
+            </div>
+            <div>
+              <strong>Fecha:</strong>
+              <span id="doc-date"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Búsqueda de Productos Mejorado -->
+      <div id="productSearchModal" class="modal search-results-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>🔍 Buscar Productos</h2>
+            <span class="close" onclick="closeProductSearch()">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <div class="search-form-enhanced">
+              <div class="search-form-grid">
+                <div class="form-group">
+                  <label for="product-search-term">
+                    Buscar por Código, Nombre o Marca
+                  </label>
+                  <input
+                    type="text"
+                    id="product-search-term"
+                    class="form-control"
+                    placeholder="Ingrese término de búsqueda"
+                    onkeypress="handleProductSearchEnter(event)"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="product-category-filter">Categoría</label>
+                  <select id="product-category-filter" class="form-control">
+                    <option value="">Todas las categorías</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <button class="btn btn-primary" onclick="searchProducts()">
+                    Buscar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="search-stats" class="search-stats" style="display: none">
+              <span id="results-count">0 productos encontrados</span>
+              <span id="search-time"></span>
+            </div>
+
+            <div id="products-grid" class="products-grid">
+              <!-- Resultados de búsqueda se cargan dinámicamente -->
+            </div>
+
+            <div id="no-results" class="empty-table" style="display: none">
+              <div class="empty-table-icon">🔍</div>
+              <div>No se encontraron productos</div>
+              <small>Intente con otros términos de búsqueda</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Cantidad/Confirmación -->
+      <div id="quantityModal" class="modal quantity-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>📦 Agregar Producto</h2>
+            <span class="close" onclick="closeQuantityModal()">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <div class="product-summary">
+              <div class="product-summary-title" id="quantity-product-name">
+                Nombre del Producto
+              </div>
+              <div
+                class="product-summary-details"
+                id="quantity-product-details"
+              >
+                SKU: XXX • Marca: XXX • Stock: XXX
+              </div>
+              <div class="product-summary-price" id="quantity-product-price">
+                $0
+              </div>
+            </div>
+
+            <div class="quantity-controls">
+              <button
+                class="quantity-btn"
+                id="quantity-decrease"
+                onclick="decreaseQuantity()"
+              >
+                −
+              </button>
+              <div class="quantity-display" id="quantity-display">1</div>
+              <button
+                class="quantity-btn"
+                id="quantity-increase"
+                onclick="increaseQuantity()"
+              >
+                +
+              </button>
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn btn-secondary" onclick="closeQuantityModal()">
+                Cancelar
+              </button>
+              <button
+                class="btn btn-success"
+                id="confirm-add-to-cart"
+                onclick="confirmAddToCart()"
+              >
+                ✓ Agregar al Carrito
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Búsqueda de Clientes -->
+      <div id="customerModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>🔍 Buscar Cliente</h2>
+            <span class="close" onclick="closeCustomerSearch()">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <div class="search-form-enhanced">
+              <div class="search-form-grid">
+                <div class="form-group">
+                  <label for="search-term">
+                    Buscar por RUT, Nombre o Email
+                  </label>
+                  <input
+                    type="text"
+                    id="search-term"
+                    class="form-control"
+                    placeholder="Ingrese término de búsqueda"
+                    onkeypress="handleSearchEnter(event)"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="customer-type-filter">Tipo</label>
+                  <select id="customer-type-filter" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="INDIVIDUAL">Individual</option>
+                    <option value="COMPANY">Empresa</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <button class="btn btn-primary" onclick="loadCustomerList()">
+                    Buscar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>RUT</th>
+                    <th>Nombre/Razón Social</th>
+                    <th>Tipo</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Crédito</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="customers-tbody">
+                  <!-- Resultados de búsqueda -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Personas Autorizadas -->
+      <div id="authorizedBuyerModal" class="modal">
+        <div class="modal-content authorized-person-modal">
+          <div class="modal-header">
+            <h2>👥 Personas Autorizadas</h2>
+            <span class="close" onclick="closeAuthorizedBuyerModal()"
+              >&times;</span
+            >
+          </div>
+
+          <div class="modal-body">
+            <div class="alert alert-info">
+              <div class="alert-icon">ℹ</div>
+              <div class="alert-content">
+                <div>
+                  <strong>Empresa:</strong>
+                  <span id="modal-company-name">-</span>
+                </div>
+                <div>
+                  <strong>RUT:</strong> <span id="modal-company-rut">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="data-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>RUT</th>
+                    <th>Cargo</th>
+                    <th>Email</th>
+                    <th>Nivel</th>
+                    <th>Límite Compra</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="authorized-persons-tbody">
+                  <!-- Personas autorizadas se cargan dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+      // Actualizar fecha y hora inicial
+      document.addEventListener("DOMContentLoaded", function () {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("es-CL");
+        const timeStr = now.toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const currentDateEl = document.getElementById("current-date");
+        const docDateEl = document.getElementById("doc-date");
+
+        if (currentDateEl) {
+          currentDateEl.textContent = dateStr;
+        }
+
+        if (docDateEl) {
+          docDateEl.textContent = `${dateStr} - ${timeStr}`;
+        }
+      });
+    </script>
+  </body>
+</html>

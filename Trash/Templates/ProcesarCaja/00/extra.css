@@ -1,0 +1,859 @@
+/* ==========================================================================
+   Sistema POS - Caja - Estilos Adicionales (extra.css)
+   ========================================================================== */
+
+/* ==========================================================================
+   Estados de Sesión en Header
+   ========================================================================== */
+
+.session-active {
+  color: #28a745;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: rgba(40, 167, 69, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.session-inactive {
+  color: #dc3545;
+  font-weight: 600;
+  padding: 3px 8px;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* ==========================================================================
+   Sección de Búsqueda por Folio
+   ========================================================================== */
+
+.folio-search-section {
+  background: #fff3e0;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  border: 2px solid #ff9800;
+}
+
+.folio-search-section h3 {
+  color: #f57c00;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+.folio-search-row {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 15px;
+  align-items: end;
+}
+
+.folio-input {
+  font-size: 1.1em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 12px 15px;
+}
+
+/* ==========================================================================
+   Preview de Venta
+   ========================================================================== */
+
+.sale-preview {
+  margin-top: 15px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+}
+
+.sale-preview.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sale-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sale-preview-total {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #007bff;
+}
+
+.sale-preview-details {
+  font-size: 0.9em;
+  color: #6c757d;
+}
+
+/* ==========================================================================
+   Sección de Ventas Pendientes
+   ========================================================================== */
+
+.pending-sales-section {
+  background: #f0f8ff;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid #007bff;
+}
+
+.pending-sales-section h3 {
+  color: #0056b3;
+  margin-bottom: 20px;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Filtros
+   ========================================================================== */
+
+.filters-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 120px;
+  gap: 15px;
+  align-items: end;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   Estadísticas Rápidas
+   ========================================================================== */
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+  transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.stat-number {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: #007bff;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9em;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Tabla de Ventas Pendientes
+   ========================================================================== */
+
+.pending-sales-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+}
+
+.pending-sale-row {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pending-sale-row:hover {
+  background: #f8f9fa;
+  transform: translateX(3px);
+}
+
+.pending-sale-row.selected {
+  background: #e3f2fd;
+  border-left: 4px solid #007bff;
+}
+
+.customer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.customer-details {
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+.amount-cell {
+  text-align: right;
+  font-weight: 700;
+  color: #007bff;
+  font-size: 1.05em;
+}
+
+.datetime-cell {
+  text-align: center;
+}
+
+.datetime-cell .date {
+  font-weight: 600;
+  color: #495057;
+}
+
+.datetime-cell .time {
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+/* ==========================================================================
+   Estados de Venta
+   ========================================================================== */
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-processing {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.status-completed {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-expired {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* ==========================================================================
+   Panel de Detalles de Venta
+   ========================================================================== */
+
+.sale-details-panel {
+  background: white;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 20px;
+  height: fit-content;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.no-selection-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.no-selection-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+  opacity: 0.3;
+}
+
+.no-selection-text {
+  font-size: 1.1em;
+}
+
+.no-selection-text strong {
+  color: #495057;
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ==========================================================================
+   Secciones de Detalle
+   ========================================================================== */
+
+.detail-section {
+  margin-bottom: 25px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.detail-section h4 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 1.1em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  font-size: 0.9em;
+}
+
+.detail-item {
+  color: #495057;
+  padding: 8px 0;
+}
+
+.detail-item strong {
+  color: #333;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.buyer-info {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.buyer-highlight {
+  background: #e8f4fd;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+}
+
+/* ==========================================================================
+   Tabla de Items en Detalle
+   ========================================================================== */
+
+.detail-items-table {
+  background: #f8f9fa;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.detail-items-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.detail-items-table thead {
+  background: #495057;
+  color: white;
+}
+
+.detail-items-table th {
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.detail-items-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.detail-items-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ==========================================================================
+   Resumen de Totales
+   ========================================================================== */
+
+.totals-summary {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 0.95em;
+}
+
+.total-final {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #007bff;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 2px solid #007bff;
+}
+
+/* ==========================================================================
+   Acciones de Detalle
+   ========================================================================== */
+
+.detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 2px solid #e9ecef;
+}
+
+.detail-actions .btn-lg {
+  padding: 15px 20px;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Modal de Pago
+   ========================================================================== */
+
+.payment-modal .modal-content {
+  max-width: 600px;
+  margin: 5% auto;
+}
+
+.payment-summary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+.payment-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.payment-folio {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.payment-total {
+  font-size: 1.5em;
+  font-weight: 700;
+}
+
+.payment-customer {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+/* ==========================================================================
+   Métodos de Pago
+   ========================================================================== */
+
+.payment-methods-section {
+  margin-bottom: 25px;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.payment-method-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.payment-method-card:hover {
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.15);
+}
+
+.payment-method-card.selected {
+  border-color: #007bff;
+  background: #e3f2fd;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.payment-method-icon {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
+
+.payment-method-name {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #495057;
+}
+
+/* ==========================================================================
+   Detalles de Pago Específicos
+   ========================================================================== */
+
+.payment-details {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.payment-detail-section h4 {
+  color: #495057;
+  margin-bottom: 15px;
+  font-size: 1.1em;
+}
+
+.cash-payment-grid,
+.card-payment-grid,
+.transfer-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  align-items: end;
+}
+
+.amount-input {
+  font-size: 1.2em;
+  font-weight: 600;
+  text-align: right;
+  padding: 12px 15px;
+}
+
+.change-display {
+  background: #e8f5e8;
+  border: 2px solid #28a745;
+  border-radius: 6px;
+  padding: 12px 15px;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #155724;
+  text-align: right;
+}
+
+.change-display.negative {
+  background: #f8d7da;
+  border-color: #dc3545;
+  color: #721c24;
+}
+
+/* ==========================================================================
+   Tipos de Documento
+   ========================================================================== */
+
+.document-type-selection {
+  margin: 20px 0;
+}
+
+.document-type-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.document-type-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.document-type-card:hover {
+  border-color: #28a745;
+  transform: translateY(-2px);
+}
+
+.document-type-card.active {
+  border-color: #28a745;
+  background: #e8f5e8;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
+.document-type-icon {
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.document-type-name {
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.document-type-desc {
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+/* ==========================================================================
+   Confirmación de Factura
+   ========================================================================== */
+
+.invoice-confirmation {
+  text-align: center;
+}
+
+.invoice-summary {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.invoice-detail {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.invoice-detail:last-child {
+  border-bottom: none;
+}
+
+/* ==========================================================================
+   Responsive para Caja
+   ========================================================================== */
+
+@media (max-width: 992px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .folio-search-row,
+  .filters-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-methods-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .document-type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .pending-sales-table {
+    font-size: 0.85em;
+    overflow-x: auto;
+  }
+
+  .pending-sales-table th,
+  .pending-sales-table td {
+    padding: 8px 6px;
+    min-width: 80px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-actions {
+    margin-top: 20px;
+  }
+
+  .cash-payment-grid,
+  .card-payment-grid,
+  .transfer-payment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-summary-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* ==========================================================================
+   Animaciones Adicionales
+   ========================================================================== */
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.highlight-new {
+  animation: highlightNew 2s ease;
+}
+
+@keyframes highlightNew {
+  0% {
+    background: #d4edda;
+    transform: scale(1.02);
+  }
+  100% {
+    background: transparent;
+    transform: scale(1);
+  }
+}
+
+/* ==========================================================================
+   Estados de Carga
+   ========================================================================== */
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.loading-overlay .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   Elementos Específicos
+   ========================================================================== */
+
+.urgent-priority {
+  position: relative;
+}
+
+.urgent-priority::before {
+  content: "🔥";
+  position: absolute;
+  left: -25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2em;
+  animation: pulse 2s infinite;
+}
+
+.high-priority {
+  position: relative;
+}
+
+.high-priority::before {
+  content: "⚡";
+  position: absolute;
+  left: -25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1em;
+}
+
+.expired-sale {
+  opacity: 0.6;
+  background: #f8f9fa !important;
+}
+
+.expired-sale .customer-name {
+  text-decoration: line-through;
+}
+
+/* ==========================================================================
+   Tooltips Simples
+   ========================================================================== */
+
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  white-space: nowrap;
+  z-index: 1000;
+  margin-bottom: 5px;
+}
+
+[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #333;
+  z-index: 1000;
+}

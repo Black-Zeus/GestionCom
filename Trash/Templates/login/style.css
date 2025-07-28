@@ -1,0 +1,976 @@
+/* ====================================
+   RESET Y CONFIGURACIÓN BASE
+==================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* === PALETA DE COLORES PROFESIONAL === */
+    --primary-50: #dbeafe;
+    --primary-100: #bfdbfe;
+    --primary-200: #93c5fd;
+    --primary-300: #60a5fa;
+    --primary-400: #3b82f6;
+    --primary-500: #2563eb;
+    --primary-600: #1d4ed8;
+    --primary-700: #1e40af;
+    --primary-800: #1e3a8a;
+    --primary-900: #1e3a8a;
+
+    --secondary-50: #f8fafc;
+    --secondary-100: #f1f5f9;
+    --secondary-200: #e2e8f0;
+    --secondary-300: #cbd5e1;
+    --secondary-400: #94a3b8;
+    --secondary-500: #64748b;
+    --secondary-600: #475569;
+    --secondary-700: #334155;
+    --secondary-800: #1e293b;
+    --secondary-900: #0f172a;
+
+    --success-500: #22c55e;
+    --success-600: #16a34a;
+    --warning-500: #f59e0b;
+    --danger-500: #ef4444;
+    --danger-600: #dc2626;
+
+    /* === DIMENSIONES === */
+    --header-height: 60px;
+    --footer-height: 40px;
+
+    /* === TRANSICIONES === */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Modo oscuro */
+body.dark-mode {
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --border-color: #334155;
+    --glass-bg: rgba(30, 41, 59, 0.3);
+    --glass-border: rgba(148, 163, 184, 0.2);
+    
+    /* === COLORES ESPECÍFICOS PARA HEADER/FOOTER EN MODO OSCURO === */
+    --header-bg: rgba(15, 23, 42, 0.85);
+    --footer-bg: rgba(15, 23, 42, 0.85);
+    --header-border: rgba(148, 163, 184, 0.15);
+    --footer-border: rgba(148, 163, 184, 0.15);
+}
+
+/* Modo claro */
+body {
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --border-color: #e2e8f0;
+    --glass-bg: rgba(255, 255, 255, 0.25);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    
+    /* === COLORES ESPECÍFICOS PARA HEADER/FOOTER EN MODO CLARO === */
+    --header-bg: rgba(255, 255, 255, 0.9);
+    --footer-bg: rgba(255, 255, 255, 0.9);
+    --header-border: rgba(226, 232, 240, 0.8);
+    --footer-border: rgba(226, 232, 240, 0.8);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    overflow-x: hidden;
+    transition: var(--transition-smooth);
+    
+    /* === IMAGEN DE FONDO WAREHOUSE/BODEGA === */
+    background-image: 
+        linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(30, 41, 59, 0.2) 100%),
+        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Modo oscuro con overlay más fuerte */
+body.dark-mode {
+    background-image: 
+        linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.9) 100%),
+        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+}
+
+/* ====================================
+   LAYOUT PRINCIPAL SIN SIDEBAR
+==================================== */
+.layout {
+    display: grid;
+    grid-template-areas: 
+        "header"
+        "main"
+        "footer";
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-height) 1fr var(--footer-height);
+    min-height: 100vh;
+    width: 100%;
+    transition: var(--transition-smooth);
+}
+
+/* ====================================
+   HEADER MEJORADO - MEJOR LEGIBILIDAD
+==================================== */
+.header {
+    grid-area: header;
+    background: var(--header-bg);
+    backdrop-filter: blur(8px); /* Reducido de 20px a 8px */
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--header-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    transition: var(--transition-smooth);
+    position: relative;
+    /* Agregamos una sombra sutil para mejor definición */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Efecto de brillo sutil en el header - más sutil */
+.header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    opacity: 0.6; /* Agregamos opacidad para que sea más sutil */
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.system-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* Agregamos text-shadow para mejor legibilidad */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .system-title {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.system-version {
+    background: var(--primary-100);
+    color: var(--primary-700);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    /* Mejoramos el contraste */
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+body.dark-mode .system-version {
+    background: var(--primary-900);
+    color: var(--primary-300);
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    /* Agregamos borde para mejor definición */
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+}
+
+.theme-toggle:hover {
+    background: var(--primary-500);
+    color: white;
+    transform: scale(1.05);
+    border-color: var(--primary-500);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    /* Mejoramos legibilidad */
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+body.dark-mode .status-indicator {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success-500);
+    animation: pulse 2s infinite;
+    /* Agregamos sombra para mejor visibilidad */
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ====================================
+   MAIN - ÁREA DE LOGIN CON GLASSMORPHISM MEJORADO
+==================================== */
+.main {
+    grid-area: main;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+/* Elementos geométricos flotantes más sutiles */
+.main::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.main::after {
+    content: '';
+    position: absolute;
+    bottom: -150px;
+    right: -150px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* ====================================
+   GLASSMORPHISM LOGIN CARD
+==================================== */
+.login-container {
+    position: relative;
+    z-index: 10;
+    animation: slideInUp 0.8s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.95); /* Mucho más opaco */
+    backdrop-filter: blur(15px); /* Blur reducido */
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Borde más visible */
+    border-radius: 24px;
+    padding: 50px 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.2),
+        0 2px 8px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+}
+
+body.dark-mode .login-card {
+    background: rgba(15, 23, 42, 0.95); /* Mucho más opaco en modo oscuro */
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.login-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.25),
+        0 4px 12px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+body.dark-mode .login-card:hover {
+    box-shadow: 
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        0 4px 12px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Efectos de luz interna */
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+}
+
+.login-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%);
+    animation: shimmer 4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(180deg); }
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+    z-index: 2;
+}
+
+.login-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.login-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    opacity: 0.8;
+}
+
+/* ====================================
+   FORMULARIO CON EFECTOS GLASSMORPHISM
+==================================== */
+.login-form {
+    position: relative;
+    z-index: 2;
+}
+
+.form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.form-label {
+    display: block;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    transition: var(--transition-smooth);
+}
+
+.form-input {
+    width: 100%;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.8); /* Mucho más opaco */
+    backdrop-filter: blur(5px); /* Blur reducido */
+    border: 1px solid rgba(0, 0, 0, 0.1); /* Borde más visible */
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: var(--transition-smooth);
+    outline: none;
+    position: relative;
+}
+
+body.dark-mode .form-input {
+    background: rgba(30, 41, 59, 0.9); /* Más opaco en modo oscuro */
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-primary);
+}
+
+.form-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.form-input:focus {
+    border-color: var(--primary-500);
+    box-shadow: 
+        0 0 0 3px rgba(37, 99, 235, 0.15),
+        0 2px 8px rgba(37, 99, 235, 0.2);
+    background: rgba(255, 255, 255, 0.95); /* Más opaco al hacer focus */
+    transform: translateY(-1px);
+}
+
+body.dark-mode .form-input:focus {
+    background: rgba(30, 41, 59, 0.95);
+}
+
+/* Checkbox personalizado */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.checkbox-input {
+    position: absolute;
+    opacity: 0;
+}
+
+.checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-smooth);
+}
+
+.checkbox-input:checked + .checkbox-custom {
+    background: var(--primary-500);
+    border-color: var(--primary-500);
+    transform: scale(1.1);
+}
+
+.checkbox-input:checked + .checkbox-custom::after {
+    content: '✓';
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.checkbox-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+.forgot-link {
+    color: var(--primary-500);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: var(--transition-smooth);
+}
+
+.forgot-link:hover {
+    color: var(--primary-600);
+    text-decoration: underline;
+}
+
+/* ====================================
+   BOTÓN PRINCIPAL CON GLASSMORPHISM
+==================================== */
+.login-button {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition-smooth);
+    box-shadow: 
+        0 4px 12px rgba(37, 99, 235, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.login-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+}
+
+.login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+        0 6px 20px rgba(37, 99, 235, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.login-button:hover::before {
+    left: 100%;
+}
+
+.login-button:active {
+    transform: translateY(0);
+}
+
+/* Estado de carga */
+.login-button.loading {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.login-button.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ====================================
+   FOOTER MEJORADO - MEJOR LEGIBILIDAD
+==================================== */
+.footer {
+    grid-area: footer;
+    background: var(--footer-bg);
+    backdrop-filter: blur(8px); /* Reducido de 20px a 8px */
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--footer-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    position: relative;
+    /* Agregamos una sombra sutil para mejor definición */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Efecto de brillo sutil en el footer - más sutil */
+.footer::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    opacity: 0.6; /* Agregamos opacidad para que sea más sutil */
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-label {
+    color: var(--text-muted);
+    /* Mejoramos legibilidad */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .footer-label {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.footer-value {
+    color: var(--text-primary);
+    font-weight: 500;
+    /* Mejoramos legibilidad */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .footer-value {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.footer-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-color);
+    opacity: 0.6; /* Más sutil */
+}
+
+/* ====================================
+   RESPONSIVE DESIGN - AJUSTADO PARA FONDO
+==================================== */
+@media (max-width: 768px) {
+    /* Ajustar fondo para móviles */
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .header {
+        padding: 0 20px;
+        background: var(--header-bg);
+        backdrop-filter: blur(6px); /* Menos blur en móviles */
+    }
+
+    .footer {
+        padding: 0 20px;
+        font-size: 0.8rem;
+        background: var(--footer-bg);
+        backdrop-filter: blur(6px); /* Menos blur en móviles */
+    }
+
+    .header-left {
+        gap: 15px;
+    }
+
+    .system-title {
+        font-size: 1rem;
+    }
+
+    .login-card {
+        margin: 20px;
+        padding: 40px 30px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(20px);
+    }
+
+    body.dark-mode .login-card {
+        background: rgba(15, 23, 42, 0.5);
+    }
+
+    .login-title {
+        font-size: 1.75rem;
+    }
+
+    .footer-right {
+        gap: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 0 15px;
+        background: var(--header-bg);
+        backdrop-filter: blur(4px); /* Aún menos blur en móviles pequeños */
+    }
+
+    .login-card {
+        margin: 15px;
+        padding: 30px 20px;
+        background: rgba(255, 255, 255, 0.35);
+    }
+
+    body.dark-mode .login-card {
+        background: rgba(15, 23, 42, 0.6);
+    }
+
+    .login-title {
+        font-size: 1.5rem;
+    }
+
+    .form-input {
+        padding: 14px 16px;
+    }
+
+    .login-button {
+        padding: 14px;
+    }
+
+    .footer {
+        padding: 0 15px;
+        flex-direction: column;
+        height: auto;
+        min-height: var(--footer-height);
+        gap: 8px;
+        background: var(--footer-bg);
+        backdrop-filter: blur(4px); /* Aún menos blur en móviles pequeños */
+    }
+}
+
+/* ====================================
+   ANIMACIONES Y EFECTOS ADICIONALES
+==================================== */
+.form-group {
+    animation: fadeInUp 0.6s ease-out;
+    animation-fill-mode: both;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.1s; }
+.form-group:nth-child(2) { animation-delay: 0.2s; }
+.form-group:nth-child(3) { animation-delay: 0.3s; }
+.login-button { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Efectos de foco mejorados */
+.form-input:focus + .form-label {
+    color: var(--primary-500);
+    transform: translateY(-2px);
+}
+
+/* ====================================
+   ACCESIBILIDAD
+==================================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus visible para navegación por teclado */
+.login-button:focus-visible,
+.form-input:focus-visible,
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--primary-500);
+    outline-offset: 2px;
+}
+
+/* ====================================
+   OPCIONES DE IMÁGENES DE FONDO - COMENTADAS
+==================================== */
+/*
+
+OPCIÓN 1 - WAREHOUSE/ALMACÉN MODERNO (ACTUAL):
+url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80')
+
+OPCIÓN 2 - OFICINA MODERNA:
+url('https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')
+
+OPCIÓN 3 - TECNOLOGÍA Y DATOS:
+url('https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80')
+
+OPCIÓN 4 - FINTECH/MINIMALISTA:
+url('https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&auto=format&fit=crop&w=2126&q=80')
+
+OPCIÓN 5 - GRADIENTE GEOMÉTRICO:
+url('https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80')
+
+Para cambiar la imagen, simplemente reemplaza la URL en las reglas del body
+
+*/
+
+/* ====================================
+   FOOTER CON 3 COLUMNAS - CSS ADICIONAL
+==================================== */
+
+/* Modificar el footer principal para 3 columnas */
+.footer {
+    grid-area: footer;
+    background: var(--footer-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-top: 1px solid var(--footer-border);
+    display: flex; /* Cambiar a flex para 3 columnas */
+    align-items: center;
+    justify-content: space-between; /* Distribuir espacio entre columnas */
+    padding: 0 30px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    position: relative;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Columna izquierda */
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Reducir gap para más columnas */
+    flex: 1; /* Ocupar espacio proporcional */
+    justify-content: flex-start; /* Alinear a la izquierda */
+}
+
+/* Nueva columna centro */
+.footer-center {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1; /* Ocupar espacio proporcional */
+    justify-content: center; /* Centrar contenido */
+}
+
+/* Columna derecha */
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Reducir gap para más elementos */
+    flex: 1; /* Ocupar espacio proporcional */
+    justify-content: flex-end; /* Alinear a la derecha */
+}
+
+/* ====================================
+   RESPONSIVE PARA 3 COLUMNAS
+==================================== */
+
+/* Tablet - Mantener 3 columnas pero más compacto */
+@media (max-width: 1024px) {
+    .footer {
+        padding: 0 20px;
+        font-size: 0.8rem;
+    }
+    
+    .footer-left,
+    .footer-center,
+    .footer-right {
+        gap: 12px;
+    }
+    
+    .footer-divider {
+        display: none; /* Ocultar divisores en tablet */
+    }
+}
+
+/* Móvil - Cambiar a columnas verticales */
+@media (max-width: 768px) {
+    .footer {
+        flex-direction: column;
+        padding: 15px 20px;
+        height: auto;
+        min-height: var(--footer-height);
+        gap: 10px;
+        background: var(--footer-bg);
+        backdrop-filter: blur(6px);
+    }
+    
+    .footer-left,
+    .footer-center,
+    .footer-right {
+        width: 100%;
+        justify-content: space-between; /* Distribuir en ancho completo */
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .footer-divider {
+        display: block; /* Mostrar divisores en móvil */
+        height: 12px;
+    }
+}
+
+/* Móvil pequeño - Una sola columna */
+@media (max-width: 480px) {
+    .footer {
+        padding: 12px 15px;
+        background: var(--footer-bg);
+        backdrop-filter: blur(4px);
+    }
+    
+    .footer-left,
+    .footer-center,
+    .footer-right {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .footer-info {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .footer-divider {
+        display: none; /* Ocultar divisores en móvil muy pequeño */
+    }
+}

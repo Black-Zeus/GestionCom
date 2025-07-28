@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard del Sistema</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dashboard del Sistema</h1>
+            <p>Panel de control principal - Vista general del negocio</p>
+        </div>
+
+        <!-- DASHBOARD PRINCIPAL -->
+        <div class="section" data-section-id="dashboard-principal">
+            <div class="section-header">
+                📊 DASHBOARD PRINCIPAL
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="grid grid-4">
+                    <div class="card">
+                        <div class="card-title">Ventas del Día</div>
+                        <div class="metric">$1,247,500</div>
+                        <small>↗️ +12% vs ayer</small>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Facturas Pendientes</div>
+                        <div class="metric">47</div>
+                        <small>🔔 3 críticas</small>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Stock Bajo</div>
+                        <div class="metric">23</div>
+                        <small>⚠️ Requiere atención</small>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Caja Activa</div>
+                        <div class="metric">$850,200</div>
+                        <small>✅ 5 cajas abiertas</small>
+                    </div>
+                </div>
+                
+                <div class="subsection">
+                    <div class="subsection-title">Alertas Críticas</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Alertas del Sistema</div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-danger"></span>Cliente ABC superó límite de crédito</span>
+                            <span>Hace 5 min</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Producto XYZ con stock crítico (2 unidades)</span>
+                            <span>Hace 15 min</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Factura #1234 vence hoy</span>
+                            <span>Hace 1 hora</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GESTIÓN DE PRODUCTOS -->
+        <div class="section" data-section-id="gestion-de-productos">
+            <div class="section-header">
+                📦 GESTIÓN DE PRODUCTOS
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Catálogo y Búsqueda</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Total Productos</div>
+                            <div class="metric">1,247</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos Activos</div>
+                            <div class="metric">1,201</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Sin Movimiento</div>
+                            <div class="metric">86</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Gestión de Variantes</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Productos con Múltiples Variantes</div>
+                        <div class="table-row">
+                            <span>Camiseta Deportiva - 12 variantes (tallas/colores)</span>
+                            <span>Gestionar →</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Zapatillas Running - 8 variantes (tallas)</span>
+                            <span>Gestionar →</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Códigos de Barras y Precios</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Productos sin Código</div>
+                            <div class="metric">15</div>
+                            <small>Requieren código de barras</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Listas de Precios</div>
+                            <div class="metric">5</div>
+                            <small>Mayorista, Minorista, VIP...</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Análisis de Rentabilidad</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Top 5 Productos Más Rentables</div>
+                        <div class="table-row">
+                            <span>Laptop Gaming XYZ - Margen: 25%</span>
+                            <span>$450,000</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Smartphone ABC - Margen: 18%</span>
+                            <span>$320,000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROL DE INVENTARIO -->
+        <div class="section" data-section-id="control-de-inventario">
+            <div class="section-header">
+                📊 CONTROL DE INVENTARIO
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Estado General del Stock</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Valor Total Inventario</div>
+                            <div class="metric">$15.2M</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos en Stock</div>
+                            <div class="metric">1,156</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Stock Crítico</div>
+                            <div class="metric">23</div>
+                            <small class="status-indicator status-danger"></small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Próximos a Vencer</div>
+                            <div class="metric">12</div>
+                            <small class="status-indicator status-warning"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Movimientos en Tiempo Real</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Últimos Movimientos de Inventario</div>
+                        <div class="table-row">
+                            <span>📤 Venta - Laptop Dell (Bodega Centro) -1 und</span>
+                            <span data-timestamp>14:32</span>
+                        </div>
+                        <div class="table-row">
+                            <span>📥 Entrada - Monitor LG (Bodega Norte) +15 und</span>
+                            <span data-timestamp>14:28</span>
+                        </div>
+                        <div class="table-row">
+                            <span>🔄 Transferencia - Mouse Logitech (Norte → Centro) 10 und</span>
+                            <span data-timestamp>14:15</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Sugerencias de Reabastecimiento</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Productos para Reordenar</div>
+                        <div class="table-row">
+                            <span>Teclado Mecánico - Stock: 3 / Mín: 10 / Sugerido: 25</span>
+                            <span>🛒 Ordenar</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Cable HDMI - Stock: 1 / Mín: 15 / Sugerido: 50</span>
+                            <span>🛒 Ordenar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Control de Lotes y Vencimientos</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Lotes Activos</div>
+                            <div class="metric">156</div>
+                            <small>Productos con control de lotes</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Vencen en 30 días</div>
+                            <div class="metric">8</div>
+                            <small>Requieren atención</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Análisis ABC y Rotación</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Productos Clase A</div>
+                            <div class="metric">124</div>
+                            <small>Alta rotación - 80% ventas</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos Clase B</div>
+                            <div class="metric">248</div>
+                            <small>Rotación media - 15% ventas</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos Clase C</div>
+                            <div class="metric">875</div>
+                            <small>Baja rotación - 5% ventas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PUNTO DE VENTA -->
+        <div class="section" data-section-id="punto-de-venta">
+            <div class="section-header">
+                💰 PUNTO DE VENTA
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Terminales Activos</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">POS 1 - Centro</div>
+                            <div class="metric">$125,400</div>
+                            <small>✅ Activo - Juan Pérez</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">POS 2 - Norte</div>
+                            <div class="metric">$98,700</div>
+                            <small>✅ Activo - María García</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">POS 3 - Sur</div>
+                            <div class="metric">$87,200</div>
+                            <small>⚠️ Requiere cuadre</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">POS Online</div>
+                            <div class="metric">$156,800</div>
+                            <small>🌐 Web/App</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Facturación Electrónica (DTE)</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Documentos Emitidos Hoy</div>
+                            <div class="metric">247</div>
+                            <small>📄 Facturas y Boletas</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Estado SII</div>
+                            <div class="metric">✅ OK</div>
+                            <small>Conectado y operativo</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Pendientes Envío</div>
+                            <div class="metric">3</div>
+                            <small>⏳ En cola de envío</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Ventas en Proceso</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Transacciones Activas</div>
+                        <div class="table-row">
+                            <span>POS 1 - Venta #2024001234 - Cliente: Empresa ABC</span>
+                            <span>$45,600 - En proceso</span>
+                        </div>
+                        <div class="table-row">
+                            <span>POS 2 - Cotización #COT-0456 - Cliente: Juan Rodríguez</span>
+                            <span>$12,400 - Pendiente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Métodos de Pago del Día</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Efectivo</div>
+                            <div class="metric">$185,400</div>
+                            <small>35% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Tarjetas</div>
+                            <div class="metric">$245,800</div>
+                            <small>46% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Transferencias</div>
+                            <div class="metric">$87,300</div>
+                            <small>16% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Crédito</div>
+                            <div class="metric">$15,600</div>
+                            <small>3% del total</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GESTIÓN DE CLIENTES -->
+        <div class="section" data-section-id="gestion-de-clientes">
+            <div class="section-header">
+                👥 GESTIÓN DE CLIENTES
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Resumen de Clientes</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Total Clientes</div>
+                            <div class="metric">2,847</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Clientes Activos</div>
+                            <div class="metric">1,956</div>
+                            <small>Compras últimos 90 días</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Nuevos este Mes</div>
+                            <div class="metric">47</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">VIP/Corporativos</div>
+                            <div class="metric">156</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Segmentación de Clientes</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Clientes Premium</div>
+                            <div class="metric">89</div>
+                            <small>Compras > $500K anuales</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Clientes Regulares</div>
+                            <div class="metric">567</div>
+                            <small>Compras $50K - $500K</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Clientes Ocasionales</div>
+                            <div class="metric">1,300</div>
+                            <small>Compras < $50K</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Límites de Crédito</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Alertas de Crédito</div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-danger"></span>Empresa XYZ - Excedió límite ($450K/$400K)</span>
+                            <span>Ver detalles →</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Comercial ABC - 85% del límite usado</span>
+                            <span>Ver detalles →</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Análisis de Comportamiento</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Frecuencia Promedio</div>
+                            <div class="metric">12 días</div>
+                            <small>Entre compras</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Ticket Promedio</div>
+                            <div class="metric">$87,500</div>
+                            <small>Por transacción</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CUENTAS POR COBRAR -->
+        <div class="section" data-section-id="cuentas-por-cobrar">
+            <div class="section-header">
+                💳 CUENTAS POR COBRAR
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Estado General de Cartera</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Saldo Total</div>
+                            <div class="metric">$2.8M</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Facturas Pendientes</div>
+                            <div class="metric">347</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Cartera Vencida</div>
+                            <div class="metric">$485K</div>
+                            <small class="status-indicator status-danger"></small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Promedio Días Mora</div>
+                            <div class="metric">18 días</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Antigüedad de Saldos (Aging)</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">0-30 días</div>
+                            <div class="metric">$1.8M</div>
+                            <small>64% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">31-60 días</div>
+                            <div class="metric">$485K</div>
+                            <small>17% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">61-90 días</div>
+                            <div class="metric">$345K</div>
+                            <small>12% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">+90 días</div>
+                            <div class="metric">$170K</div>
+                            <small>7% del total</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Cobranza y Seguimiento</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Clientes Prioritarios para Cobranza</div>
+                        <div class="table-row">
+                            <span>Empresa ABC - $125K vencida hace 45 días</span>
+                            <span>🔔 Contactar urgente</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Comercial XYZ - $85K vence mañana</span>
+                            <span>📞 Recordatorio</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Pagos Recibidos Hoy</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Últimos Pagos Procesados</div>
+                        <div class="table-row">
+                            <span>Empresa DEF - Transferencia $45K - Fact. #1234</span>
+                            <span>✅ Aplicado</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Cliente GHI - Cheque $15K - Fact. #1235</span>
+                            <span>⏳ Pendiente compensación</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CONTROL DE CAJA -->
+        <div class="section" data-section-id="control-de-caja">
+            <div class="section-header">
+                💵 CONTROL DE CAJA
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Estado de Cajas</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Cajas Abiertas</div>
+                            <div class="metric">5</div>
+                            <small>De 8 disponibles</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Efectivo Total</div>
+                            <div class="metric">$385K</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Pendientes Cuadre</div>
+                            <div class="metric">2</div>
+                            <small class="status-indicator status-warning"></small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Diferencias Detectadas</div>
+                            <div class="metric">$2,500</div>
+                            <small>Sobrantes netos</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Sesiones Activas</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Cajeros en Turno</div>
+                        <div class="table-row">
+                            <span>Caja 1 - Juan Pérez - Apertura: 08:00</span>
+                            <span>$125,400 - ✅ OK</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Caja 2 - María García - Apertura: 08:00</span>
+                            <span>$98,700 - ✅ OK</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Caja 3 - Carlos López - Apertura: 14:00</span>
+                            <span>$45,200 - ⚠️ Revisar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Movimientos en Tiempo Real</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Últimos Movimientos de Efectivo</div>
+                        <div class="table-row">
+                            <span>📥 Venta #1234 - Caja 1 - Efectivo: +$15,600</span>
+                            <span data-timestamp>14:45</span>
+                        </div>
+                        <div class="table-row">
+                            <span>📤 Cambio cliente - Caja 2 - Efectivo: -$4,400</span>
+                            <span data-timestamp>14:42</span>
+                        </div>
+                        <div class="table-row">
+                            <span>💰 Retiro bancario - Caja 3 - Efectivo: -$50,000</span>
+                            <span data-timestamp>14:30</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Caja Chica y Gastos</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Fondos Caja Chica</div>
+                            <div class="metric">$45,000</div>
+                            <small>3 fondos activos</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Gastos del Día</div>
+                            <div class="metric">$8,500</div>
+                            <small>12 comprobantes</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Reposiciones Pendientes</div>
+                            <div class="metric">2</div>
+                            <small>Requieren autorización</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Conciliación Diaria</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Tarjetas Procesadas</div>
+                            <div class="metric">$245,800</div>
+                            <small>✅ Conciliado con banco</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Transferencias</div>
+                            <div class="metric">$87,300</div>
+                            <small>⏳ Pendiente confirmación</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEVOLUCIONES -->
+        <div class="section" data-section-id="devoluciones">
+            <div class="section-header">
+                🔄 DEVOLUCIONES
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Resumen de Devoluciones</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Devoluciones del Día</div>
+                            <div class="metric">12</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Valor Total</div>
+                            <div class="metric">$68,500</div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos Retornados</div>
+                            <div class="metric">8</div>
+                            <small>Al inventario</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Reembolsos Pendientes</div>
+                            <div class="metric">4</div>
+                            <small>Por procesar</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Motivos de Devolución</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Producto Defectuoso</div>
+                            <div class="metric">5</div>
+                            <small>42% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Cambio de Opinión</div>
+                            <div class="metric">4</div>
+                            <small>33% del total</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Error en Pedido</div>
+                            <div class="metric">3</div>
+                            <small>25% del total</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Devoluciones en Proceso</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Pendientes de Autorización</div>
+                        <div class="table-row">
+                            <span>DEV-001 - Laptop Dell - Cliente: Juan Pérez - Defecto</span>
+                            <span>$850K - ⏳ Evaluación técnica</span>
+                        </div>
+                        <div class="table-row">
+                            <span>DEV-002 - Mouse Logitech - Cliente: Empresa ABC - Error envío</span>
+                            <span>$25K - ✅ Autorizada</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Notas de Crédito Generadas</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Últimas Notas de Crédito</div>
+                        <div class="table-row">
+                            <span>NC-001234 - Cliente: María García - $45K</span>
+                            <span>✅ Aplicada</span>
+                        </div>
+                        <div class="table-row">
+                            <span>NC-001235 - Cliente: Comercial XYZ - $120K</span>
+                            <span>⏳ Pendiente aplicación</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DOCUMENTACIÓN COMERCIAL -->
+        <div class="section" data-section-id="documentacion-comercial">
+            <div class="section-header">
+                📋 DOCUMENTACIÓN COMERCIAL
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Estado de Series y Folios</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Facturas Disponibles</div>
+                            <div class="metric">2,847</div>
+                            <small>Folios restantes</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Boletas Disponibles</div>
+                            <div class="metric">4,156</div>
+                            <small>Folios restantes</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Guías de Despacho</div>
+                            <div class="metric">1,234</div>
+                            <small>Folios restantes</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Notas de Crédito</div>
+                            <div class="metric">456</div>
+                            <small>Folios restantes</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Documentos Emitidos Hoy</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Facturas Electrónicas</div>
+                            <div class="metric">89</div>
+                            <small>✅ Todas enviadas al SII</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Boletas Electrónicas</div>
+                            <div class="metric">158</div>
+                            <small>✅ Todas enviadas al SII</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Guías de Despacho</div>
+                            <div class="metric">34</div>
+                            <small>⏳ 2 pendientes envío</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Estado SII y Contingencia</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Monitoreo Facturación Electrónica</div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-good"></span>Conexión SII - Operativa</span>
+                            <span>Última sincronización: 14:45</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-good"></span>Certificado Digital - Válido</span>
+                            <span>Vence: 15/12/2025</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Modo Contingencia - Inactivo</span>
+                            <span>Sistema operando normalmente</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Documentos Pendientes</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Requieren Atención</div>
+                        <div class="table-row">
+                            <span>Factura #001234 - Error en envío SII</span>
+                            <span>🔄 Reenviar</span>
+                        </div>
+                        <div class="table-row">
+                            <span>Guía #567890 - Pendiente firma electrónica</span>
+                            <span>✍️ Firmar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Trazabilidad de Documentos</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Documentos Aceptados</div>
+                            <div class="metric">245</div>
+                            <small>✅ SII confirmó recepción</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Documentos Rechazados</div>
+                            <div class="metric">2</div>
+                            <small>❌ Requieren corrección</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REPORTERÍA Y ANÁLISIS -->
+        <div class="section" data-section-id="reporteria-y-analisis">
+            <div class="section-header">
+                📈 REPORTERÍA Y ANÁLISIS
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Reportes de Ventas</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Ventas del Mes</div>
+                            <div class="metric">$15.8M</div>
+                            <small>↗️ +8% vs mes anterior</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Margen Promedio</div>
+                            <div class="metric">22.5%</div>
+                            <small>↗️ +1.2% vs promedio</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Ticket Promedio</div>
+                            <div class="metric">$87,500</div>
+                            <small>↘️ -3% vs mes anterior</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Transacciones</div>
+                            <div class="metric">3,247</div>
+                            <small>↗️ +12% vs mes anterior</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Análisis de Inventario</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Rotación Promedio</div>
+                            <div class="metric">4.2x</div>
+                            <small>Veces por año</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Días de Stock</div>
+                            <div class="metric">87 días</div>
+                            <small>Inventario actual</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Stock Sin Movimiento</div>
+                            <div class="metric">$485K</div>
+                            <small>Más de 90 días</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Rendimiento por Vendedor</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Top 5 Vendedores del Mes</div>
+                        <div class="table-row">
+                            <span>1. Juan Pérez - $1.2M vendido - 45 clientes</span>
+                            <span>✅ Meta: 120%</span>
+                        </div>
+                        <div class="table-row">
+                            <span>2. María García - $980K vendido - 38 clientes</span>
+                            <span>✅ Meta: 105%</span>
+                        </div>
+                        <div class="table-row">
+                            <span>3. Carlos López - $850K vendido - 42 clientes</span>
+                            <span>⚠️ Meta: 95%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Productos Más/Menos Vendidos</div>
+                    <div class="grid grid-2">
+                        <div class="card">
+                            <div class="card-title">Top Productos</div>
+                            <div style="font-size: 12px; margin-top: 10px;">
+                                1. Laptop Gaming XYZ - 147 unidades<br>
+                                2. Mouse Logitech - 234 unidades<br>
+                                3. Monitor Samsung - 89 unidades<br>
+                                4. Teclado Mecánico - 156 unidades<br>
+                                5. Smartphone iPhone - 67 unidades
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Productos Rezagados</div>
+                            <div style="font-size: 12px; margin-top: 10px;">
+                                1. Impresora Matriz - 2 unidades<br>
+                                2. Scanner Antiguo - 1 unidad<br>
+                                3. Cable Serial - 3 unidades<br>
+                                4. Fax Machine - 0 unidades<br>
+                                5. Disquetes 3.5" - 1 unidad
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Análisis Financiero</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">ROI Inventario</div>
+                            <div class="metric">18.5%</div>
+                            <small>Retorno sobre inversión</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Días Promedio Cobro</div>
+                            <div class="metric">35 días</div>
+                            <small>⚠️ Meta: 30 días</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Efectividad Cobranza</div>
+                            <div class="metric">94.2%</div>
+                            <small>✅ Meta: 90%</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Costo de Ventas</div>
+                            <div class="metric">77.5%</div>
+                            <small>Del total de ingresos</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Exportación de Reportes</div>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <div class="card-title">Reportes Programados</div>
+                            <div class="metric">12</div>
+                            <small>Envío automático</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Último Backup</div>
+                            <div class="metric">Hoy 02:00</div>
+                            <small>✅ Exitoso</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Formatos Disponibles</div>
+                            <div class="metric">Excel, PDF</div>
+                            <small>CSV, XML</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTRO DE NOTIFICACIONES -->
+        <div class="section" data-section-id="centro-de-notificaciones">
+            <div class="section-header">
+                🔔 CENTRO DE NOTIFICACIONES
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="section-content">
+                <div class="subsection">
+                    <div class="subsection-title">Alertas Críticas</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Requieren Acción Inmediata</div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-danger"></span>Stock crítico: Teclado Mecánico (3 unidades)</span>
+                            <span>🛒 Reordenar ahora</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-danger"></span>Cliente ABC excedió límite crédito</span>
+                            <span>🚫 Bloquear ventas</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-danger"></span>Factura #1234 rechazada por SII</span>
+                            <span>🔄 Corregir y reenviar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Alertas de Advertencia</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Requieren Atención Próxima</div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>12 productos vencen en 15 días</span>
+                            <span>📅 Programar promoción</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Factura #5678 vence mañana ($85K)</span>
+                            <span>📞 Contactar cliente</span>
+                        </div>
+                        <div class="table-row">
+                            <span><span class="status-indicator status-warning"></span>Caja 3 requiere cuadre</span>
+                            <span>🧮 Revisar diferencias</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Tareas Pendientes</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Actividades Programadas</div>
+                        <div class="table-row">
+                            <span>📋 Inventario físico bodega norte - Programado: 20/07</span>
+                            <span>⏰ En 6 días</span>
+                        </div>
+                        <div class="table-row">
+                            <span>💰 Cierre mensual de caja - Programado: 31/07</span>
+                            <span>⏰ En 17 días</span>
+                        </div>
+                        <div class="table-row">
+                            <span>📊 Reporte gerencial - Programado: 15/07</span>
+                            <span>⏰ Mañana</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Aprobaciones Requeridas</div>
+                    <div class="table-mockup">
+                        <div class="table-header">Pendientes de Autorización</div>
+                        <div class="table-row">
+                            <span>💳 Excepción crédito - Cliente XYZ (+$100K)</span>
+                            <span>👤 Autorizar gerencia</span>
+                        </div>
+                        <div class="table-row">
+                            <span>🔄 Devolución Laptop Dell ($850K)</span>
+                            <span>👤 Autorizar supervisor</span>
+                        </div>
+                        <div class="table-row">
+                            <span>💵 Gasto caja chica extraordinario ($25K)</span>
+                            <span>👤 Autorizar administración</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-title">Configuración de Alertas</div>
+                    <div class="grid grid-4">
+                        <div class="card">
+                            <div class="card-title">Email Activo</div>
+                            <div class="metric">✅ SI</div>
+                            <small>Alertas críticas por correo</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">SMS Activo</div>
+                            <div class="metric">⚠️ NO</div>
+                            <small>Configurar número</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Push Notifications</div>
+                            <div class="metric">✅ SI</div>
+                            <small>En navegador</small>
+                        </div>
+                        <div class="card">
+                            <div class="card-title">Frecuencia Check</div>
+                            <div class="metric">5 min</div>
+                            <small>Actualización automática</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

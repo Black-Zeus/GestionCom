@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema POS - Caja</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="extra.css" />
+  </head>
+  <body>
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <h1>💰 Sistema de Caja</h1>
+        <div class="user-info">
+          <strong>Cajero:</strong> <span id="cashier-name">Cargando...</span
+          ><br />
+          <strong>Caja:</strong> <span id="register-name">Cargando...</span> •
+          <strong>Fecha:</strong> <span id="current-date"></span><br />
+          <strong>Estado:</strong>
+          <span id="session-status" class="session-active">Sesión Activa</span>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <!-- Panel de Búsqueda y Selección -->
+        <div class="sales-form">
+          <!-- Búsqueda por Folio -->
+          <div class="folio-search-section">
+            <h3>🔍 Buscar Venta por Folio</h3>
+            <div class="folio-search-row">
+              <div class="form-group">
+                <label for="sale-folio">Folio de Venta</label>
+                <input
+                  type="text"
+                  id="sale-folio"
+                  class="form-control folio-input"
+                  placeholder="PV240001"
+                  onkeypress="handleFolioEnter(event)"
+                  oninput="handleFolioInput(event)"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <button class="btn btn-primary" onclick="searchByFolio()">
+                  🔍 Buscar
+                </button>
+              </div>
+            </div>
+
+            <!-- Preview de la venta encontrada -->
+            <div id="sale-preview" class="sale-preview" style="display: none">
+              <div class="alert alert-success">
+                <div class="alert-icon">✓</div>
+                <div class="alert-content">
+                  <div class="sale-preview-header">
+                    <strong id="preview-folio">PV240001</strong>
+                    <span id="preview-total" class="sale-preview-total"
+                      >$0</span
+                    >
+                  </div>
+                  <div id="preview-details" class="sale-preview-details">
+                    Cliente: • Items: • Fecha:
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lista de Ventas Pendientes -->
+          <div class="pending-sales-section">
+            <h3>📋 Ventas Pendientes de Facturación</h3>
+
+            <!-- Filtros -->
+            <div class="filters-row">
+              <div class="form-group">
+                <label for="date-filter">Fecha</label>
+                <select
+                  id="date-filter"
+                  class="form-control"
+                  onchange="filterPendingSales()"
+                >
+                  <option value="today">Hoy</option>
+                  <option value="yesterday">Ayer</option>
+                  <option value="week">Esta semana</option>
+                  <option value="all">Todas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="customer-filter">Cliente</label>
+                <input
+                  type="text"
+                  id="customer-filter"
+                  class="form-control"
+                  placeholder="Filtrar por cliente..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="amount-filter">Monto</label>
+                <select
+                  id="amount-filter"
+                  class="form-control"
+                  onchange="filterPendingSales()"
+                >
+                  <option value="">Todos los montos</option>
+                  <option value="0-100000">Hasta $100.000</option>
+                  <option value="100000-500000">$100.000 - $500.000</option>
+                  <option value="500000-1000000">$500.000 - $1.000.000</option>
+                  <option value="1000000+">Más de $1.000.000</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <button
+                  class="btn btn-secondary"
+                  onclick="refreshPendingSales()"
+                  title="Actualizar (F5)"
+                >
+                  🔄 Actualizar
+                </button>
+              </div>
+            </div>
+
+            <!-- Estadísticas rápidas -->
+            <div class="stats-row">
+              <div
+                class="stat-card"
+                data-tooltip="Ventas esperando ser facturadas"
+              >
+                <div class="stat-number" id="pending-count">0</div>
+                <div class="stat-label">Ventas Pendientes</div>
+              </div>
+              <div
+                class="stat-card"
+                data-tooltip="Valor total de ventas pendientes"
+              >
+                <div class="stat-number" id="pending-total">$0</div>
+                <div class="stat-label">Total Pendiente</div>
+              </div>
+              <div
+                class="stat-card"
+                data-tooltip="Ventas procesadas el día de hoy"
+              >
+                <div class="stat-number" id="today-processed">0</div>
+                <div class="stat-label">Facturadas Hoy</div>
+              </div>
+            </div>
+
+            <!-- Tabla de ventas pendientes -->
+            <div class="pending-sales-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Folio</th>
+                    <th>Cliente</th>
+                    <th>Comprador</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Fecha/Hora</th>
+                    <th>Vendedor</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="pending-sales-tbody">
+                  <!-- Las ventas pendientes se cargan dinámicamente -->
+                </tbody>
+              </table>
+              <div id="empty-pending" class="empty-table">
+                <div class="empty-table-icon">📄</div>
+                <div>No hay ventas pendientes</div>
+                <small>Todas las ventas han sido procesadas</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de Información de Venta Seleccionada -->
+        <div class="sale-details-panel">
+          <h3>📄 Detalle de Venta</h3>
+
+          <div id="no-sale-selected" class="no-selection-state">
+            <div class="no-selection-icon">📄</div>
+            <div class="no-selection-text">
+              <strong>Ninguna venta seleccionada</strong><br />
+              <small>Busque por folio o seleccione una venta de la lista</small>
+            </div>
+          </div>
+
+          <div id="sale-details" class="sale-details" style="display: none">
+            <!-- Información del cliente -->
+            <div class="detail-section">
+              <h4>👤 Información del Cliente</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <strong>RUT:</strong> <span id="detail-customer-rut">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Nombre:</strong>
+                  <span id="detail-customer-name">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Tipo:</strong>
+                  <span id="detail-customer-type">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Email:</strong>
+                  <span id="detail-customer-email">-</span>
+                </div>
+              </div>
+
+              <!-- Comprador autorizado (si aplica) -->
+              <div id="buyer-info" class="buyer-info" style="display: none">
+                <div class="detail-item buyer-highlight">
+                  <strong>Comprador:</strong>
+                  <span id="detail-buyer-name">-</span><br />
+                  <small
+                    ><strong>Cargo:</strong>
+                    <span id="detail-buyer-position">-</span></small
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Items de la venta -->
+            <div class="detail-section">
+              <h4>📦 Productos</h4>
+              <div class="detail-items-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Producto</th>
+                      <th>Cant.</th>
+                      <th>Precio Unit.</th>
+                      <th>Desc.</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="detail-items-tbody">
+                    <!-- Items se cargan dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Totales -->
+            <div class="detail-section">
+              <h4>💰 Totales</h4>
+              <div class="totals-summary">
+                <div class="total-row">
+                  <span>Items:</span>
+                  <span id="detail-total-items">0</span>
+                </div>
+                <div class="total-row">
+                  <span>Subtotal:</span>
+                  <span id="detail-subtotal">$0</span>
+                </div>
+                <div class="total-row">
+                  <span>Descuentos:</span>
+                  <span id="detail-discounts">$0</span>
+                </div>
+                <div class="total-row">
+                  <span>IVA (19%):</span>
+                  <span id="detail-tax">$0</span>
+                </div>
+                <div class="total-row total-final">
+                  <span>TOTAL:</span>
+                  <span id="detail-total">$0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="detail-section">
+              <h4>ℹ️ Información Adicional</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <strong>Folio:</strong> <span id="detail-folio">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Fecha:</strong> <span id="detail-date">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Hora:</strong> <span id="detail-time">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Vendedor:</strong> <span id="detail-seller">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Estado:</strong> <span id="detail-status">-</span>
+                </div>
+                <div class="detail-item">
+                  <strong>Tipo Venta:</strong>
+                  <span id="detail-credit-type">-</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="detail-actions">
+              <button
+                class="btn btn-success btn-lg"
+                onclick="processSale()"
+                id="process-btn"
+                disabled
+                title="Procesar Pago (Ctrl+P)"
+              >
+                💰 Procesar Pago
+              </button>
+              <button
+                class="btn btn-info"
+                onclick="printSaleDetail()"
+                title="Imprimir Detalle"
+              >
+                🖨️ Imprimir Detalle
+              </button>
+              <button
+                class="btn btn-secondary"
+                onclick="clearSelection()"
+                title="Limpiar Selección"
+              >
+                🗑️ Limpiar Selección
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Procesamiento de Pago -->
+      <div id="paymentModal" class="modal">
+        <div class="modal-content payment-modal">
+          <div class="modal-header">
+            <h2>💳 Procesar Pago</h2>
+            <span class="close" onclick="closePaymentModal()">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <!-- Resumen de la venta -->
+            <div class="payment-summary">
+              <div class="payment-summary-header">
+                <div class="payment-folio" id="payment-folio">PV240001</div>
+                <div class="payment-total" id="payment-total">$0</div>
+              </div>
+              <div class="payment-customer" id="payment-customer">Cliente</div>
+            </div>
+
+            <!-- Métodos de pago -->
+            <div class="payment-methods-section">
+              <h4>💳 Método de Pago</h4>
+              <div class="payment-methods-grid">
+                <div
+                  class="payment-method-card"
+                  onclick="selectPaymentMethod('CASH')"
+                  data-tooltip="Pago en efectivo con vuelto"
+                >
+                  <div class="payment-method-icon">💵</div>
+                  <div class="payment-method-name">Efectivo</div>
+                </div>
+                <div
+                  class="payment-method-card"
+                  onclick="selectPaymentMethod('DEBIT')"
+                  data-tooltip="Tarjeta de débito"
+                >
+                  <div class="payment-method-icon">💳</div>
+                  <div class="payment-method-name">Débito</div>
+                </div>
+                <div
+                  class="payment-method-card"
+                  onclick="selectPaymentMethod('CREDIT')"
+                  data-tooltip="Tarjeta de crédito"
+                >
+                  <div class="payment-method-icon">💳</div>
+                  <div class="payment-method-name">Crédito</div>
+                </div>
+                <div
+                  class="payment-method-card"
+                  onclick="selectPaymentMethod('TRANSFER')"
+                  data-tooltip="Transferencia bancaria"
+                >
+                  <div class="payment-method-icon">🏦</div>
+                  <div class="payment-method-name">Transferencia</div>
+                </div>
+                <div
+                  class="payment-method-card"
+                  onclick="selectPaymentMethod('CREDIT_ACCOUNT')"
+                  data-tooltip="Cuenta corriente del cliente"
+                >
+                  <div class="payment-method-icon">📋</div>
+                  <div class="payment-method-name">Cuenta Corriente</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detalles de pago específicos -->
+            <div
+              id="payment-details"
+              class="payment-details"
+              style="display: none"
+            >
+              <!-- Para efectivo -->
+              <div
+                id="cash-details"
+                class="payment-detail-section"
+                style="display: none"
+              >
+                <h4>💵 Pago en Efectivo</h4>
+                <div class="cash-payment-grid">
+                  <div class="form-group">
+                    <label for="amount-received">Monto Recibido</label>
+                    <input
+                      type="number"
+                      id="amount-received"
+                      class="form-control amount-input"
+                      placeholder="0"
+                      min="0"
+                      step="1"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>Vuelto</label>
+                    <div class="change-display" id="change-amount">$0</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Para tarjetas -->
+              <div
+                id="card-details"
+                class="payment-detail-section"
+                style="display: none"
+              >
+                <h4>💳 Pago con Tarjeta</h4>
+                <div class="card-payment-grid">
+                  <div class="form-group">
+                    <label for="card-number">Últimos 4 dígitos</label>
+                    <input
+                      type="text"
+                      id="card-number"
+                      class="form-control"
+                      placeholder="1234"
+                      maxlength="4"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="authorization-code"
+                      >Código de Autorización</label
+                    >
+                    <input
+                      type="text"
+                      id="authorization-code"
+                      class="form-control"
+                      placeholder="ABC123"
+                      maxlength="10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Para transferencia -->
+              <div
+                id="transfer-details"
+                class="payment-detail-section"
+                style="display: none"
+              >
+                <h4>🏦 Transferencia Bancaria</h4>
+                <div class="transfer-payment-grid">
+                  <div class="form-group">
+                    <label for="bank-name">Banco</label>
+                    <input
+                      type="text"
+                      id="bank-name"
+                      class="form-control"
+                      placeholder="Banco de Chile"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="transfer-reference">Número de Referencia</label>
+                    <input
+                      type="text"
+                      id="transfer-reference"
+                      class="form-control"
+                      placeholder="TRF123456789"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones del modal -->
+            <div class="modal-actions">
+              <button class="btn btn-secondary" onclick="closePaymentModal()">
+                Cancelar
+              </button>
+              <button
+                class="btn btn-success"
+                id="confirm-payment-btn"
+                onclick="confirmPayment()"
+                disabled
+              >
+                ✓ Confirmar Pago
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de Confirmación de Facturación -->
+      <div id="invoiceModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>📄 Generar Factura</h2>
+            <span class="close" onclick="closeInvoiceModal()">&times;</span>
+          </div>
+
+          <div class="modal-body">
+            <div class="invoice-confirmation">
+              <div class="alert alert-success">
+                <div class="alert-icon">✓</div>
+                <div class="alert-content">
+                  <strong>Pago procesado exitosamente</strong><br />
+                  La venta ha sido registrada y está lista para facturar
+                </div>
+              </div>
+
+              <div class="invoice-summary">
+                <div class="invoice-detail">
+                  <strong>Folio de Venta:</strong>
+                  <span id="invoice-folio">-</span>
+                </div>
+                <div class="invoice-detail">
+                  <strong>Cliente:</strong> <span id="invoice-customer">-</span>
+                </div>
+                <div class="invoice-detail">
+                  <strong>Total:</strong> <span id="invoice-total">-</span>
+                </div>
+                <div class="invoice-detail">
+                  <strong>Método de Pago:</strong>
+                  <span id="invoice-payment-method">-</span>
+                </div>
+                <div class="invoice-detail">
+                  <strong>Fecha:</strong> <span id="invoice-date">-</span>
+                </div>
+              </div>
+
+              <div class="document-type-selection">
+                <h4>📋 Tipo de Documento</h4>
+                <div class="document-type-grid">
+                  <div
+                    class="document-type-card active"
+                    onclick="selectDocumentType('BOLETA')"
+                  >
+                    <div class="document-type-icon">🧾</div>
+                    <div class="document-type-name">Boleta</div>
+                    <div class="document-type-desc">Para consumidor final</div>
+                  </div>
+                  <div
+                    class="document-type-card"
+                    onclick="selectDocumentType('FACTURA')"
+                  >
+                    <div class="document-type-icon">📄</div>
+                    <div class="document-type-name">Factura</div>
+                    <div class="document-type-desc">Para empresas</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions">
+              <button class="btn btn-secondary" onclick="closeInvoiceModal()">
+                Cerrar
+              </button>
+              <button class="btn btn-success" onclick="generateInvoice()">
+                📄 Generar Documento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+      // Actualizar fecha y hora inicial
+      document.addEventListener("DOMContentLoaded", function () {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("es-CL");
+        const timeStr = now.toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const currentDateEl = document.getElementById("current-date");
+        if (currentDateEl) {
+          currentDateEl.textContent = dateStr;
+        }
+
+        // Mostrar información de atajos al cargar
+        console.log(`
+🔧 ATAJOS DE TECLADO DISPONIBLES:
+• Ctrl + F: Enfocar búsqueda de folio
+• Ctrl + R: Actualizar lista de ventas
+• Ctrl + P: Procesar pago (si hay venta seleccionada)
+• F5: Actualizar lista de ventas
+• Escape: Cerrar modales
+• Flechas: Navegar en tabla de ventas
+• Enter/Espacio: Seleccionar fila de venta
+        `);
+      });
+    </script>
+  </body>
+</html>

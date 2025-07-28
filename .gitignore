@@ -73,10 +73,10 @@ temp/
 # =========================
 # CARPETAS DE RESPALDO/BASURA
 # =========================
-Trash/
-trash/
+#Trash/
+#trash/
 backup/
-old/
+#old/
 
 # =========================
 # VOLÚMENES DE SERVICIOS DOCKER

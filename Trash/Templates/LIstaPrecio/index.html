@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Listas de Precios</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="extra.css" />
+</head>
+
+<body>
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>💰 Sistema de Listas de Precios</h1>
+            <div class="user-info">
+                <strong>Usuario:</strong> <span id="user-name">Cargando...</span><br />
+                <strong>Rol:</strong> <span id="user-role">Cargando...</span><br />
+                <strong>Fecha:</strong> <span id="current-date"></span>
+            </div>
+        </div>
+
+        <!-- Navegación Principal por Pestañas -->
+        <div class="main-tabs">
+            <button class="tab-button active" onclick="showTab('lists')">
+                <span class="tab-icon">📋</span>
+                <span>Listas de Precios</span>
+                <span class="tab-badge" id="lists-badge">6</span>
+            </button>
+            <button class="tab-button" onclick="showTab('products')">
+                <span class="tab-icon">🏷️</span>
+                <span>Productos y Precios</span>
+                <span class="tab-badge" id="products-badge">12</span>
+            </button>
+            <button class="tab-button" onclick="showTab('comparison')">
+                <span class="tab-icon">📊</span>
+                <span>Comparador</span>
+            </button>
+            <button class="tab-button" onclick="showTab('reports')">
+                <span class="tab-icon">📈</span>
+                <span>Reportes</span>
+            </button>
+        </div>
+
+        <!-- Contenido de Pestañas -->
+        <div class="tab-content">
+            
+            <!-- ============================================== -->
+            <!-- PESTAÑA: LISTAS DE PRECIOS -->
+            <!-- ============================================== -->
+            <div id="lists-tab" class="tab-panel active">
+                <!-- Header de la sección -->
+                <div class="price-lists-header">
+                    <h2>
+                        📋 Gestión de Listas de Precios
+                    </h2>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="createPriceList()">
+                            ➕ Nueva Lista
+                        </button>
+                        <button class="btn btn-info" onclick="exportPrices()">
+                            📤 Exportar
+                        </button>
+                        <button class="btn btn-secondary" onclick="importPrices()">
+                            📥 Importar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="price-lists-filters">
+                    <h4>🔍 Filtros</h4>
+                    <div class="filters-grid">
+                        <div class="form-group">
+                            <label for="search-lists">Buscar lista</label>
+                            <input type="text" id="search-lists" class="form-control" 
+                                   placeholder="Buscar por nombre o código..." autocomplete="off" />
+                        </div>
+                        <div class="form-group">
+                            <label for="group-filter">Grupo</label>
+                            <select id="group-filter" class="form-control">
+                                <option value="">Todos los grupos</option>
+                                <option value="1">Precios Retail</option>
+                                <option value="2">Precios Mayorista</option>
+                                <option value="3">Precios Especiales</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="status-filter">Estado</label>
+                            <select id="status-filter" class="form-control">
+                                <option value="">Todos los estados</option>
+                                <option value="active">Activas</option>
+                                <option value="inactive">Inactivas</option>
+                                <option value="expired">Expiradas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-primary" onclick="filterPriceLists()">
+                                🔍 Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas rápidas -->
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <div class="stat-number" id="active-lists-count">0</div>
+                        <div class="stat-label">Listas Activas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="expired-lists-count">0</div>
+                        <div class="stat-label">Listas Expiradas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-items-count">0</div>
+                        <div class="stat-label">Total Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="recent-changes-count">3</div>
+                        <div class="stat-label">Cambios Recientes</div>
+                    </div>
+                </div>
+
+                <!-- Tabla de listas de precios -->
+                <div class="price-lists-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Grupo</th>
+                                <th>Moneda</th>
+                                <th>Vigencia</th>
+                                <th>Items</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="price-lists-tbody">
+                            <!-- Las listas se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                    <div id="empty-price-lists" class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <h3>No hay listas de precios</h3>
+                        <p>Crea tu primera lista de precios para comenzar</p>
+                        <button class="btn btn-success" onclick="createPriceList()">
+                            ➕ Crear Lista
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- PESTAÑA: PRODUCTOS Y PRECIOS -->
+            <!-- ============================================== -->
+            <div id="products-tab" class="tab-panel">
+                <!-- Header de la sección -->
+                <div class="products-header">
+                    <h2>
+                        🏷️ Gestión de Productos y Precios
+                    </h2>
+                    <div class="header-actions">
+                        <button class="btn btn-warning" onclick="bulkUpdatePrices()">
+                            📊 Actualización Masiva
+                        </button>
+                        <button class="btn btn-success" onclick="savePendingChanges()">
+                            💾 Guardar Cambios
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selector de lista de precios -->
+                <div class="price-list-selector">
+                    <label for="price-list-selector">Lista de Precios Activa</label>
+                    <select id="price-list-selector" class="price-list-select" onchange="selectPriceListForProducts()">
+                        <option value="">Seleccionar lista de precios...</option>
+                    </select>
+                    <div id="selected-list-info" class="selected-list-info">
+                        <!-- Info de la lista seleccionada se carga dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Filtros de productos -->
+                <div class="products-filters">
+                    <h4>🔍 Filtros de Productos</h4>
+                    <div class="products-search-grid">
+                        <div class="form-group">
+                            <label for="search-products">Buscar producto</label>
+                            <input type="text" id="search-products" class="form-control" 
+                                   placeholder="Buscar por nombre, SKU o marca..." autocomplete="off" />
+                        </div>
+                        <div class="form-group">
+                            <label for="category-filter">Categoría</label>
+                            <select id="category-filter" class="form-control">
+                                <option value="">Todas las categorías</option>
+                                <option value="2">Computación</option>
+                                <option value="3">Telefonía</option>
+                                <option value="4">Accesorios</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="brand-filter">Marca</label>
+                            <input type="text" id="brand-filter" class="form-control" 
+                                   placeholder="Filtrar por marca..." autocomplete="off" />
+                        </div>
+                        <div class="form-group">
+                            <label for="price-status-filter">Estado de Precio</label>
+                            <select id="price-status-filter" class="form-control">
+                                <option value="">Todos</option>
+                                <option value="with-price">Con precio</option>
+                                <option value="without-price">Sin precio</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-primary" onclick="filterProducts()">
+                                🔍 Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de acciones masivas -->
+                <div id="bulk-actions-bar" class="bulk-actions-bar">
+                    <div class="bulk-actions-left">
+                        <span class="selected-count" id="selected-count">0</span>
+                        <span>productos seleccionados</span>
+                    </div>
+                    <div class="bulk-actions-right">
+                        <button class="bulk-action-btn" onclick="bulkUpdatePrices()">
+                            📊 Actualizar Precios
+                        </button>
+                        <button class="bulk-action-btn danger" onclick="bulkRemoveProducts()">
+                            🗑️ Eliminar Selección
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabla de productos con precios -->
+                <div class="products-price-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="40">
+                                    <input type="checkbox" id="select-all-products" 
+                                           onchange="toggleAllProducts(this.checked)">
+                                </th>
+                                <th>Producto</th>
+                                <th>Precio Costo</th>
+                                <th>Precio Venta</th>
+                                <th>Margen %</th>
+                                <th>Historial</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody">
+                            <!-- Los productos se cargan dinámicamente -->
+                        </tbody>
+                    </table>
+                    <div id="empty-products" class="empty-state">
+                        <div class="empty-state-icon">🏷️</div>
+                        <h3>Selecciona una lista de precios</h3>
+                        <p>Elige una lista de precios para ver y editar los productos</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- PESTAÑA: COMPARADOR DE PRECIOS -->
+            <!-- ============================================== -->
+            <div id="comparison-tab" class="tab-panel">
+                <!-- Header de la sección -->
+                <div class="comparison-header">
+                    <h2>📊 Comparador de Precios</h2>
+                    <div class="comparison-subtitle">
+                        Compara precios entre diferentes listas para análisis de mercado
+                    </div>
+                </div>
+
+                <!-- Filtros de comparación -->
+                <div class="comparison-filters">
+                    <h4>🔍 Filtros de Comparación</h4>
+                    <div class="comparison-grid">
+                        <div class="form-group">
+                            <label for="comparison-search">Buscar producto</label>
+                            <input type="text" id="comparison-search" class="form-control" 
+                                   placeholder="Buscar productos a comparar..." autocomplete="off" />
+                        </div>
+                        <div class="form-group">
+                            <label for="comparison-category">Categoría</label>
+                            <select id="comparison-category" class="form-control">
+                                <option value="">Todas las categorías</option>
+                                <option value="2">Computación</option>
+                                <option value="3">Telefonía</option>
+                                <option value="4">Accesorios</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="comparison-brand">Marca</label>
+                            <input type="text" id="comparison-brand" class="form-control" 
+                                   placeholder="Filtrar por marca..." autocomplete="off" />
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-primary" onclick="filterComparison()">
+                                🔍 Filtrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selección de listas para comparar -->
+                <div class="price-lists-selection">
+                    <h4>📋 Seleccionar Listas para Comparar</h4>
+                    <p class="text-muted">Marca las casillas de las listas que deseas incluir en la comparación</p>
+                    <div id="comparison-lists-checkboxes" class="lists-checkboxes">
+                        <!-- Las listas se cargan dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Tabla de comparación -->
+                <div id="comparison-table-container">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <h3>Selecciona listas para comparar</h3>
+                        <p>Marca las casillas de las listas de precios que deseas comparar</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- PESTAÑA: REPORTES Y ANÁLISIS -->
+            <!-- ============================================== -->
+            <div id="reports-tab" class="tab-panel">
+                <!-- Header de la sección -->
+                <div class="reports-header">
+                    <h2>📈 Reportes y Análisis</h2>
+                    <div class="comparison-subtitle">
+                        Análisis estadístico y reportes de listas de precios
+                    </div>
+                </div>
+
+                <!-- Grid de reportes disponibles -->
+                <div class="reports-grid">
+                    <div class="report-card" onclick="generateReport('coverage')">
+                        <div class="report-card-header">
+                            <div class="report-icon">📊</div>
+                            <div>
+                                <h3>Cobertura de Productos</h3>
+                            </div>
+                        </div>
+                        <div class="report-description">
+                            Análisis de cobertura de productos en las diferentes listas de precios
+                        </div>
+                        <div class="report-stats">
+                            <div class="report-stat">
+                                <span class="report-stat-value" id="total-products-report">0</span>
+                                <span class="report-stat-label">Productos</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value" id="products-with-prices-report">0</span>
+                                <span class="report-stat-label">Con Precios</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value" id="coverage-percentage-report">0%</span>
+                                <span class="report-stat-label">Cobertura</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-card" onclick="generateReport('margins')">
+                        <div class="report-card-header">
+                            <div class="report-icon">💰</div>
+                            <div>
+                                <h3>Análisis de Márgenes</h3>
+                            </div>
+                        </div>
+                        <div class="report-description">
+                            Distribución y análisis de márgenes de ganancia por producto y categoría
+                        </div>
+                        <div class="report-stats">
+                            <div class="report-stat">
+                                <span class="report-stat-value" id="average-margin-report">0%</span>
+                                <span class="report-stat-label">Margen Promedio</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">15</span>
+                                <span class="report-stat-label">Productos</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">3</span>
+                                <span class="report-stat-label">Margen Bajo</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-card" onclick="generateReport('price-changes')">
+                        <div class="report-card-header">
+                            <div class="report-icon">📈</div>
+                            <div>
+                                <h3>Historial de Cambios</h3>
+                            </div>
+                        </div>
+                        <div class="report-description">
+                            Tracking de cambios de precios y análisis de tendencias históricas
+                        </div>
+                        <div class="report-stats">
+                            <div class="report-stat">
+                                <span class="report-stat-value" id="recent-changes-report">0</span>
+                                <span class="report-stat-label">Cambios 7 días</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">12</span>
+                                <span class="report-stat-label">Cambios 30 días</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">89%</span>
+                                <span class="report-stat-label">Incrementos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="report-card" onclick="generateReport('competitive')">
+                        <div class="report-card-header">
+                            <div class="report-icon">⚔️</div>
+                            <div>
+                                <h3>Análisis Competitivo</h3>
+                            </div>
+                        </div>
+                        <div class="report-description">
+                            Comparativa de precios entre listas y análisis de posicionamiento
+                        </div>
+                        <div class="report-stats">
+                            <div class="report-stat">
+                                <span class="report-stat-value">6</span>
+                                <span class="report-stat-label">Listas</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">45%</span>
+                                <span class="report-stat-label">Variación</span>
+                            </div>
+                            <div class="report-stat">
+                                <span class="report-stat-value">Premium</span>
+                                <span class="report-stat-label">Más Alta</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de análisis detallado -->
+                <div class="analysis-section">
+                    <div class="analysis-header">
+                        <h3>📊 Distribución de Precios por Categoría</h3>
+                        <div class="header-actions">
+                            <button class="btn btn-info" onclick="exportReport('price-distribution')">
+                                📤 Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder">
+                        Gráfico de distribución de precios por categoría
+                    </div>
+                </div>
+
+                <div class="analysis-section">
+                    <div class="analysis-header">
+                        <h3>💹 Evolución de Márgenes</h3>
+                        <div class="header-actions">
+                            <button class="btn btn-info" onclick="exportReport('margin-evolution')">
+                                📤 Exportar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="chart-placeholder">
+                        Gráfico de evolución de márgenes en el tiempo
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales -->
+    
+    <!-- Modal de Edición de Lista de Precios -->
+    <div id="priceListModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Editar Lista de Precios</h2>
+                <span class="close" onclick="closePriceListModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="price-edit-form">
+                    <div class="form-group">
+                        <label for="modal-list-name">Nombre de la Lista</label>
+                        <input type="text" id="modal-list-name" class="form-control" 
+                               placeholder="Ej: Lista Premium 2025" />
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-list-code">Código</label>
+                        <input type="text" id="modal-list-code" class="form-control" 
+                               placeholder="Ej: PREMIUM_2025" />
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-list-group">Grupo</label>
+                        <select id="modal-list-group" class="form-control">
+                            <option value="">Seleccionar grupo...</option>
+                            <option value="1">Precios Retail</option>
+                            <option value="2">Precios Mayorista</option>
+                            <option value="3">Precios Especiales</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-list-currency">Moneda</label>
+                        <select id="modal-list-currency" class="form-control">
+                            <option value="CLP">Peso Chileno (CLP)</option>
+                            <option value="USD">Dólar Americano (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-valid-from">Válido Desde</label>
+                        <input type="date" id="modal-valid-from" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label for="modal-valid-to">Válido Hasta</label>
+                        <input type="date" id="modal-valid-to" class="form-control" />
+                        <small class="text-muted">Dejar vacío para vigencia permanente</small>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="closePriceListModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-success" onclick="savePriceList()">
+                        💾 Guardar Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Historial de Precios -->
+    <div id="priceHistoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Historial de Precios</h2>
+                <span class="close" onclick="closePriceHistoryModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="price-history-content">
+                    <!-- Contenido del historial se carga dinámicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+        // Actualizar fecha actual
+        document.addEventListener("DOMContentLoaded", function () {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString("es-CL");
+            document.getElementById("current-date").textContent = dateStr;
+
+            // Funciones auxiliares para modales (placeholders)
+            window.closePriceListModal = function() {
+                document.getElementById('priceListModal').style.display = 'none';
+            };
+
+            window.closePriceHistoryModal = function() {
+                document.getElementById('priceHistoryModal').style.display = 'none';
+            };
+
+            window.savePriceList = function() {
+                showToast('Lista de precios guardada (demo)', 'success');
+                closePriceListModal();
+            };
+
+            window.toggleAllProducts = function(checked) {
+                document.querySelectorAll('.product-checkbox').forEach(cb => {
+                    cb.checked = checked;
+                    toggleProductSelection(parseInt(cb.value));
+                });
+            };
+
+            window.bulkRemoveProducts = function() {
+                if (selectedProducts.length === 0) {
+                    showToast('Debe seleccionar productos primero', 'warning');
+                    return;
+                }
+                
+                if (confirm(`¿Eliminar ${selectedProducts.length} productos de la lista?`)) {
+                    showToast(`${selectedProducts.length} productos eliminados`, 'warning');
+                    selectedProducts = [];
+                    updateBulkActionsBar();
+                }
+            };
+
+            window.generateReport = function(reportType) {
+                showToast(`Generando reporte: ${reportType}`, 'info');
+            };
+
+            window.exportReport = function(reportType) {
+                showToast(`Exportando reporte: ${reportType}`, 'success');
+            };
+
+            window.filterComparison = function() {
+                showToast('Filtros de comparación aplicados', 'info');
+            };
+
+            // Cerrar modales con clic fuera
+            window.onclick = function(event) {
+                const modals = ['priceListModal', 'priceHistoryModal'];
+                modals.forEach(modalId => {
+                    const modal = document.getElementById(modalId);
+                    if (event.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            };
+
+            console.log(`
+🔧 ATAJOS DE TECLADO DISPONIBLES:
+• Ctrl + S: Guardar cambios pendientes
+• Ctrl + F: Enfocar búsqueda en pestaña activa
+• Alt + 1-4: Cambiar entre pestañas
+• Escape: Limpiar selecciones
+• Click en fila: Seleccionar lista/producto
+            `);
+        });
+    </script>
+</body>
+
+</html>

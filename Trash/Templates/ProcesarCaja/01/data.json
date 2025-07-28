@@ -1,0 +1,533 @@
+{
+  "pending_sales": [
+    {
+      "folio": "PV240001",
+      "customer": {
+        "rut": "12345678-9",
+        "name": "Comercial Los Andes Ltda.",
+        "type": "COMPANY",
+        "email": "compras@losandes.cl",
+        "phone": "+56 2 2234 5678",
+        "is_credit_customer": true,
+        "credit_limit": 5000000,
+        "credit_available": 3200000
+      },
+      "buyer": {
+        "name": "María González Pérez",
+        "position": "Jefe de Compras",
+        "email": "maria.gonzalez@losandes.cl",
+        "authorization_level": "ADVANCED",
+        "is_primary_contact": true
+      },
+      "sale_info": {
+        "date": "2025-01-15",
+        "time": "14:30",
+        "seller_name": "Carlos Mendoza",
+        "seller_id": "VEND001",
+        "warehouse": "Bodega Central",
+        "terminal": "CAJA-001",
+        "branch": "Sucursal Santiago Centro"
+      },
+      "items": [
+        {
+          "code": "PROD001",
+          "name": "Notebook HP Pavilion 15.6\" Intel Core i5",
+          "brand": "HP",
+          "category": "Computación",
+          "quantity": 2,
+          "unit_price": 450000,
+          "discount_percentage": 5,
+          "discount_amount": 45000,
+          "line_total": 855000
+        },
+        {
+          "code": "PROD002",
+          "name": "Mouse Inalámbrico Logitech MX Master 3",
+          "brand": "Logitech",
+          "category": "Accesorios",
+          "quantity": 3,
+          "unit_price": 89990,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "line_total": 269970
+        },
+        {
+          "code": "PROD003",
+          "name": "Teclado Mecánico Corsair K95 RGB",
+          "brand": "Corsair",
+          "category": "Accesorios",
+          "quantity": 1,
+          "unit_price": 189990,
+          "discount_percentage": 10,
+          "discount_amount": 18999,
+          "line_total": 170991
+        }
+      ],
+      "totals": {
+        "total_items": 6,
+        "subtotal": 1295961,
+        "line_discounts": 63999,
+        "document_discount": 0,
+        "tax_amount": 246432,
+        "total_amount": 1542393
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente Facturación"
+      },
+      "timestamps": {
+        "created_at": "2025-01-15T14:30:00Z",
+        "expires_at": "2025-01-17T23:59:59Z"
+      },
+      "credit_sale": true,
+      "credit_terms_days": 30,
+      "priority": "HIGH",
+      "notes": "Cliente requiere factura antes del cierre del mes"
+    },
+    {
+      "folio": "PV240002",
+      "customer": {
+        "rut": "98765432-1",
+        "name": "Juan Carlos Rodríguez",
+        "type": "INDIVIDUAL",
+        "email": "juan.rodriguez@gmail.com",
+        "phone": "+56 9 8765 4321",
+        "is_credit_customer": false,
+        "credit_limit": 0,
+        "credit_available": 0
+      },
+      "buyer": null,
+      "sale_info": {
+        "date": "2025-01-15",
+        "time": "15:45",
+        "seller_name": "Ana Torres",
+        "seller_id": "VEND002",
+        "warehouse": "Bodega Central",
+        "terminal": "CAJA-002",
+        "branch": "Sucursal Santiago Centro"
+      },
+      "items": [
+        {
+          "code": "PROD004",
+          "name": "Smartphone Samsung Galaxy A54 128GB",
+          "brand": "Samsung",
+          "category": "Telefonía",
+          "quantity": 1,
+          "unit_price": 299990,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "line_total": 299990
+        },
+        {
+          "code": "PROD005",
+          "name": "Cargador Inalámbrico Samsung 15W",
+          "brand": "Samsung",
+          "category": "Accesorios",
+          "quantity": 1,
+          "unit_price": 45990,
+          "discount_percentage": 15,
+          "discount_amount": 6899,
+          "line_total": 39091
+        }
+      ],
+      "totals": {
+        "total_items": 2,
+        "subtotal": 339081,
+        "line_discounts": 6899,
+        "document_discount": 0,
+        "tax_amount": 64425,
+        "total_amount": 403506
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente Facturación"
+      },
+      "timestamps": {
+        "created_at": "2025-01-15T15:45:00Z",
+        "expires_at": "2025-07-25T23:59:59Z"
+      },
+      "credit_sale": false,
+      "credit_terms_days": 0,
+      "priority": "NORMAL",
+      "notes": null
+    },
+    {
+      "folio": "PV240003",
+      "customer": {
+        "rut": "87654321-0",
+        "name": "Tecnología Avanzada S.A.",
+        "type": "COMPANY",
+        "email": "facturacion@tecavanzada.cl",
+        "phone": "+56 2 2987 6543",
+        "is_credit_customer": true,
+        "credit_limit": 10000000,
+        "credit_available": 7500000
+      },
+      "buyer": {
+        "name": "Roberto Silva Martinez",
+        "position": "Gerente de Proyectos",
+        "email": "roberto.silva@tecavanzada.cl",
+        "authorization_level": "FULL",
+        "is_primary_contact": false
+      },
+      "sale_info": {
+        "date": "2025-01-15",
+        "time": "16:20",
+        "seller_name": "Patricia Morales",
+        "seller_id": "VEND003",
+        "warehouse": "Bodega Central",
+        "terminal": "CAJA-001",
+        "branch": "Sucursal Santiago Centro"
+      },
+      "items": [
+        {
+          "code": "PROD006",
+          "name": "Monitor LG UltraWide 34\" 1440p USB-C",
+          "brand": "LG",
+          "category": "Monitores",
+          "quantity": 3,
+          "unit_price": 520000,
+          "discount_percentage": 8,
+          "discount_amount": 124800,
+          "line_total": 1435200
+        },
+        {
+          "code": "PROD007",
+          "name": "Webcam Logitech C920 Pro HD",
+          "brand": "Logitech",
+          "category": "Accesorios",
+          "quantity": 5,
+          "unit_price": 89990,
+          "discount_percentage": 12,
+          "discount_amount": 53994,
+          "line_total": 395956
+        },
+        {
+          "code": "PROD008",
+          "name": "Docking Station USB-C Universal",
+          "brand": "Dell",
+          "category": "Accesorios",
+          "quantity": 3,
+          "unit_price": 159990,
+          "discount_percentage": 5,
+          "discount_amount": 23999,
+          "line_total": 455971
+        }
+      ],
+      "totals": {
+        "total_items": 11,
+        "subtotal": 2287127,
+        "line_discounts": 202793,
+        "document_discount": 50000,
+        "tax_amount": 434754,
+        "total_amount": 2671881
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente Facturación"
+      },
+      "timestamps": {
+        "created_at": "2025-01-15T16:20:00Z",
+        "expires_at": "2025-01-18T23:59:59Z"
+      },
+      "credit_sale": true,
+      "credit_terms_days": 45,
+      "priority": "URGENT",
+      "notes": "Proyecto crítico - Requiere procesamiento inmediato"
+    },
+    {
+      "folio": "PV240004",
+      "customer": {
+        "rut": "65432109-8",
+        "name": "Sofía Herrera Vega",
+        "type": "INDIVIDUAL",
+        "email": "sofia.herrera@outlook.com",
+        "phone": "+56 9 6543 2109",
+        "is_credit_customer": false,
+        "credit_limit": 0,
+        "credit_available": 0
+      },
+      "buyer": null,
+      "sale_info": {
+        "date": "2025-01-15",
+        "time": "17:10",
+        "seller_name": "Miguel Fernández",
+        "seller_id": "VEND004",
+        "warehouse": "Bodega Central",
+        "terminal": "CAJA-003",
+        "branch": "Sucursal Santiago Centro"
+      },
+      "items": [
+        {
+          "code": "PROD009",
+          "name": "Tablet iPad Air 64GB Wi-Fi",
+          "brand": "Apple",
+          "category": "Tablets",
+          "quantity": 1,
+          "unit_price": 649990,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "line_total": 649990
+        },
+        {
+          "code": "PROD010",
+          "name": "Apple Pencil 2da Generación",
+          "brand": "Apple",
+          "category": "Accesorios",
+          "quantity": 1,
+          "unit_price": 149990,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "line_total": 149990
+        },
+        {
+          "code": "PROD011",
+          "name": "Funda Smart Cover iPad Air",
+          "brand": "Apple",
+          "category": "Accesorios",
+          "quantity": 1,
+          "unit_price": 79990,
+          "discount_percentage": 20,
+          "discount_amount": 15998,
+          "line_total": 63992
+        }
+      ],
+      "totals": {
+        "total_items": 3,
+        "subtotal": 863972,
+        "line_discounts": 15998,
+        "document_discount": 0,
+        "tax_amount": 164194,
+        "total_amount": 1028166
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente Facturación"
+      },
+      "timestamps": {
+        "created_at": "2025-01-15T17:10:00Z",
+        "expires_at": "2025-07-25T23:59:59Z"
+      },
+      "credit_sale": false,
+      "credit_terms_days": 0,
+      "priority": "NORMAL",
+      "notes": null
+    },
+    {
+      "folio": "PV240005",
+      "customer": {
+        "rut": "54321098-7",
+        "name": "Distribuidora El Roble Ltda.",
+        "type": "COMPANY",
+        "email": "administracion@elroble.cl",
+        "phone": "+56 2 2543 2109",
+        "is_credit_customer": true,
+        "credit_limit": 3000000,
+        "credit_available": 1200000
+      },
+      "buyer": {
+        "name": "Carmen Gutiérrez López",
+        "position": "Coordinadora de Compras",
+        "email": "carmen.gutierrez@elroble.cl",
+        "authorization_level": "BASIC",
+        "is_primary_contact": true
+      },
+      "sale_info": {
+        "date": "2025-01-14",
+        "time": "11:30",
+        "seller_name": "Luis Pérez",
+        "seller_id": "VEND005",
+        "warehouse": "Bodega Central",
+        "terminal": "CAJA-002",
+        "branch": "Sucursal Santiago Centro"
+      },
+      "items": [
+        {
+          "code": "PROD012",
+          "name": "Impresora Láser HP LaserJet Pro M404dn",
+          "brand": "HP",
+          "category": "Impresoras",
+          "quantity": 2,
+          "unit_price": 289990,
+          "discount_percentage": 7,
+          "discount_amount": 40599,
+          "line_total": 539381
+        },
+        {
+          "code": "PROD013",
+          "name": "Cartucho Tóner HP 58A Negro",
+          "brand": "HP",
+          "category": "Consumibles",
+          "quantity": 4,
+          "unit_price": 45990,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "line_total": 183960
+        }
+      ],
+      "totals": {
+        "total_items": 6,
+        "subtotal": 723341,
+        "line_discounts": 40599,
+        "document_discount": 0,
+        "tax_amount": 137435,
+        "total_amount": 860776
+      },
+      "status": {
+        "code": "PENDING",
+        "name": "Pendiente Facturación"
+      },
+      "timestamps": {
+        "created_at": "2025-01-14T11:30:00Z",
+        "expires_at": "2025-07-25T23:59:59Z"
+      },
+      "credit_sale": true,
+      "credit_terms_days": 30,
+      "priority": "NORMAL",
+      "notes": "Cliente frecuente - Descuento por volumen aplicado"
+    }
+  ],
+  "payment_methods": [
+    {
+      "code": "CASH",
+      "name": "Efectivo",
+      "is_active": true,
+      "requires_details": true,
+      "details_type": "cash",
+      "icon": "💵",
+      "description": "Pago en efectivo con cálculo de vuelto"
+    },
+    {
+      "code": "DEBIT",
+      "name": "Tarjeta de Débito",
+      "is_active": true,
+      "requires_details": true,
+      "details_type": "card",
+      "icon": "💳",
+      "description": "Pago con tarjeta de débito"
+    },
+    {
+      "code": "CREDIT",
+      "name": "Tarjeta de Crédito",
+      "is_active": true,
+      "requires_details": true,
+      "details_type": "card",
+      "icon": "💳",
+      "description": "Pago con tarjeta de crédito"
+    },
+    {
+      "code": "TRANSFER",
+      "name": "Transferencia",
+      "is_active": true,
+      "requires_details": true,
+      "details_type": "transfer",
+      "icon": "🏦",
+      "description": "Transferencia bancaria"
+    },
+    {
+      "code": "CREDIT_ACCOUNT",
+      "name": "Cuenta Corriente",
+      "is_active": true,
+      "requires_details": false,
+      "details_type": null,
+      "icon": "📋",
+      "description": "Cargo a cuenta corriente del cliente"
+    }
+  ],
+  "document_types": [
+    {
+      "code": "BOLETA",
+      "name": "Boleta",
+      "description": "Para consumidor final",
+      "icon": "🧾",
+      "requires_tax_id": false,
+      "max_amount": 1000000
+    },
+    {
+      "code": "FACTURA",
+      "name": "Factura",
+      "description": "Para empresas",
+      "icon": "📄",
+      "requires_tax_id": true,
+      "max_amount": null
+    }
+  ],
+  "cash_register_session": {
+    "session_id": "SES20240115001",
+    "cashier": {
+      "user_id": "USR001",
+      "name": "María Elena Rodríguez",
+      "employee_code": "EMP001",
+      "department": "Ventas"
+    },
+    "cash_register": {
+      "register_id": "REG001",
+      "name": "Caja Principal",
+      "location": "Sucursal Santiago Centro",
+      "terminal_code": "TERM001"
+    },
+    "session_status": {
+      "code": "ACTIVE",
+      "name": "Sesión Activa",
+      "started_at": "2025-01-15T08:00:00Z"
+    },
+    "opening_info": {
+      "opening_datetime": "2025-01-15T08:00:00Z",
+      "opening_amount": 50000,
+      "opened_by": "María Elena Rodríguez",
+      "supervisor_authorization": "SUP001"
+    }
+  },
+  "statistics": {
+    "today": {
+      "processed_sales": 12,
+      "total_amount": 8540230,
+      "pending_sales": 5,
+      "pending_amount": 6506722,
+      "average_sale": 711686
+    },
+    "week": {
+      "processed_sales": 89,
+      "total_amount": 45230890,
+      "pending_sales": 5,
+      "pending_amount": 6506722
+    },
+    "month": {
+      "processed_sales": 342,
+      "total_amount": 189450670,
+      "pending_sales": 5,
+      "pending_amount": 6506722
+    }
+  },
+  "system_config": {
+    "company_info": {
+      "name": "TechStore Chile S.A.",
+      "rut": "76543210-K",
+      "address": "Av. Providencia 1234, Santiago",
+      "phone": "+56 2 2234 5678",
+      "email": "info@techstore.cl"
+    },
+    "tax_settings": {
+      "tax_rate": 19,
+      "currency": "CLP",
+      "currency_symbol": "$",
+      "decimal_places": 0
+    },
+    "cashier_settings": {
+      "auto_refresh_pending": true,
+      "refresh_interval_seconds": 30,
+      "session_timeout_minutes": 480,
+      "require_supervisor_for_large_amounts": true,
+      "large_amount_threshold": 2000000,
+      "enable_cash_count": true,
+      "print_receipt_automatically": false
+    },
+    "document_settings": {
+      "folio_prefix": "PV",
+      "folio_length": 6,
+      "enable_electronic_documents": true,
+      "default_document_type": "BOLETA",
+      "require_customer_email": false
+    }
+  }
+}

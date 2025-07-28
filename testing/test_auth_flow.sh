@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ===========================================
-# AUTH API TESTER v4.1 - FIXED COLORS
+# AUTH API TESTER v4.2 - CONFIGURABLE TOKEN PATH
 # Test de endpoints de autenticación unificada
 # ===========================================
 
@@ -11,6 +11,11 @@ USERNAME=""
 PASSWORD=""
 TOKEN=""
 REFRESH_TOKEN=""
+
+# Nueva configuración para rutas de tokens
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+DEFAULT_TOKEN_FILE="$SCRIPT_DIR/auth_tokens.env"
+TOKEN_FILE="$DEFAULT_TOKEN_FILE"
 
 # Detectar si la terminal soporta colores
 if [[ -t 1 ]] && command -v tput &> /dev/null && tput colors &> /dev/null && [[ $(tput colors) -ge 8 ]]; then
@@ -43,7 +48,7 @@ fi
 
 show_help() {
     cat << EOF
-${CYAN}${BOLD}=== AUTH API TESTER v4.1 - ENDPOINTS COMPLETOS ===${NC}
+${CYAN}${BOLD}=== AUTH API TESTER v4.2 - CONFIGURABLE TOKEN PATH ===${NC}
 
 Uso: $0 [OPCIONES] [COMANDO]
 
@@ -75,30 +80,36 @@ ${YELLOW}${BOLD}OPCIONES:${NC}
   -t TOKEN           Token JWT para validación/logout
   -r REFRESH_TOKEN   Refresh token para renovación
   -a URL             API base URL (default: http://localhost:8000/auth)
+  -f TOKEN_FILE      Archivo para guardar tokens (default: ./auth_tokens.env)
   -v                 Modo verbose (mostrar headers y detalles)
   -n                 Modo sin colores (para logs o pipes)
   -h                 Mostrar esta ayuda
 
+${YELLOW}${BOLD}CONFIGURACIÓN DE ARCHIVOS DE TOKENS:${NC}
+  ${CYAN}Por defecto:${NC} Los tokens se guardan en auth_tokens.env en la misma carpeta del script
+  ${CYAN}Ruta absoluta:${NC} -f /path/to/my_tokens.env
+  ${CYAN}Ruta relativa:${NC} -f ./config/tokens.env
+  ${CYAN}Solo nombre:${NC} -f my_session.env (se guardará en la carpeta del script)
+
 ${YELLOW}${BOLD}EJEMPLOS DE USO:${NC}
-  ${CYAN}# Tests básicos${NC}
+  ${CYAN}# Tests básicos (tokens en ./auth_tokens.env)${NC}
   $0 info
   $0 -u admin.demo -p admin.demo1 login
-  $0 -t "eyJ0eXAi..." validate
-  $0 -r "refresh_token..." refresh
 
-  ${CYAN}# Gestión de contraseñas${NC}
-  $0 -u admin.demo forgot-password
-  $0 -u admin.demo -p nuevapass reset-password
-  
-  ${CYAN}# Tests completos${NC}
-  $0 -u admin.demo -p admin.demo1 all
-  $0 -u admin.demo -p admin.demo1 full-test
+  ${CYAN}# Usar archivo de tokens personalizado${NC}
+  $0 -f ./config/session.env -u admin.demo -p admin.demo1 login
+  $0 -f /tmp/my_tokens.env -t "eyJ0eXAi..." validate
 
-  ${CYAN}# Sin colores (para logs)${NC}
-  $0 -n -u admin.demo -p admin.demo1 all > test_results.log
+  ${CYAN}# Tokens en directorio específico${NC}
+  $0 -f ~/auth/production.env -u admin -p pass all
+
+  ${CYAN}# Tests completos con archivo personalizado${NC}
+  $0 -f ./test_session.env -u admin.demo -p admin.demo1 full-test
 
 ${YELLOW}${BOLD}FUNCIONALIDADES:${NC}
-  ✅ Manejo automático de tokens (guarda/carga desde /tmp)
+  ✅ Configuración de ruta personalizada para tokens
+  ✅ Detección automática de la carpeta del script
+  ✅ Manejo automático de tokens (guarda/carga desde archivo especificado)
   ✅ Rate limiting y validación de respuestas
   ✅ Support para todos los endpoints de auth
   ✅ Tests de flujos completos
@@ -143,6 +154,42 @@ print_separator() {
     local char="${1:-━}"
     local width="${2:-60}"
     printf '%*s\n' "$width" '' | tr ' ' "$char"
+}
+
+# Función para resolver la ruta completa del archivo de tokens
+resolve_token_file_path() {
+    local input_path="$1"
+    
+    # Si es una ruta absoluta, usarla tal como está
+    if [[ "$input_path" == /* ]]; then
+        echo "$input_path"
+        return
+    fi
+    
+    # Si contiene directorios relativos (./ o ../), resolver desde el directorio actual
+    if [[ "$input_path" == ./* ]] || [[ "$input_path" == ../* ]] || [[ "$input_path" == */* ]]; then
+        echo "$(realpath "$input_path" 2>/dev/null || echo "$input_path")"
+        return
+    fi
+    
+    # Si es solo un nombre de archivo, colocarlo en el directorio del script
+    echo "$SCRIPT_DIR/$input_path"
+}
+
+# Función para crear el directorio del archivo de tokens si no existe
+ensure_token_dir() {
+    local token_file="$1"
+    local token_dir="$(dirname "$token_file")"
+    
+    if [[ ! -d "$token_dir" ]]; then
+        print_debug "Creando directorio para tokens: $token_dir"
+        mkdir -p "$token_dir" 2>/dev/null
+        if [[ $? -ne 0 ]]; then
+            print_error "No se pudo crear el directorio: $token_dir"
+            return 1
+        fi
+    fi
+    return 0
 }
 
 # Extraer valor de JSON (versión optimizada solo con grep/sed)
@@ -212,13 +259,13 @@ make_request() {
         local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
             -X "$method" "$url" \
             -H "Content-Type: application/json" \
-            -H "User-Agent: auth-tester/4.1" \
+            -H "User-Agent: auth-tester/4.2" \
             -d "$data")
     else
         local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
             -X "$method" "$url" \
             -H "Content-Type: application/json" \
-            -H "User-Agent: auth-tester/4.1")
+            -H "User-Agent: auth-tester/4.2")
     fi
     
     export HTTP_CODE=$(echo "$full_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
@@ -243,14 +290,14 @@ make_request_with_auth() {
             -X "$method" "$url" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $token" \
-            -H "User-Agent: auth-tester/4.1" \
+            -H "User-Agent: auth-tester/4.2" \
             -d "$data")
     else
         local full_response=$(curl -s -w "HTTPSTATUS:%{http_code}" \
             -X "$method" "$url" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $token" \
-            -H "User-Agent: auth-tester/4.1")
+            -H "User-Agent: auth-tester/4.2")
     fi
     
     export HTTP_CODE=$(echo "$full_response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
@@ -307,32 +354,62 @@ analyze_response() {
     fi
 }
 
-# Guardar tokens en archivo temporal
+# Guardar tokens en archivo (MODIFICADO para usar ruta configurable)
 save_tokens() {
     local access_token="$1"
     local refresh_token="$2"
     
-    cat > /tmp/auth_tokens.env << EOF
+    # Asegurar que el directorio existe
+    if ! ensure_token_dir "$TOKEN_FILE"; then
+        print_error "No se pudo crear el directorio para el archivo de tokens"
+        return 1
+    fi
+    
+    # Crear el archivo de tokens
+    cat > "$TOKEN_FILE" << EOF
+# AUTH API TESTER - Session Tokens
+# Generado: $(date)
+# Script: $0
 ACCESS_TOKEN="$access_token"
 REFRESH_TOKEN="$refresh_token"
 EOF
-    print_info "Tokens guardados en /tmp/auth_tokens.env"
+
+    if [[ $? -eq 0 ]]; then
+        print_info "Tokens guardados en: $TOKEN_FILE"
+        print_debug "Archivo de tokens creado exitosamente"
+    else
+        print_error "Error al guardar tokens en: $TOKEN_FILE"
+        return 1
+    fi
 }
 
-# Cargar tokens desde archivo
+# Cargar tokens desde archivo (MODIFICADO para usar ruta configurable)
 load_tokens() {
-    if [[ -f /tmp/auth_tokens.env ]]; then
-        source /tmp/auth_tokens.env
+    if [[ -f "$TOKEN_FILE" ]]; then
+        print_debug "Cargando tokens desde: $TOKEN_FILE"
+        source "$TOKEN_FILE"
         TOKEN="$ACCESS_TOKEN"
         REFRESH_TOKEN="$REFRESH_TOKEN"
-        print_info "Tokens cargados desde archivo"
+        print_info "Tokens cargados desde: $TOKEN_FILE"
         return 0
+    else
+        print_debug "Archivo de tokens no encontrado: $TOKEN_FILE"
+        return 1
     fi
-    return 1
+}
+
+# Función para limpiar archivo de tokens
+clean_tokens() {
+    if [[ -f "$TOKEN_FILE" ]]; then
+        rm -f "$TOKEN_FILE"
+        print_info "Archivo de tokens eliminado: $TOKEN_FILE"
+    else
+        print_debug "No hay archivo de tokens para eliminar"
+    fi
 }
 
 # ===========================================
-# TESTS DE ENDPOINTS
+# TESTS DE ENDPOINTS (sin cambios en la lógica)
 # ===========================================
 
 test_info() {
@@ -544,14 +621,16 @@ test_logout() {
         fi
         
         # Limpiar tokens guardados
-        rm -f /tmp/auth_tokens.env
-        print_info "Tokens temporales eliminados"
+        clean_tokens
         
         return 0
     else
         return 1
     fi
 }
+
+# [Continuaría con los demás tests sin cambios significativos...]
+# Por brevedad, mantengo la estructura existente para los demás tests.
 
 test_change_password() {
     print_step "PUT /auth/change-password - Cambiar Contraseña"
@@ -604,6 +683,134 @@ test_change_password() {
         return 1
     fi
 }
+
+test_forgot_password() {
+    print_step "POST /auth/forgot-password - Solicitar Código de Recuperación"
+    
+    if [[ -z "$USERNAME" ]]; then
+        print_error "Se requiere username/email (-u) para recuperación"
+        return 1
+    fi
+    
+    local payload="{\"email\": \"$USERNAME\"}"
+    
+    make_request "POST" "$API_URL/forgot-password" "$payload"
+    
+    if analyze_response "Forgot password" "200"; then
+        local code_sent=$(extract_nested_value "$RESPONSE_BODY" "data.code_sent")
+        local expires_in=$(extract_nested_value "$RESPONSE_BODY" "data.expires_in_minutes")
+        local debug_code=$(extract_nested_value "$RESPONSE_BODY" "data.code")
+        
+        if [[ "$code_sent" == "true" ]]; then
+            print_success "Código de recuperación enviado"
+            if [[ -n "$expires_in" && "$expires_in" != "null" ]]; then
+                print_info "Expira en: $expires_in minutos"
+            fi
+            
+            # En modo desarrollo, mostrar el código y guardarlo
+            if [[ -n "$debug_code" && "$debug_code" != "null" ]]; then
+                print_warning "CÓDIGO DEBUG: $debug_code"
+                
+                # Agregar el código al archivo de tokens
+                if [[ -f "$TOKEN_FILE" ]]; then
+                    echo "RESET_CODE=\"$debug_code\"" >> "$TOKEN_FILE"
+                else
+                    ensure_token_dir "$TOKEN_FILE"
+                    echo "RESET_CODE=\"$debug_code\"" > "$TOKEN_FILE"
+                fi
+                print_debug "Código de recuperación guardado en: $TOKEN_FILE"
+            fi
+        fi
+        
+        return 0
+    else
+        return 1
+    fi
+}
+
+# [Los demás tests mantienen la misma lógica, solo actualizando las referencias a archivos]
+
+# ===========================================
+# PROCESAMIENTO DE ARGUMENTOS (MODIFICADO)
+# ===========================================
+
+VERBOSE=false
+NO_COLORS=false
+
+# Clear screen al inicio (solo si es terminal interactiva)
+if [[ -t 1 ]]; then
+    clear
+fi
+
+while getopts "u:p:t:r:a:f:vnhi" opt; do
+    case $opt in
+        u) USERNAME="$OPTARG" ;;
+        p) PASSWORD="$OPTARG" ;;
+        t) TOKEN="$OPTARG" ;;
+        r) REFRESH_TOKEN="$OPTARG" ;;
+        a) API_URL="$OPTARG" ;;
+        f) TOKEN_FILE="$(resolve_token_file_path "$OPTARG")" ;;
+        v) VERBOSE=true ;;
+        n) NO_COLORS=true ;;
+        h) show_help; exit 0 ;;
+        i) 
+            # Modo interactivo para configurar credenciales
+            read -p "Username/Email: " USERNAME
+            read -sp "Password: " PASSWORD
+            echo
+            ;;
+        *) 
+            echo "Opción inválida. Usar -h para ayuda." >&2
+            exit 1 
+            ;;
+    esac
+done
+
+# Forzar modo sin colores si se especificó
+if [[ "$NO_COLORS" == "true" ]]; then
+    RED=""
+    GREEN=""
+    YELLOW=""
+    BLUE=""
+    PURPLE=""
+    CYAN=""
+    WHITE=""
+    BOLD=""
+    NC=""
+fi
+
+shift $((OPTIND-1))
+COMMAND="${1:-help}"
+
+# Verificar curl
+if ! command -v curl &> /dev/null; then
+    print_error "curl no está instalado"
+    exit 1
+fi
+
+# Mostrar configuración
+echo -e "${CYAN}${BOLD}=== AUTH API TESTER v4.2 - CONFIGURABLE TOKEN PATH ===${NC}"
+echo "🔗 API URL: $API_URL"
+echo "👤 Username: ${USERNAME:-'no especificado'}"
+echo "🔑 Password: ${PASSWORD:+[OCULTO]}${PASSWORD:-'no especificado'}"
+echo "🎫 Token: ${TOKEN:0:25}${TOKEN:+'...'}"
+echo "🔄 Refresh: ${REFRESH_TOKEN:0:25}${REFRESH_TOKEN:+'...'}"
+echo "📁 Token File: $TOKEN_FILE"
+echo "📝 Comando: $COMMAND"
+echo "🔍 Verbose: $VERBOSE"
+echo "🎨 Colores: $([[ -n "$RED" ]] && echo "Activados" || echo "Desactivados")"
+echo "⚡ Dependencias: Solo curl y bash"
+
+# Detectar si estamos siendo piped o redirigidos
+if [[ ! -t 1 ]]; then
+    print_info "Salida detectada como pipe/redirect - usando formato plano"
+fi
+
+echo ""
+
+# ===========================================
+# TESTS ADICIONALES COMPLETOS
+# ===========================================
 
 test_admin_change_password() {
     print_step "PUT /auth/change-password-by-admin - Cambio Admin de Contraseña"
@@ -674,42 +881,6 @@ test_admin_change_password() {
     fi
 }
 
-test_forgot_password() {
-    print_step "POST /auth/forgot-password - Solicitar Código de Recuperación"
-    
-    if [[ -z "$USERNAME" ]]; then
-        print_error "Se requiere username/email (-u) para recuperación"
-        return 1
-    fi
-    
-    local payload="{\"email\": \"$USERNAME\"}"
-    
-    make_request "POST" "$API_URL/forgot-password" "$payload"
-    
-    if analyze_response "Forgot password" "200"; then
-        local code_sent=$(extract_nested_value "$RESPONSE_BODY" "data.code_sent")
-        local expires_in=$(extract_nested_value "$RESPONSE_BODY" "data.expires_in_minutes")
-        local debug_code=$(extract_nested_value "$RESPONSE_BODY" "data.code")
-        
-        if [[ "$code_sent" == "true" ]]; then
-            print_success "Código de recuperación enviado"
-            if [[ -n "$expires_in" && "$expires_in" != "null" ]]; then
-                print_info "Expira en: $expires_in minutos"
-            fi
-            
-            # En modo desarrollo, mostrar el código
-            if [[ -n "$debug_code" && "$debug_code" != "null" ]]; then
-                print_warning "CÓDIGO DEBUG: $debug_code"
-                echo "RESET_CODE=$debug_code" >> /tmp/auth_tokens.env
-            fi
-        fi
-        
-        return 0
-    else
-        return 1
-    fi
-}
-
 test_reset_password() {
     print_step "POST /auth/reset-password - Restablecer Contraseña"
     
@@ -720,8 +891,8 @@ test_reset_password() {
     
     # Cargar código desde archivo o solicitar
     local reset_code=""
-    if [[ -f /tmp/auth_tokens.env ]]; then
-        source /tmp/auth_tokens.env
+    if [[ -f "$TOKEN_FILE" ]]; then
+        source "$TOKEN_FILE"
         reset_code="$RESET_CODE"
     fi
     
@@ -840,7 +1011,7 @@ test_password_flow() {
 }
 
 test_all() {
-    print_section "BATERÍA COMPLETA DE TESTS v4.1 - ENDPOINTS BÁSICOS"
+    print_section "BATERÍA COMPLETA DE TESTS v4.2 - ENDPOINTS BÁSICOS"
     
     if [[ -z "$USERNAME" || -z "$PASSWORD" ]]; then
         print_error "Se requieren username (-u) y password (-p) para test completo"
@@ -1054,82 +1225,6 @@ test_full() {
 }
 
 # ===========================================
-# PROCESAMIENTO DE ARGUMENTOS
-# ===========================================
-
-VERBOSE=false
-NO_COLORS=false
-
-# Clear screen al inicio (solo si es terminal interactiva)
-if [[ -t 1 ]]; then
-    clear
-fi
-
-while getopts "u:p:t:r:a:vnhi" opt; do
-    case $opt in
-        u) USERNAME="$OPTARG" ;;
-        p) PASSWORD="$OPTARG" ;;
-        t) TOKEN="$OPTARG" ;;
-        r) REFRESH_TOKEN="$OPTARG" ;;
-        a) API_URL="$OPTARG" ;;
-        v) VERBOSE=true ;;
-        n) NO_COLORS=true ;;
-        h) show_help; exit 0 ;;
-        i) 
-            # Modo interactivo para configurar credenciales
-            read -p "Username/Email: " USERNAME
-            read -sp "Password: " PASSWORD
-            echo
-            ;;
-        *) 
-            echo "Opción inválida. Usar -h para ayuda." >&2
-            exit 1 
-            ;;
-    esac
-done
-
-# Forzar modo sin colores si se especificó
-if [[ "$NO_COLORS" == "true" ]]; then
-    RED=""
-    GREEN=""
-    YELLOW=""
-    BLUE=""
-    PURPLE=""
-    CYAN=""
-    WHITE=""
-    BOLD=""
-    NC=""
-fi
-
-shift $((OPTIND-1))
-COMMAND="${1:-help}"
-
-# Verificar curl
-if ! command -v curl &> /dev/null; then
-    print_error "curl no está instalado"
-    exit 1
-fi
-
-# Mostrar configuración
-echo -e "${CYAN}${BOLD}=== AUTH API TESTER v4.1 - FIXED COLORS ===${NC}"
-echo "🔗 API URL: $API_URL"
-echo "👤 Username: ${USERNAME:-'no especificado'}"
-echo "🔑 Password: ${PASSWORD:+[OCULTO]}${PASSWORD:-'no especificado'}"
-echo "🎫 Token: ${TOKEN:0:25}${TOKEN:+'...'}"
-echo "🔄 Refresh: ${REFRESH_TOKEN:0:25}${REFRESH_TOKEN:+'...'}"
-echo "📝 Comando: $COMMAND"
-echo "🔍 Verbose: $VERBOSE"
-echo "🎨 Colores: $([[ -n "$RED" ]] && echo "Activados" || echo "Desactivados")"
-echo "⚡ Dependencias: Solo curl y bash"
-
-# Detectar si estamos siendo piped o redirigidos
-if [[ ! -t 1 ]]; then
-    print_info "Salida detectada como pipe/redirect - usando formato plano"
-fi
-
-echo ""
-
-# ===========================================
 # EJECUTAR COMANDO
 # ===========================================
 
@@ -1192,6 +1287,14 @@ case "$COMMAND" in
             echo
         fi
         
+        echo -e "\n${YELLOW}¿Usar archivo de tokens personalizado?${NC}"
+        read -p "Ruta del archivo (Enter para default): " custom_token_file
+        
+        if [[ -n "$custom_token_file" ]]; then
+            TOKEN_FILE="$(resolve_token_file_path "$custom_token_file")"
+            print_info "Usando archivo de tokens: $TOKEN_FILE"
+        fi
+        
         echo -e "\n${YELLOW}Comandos disponibles:${NC}"
         echo "1) info - Información del sistema"
         echo "2) login - Autenticación básica"
@@ -1245,8 +1348,9 @@ else
 fi
 
 # Mostrar información adicional si hay tokens guardados
-if [[ -f /tmp/auth_tokens.env ]]; then
-    print_info "Tokens disponibles en /tmp/auth_tokens.env para próximas ejecuciones"
+if [[ -f "$TOKEN_FILE" ]]; then
+    print_info "Tokens disponibles en: $TOKEN_FILE"
+    print_debug "Archivo de tokens: $(ls -la "$TOKEN_FILE" 2>/dev/null || echo "archivo no accesible")"
 fi
 
 exit $exit_code

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Inventario y Punto de Venta - Acceso Seguro">
+    <title>Sistema de Inventario - Acceso</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <!-- Layout principal sin sidebar -->
+    <div class="layout">
+        <!-- Header (igual que tu dashboard) -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="system-title">Sistema de Inventario</h1>
+                <span class="system-version">v2.1.0</span>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>Sistema Activo</span>
+                </div>
+                <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Alternar modo oscuro">
+                    🌙
+                </button>
+            </div>
+        </header>
+
+        <!-- Main: Área de login con glassmorphism -->
+        <main class="main">
+            <div class="login-container">
+                <div class="login-card">
+                    <div class="login-header">
+                        <h2 class="login-title">Acceso al Sistema</h2>
+                        <p class="login-subtitle">Ingresa tus credenciales para continuar</p>
+                    </div>
+
+                    <form class="login-form" id="loginForm">
+                        <div class="form-group">
+                            <label for="email" class="form-label">Correo Electrónico</label>
+                            <input type="email" id="email" name="email" class="form-input"
+                                placeholder="usuario@empresa.com" required autocomplete="email"
+                                aria-describedby="email-error">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password" class="form-label">Contraseña</label>
+                            <input type="password" id="password" name="password" class="form-input"
+                                placeholder="••••••••" required autocomplete="current-password"
+                                aria-describedby="password-error">
+                        </div>
+
+                        <div class="checkbox-group">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" class="checkbox-input" id="remember">
+                                <div class="checkbox-custom"></div>
+                                <span class="checkbox-label">Recordar sesión</span>
+                            </label>
+                            <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                        </div>
+
+                        <button type="submit" class="login-button" id="loginButton">
+                            <span class="button-text">Iniciar Sesión</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <!-- COLUMNA IZQUIERDA: Información del Sistema/Producto -->
+            <div class="footer-left">
+                <div class="footer-info">
+                    <span class="footer-label">Módulos:</span>
+                    <span class="footer-value">Inventario + POS</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Licencia:</span>
+                    <span class="footer-value">Empresarial</span>
+                </div>
+            </div>
+
+            <!-- COLUMNA CENTRO: Configuración/Entorno -->
+            <div class="footer-center">
+                <div class="footer-info">
+                    <span class="footer-label">Entorno:</span>
+                    <span class="footer-value">Producción</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Idioma:</span>
+                    <span class="footer-value">Español</span>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA: Información de Soporte/Actualización -->
+            <div class="footer-right">
+                <div class="footer-info">
+                    <span class="footer-label">Soporte:</span>
+                    <span class="footer-value">soporte@empresa.com</span>
+                </div>
+                <div class="footer-divider"></div>
+                <div class="footer-info">
+                    <span class="footer-label">Última actualización:</span>
+                    <span class="footer-value">Enero 2025</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

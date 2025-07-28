@@ -326,6 +326,8 @@ PRIVATE_ROUTES = [
 
     # Módulos de negocio que requieren autenticación
     "/warehouses",                  # Gestión de almacenes y bodegas
+    "/menu-items",                  # Gestión de Menus
+    "/user-menus",                  # Gestión de Menus del usuario
 ]
 
 # Flag para indicar si ResponseManager está disponible

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Consulta de Stock - Sistema de Inventario</title>
+    <meta name="description" content="Consulta avanzada de stock con filtros, búsqueda y exportación de datos">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📋%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📋 Consulta de Stock</h1>
+            <div class="user-info">
+                <div><strong>Módulo:</strong> Inventario - Consulta de Stock</div>
+                <div id="current-date-time"></div>
+            </div>
+        </div>
+
+        <!-- Alertas de Stock -->
+        <div id="stock-alerts"></div>
+
+        <!-- Panel de Filtros -->
+        <div class="filters-panel">
+            <h3>🔍 Filtros de Búsqueda</h3>
+            
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="warehouse-filter">Bodega</label>
+                    <select id="warehouse-filter" class="filter-select">
+                        <option value="">Todas las bodegas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="category-filter">Categoría</label>
+                    <select id="category-filter" class="filter-select">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="brand-filter">Marca</label>
+                    <select id="brand-filter" class="filter-select">
+                        <option value="">Todas las marcas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="status-filter">Estado de Stock</label>
+                    <select id="status-filter" class="filter-select">
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <div class="filter-group">
+                    <label for="search-input">Búsqueda General</label>
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        class="filter-input" 
+                        placeholder="Buscar por nombre, código, SKU, marca..."
+                    >
+                </div>
+            </div>
+            
+            <div class="filters-actions">
+                <button id="clear-filters-btn" class="clear-filters-btn">
+                    🗑️ Limpiar Filtros
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabla de Stock -->
+        <div class="stock-table-container" id="stock-table-container">
+            <!-- Header de Tabla -->
+            <div class="stock-table-header">
+                <h3 class="stock-table-title">
+                    📦 Inventario de Stock
+                </h3>
+                <div class="table-actions">
+                    <button id="export-btn" class="export-btn" title="Exportar a CSV">
+                        📊 Exportar
+                    </button>
+                    <button id="refresh-btn" class="refresh-btn" title="Actualizar datos">
+                        🔄 Actualizar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Información de Tabla -->
+            <div class="table-info">
+                <div class="results-count" id="results-count">
+                    Cargando productos...
+                </div>
+                <div class="last-update" id="last-update">
+                    Última actualización: --:--:--
+                </div>
+            </div>
+            
+            <!-- Tabla Principal -->
+            <table class="stock-table">
+                <thead>
+                    <tr>
+                        <th data-sort="product_name" class="sortable">
+                            Producto
+                        </th>
+                        <th data-sort="warehouse_name" class="sortable">
+                            Bodega
+                        </th>
+                        <th data-sort="current_quantity" class="sortable text-center">
+                            Stock Actual
+                        </th>
+                        <th data-sort="available_quantity" class="sortable text-center">
+                            Disponible
+                        </th>
+                        <th data-sort="reserved_quantity" class="sortable text-center">
+                            Reservado
+                        </th>
+                        <th data-sort="status" class="sortable text-center">
+                            Estado
+                        </th>
+                        <th data-sort="rotation_category" class="sortable text-center">
+                            Rotación
+                        </th>
+                        <th class="text-center">
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="stock-table-body">
+                    <!-- Las filas se cargan dinámicamente -->
+                </tbody>
+            </table>
+            
+            <!-- Paginación -->
+            <div class="pagination-container">
+                <div class="pagination-info" id="pagination-info">
+                    Mostrando 0-0 de 0 productos
+                </div>
+                <div class="pagination-controls" id="pagination-controls">
+                    <!-- Los controles se cargan dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>📋 Consulta de Stock v1.0</strong> - 
+                Sistema de consulta avanzada de inventario con filtros y exportación
+            </div>
+            <div>
+                🔍 Búsqueda en tiempo real | 
+                📊 Exportación a CSV | 
+                📱 Interfaz optimizada | 
+                ⚡ Datos actualizados dinámicamente
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8em;">
+                <strong>Atajos de teclado:</strong> 
+                Ctrl+F (Buscar) | F5 (Actualizar) | Escape (Limpiar filtros)
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    
+    <!-- Script para mostrar fecha/hora actual -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElement = document.getElementById('current-date-time');
+            if (dateTimeElement) {
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                dateTimeElement.textContent = now.toLocaleDateString('es-CL', options);
+            }
+        }
+        
+        // Actualizar fecha/hora cada segundo
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Ejecutar inmediatamente
+    </script>
+
+    <!-- Configuraciones adicionales -->
+    <script>
+        // Logging para análisis de uso
+        console.log('📋 Consulta de Stock iniciada:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight
+            },
+            connection: navigator.connection ? {
+                effectiveType: navigator.connection.effectiveType,
+                downlink: navigator.connection.downlink
+            } : 'unknown'
+        });
+
+        // Detectar modo de visualización
+        if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+            console.log('📱 Modo móvil detectado');
+        } else {
+            console.log('🖥️ Modo escritorio detectado');
+        }
+
+        // Manejo de errores globales específico para este módulo
+        window.addEventListener('error', (e) => {
+            console.error('❌ Error en Consulta de Stock:', e.error);
+            
+            // Crear toast de error si la función existe
+            if (typeof showError === 'function') {
+                showError('Ha ocurrido un error. Recarga la página si persiste.');
+            }
+        });
+
+        // Optimización de rendimiento para tablas grandes
+        if (typeof IntersectionObserver !== 'undefined') {
+            const tableObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            });
+
+            // Observar elementos cuando se cargue la tabla
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(() => {
+                    const tableRows = document.querySelectorAll('#stock-table-body tr');
+                    tableRows.forEach(row => {
+                        tableObserver.observe(row);
+                    });
+                }, 1000);
+            });
+        }
+
+        // Configuración de autosave para filtros (localStorage)
+        function saveFiltersState() {
+            if (typeof StockApp !== 'undefined' && StockApp.filters) {
+                try {
+                    localStorage.setItem('stock_filters', JSON.stringify(StockApp.filters));
+                } catch (e) {
+                    console.warn('No se pudieron guardar los filtros:', e);
+                }
+            }
+        }
+
+        function loadFiltersState() {
+            try {
+                const savedFilters = localStorage.getItem('stock_filters');
+                if (savedFilters) {
+                    const filters = JSON.parse(savedFilters);
+                    
+                    // Aplicar filtros guardados a los controles
+                    Object.keys(filters).forEach(key => {
+                        const element = document.getElementById(key + '-filter') || 
+                                      document.getElementById('search-input');
+                        if (element && filters[key]) {
+                            element.value = filters[key];
+                        }
+                    });
+                    
+                    console.log('🔍 Filtros restaurados desde localStorage');
+                }
+            } catch (e) {
+                console.warn('No se pudieron restaurar los filtros:', e);
+            }
+        }
+
+        // Guardar estado al cambiar filtros
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                // Restaurar filtros guardados
+                loadFiltersState();
+                
+                // Guardar cuando cambien
+                const filterElements = [
+                    'warehouse-filter',
+                    'category-filter', 
+                    'brand-filter',
+                    'status-filter',
+                    'search-input'
+                ];
+                
+                filterElements.forEach(id => {
+                    const element = document.getElementById(id);
+                    if (element) {
+                        element.addEventListener('change', saveFiltersState);
+                        element.addEventListener('input', saveFiltersState);
+                    }
+                });
+            }, 2000);
+        });
+
+        // Configurar shortcuts de teclado avanzados
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+E para exportar
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                const exportBtn = document.getElementById('export-btn');
+                if (exportBtn) exportBtn.click();
+            }
+            
+            // Ctrl+R para actualizar (además del F5)
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                const refreshBtn = document.getElementById('refresh-btn');
+                if (refreshBtn) refreshBtn.click();
+            }
+        });
+
+        // Configurar modo offline (opcional)
+        window.addEventListener('online', () => {
+            console.log('🌐 Conexión restaurada');
+            if (typeof showSuccess === 'function') {
+                showSuccess('Conexión restaurada. Actualizando datos...');
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📴 Sin conexión');
+            if (typeof showError === 'function') {
+                showError('Sin conexión. Trabajando en modo offline.');
+            }
+        });
+    </script>
+
+    <!-- Meta tags adicionales para SEO y PWA -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Consulta Stock">
+    
+    <!-- Configuración de CSP básica -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;">
+</body>
+</html>

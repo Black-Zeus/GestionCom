@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Dashboard de Inventario - Sistema de Control de Stock</title>
+    <meta name="description" content="Dashboard principal para control y monitoreo de inventario en tiempo real">
+    <meta name="author" content="Sistema de Inventario">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="extra.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📦%3C/text%3E%3C/svg%3E">
+</head>
+
+<body>
+    <!-- Contenedor Principal -->
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📦 Dashboard de Inventario</h1>
+            <div class="user-info">
+                <div><strong>Usuario:</strong> Juan Pérez - Jefe de Bodega</div>
+                <div id="current-date-time"></div>
+            </div>
+        </div>
+
+        <!-- Información de Actualización -->
+        <div class="refresh-info">
+            <div class="refresh-status">
+                <div class="refresh-indicator"></div>
+                <span id="last-refresh">Última actualización: --:--:--</span>
+            </div>
+            <div class="refresh-controls">
+                <button class="refresh-btn" id="manual-refresh-btn" title="Actualizar manualmente">
+                    🔄 Actualizar
+                </button>
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9em;">
+                    <input type="checkbox" id="auto-refresh-toggle" checked>
+                    Auto-actualizar
+                </label>
+            </div>
+        </div>
+
+        <!-- Selector de Bodega -->
+        <div class="warehouse-selector">
+            <h3>🏪 Selección de Bodega</h3>
+            <div class="warehouse-tabs" id="warehouse-tabs">
+                <!-- Las pestañas se cargan dinámicamente -->
+            </div>
+            <div class="warehouse-info" id="warehouse-info">
+                <!-- La información se carga dinámicamente -->
+            </div>
+        </div>
+
+        <!-- KPIs Principales -->
+        <div class="dashboard-kpis" id="dashboard-kpis">
+            <!-- Los KPIs se cargan dinámicamente -->
+        </div>
+
+        <!-- Layout Principal -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-bottom: 25px;">
+            <!-- Centro de Alertas -->
+            <div class="alerts-center">
+                <div class="alerts-header">
+                    <h3 class="alerts-title">
+                        ⚠️ Centro de Alertas
+                        <span style="font-size: 0.7em; background: #dc3545; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 10px;">
+                            TIEMPO REAL
+                        </span>
+                    </h3>
+                    <div class="alerts-filter">
+                        <button class="alert-filter-btn active" data-filter="all">Todas</button>
+                        <button class="alert-filter-btn" data-filter="urgent">Urgentes</button>
+                        <button class="alert-filter-btn" data-filter="critical">Críticas</button>
+                        <button class="alert-filter-btn" data-filter="warning">Advertencias</button>
+                        <button class="alert-filter-btn" data-filter="info">Información</button>
+                    </div>
+                </div>
+                <div class="alerts-list" id="alerts-list">
+                    <!-- Las alertas se cargan dinámicamente -->
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn btn-info btn-sm" onclick="navigateToAlerts()">
+                        📋 Ver Todas las Alertas
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="exportAlerts()">
+                        📊 Exportar Reporte
+                    </button>
+                </div>
+            </div>
+
+            <!-- Accesos Rápidos -->
+            <div>
+                <h3 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.2em;">🚀 Accesos Rápidos</h3>
+                <div class="quick-actions">
+                    <a href="#" class="quick-action-btn" onclick="navigateToStock()">
+                        <span class="quick-action-icon">📋</span>
+                        <div class="quick-action-title">Consultar Stock</div>
+                        <div class="quick-action-desc">Ver disponibilidad</div>
+                    </a>
+                    
+                    <a href="#" class="quick-action-btn" onclick="navigateToMovements()">
+                        <span class="quick-action-icon">📦</span>
+                        <div class="quick-action-title">Movimientos</div>
+                        <div class="quick-action-desc">Historial completo</div>
+                    </a>
+                    
+                    <a href="#" class="quick-action-btn" onclick="navigateToAdjustments()">
+                        <span class="quick-action-icon">⚖️</span>
+                        <div class="quick-action-title">Ajustes</div>
+                        <div class="quick-action-desc">Corregir inventario</div>
+                    </a>
+                    
+                    <a href="#" class="quick-action-btn" onclick="navigateToWarehouses()">
+                        <span class="quick-action-icon">🏪</span>
+                        <div class="quick-action-title">Bodegas</div>
+                        <div class="quick-action-desc">Gestionar ubicaciones</div>
+                    </a>
+                    
+                    <a href="#" class="quick-action-btn" onclick="navigateToReports()">
+                        <span class="quick-action-icon">📊</span>
+                        <div class="quick-action-title">Reportes</div>
+                        <div class="quick-action-desc">Análisis detallado</div>
+                    </a>
+                    
+                    <a href="#" class="quick-action-btn" onclick="window.print()">
+                        <span class="quick-action-icon">🖨️</span>
+                        <div class="quick-action-title">Imprimir</div>
+                        <div class="quick-action-desc">Dashboard actual</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Análisis de Rotación -->
+        <div style="margin-bottom: 25px;">
+            <h3 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.2em;">
+                🔄 Análisis de Rotación de Inventario
+            </h3>
+            <div class="rotation-analysis" id="rotation-analysis">
+                <!-- El análisis se carga dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Gráfico de Movimientos -->
+        <div class="movements-chart-section">
+            <div class="chart-header">
+                <h3 class="chart-title">📈 Movimientos de Inventario</h3>
+                <div class="chart-controls">
+                    <button class="chart-period-btn active" data-period="7d">7 Días</button>
+                    <button class="chart-period-btn" data-period="30d">30 Días</button>
+                    <button class="chart-period-btn" data-period="90d">90 Días</button>
+                </div>
+            </div>
+            <div class="chart-container" id="movements-chart">
+                <!-- El gráfico se carga dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Últimos Movimientos -->
+        <div class="recent-movements">
+            <div class="movements-header">
+                <h3 class="movements-title">📦 Últimos Movimientos</h3>
+                <div>
+                    <button class="btn btn-info btn-sm" onclick="navigateToMovements()">
+                        📋 Ver Todos
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="exportMovements()">
+                        📊 Exportar
+                    </button>
+                </div>
+            </div>
+            <div class="movements-list" id="recent-movements-list">
+                <!-- Los movimientos se cargan dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 25px; font-size: 0.9em; color: #6c757d; text-align: center;">
+            <div style="margin-bottom: 10px;">
+                <strong>Sistema de Inventario v2.1.0</strong> - 
+                Dashboard en tiempo real con actualización automática cada 30 segundos
+            </div>
+            <div>
+                📊 Datos actualizados desde la base de datos principal | 
+                🔒 Sesión segura | 
+                ⚡ Optimizado para dispositivos móviles
+            </div>
+        </div>
+    </div>
+
+    <!-- Container para Toasts -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    
+    <!-- Script para mostrar fecha/hora actual -->
+    <script>
+        function updateDateTime() {
+            const now = new Date();
+            const dateTimeElement = document.getElementById('current-date-time');
+            if (dateTimeElement) {
+                const options = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                dateTimeElement.textContent = now.toLocaleDateString('es-CL', options);
+            }
+        }
+        
+        // Actualizar fecha/hora cada segundo
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Ejecutar inmediatamente
+    </script>
+
+    <!-- Configuraciones adicionales para PWA (opcional) -->
+    <script>
+        // Detectar si es PWA o aplicación web
+        if ('serviceWorker' in navigator) {
+            console.log('🔧 Service Worker disponible para PWA');
+        }
+        
+        // Detectar modo de visualización
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.body.classList.add('pwa-mode');
+            console.log('📱 Aplicación ejecutándose en modo PWA');
+        }
+        
+        // Manejar instalación de PWA
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('💾 PWA puede ser instalada');
+            // En implementación futura se puede mostrar botón de instalación
+        });
+    </script>
+
+    <!-- Configuración de meta tags para PWA -->
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Inventario Dashboard">
+    
+    <!-- Configuración de viewport específica para dashboard -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+
+<!-- Scripts adicionales para mejorar la experiencia -->
+<script>
+    // Prevenir zoom accidental en dashboard
+    document.addEventListener('gesturestart', function (e) {
+        e.preventDefault();
+    });
+    
+    // Optimización para pantallas táctiles
+    document.addEventListener('touchstart', function() {}, {passive: true});
+    
+    // Logging para análisis de uso
+    console.log('📊 Dashboard de Inventario iniciado:', {
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight
+        },
+        connection: navigator.connection ? {
+            effectiveType: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink
+        } : 'unknown'
+    });
+</script>
+
+</body>
+</html>
