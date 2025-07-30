@@ -5,7 +5,7 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class',
-  
+
   theme: {
     extend: {
       // ====================================
@@ -33,7 +33,7 @@ export default {
         // === COLOR CÁLIDO PARA ALMA ===
         warm: {
           50: '#fefcfb',
-          100: '#fef7f0', 
+          100: '#fef7f0',
           200: '#feeee0',
           300: '#fde1c7',
           400: '#fbcb9a',
@@ -225,13 +225,13 @@ export default {
       // ====================================
       fontFamily: {
         sans: [
-          'Inter', 
-          '-apple-system', 
-          'BlinkMacSystemFont', 
-          '"Segoe UI"', 
-          'Roboto', 
-          '"Helvetica Neue"', 
-          'Arial', 
+          'Inter',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
           'sans-serif'
         ],
         mono: [
@@ -326,7 +326,7 @@ export default {
         'warm': '0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04)',
         'gentle': '0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04)',
         'subtle': '0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)',
-        
+
         // Sombras específicas para componentes
         'card': '0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03)',
         'card-hover': '0 8px 25px rgba(0, 0, 0, 0.08), 0 4px 10px rgba(0, 0, 0, 0.04)',
@@ -334,12 +334,12 @@ export default {
         'modal': '0 25px 50px rgba(0, 0, 0, 0.15), 0 12px 25px rgba(0, 0, 0, 0.08)',
         'button': '0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)',
         'button-hover': '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
-        
+
         // Sombras con color para elementos especiales
         'primary': '0 4px 12px rgba(79, 124, 255, 0.15), 0 2px 4px rgba(79, 124, 255, 0.08)',
         'warm-glow': '0 4px 12px rgba(247, 177, 109, 0.15), 0 2px 4px rgba(247, 177, 109, 0.08)',
         'success': '0 4px 12px rgba(34, 197, 94, 0.15), 0 2px 4px rgba(34, 197, 94, 0.08)',
-        
+
         // Sombras inner mejoradas
         'inner': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.03)',
         'inner-lg': 'inset 0 4px 8px 0 rgba(0, 0, 0, 0.05)',
@@ -388,14 +388,14 @@ export default {
         'slide-in-down': 'slideInDown 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         'scale-in': 'scaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         'scale-out': 'scaleOut 0.2s ease-in',
-        
+
         // Animaciones con personalidad
         'hover-lift': 'hoverLift 0.2s ease-out',
         'gentle-bounce': 'gentleBounce 0.6s ease-out',
         'breathe': 'breathe 4s ease-in-out infinite',
         'gentle-pulse': 'gentlePulse 3s ease-in-out infinite',
         'float': 'float 6s ease-in-out infinite',
-        
+
         // Animaciones específicas mejoradas
         'sidebar-slide': 'sidebarSlide 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         'dropdown-enter': 'dropdownEnter 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
@@ -404,7 +404,7 @@ export default {
         'modal-exit': 'modalExit 0.3s ease-in',
         'toast-enter': 'toastEnter 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         'toast-exit': 'toastExit 0.3s ease-in',
-        
+
         // Animaciones de carga mejoradas
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'spin-slow': 'spin 3s linear infinite',
@@ -445,7 +445,7 @@ export default {
           '0%': { transform: 'scale(1)', opacity: '1' },
           '100%': { transform: 'scale(0.95)', opacity: '0' }
         },
-        
+
         // Keyframes con personalidad
         hoverLift: {
           '0%': { transform: 'translateY(0px)' },
@@ -468,7 +468,7 @@ export default {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' }
         },
-        
+
         // Keyframes específicos mejorados
         sidebarSlide: {
           '0%': { transform: 'translateX(-100%)', opacity: '0' },
@@ -536,17 +536,35 @@ export default {
         '2xl': '1536px',
         '3xl': '1920px',
         '4xl': '2560px',
-        
+
         // Breakpoints para altura
         'h-sm': { 'raw': '(min-height: 640px)' },
         'h-md': { 'raw': '(min-height: 768px)' },
         'h-lg': { 'raw': '(min-height: 1024px)' },
         'h-xl': { 'raw': '(min-height: 1280px)' },
-        
+
         // Breakpoints específicos
         'sidebar-collapse': '768px',
         'dashboard-wide': '1440px',
         'container-max': '1400px'
+      },
+
+      width: {
+        '70': '17.5rem', // 280px para sidebar
+        '4.5': '1.125rem', // Para switch thumb
+      },
+      minWidth: {
+        '70': '17.5rem', // 280px para sidebar  
+      },
+      lineHeight: {
+        '1.2': '1.2',
+        '1.4': '1.4',
+      },
+      maxWidth: {
+        '30': '7.5rem', // Para texto truncado
+      },
+      translate: {
+        '0.5': '0.125rem', // Para micro-movimientos
       }
     }
   },
@@ -555,7 +573,7 @@ export default {
   // PLUGINS Y UTILIDADES MEJORADAS
   // ====================================
   plugins: [
-    function({ addUtilities, theme }) {
+    function ({ addUtilities, theme }) {
       const newUtilities = {
         // === UTILIDADES DE TEXTO MEJORADAS ===
         '.text-balance': {
@@ -573,7 +591,7 @@ export default {
         '.text-shadow-lg': {
           'text-shadow': '0 4px 8px rgba(0, 0, 0, 0.08)'
         },
-        
+
         // === UTILIDADES DE TRANSICIÓN MEJORADAS ===
         '.transition-smooth': {
           'transition': 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -587,7 +605,7 @@ export default {
         '.transition-bounce': {
           'transition': 'all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
         },
-        
+
         // === UTILIDADES DE HOVER CON ALMA ===
         '.hover-lift': {
           'transition': 'all 0.2s ease-out',
@@ -610,7 +628,7 @@ export default {
             'transform': 'scale(1.02)'
           }
         },
-        
+
         // === UTILIDADES DE GRADIENTES MEJORADAS ===
         '.gradient-primary': {
           'background': 'linear-gradient(135deg, #4f7cff 0%, #2563eb 100%)'
@@ -624,7 +642,7 @@ export default {
         '.gradient-dark': {
           'background': 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
         },
-        
+
         // === UTILIDADES DE SIDEBAR MEJORADAS ===
         '.sidebar-gradient': {
           'background': 'linear-gradient(180deg, #334155 0%, #475569 100%)'
@@ -632,7 +650,7 @@ export default {
         '.sidebar-gradient-dark': {
           'background': 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)'
         },
-        
+
         // === UTILIDADES DE GLASSMORPHISM MEJORADAS ===
         '.glass': {
           'backdrop-filter': 'blur(12px)',
@@ -652,7 +670,7 @@ export default {
           'border': '1px solid rgba(247, 177, 109, 0.12)',
           'box-shadow': '0 8px 32px rgba(247, 177, 109, 0.08)'
         },
-        
+
         // === UTILIDADES DE SCROLL MEJORADAS ===
         '.scrollbar-thin': {
           'scrollbar-width': 'thin',
@@ -681,7 +699,7 @@ export default {
             }
           }
         },
-        
+
         // === UTILIDADES DE ESTADO MEJORADAS ===
         '.state-success': {
           'background-color': '#f0fdf4',
@@ -703,7 +721,7 @@ export default {
           'border-color': '#a5f3fc',
           'color': '#0891b2'
         },
-        
+
         // === UTILIDADES DE FOCUS MEJORADAS ===
         '.focus-ring': {
           '&:focus': {
@@ -719,7 +737,7 @@ export default {
             'border-color': '#f7b16d'
           }
         },
-        
+
         // === UTILIDADES DE ASPECT RATIO ===
         '.aspect-card': {
           'aspect-ratio': '4 / 3'
@@ -730,7 +748,7 @@ export default {
         '.aspect-golden': {
           'aspect-ratio': '1.618 / 1'
         },
-        
+
         // === UTILIDADES DE CONTENEDOR MEJORADAS ===
         '.container-padding': {
           'padding-left': '1.5rem',
@@ -744,7 +762,7 @@ export default {
             'padding-right': '3rem'
           }
         },
-        
+
         // === UTILIDADES DE LAYOUT FLEXIBLES ===
         '.flex-center': {
           'display': 'flex',
@@ -761,7 +779,7 @@ export default {
           'align-items': 'center',
           'justify-content': 'space-around'
         },
-        
+
         // === UTILIDADES DE SEGURIDAD VISUAL ===
         '.safe-area-top': {
           'padding-top': 'env(safe-area-inset-top)'
@@ -769,7 +787,7 @@ export default {
         '.safe-area-bottom': {
           'padding-bottom': 'env(safe-area-inset-bottom)'
         },
-        
+
         // === UTILIDADES DE ANIMACIÓN PERSONALIZADA ===
         '.animate-on-scroll': {
           'opacity': '0',

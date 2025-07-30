@@ -9,19 +9,19 @@ const useSidebarStore = create(
       // ==========================================
       // ESTADOS DEL SIDEBAR
       // ==========================================
-      
+
       // Layout states
       isCollapsed: false,
       isMobileOpen: false,
       isDarkMode: false,
-      
+
       // Navigation states
       activeSection: 'Dashboard',
       openSubmenus: [], // Array de IDs de submenús abiertos
-      
+
       // User profile dropdown
       isProfileDropdownOpen: false,
-      
+
       // Session/user info display
       sessionInfo: {
         branch: 'Central',
@@ -33,18 +33,18 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - LAYOUT
       // ==========================================
-      
+
       /**
        * Toggle sidebar collapsed/expanded (desktop)
        */
       toggleCollapsed: () => {
         set((state) => {
           const newCollapsed = !state.isCollapsed;
-          
+
           if (shouldLog()) {
             console.log(`🔄 Sidebar ${newCollapsed ? 'collapsed' : 'expanded'}`);
           }
-          
+
           return { isCollapsed: newCollapsed };
         });
       },
@@ -62,12 +62,12 @@ const useSidebarStore = create(
       toggleMobileOpen: () => {
         set((state) => {
           const newOpen = !state.isMobileOpen;
-          
+
           // Controlar scroll del body
           if (typeof window !== 'undefined') {
             document.body.style.overflow = newOpen ? 'hidden' : '';
           }
-          
+
           return { isMobileOpen: newOpen };
         });
       },
@@ -85,14 +85,14 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - TEMA
       // ==========================================
-      
+
       /**
        * Toggle dark/light mode
        */
       toggleTheme: () => {
         set((state) => {
           const newDarkMode = !state.isDarkMode;
-          
+
           // Aplicar clase al body
           if (typeof window !== 'undefined') {
             if (newDarkMode) {
@@ -101,11 +101,11 @@ const useSidebarStore = create(
               document.body.classList.remove('dark-mode');
             }
           }
-          
+
           if (shouldLog()) {
             console.log(`🌙 Theme: ${newDarkMode ? 'Dark' : 'Light'}`);
           }
-          
+
           return { isDarkMode: newDarkMode };
         });
       },
@@ -115,7 +115,7 @@ const useSidebarStore = create(
        */
       setTheme: (isDark) => {
         set({ isDarkMode: isDark });
-        
+
         if (typeof window !== 'undefined') {
           if (isDark) {
             document.body.classList.add('dark-mode');
@@ -128,13 +128,13 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - NAVEGACIÓN
       // ==========================================
-      
+
       /**
        * Set active navigation section
        */
       setActiveSection: (section) => {
         set({ activeSection: section });
-        
+
         if (shouldLog()) {
           console.log(`📍 Active section: ${section}`);
         }
@@ -147,7 +147,7 @@ const useSidebarStore = create(
         set((state) => {
           const isOpen = state.openSubmenus.includes(submenuId);
           let newOpenSubmenus;
-          
+
           if (isOpen) {
             // Cerrar submenu
             newOpenSubmenus = state.openSubmenus.filter(id => id !== submenuId);
@@ -155,7 +155,7 @@ const useSidebarStore = create(
             // Abrir submenu (cerrar otros si es necesario)
             newOpenSubmenus = [...state.openSubmenus, submenuId];
           }
-          
+
           return { openSubmenus: newOpenSubmenus };
         });
       },
@@ -173,7 +173,7 @@ const useSidebarStore = create(
       navigateTo: (section, closeMobileAfter = true) => {
         set((state) => {
           const updates = { activeSection: section };
-          
+
           // Cerrar móvil si está abierto
           if (closeMobileAfter && state.isMobileOpen) {
             updates.isMobileOpen = false;
@@ -181,7 +181,7 @@ const useSidebarStore = create(
               document.body.style.overflow = '';
             }
           }
-          
+
           return updates;
         });
       },
@@ -189,13 +189,13 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - PROFILE DROPDOWN
       // ==========================================
-      
+
       /**
        * Toggle profile dropdown
        */
       toggleProfileDropdown: () => {
-        set((state) => ({ 
-          isProfileDropdownOpen: !state.isProfileDropdownOpen 
+        set((state) => ({
+          isProfileDropdownOpen: !state.isProfileDropdownOpen
         }));
       },
 
@@ -209,7 +209,7 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - SESSION INFO
       // ==========================================
-      
+
       /**
        * Update session info (for footer display)
        */
@@ -242,10 +242,10 @@ const useSidebarStore = create(
        */
       updateShift: (shift, shiftStatus = 'success') => {
         set((state) => ({
-          sessionInfo: { 
-            ...state.sessionInfo, 
-            shift, 
-            shiftStatus 
+          sessionInfo: {
+            ...state.sessionInfo,
+            shift,
+            shiftStatus
           }
         }));
       },
@@ -253,13 +253,13 @@ const useSidebarStore = create(
       // ==========================================
       // ACCIONES - UTILIDADES
       // ==========================================
-      
+
       /**
        * Initialize sidebar (called on app load)
        */
       initialize: () => {
         const state = get();
-        
+
         // Aplicar tema al body
         if (typeof window !== 'undefined') {
           if (state.isDarkMode) {
@@ -268,7 +268,7 @@ const useSidebarStore = create(
             document.body.classList.remove('dark-mode');
           }
         }
-        
+
         if (shouldLog()) {
           console.log('🚀 Sidebar store initialized');
         }
@@ -292,7 +292,7 @@ const useSidebarStore = create(
             shiftStatus: 'success'
           }
         });
-        
+
         if (typeof window !== 'undefined') {
           document.body.classList.remove('dark-mode');
           document.body.style.overflow = '';
@@ -302,7 +302,7 @@ const useSidebarStore = create(
       // ==========================================
       // GETTERS / COMPUTED VALUES
       // ==========================================
-      
+
       /**
        * Check if submenu is open
        */
@@ -352,20 +352,20 @@ export const sidebarSelectors = {
   isCollapsed: (state) => state.isCollapsed,
   isMobileOpen: (state) => state.isMobileOpen,
   isDarkMode: (state) => state.isDarkMode,
-  
+
   // Navigation
   activeSection: (state) => state.activeSection,
   openSubmenus: (state) => state.openSubmenus,
-  
+
   // Profile
   isProfileDropdownOpen: (state) => state.isProfileDropdownOpen,
-  
+
   // Session
   sessionInfo: (state) => state.sessionInfo,
-  
+
   // Computed
   layoutClasses: (state) => state.getLayoutClasses(),
-  
+
   // Specific checks
   isSubmenuOpen: (submenuId) => (state) => state.isSubmenuOpen(submenuId)
 };
