@@ -32,9 +32,9 @@ obj/
 # =========================
 # ARCHIVOS DE BLOQUEO (opcional)
 # =========================
-# yarn.lock
-# package-lock.json
-# pnpm-lock.yaml
+volumes/**/*yarn.lock
+volumes/**/*-lock.json
+volumes/**/*lock.yaml
 
 # =========================
 # PYTHON
