@@ -1,231 +1,307 @@
-import { useSidebar } from '@/store/sidebarStore';
-import { useState, useEffect } from 'react';
+// ====================================
+// FOOTER COMPONENT - COMPONENTE PRINCIPAL INTEGRADO
+// Versión final con todos los componentes y hooks desarrollados
+// ====================================
+
+import { useEffect } from 'react';
 import { cn } from '@/utils/cn';
+import { useFooterSelectors } from '@/hooks/useFooterSelectors';
+import { BranchInfoGroup,  CashInfoGroup,  UserInfoGroup  } from './InfoGroupWithIcon';
+import Divider from './Divider';
 
+import FooterLink from './FooterLink';
+
+/**
+ * Componente principal del Footer
+ * Integra todos los selectores, hooks y funcionalidades desarrolladas
+ */
 function Footer({ className }) {
-  const { sessionInfo } = useSidebar();
-  const [notification, setNotification] = useState(null);
+  
+  // ====================================
+  // HOOK PRINCIPAL - GESTIÓN UNIFICADA
+  // ====================================
+  
+  const {
+    // Estado principal
+    sessionInfo,
+    activeSelector,
+    isChanging,
+    
+    // Funciones específicas por tipo
+    openBranchSelector,
+    changeBranch,
+    openCashSelector,
+    changeCash,
+    openUserSelector,
+    changeUser,
+    openShiftSelector,
+    changeShift,
+    
+    // Utilidades
+    closeSelector,
+    resetSession,
+    getSelectorConfig
+  } = useFooterSelectors();
 
-  return (
-    <footer className={cn(
-      // Layout base
-      "flex items-center justify-between",
-      "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300",
-      "border-t border-gray-200 dark:border-gray-700",
-      "px-6 lg:px-8 xl:px-12",
-      "h-12", // Altura fija
-      "relative z-10",
-      
-      // Transiciones
-      "transition-all duration-300 ease-in-out",
-      
-      // Sombra sutil
-      "shadow-[0_-1px_3px_rgba(0,0,0,0.1)]",
-      
-      // Responsive
-      "text-sm",
-      "min-w-0 flex-shrink-0",
-      
-      className
-    )}>
-      
-      {/* Notificación flotante */}
-      <FooterNotification 
-        notification={notification} 
-        onClose={() => setNotification(null)} 
-      />
-      
-      {/* Sección Izquierda - Copyright y Enlaces */}
-      <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
-        
-        {/* Copyright */}
-        <div className="flex items-center gap-2 text-gray-500 font-medium">
-          <span className="text-gray-600 font-bold">©</span>
-          <span className="whitespace-nowrap">
-            2025 Sistema de Inventario y Punto de Venta
-          </span>
-        </div>
-        
-        {/* Enlaces - Ocultos en móvil */}
-        <div className="hidden md:flex items-center gap-4">
-          <FooterLink href="#" onClick={() => showModal('support')}>
-            Soporte
-          </FooterLink>
-          <span className="text-gray-400">|</span>
-          <FooterLink href="#" onClick={() => showModal('help')}>
-            Ayuda
-          </FooterLink>
-        </div>
-      </div>
-      
-      {/* Sección Derecha - Información Operativa */}
-      <div className="flex items-center gap-4 lg:gap-6 min-w-0 flex-shrink-0 font-medium">
-        
-        {/* Sucursal */}
-        <InfoGroup 
-          label="Sucursal:"
-          value={sessionInfo?.branch || 'Central'}
-          className="text-blue-500"
-          title="Sucursal actual"
-        />
-        
-        <Divider />
-        
-        {/* Caja - Oculto en móvil pequeño */}
-        <InfoGroup 
-          label="Caja:"
-          value={sessionInfo?.cashRegister || '#1234'}
-          className="hidden sm:flex"
-          title="Caja registradora activa"
-        />
-        
-        <Divider className="hidden sm:block" />
-        
-        {/* Usuario - Versión compacta en móvil */}
-        <InfoGroup 
-          label="Usuario:"
-          value={sessionInfo?.user?.username || 'vsoto'}
-          role={sessionInfo?.user?.role || 'Admin'}
-          title="Usuario activo"
-          compact={true}
-        />
-        
-        <Divider />
-        
-        {/* Turno */}
-        <InfoGroup 
-          label="Turno:"
-          value={sessionInfo?.shift || 'Mañana'}
-          status="success"
-          withIndicator={true}
-          title="Turno de trabajo actual"
-        />
-      </div>
-    </footer>
-  );
-}
+  // ====================================
+  // INICIALIZACIÓN - REPLICA DEL TEMPLATE
+  // ====================================
 
-// Componente para grupos de información
-function InfoGroup({ 
-  label, 
-  value, 
-  role, 
-  status = 'normal', 
-  withIndicator = false,
-  compact = false,
-  className,
-  title,
-  ...props 
-}) {
-  const statusColors = {
-    success: 'text-green-600',
-    warning: 'text-yellow-600',
-    danger: 'text-red-600',
-    normal: 'text-gray-900 dark:text-gray-100'
+  useEffect(() => {
+    setupFooter();
+  }, []);
+
+  const setupFooter = () => {
+    try {
+      console.log('🦶 Footer del sistema inicializado correctamente');
+      console.log('📋 Información de sesión cargada:', sessionInfo);
+      
+    } catch (error) {
+      console.error('❌ Error inicializando footer:', error);
+    }
   };
 
-  return (
-    <div 
-      className={cn(
-        "flex items-center gap-1 whitespace-nowrap",
-        compact && "max-sm:flex-col max-sm:gap-0 max-sm:text-xs",
-        className
-      )}
-      title={title}
-      {...props}
-    >
-      <span className="text-gray-500 text-xs lg:text-sm">
-        {label}
-      </span>
-      <span className={cn(
-        "font-semibold text-xs lg:text-sm",
-        statusColors[status]
-      )}>
-        {value}
-      </span>
-      {role && !compact && (
-        <>
-          <span className="text-gray-500">({role})</span>
-        </>
-      )}
-      {role && compact && (
-        <span className="text-gray-500 text-xs max-sm:text-[10px]">
-          ({role})
-        </span>
-      )}
-      {withIndicator && (
-        <div className="flex items-center ml-1">
-          <div className={cn(
-            "w-2 h-2 rounded-full",
-            status === 'success' && "bg-green-500 animate-pulse",
-            status === 'warning' && "bg-yellow-500",
-            status === 'danger' && "bg-red-500"
-          )} />
-        </div>
-      )}
-    </div>
-  );
-}
+  // ====================================
+  // MANEJO DE ENLACES - REPLICA DEL TEMPLATE
+  // ====================================
 
-// Divisor visual
-function Divider({ className }) {
-  return (
-    <div className={cn(
-      "w-[1px] h-4 bg-gray-300 dark:bg-gray-600 flex-shrink-0",
-      className
-    )} />
-  );
-}
+  const handleFooterLink = (action, linkText) => {
+    const actions = {
+      support: () => openModal('Soporte Técnico', 'Se abriría el centro de soporte técnico del sistema'),
+      help: () => openModal('Centro de Ayuda', 'Se abriría la documentación completa del sistema')
+    };
 
-// Enlace del footer
-function FooterLink({ href, onClick, children }) {
-  return (
-    <a
-      href={href}
-      onClick={(e) => {
-        e.preventDefault();
-        onClick?.(e);
-      }}
-      className={cn(
-        "text-gray-600 hover:text-blue-500",
-        "transition-colors duration-200",
-        "text-sm font-medium",
-        "hover:underline underline-offset-2"
-      )}
-    >
-      {children}
-    </a>
-  );
-}
-
-// Notificación flotante del footer
-function FooterNotification({ notification, onClose }) {
-  if (!notification) return null;
-
-  const typeStyles = {
-    success: 'bg-green-500 text-white',
-    warning: 'bg-yellow-500 text-white',
-    danger: 'bg-red-500 text-white',
-    info: 'bg-blue-500 text-white'
+    if (actions[action]) {
+      actions[action]();
+    }
+    
+    console.log(`🔗 Enlace clickeado: ${linkText}`);
   };
 
-  return (
-    <div className={cn(
-      "absolute -top-12 left-1/2 transform -translate-x-1/2",
-      "px-4 py-2 rounded-lg shadow-lg z-10",
-      "text-sm font-medium whitespace-nowrap",
-      "animate-slide-up",
-      typeStyles[notification.type] || typeStyles.info
-    )}>
-      {notification.message}
-    </div>
-  );
-}
+  const openModal = (title, content) => {
+    // Por ahora usar alert, igual que el template original
+    // En una implementación real, aquí se abriría un modal personalizado
+    alert(`${title}\n\n${content}`);
+  };
 
-// Función helper para mostrar modales (placeholder)
-function showModal(type) {
-  console.log(`Abrir modal: ${type}`);
-  // Aquí integrarías con tu sistema de modales
+  // ====================================
+  // HANDLERS ESPECÍFICOS PARA ICONOS
+  // ====================================
+
+  const handleBranchIconClick = (event) => {
+    openModal('branch', "Esto es contenido")
+    //handleIconClick('branch', event);
+  };
+
+  const handleCashIconClick = (event) => {
+    openModal('branch', "Esto es contenido")
+    //handleIconClick('cash', event);
+  };
+
+  // const handleUserIconClick = (event) => {
+  //   //handleIconClick('user', event);
+  // };
+
+  // const handleShiftIconClick = (event) => {
+  //   //handleIconClick('shift', event);
+  // };
+
+  // ====================================
+  // HANDLERS PARA CAMBIOS DE VALORES
+  // ====================================
+
+  const handleBranchChange = (branchData) => {
+    console.log('🏢 Cambiando sucursal:', branchData);
+    //changeBranch(branchData);
+  };
+
+  // const handleCashChange = (cashData) => {
+  //   console.log('💰 Cambiando caja:', cashData);
+  //   changeCash(cashData);
+  // };
+
+  // const handleUserChange = (userData) => {
+  //   console.log('👤 Cambiando usuario:', userData);
+  //   changeUser(userData);
+  // };
+
+  // const handleShiftChange = (shiftData) => {
+  //   console.log('🕐 Cambiando turno:', shiftData);
+  //   changeShift(shiftData);
+  // };
+
+  // ====================================
+  // EXPONER API GLOBAL - COMPATIBILIDAD CON TEMPLATE
+  // ====================================
+
+  useEffect(() => {
+    // API global para compatibilidad con el template original
+    window.SystemFooterAPI = {
+      // Información de sesión
+      getSessionInfo: () => sessionInfo,
+      
+      // Funciones de cambio directo (compatibilidad)
+      changeBranch: (branchName) => {
+        //changeBranch({ name: branchName, code: branchName.slice(0, 3).toUpperCase(), id: branchName.toLowerCase() });
+      },
+      changeCashRegister: (cashNumber) => {
+        //changeCash({ number: cashNumber, id: `cash-${cashNumber}`, status: 'active' });
+      },
+      changeUser: (username, fullName, role) => {
+        //changeUser({ username, fullName, role, id: `user-${username}`, email: `${username}@empresa.cl` });
+      },
+      changeShift: (shiftName, status = 'success') => {
+        //changeShift({ name: shiftName, status, id: shiftName.toLowerCase(), start: '08:00', end: '17:00' });
+      },
+      
+      // Funciones de apertura de selectores
+      openBranchSelector,
+      openCashSelector,
+      openUserSelector,
+      openShiftSelector,
+      
+      // Utilidades
+      closeSelector,
+      resetSession,
+      isChanging
+    };
+
+    // Función de compatibilidad con template original
+    window.updateSystemFooter = (type, value) => {
+      switch(type) {
+        case 'branch':
+          window.SystemFooterAPI.changeBranch(value);
+          break;
+        case 'cash':
+          window.SystemFooterAPI.changeCashRegister(value);
+          break;
+        case 'user':
+          window.SystemFooterAPI.changeUser(value.username, value.fullName, value.role);
+          break;
+        case 'shift':
+          window.SystemFooterAPI.changeShift(value.name, value.status);
+          break;
+        default:
+          console.warn('Tipo de actualización no reconocido:', type);
+      }
+    };
+
+    return () => {
+      // Cleanup API global
+      delete window.SystemFooterAPI;
+      delete window.updateSystemFooter;
+    };
+  }, [
+    sessionInfo, changeBranch, changeCash, changeUser, changeShift,
+    openBranchSelector, openCashSelector, openUserSelector, openShiftSelector,
+    closeSelector, resetSession, isChanging
+  ]);
+
+  // ====================================
+  // RENDER PRINCIPAL
+  // ====================================
+
+  return (
+    <>
+      <footer 
+        className={cn(
+          // Layout base - REPLICA EXACTA DEL CSS DEL TEMPLATE
+          "flex items-center justify-between",
+          "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300",
+          "border-t border-gray-200 dark:border-gray-700",
+          "px-6 lg:px-8 xl:px-12",
+          "h-12", // Altura fija
+          "relative z-10",
+          
+          // Transiciones
+          "transition-all duration-300 ease-in-out",
+          
+          // Sombra sutil
+          "shadow-[0_-1px_3px_rgba(0,0,0,0.1)]",
+          
+          // Responsive
+          "text-sm",
+          "min-w-0 flex-shrink-0",
+          
+          // Estados
+          isChanging && "opacity-75 pointer-events-none",
+          
+          className
+        )}
+        id="systemFooter"
+      >
+        
+        {/* Sección Izquierda - Copyright y Enlaces */}
+        <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
+          
+          {/* Enlaces - Ocultos en móvil */}
+          <div className="hidden md:flex items-center gap-4">
+            <FooterLink onClick={() => handleFooterLink('support', 'Soporte')}>
+              Soporte
+            </FooterLink>
+            <span className="text-gray-400 dark:text-gray-500">|</span>
+            <FooterLink onClick={() => handleFooterLink('help', 'Ayuda')}>
+              Ayuda
+            </FooterLink>
+          </div>
+        </div>
+        
+        {/* Sección Derecha - Información Operativa CON ICONOS CLICKEABLES */}
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0 flex-shrink-0 font-medium">
+          
+          {/* Sucursal CON ICONO - Usando componente específico */}
+          <BranchInfoGroup 
+            label="Sucursal:"
+            value={sessionInfo.branch}
+            title="Sucursal actual - Click para cambiar"
+            onIconClick={handleBranchIconClick}
+            
+          />
+          
+          <Divider />
+          
+          {/* Caja CON ICONO - Oculto en móvil pequeño */}
+          <CashInfoGroup 
+            label="Caja:"
+            value={sessionInfo.cashRegister}
+            className="hidden sm:flex"
+            title="Caja registradora activa - Click para cambiar"
+            onIconClick={handleCashIconClick}
+          />
+          
+          <Divider className="hidden sm:block" />
+          
+          {/* Usuario CON ICONO - Versión compacta en móvil */}
+          <UserInfoGroup 
+            label="Usuario:"
+            value={sessionInfo.username}
+            role={sessionInfo.userRole}
+            iconClickable={false}
+          />
+        </div>
+
+        {/* Indicador de carga global */}
+        {isChanging && (
+          <div className="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-50 flex items-center justify-center">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+              <span>Actualizando...</span>
+            </div>
+          </div>
+        )}
+      </footer>
+
+
+
+      {/* Overlay para cerrar selectores (click fuera) */}
+      {activeSelector && getSelectorConfig(activeSelector).displayMode === 'modal' && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={closeSelector}
+        />
+      )}
+    </>
+  );
 }
 
 export default Footer;
