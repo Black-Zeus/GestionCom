@@ -50,14 +50,14 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     } else {
       // Navegar y actualizar sección activa
       setActiveSection(text);
-      console.log(`Navegando a: ${path || text}`);
+      //console.log(`Navegando a: ${path || text}`);
     }
   };
 
   const handleSubmenuItemClick = (subitem) => {
     setActiveSection(subitem.text);
     setActiveSubmenuItem(subitem.id);
-    console.log(`Navegando a subitem: ${subitem.path || subitem.text}`);
+    //console.log(`Navegando a subitem: ${subitem.path || subitem.text}`);
   };
 
   const ItemContent = () => (

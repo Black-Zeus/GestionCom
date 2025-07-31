@@ -10,7 +10,7 @@ function SidebarControls({ isCollapsed, isDarkMode, className }) {
 
   const handleThemeToggle = () => {
     toggleTheme();
-    console.log(`🌙 Tema cambiado a: ${isDarkMode ? 'Claro' : 'Oscuro'}`);
+    //console.log(`🌙 Tema cambiado a: ${isDarkMode ? 'Claro' : 'Oscuro'}`);
   };
 
   return (

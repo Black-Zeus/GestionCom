@@ -19,24 +19,24 @@ function SidebarUserProfile({ isCollapsed, isDarkMode, sessionInfo, className })
     
     switch (action.action) {
       case 'profile':
-        console.log('👤 Abrir perfil de usuario');
+        //console.log('👤 Abrir perfil de usuario');
         break;
       case 'settings':
-        console.log('⚙️ Abrir configuraciones');
+        //console.log('⚙️ Abrir configuraciones');
         break;
       case 'preferences':
-        console.log('🎛️ Abrir preferencias');
+        //console.log('🎛️ Abrir preferencias');
         break;
       case 'help':
-        console.log('❓ Abrir ayuda');
+        //console.log('❓ Abrir ayuda');
         break;
       case 'logout':
         if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-          console.log('🚪 Cerrando sesión...');
+          //console.log('🚪 Cerrando sesión...');
         }
         break;
       default:
-        console.log('Acción no reconocida:', action.action);
+        //console.log('Acción no reconocida:', action.action);
     }
   };
 

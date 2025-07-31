@@ -1,0 +1,304 @@
+{
+  "notifications": [
+    {
+      "id": "notif_001",
+      "type": "stock_alert",
+      "priority": "urgent",
+      "title": "Stock Crítico Detectado",
+      "message": "El producto 'Teclado Mecánico RGB' tiene solo 3 unidades en stock.",
+      "details": {
+        "product_id": "PROD_001",
+        "product_name": "Teclado Mecánico RGB",
+        "current_stock": 3,
+        "min_stock": 10,
+        "location": "Bodega Principal"
+      },
+      "icon": "⚠️",
+      "category": "inventory",
+      "timestamp": "2025-01-31T14:25:00Z",
+      "read": false,
+      "actions": [
+        {
+          "id": "view_product",
+          "label": "Ver Producto",
+          "type": "primary",
+          "url": "/inventory/products/PROD_001"
+        },
+        {
+          "id": "order_stock",
+          "label": "Ordenar Stock",
+          "type": "secondary",
+          "action": "open_order_modal"
+        }
+      ]
+    },
+    {
+      "id": "notif_002",
+      "type": "credit_limit",
+      "priority": "urgent",
+      "title": "Cliente Excedió Límite de Crédito",
+      "message": "Empresa ABC S.A. ha superado su límite de crédito autorizado ($50,000).",
+      "details": {
+        "client_id": "CLI_001",
+        "client_name": "Empresa ABC S.A.",
+        "current_debt": 65000,
+        "credit_limit": 50000,
+        "exceeded_amount": 15000,
+        "currency": "CLP"
+      },
+      "icon": "💰",
+      "category": "finance",
+      "timestamp": "2025-01-31T14:10:00Z",
+      "read": false,
+      "actions": [
+        {
+          "id": "view_client",
+          "label": "Ver Cliente",
+          "type": "primary",
+          "url": "/clients/CLI_001"
+        },
+        {
+          "id": "review_credit",
+          "label": "Revisar Crédito",
+          "type": "secondary",
+          "action": "open_credit_modal"
+        }
+      ]
+    },
+    {
+      "id": "notif_003",
+      "type": "report_ready",
+      "priority": "normal",
+      "title": "Reporte Mensual Completado",
+      "message": "El reporte de ventas de enero 2025 está listo para descargar.",
+      "details": {
+        "report_id": "RPT_202501",
+        "report_type": "monthly_sales",
+        "period": "2025-01",
+        "file_size": "2.4 MB",
+        "format": "PDF"
+      },
+      "icon": "📊",
+      "category": "reports",
+      "timestamp": "2025-01-31T12:00:00Z",
+      "read": false,
+      "actions": [
+        {
+          "id": "download_report",
+          "label": "Descargar",
+          "type": "primary",
+          "action": "download_file",
+          "params": {
+            "file_id": "RPT_202501"
+          }
+        },
+        {
+          "id": "share_report",
+          "label": "Compartir",
+          "type": "secondary",
+          "action": "open_share_modal"
+        }
+      ]
+    },
+    {
+      "id": "notif_004",
+      "type": "system_update",
+      "priority": "low",
+      "title": "Actualización del Sistema Disponible",
+      "message": "Nueva versión 2.1.1 disponible con mejoras de seguridad y rendimiento.",
+      "details": {
+        "version": "2.1.1",
+        "size": "45 MB",
+        "features": [
+          "Mejoras de seguridad",
+          "Optimización de rendimiento",
+          "Corrección de errores menores"
+        ],
+        "requires_restart": true,
+        "maintenance_window": "2025-02-01T02:00:00Z"
+      },
+      "icon": "🔄",
+      "category": "system",
+      "timestamp": "2025-01-30T16:30:00Z",
+      "read": true,
+      "actions": [
+        {
+          "id": "view_changelog",
+          "label": "Ver Cambios",
+          "type": "primary",
+          "action": "open_changelog_modal"
+        },
+        {
+          "id": "schedule_update",
+          "label": "Programar",
+          "type": "secondary",
+          "action": "open_schedule_modal"
+        }
+      ]
+    },
+    {
+      "id": "notif_005",
+      "type": "payment_received",
+      "priority": "normal",
+      "title": "Pago Recibido",
+      "message": "Cliente XYZ Ltda. ha realizado un pago de $125,000 por factura #F-2025-001.",
+      "details": {
+        "client_id": "CLI_002",
+        "client_name": "XYZ Ltda.",
+        "amount": 125000,
+        "currency": "CLP",
+        "invoice_number": "F-2025-001",
+        "payment_method": "Transferencia Bancaria",
+        "reference": "TRF-20250131-001"
+      },
+      "icon": "💳",
+      "category": "finance",
+      "timestamp": "2025-01-31T11:45:00Z",
+      "read": true,
+      "actions": [
+        {
+          "id": "view_payment",
+          "label": "Ver Pago",
+          "type": "primary",
+          "url": "/finance/payments/TRF-20250131-001"
+        },
+        {
+          "id": "view_invoice",
+          "label": "Ver Factura",
+          "type": "secondary",
+          "url": "/sales/invoices/F-2025-001"
+        }
+      ]
+    },
+    {
+      "id": "notif_006",
+      "type": "order_pending",
+      "priority": "normal",
+      "title": "Orden Pendiente de Aprobación",
+      "message": "Orden de compra #OC-2025-015 requiere aprobación de gerencia.",
+      "details": {
+        "order_id": "OC-2025-015",
+        "supplier": "Proveedor Tech S.A.",
+        "total_amount": 850000,
+        "currency": "CLP",
+        "items_count": 12,
+        "requested_by": "María González",
+        "department": "Compras"
+      },
+      "icon": "📋",
+      "category": "orders",
+      "timestamp": "2025-01-31T10:30:00Z",
+      "read": false,
+      "actions": [
+        {
+          "id": "view_order",
+          "label": "Ver Orden",
+          "type": "primary",
+          "url": "/orders/OC-2025-015"
+        },
+        {
+          "id": "approve_order",
+          "label": "Aprobar",
+          "type": "success",
+          "action": "approve_order",
+          "params": {
+            "order_id": "OC-2025-015"
+          }
+        },
+        {
+          "id": "reject_order",
+          "label": "Rechazar",
+          "type": "danger",
+          "action": "reject_order",
+          "params": {
+            "order_id": "OC-2025-015"
+          }
+        }
+      ]
+    },
+    {
+      "id": "notif_007",
+      "type": "backup_completed",
+      "priority": "low",
+      "title": "Respaldo Completado",
+      "message": "Respaldo automático del sistema completado exitosamente.",
+      "details": {
+        "backup_id": "BKP_20250131_0200",
+        "size": "1.2 GB",
+        "duration": "45 minutos",
+        "files_count": 125340,
+        "location": "Servidor de Respaldo",
+        "next_backup": "2025-02-01T02:00:00Z"
+      },
+      "icon": "💾",
+      "category": "system",
+      "timestamp": "2025-01-31T02:45:00Z",
+      "read": true,
+      "actions": [
+        {
+          "id": "view_backup_log",
+          "label": "Ver Log",
+          "type": "primary",
+          "action": "view_backup_log",
+          "params": {
+            "backup_id": "BKP_20250131_0200"
+          }
+        }
+      ]
+    },
+    {
+      "id": "notif_008",
+      "type": "user_login",
+      "priority": "low",
+      "title": "Nuevo Inicio de Sesión",
+      "message": "Usuario 'admin' ha iniciado sesión desde nueva ubicación.",
+      "details": {
+        "user_id": "USR_001",
+        "username": "admin",
+        "ip_address": "192.168.1.100",
+        "location": "Santiago, Chile",
+        "device": "Chrome en Windows 10",
+        "is_suspicious": false
+      },
+      "icon": "🔐",
+      "category": "security",
+      "timestamp": "2025-01-31T08:15:00Z",
+      "read": true,
+      "actions": [
+        {
+          "id": "view_session",
+          "label": "Ver Sesión",
+          "type": "primary",
+          "url": "/security/sessions/USR_001"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_count": 8,
+    "unread_count": 4,
+    "last_update": "2025-01-31T14:25:00Z",
+    "categories": {
+      "inventory": 1,
+      "finance": 2,
+      "reports": 1,
+      "system": 2,
+      "orders": 1,
+      "security": 1
+    },
+    "priority_counts": {
+      "urgent": 2,
+      "normal": 4,
+      "low": 2
+    }
+  },
+  "settings": {
+    "auto_refresh_interval": 30000,
+    "max_notifications": 50,
+    "show_read_notifications": true,
+    "group_by_category": false,
+    "sound_enabled": true,
+    "desktop_notifications": true,
+    "email_digest": false
+  }
+}

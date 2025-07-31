@@ -1,536 +1,660 @@
 // ====================================
-// HEADER STORE - ZUSTAND
-// Manejo completo de dropdowns, notificaciones y funcionalidades del header
+// HEADER STORE - ZUSTAND STATE MANAGEMENT
 // ====================================
 
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
 
 // ====================================
-// DATOS INICIALES Y CONFIGURACIÓN
+// CONFIGURACIÓN Y CONSTANTES
 // ====================================
 
+const DROPDOWN_TYPES = {
+  NOTIFICATIONS: 'notifications',
+  MESSAGES: 'messages',
+  SETTINGS: 'settings',
+  USER_PROFILE: 'userProfile'
+};
+
+const NOTIFICATION_TYPES = {
+  STOCK_ALERT: 'stock_alert',
+  CREDIT_LIMIT: 'credit_limit',
+  REPORT_READY: 'report_ready',
+  SYSTEM_UPDATE: 'system_update',
+  PAYMENT_RECEIVED: 'payment_received',
+  ORDER_PENDING: 'order_pending',
+  BACKUP_COMPLETED: 'backup_completed',
+  USER_LOGIN: 'user_login'
+};
+
+const MESSAGE_TYPES = {
+  WORK: 'work',
+  INFO: 'info',
+  SYSTEM: 'system',
+  APPROVAL: 'approval',
+  REPORT: 'report',
+  REMINDER: 'reminder'
+};
+
+const PRIORITY_LEVELS = {
+  URGENT: 'urgent',
+  NORMAL: 'normal',
+  LOW: 'low'
+};
+
+// Datos iniciales mock
 const INITIAL_NOTIFICATIONS = [
   {
-    id: 1,
-    type: 'warning',
-    icon: '⚠️',
+    id: 'notif_001',
+    type: 'stock_alert',
+    priority: 'urgent',
     title: 'Stock Crítico Detectado',
-    message: 'El producto "Teclado Mecánico" tiene solo 3 unidades en stock.',
-    time: 'Hace 5 min',
-    status: 'urgent',
-    unread: true,
-    timestamp: Date.now() - 5 * 60 * 1000
+    message: 'El producto "Teclado Mecánico RGB" tiene solo 3 unidades en stock.',
+    icon: '⚠️',
+    category: 'inventory',
+    timestamp: Date.now() - (5 * 60 * 1000), // 5 min ago
+    read: false,
+    actions: [
+      { id: 'view_product', label: 'Ver Producto', type: 'primary', url: '/inventory/products/PROD_001' },
+      { id: 'order_stock', label: 'Ordenar Stock', type: 'secondary', action: 'open_order_modal' }
+    ]
   },
   {
-    id: 2,
-    type: 'danger',
-    icon: '💰',
-    title: 'Cliente Excedió Límite',
-    message: 'Empresa ABC ha superado su límite de crédito autorizado.',
-    time: 'Hace 15 min',
-    status: 'urgent',
-    unread: true,
-    timestamp: Date.now() - 15 * 60 * 1000
-  },
-  {
-    id: 3,
-    type: 'info',
-    icon: '📊',
-    title: 'Reporte Mensual Listo',
-    message: 'El reporte de ventas de diciembre está disponible para descargar.',
-    time: 'Hace 2 horas',
-    status: 'normal',
-    unread: false,
-    timestamp: Date.now() - 2 * 60 * 60 * 1000
-  },
-  {
-    id: 4,
-    type: 'system',
-    icon: '🔄',
-    title: 'Actualización del Sistema',
-    message: 'Nueva versión 2.1.1 disponible con mejoras de seguridad.',
-    time: 'Ayer',
-    status: 'low',
-    unread: false,
-    timestamp: Date.now() - 24 * 60 * 60 * 1000
+    id: 'notif_002',
+    type: 'payment_received',
+    priority: 'normal',
+    title: 'Pago Recibido',
+    message: 'Cliente XYZ Ltda. ha realizado un pago de $125,000.',
+    icon: '💳',
+    category: 'finance',
+    timestamp: Date.now() - (30 * 60 * 1000), // 30 min ago
+    read: false,
+    actions: [
+      { id: 'view_payment', label: 'Ver Pago', type: 'primary', url: '/finance/payments/001' }
+    ]
   }
 ];
 
 const INITIAL_MESSAGES = [
   {
-    id: 1,
-    sender: 'María García',
-    avatar: 'MG',
-    message: '¿Podrías revisar el inventario de la bodega norte? Creo que hay discrepancias...',
-    time: 'Hace 10 min',
-    status: 'normal',
-    unread: true,
-    timestamp: Date.now() - 10 * 60 * 1000
+    id: 'msg_001',
+    sender: {
+      id: 'USR_002',
+      name: 'María García',
+      avatar: 'MG',
+      role: 'Supervisora de Inventario',
+      department: 'Logística',
+      status: 'online'
+    },
+    subject: 'Discrepancias en Inventario - Bodega Norte',
+    preview: '¿Podrías revisar el inventario de la bodega norte? Creo que hay discrepancias...',
+    timestamp: Date.now() - (10 * 60 * 1000), // 10 min ago
+    read: false,
+    priority: 'normal',
+    type: 'work',
+    attachments: [],
+    reply_count: 0
   },
   {
-    id: 2,
-    sender: 'Carlos López',
-    avatar: 'CL',
-    message: 'El cliente Empresa XYZ está solicitando una cotización urgente para 500 unidades.',
-    time: 'Hace 30 min',
-    status: 'urgent',
-    unread: true,
-    timestamp: Date.now() - 30 * 60 * 1000
-  },
-  {
-    id: 3,
-    sender: 'Ana Rodríguez',
-    avatar: 'AR',
-    message: 'He completado el cierre de caja. Todo cuadra perfecto.',
-    time: 'Hace 1 hora',
-    status: 'normal',
-    unread: true,
-    timestamp: Date.now() - 60 * 60 * 1000
+    id: 'msg_002',
+    sender: {
+      id: 'USR_003',
+      name: 'Carlos López',
+      avatar: 'CL',
+      role: 'Ejecutivo de Ventas',
+      department: 'Ventas',
+      status: 'online'
+    },
+    subject: 'Cotización Urgente - Empresa XYZ',
+    preview: 'El cliente Empresa XYZ está solicitando una cotización urgente para 500 unidades...',
+    timestamp: Date.now() - (25 * 60 * 1000), // 25 min ago
+    read: false,
+    priority: 'urgent',
+    type: 'work',
+    attachments: [],
+    reply_count: 0
   }
 ];
-
-const INITIAL_CONFIG = {
-  notifications: true,
-  sounds: false,
-  autosave: true,
-  theme: 'light',
-  autoRefresh: true,
-  compactMode: false
-};
 
 // ====================================
 // STORE PRINCIPAL
 // ====================================
 
-export const useHeaderStore = create()(
+export const useHeaderStore = create(
   devtools(
     persist(
-      immer((set, get) => ({
+      (set, get) => ({
         // ================================
-        // ESTADO PRINCIPAL
+        // ESTADO INICIAL
         // ================================
-        
+
         // Dropdowns
         activeDropdown: null,
         dropdownHistory: [],
-        
+
         // Notificaciones
         notifications: INITIAL_NOTIFICATIONS,
-        unreadNotifications: INITIAL_NOTIFICATIONS.filter(n => n.unread).length,
-        
+        notificationsMetadata: {
+          total_count: INITIAL_NOTIFICATIONS.length,
+          unread_count: INITIAL_NOTIFICATIONS.filter(n => !n.read).length,
+          last_update: new Date().toISOString()
+        },
+        notificationsSettings: {
+          auto_refresh_interval: 30000,
+          max_notifications: 50,
+          show_read_notifications: true,
+          sound_enabled: true,
+          desktop_notifications: true
+        },
+
         // Mensajes
         messages: INITIAL_MESSAGES,
-        unreadMessages: INITIAL_MESSAGES.filter(m => m.unread).length,
-        
-        // Configuración
-        config: INITIAL_CONFIG,
-        
-        // Search
+        messagesMetadata: {
+          total_count: INITIAL_MESSAGES.length,
+          unread_count: INITIAL_MESSAGES.filter(m => !m.read).length,
+          last_update: new Date().toISOString()
+        },
+        messagesSettings: {
+          auto_refresh_interval: 45000,
+          max_messages: 100,
+          show_read_messages: true,
+          sound_enabled: true,
+          desktop_notifications: true
+        },
+
+        // Usuario
+        user: {
+          id: 'USR_001',
+          username: 'admin',
+          email: 'admin@sistema-inventario.cl',
+          profile: {
+            first_name: 'Juan',
+            last_name: 'Díaz',
+            full_name: 'Juan Díaz',
+            display_name: 'Juan D.',
+            avatar: 'JD',
+            avatar_url: null
+          },
+          role: {
+            id: 'ROLE_001',
+            name: 'Administrador',
+            level: 'admin'
+          },
+          status: {
+            online: true,
+            availability: 'available',
+            last_seen: new Date().toISOString()
+          }
+        },
+        company: {
+          id: 'COMP_001',
+          name: 'Sistema de Inventario y Punto de Venta',
+          short_name: 'SIPV'
+        },
+        currentSession: {
+          id: 'SESS_001',
+          login_time: new Date().toISOString(),
+          last_activity: new Date().toISOString()
+        },
+        quickActions: [
+          { id: 'new_sale', label: 'Nueva Venta', icon: '💰', url: '/pos/new-sale' },
+          { id: 'search_product', label: 'Buscar Producto', icon: '🔍', url: '/inventory/search' }
+        ],
+        recentActivity: [],
+
+        // Búsqueda
         searchQuery: '',
         searchHistory: [],
         searchSuggestions: [],
-        
+        searchResults: [],
+        isSearching: false,
+
+        // Configuración general
+        config: {
+          autoRefresh: true,
+          refreshInterval: 30000,
+          soundEnabled: true,
+          desktopNotifications: true,
+          theme: 'light',
+          compactMode: false,
+          showReadItems: true
+        },
+
         // UI State
         isLoading: false,
         lastUpdate: Date.now(),
-        
+
         // ================================
         // ACCIONES DE DROPDOWNS
         // ================================
-        
+
         openDropdown: (dropdownId) => set((state) => {
-          // Agregar a historial si es diferente
-          if (state.activeDropdown !== dropdownId) {
-            state.dropdownHistory.push(state.activeDropdown);
-            if (state.dropdownHistory.length > 5) {
-              state.dropdownHistory.shift();
-            }
-          }
-          
-          state.activeDropdown = dropdownId;
-          
-          // Log para debugging
-          console.log(`🔽 Dropdown abierto: ${dropdownId}`);
+          const newHistory = state.activeDropdown && state.activeDropdown !== dropdownId
+            ? [state.activeDropdown, ...state.dropdownHistory.slice(0, 4)]
+            : state.dropdownHistory;
+
+          return {
+            activeDropdown: dropdownId,
+            dropdownHistory: newHistory
+          };
         }),
-        
-        closeDropdown: () => set((state) => {
-          const previousDropdown = state.activeDropdown;
-          state.activeDropdown = null;
-          
-          if (previousDropdown) {
-            console.log(`🔼 Dropdown cerrado: ${previousDropdown}`);
-          }
-        }),
-        
-        toggleDropdown: (dropdownId) => set((state) => {
-          if (state.activeDropdown === dropdownId) {
-            state.activeDropdown = null;
-            console.log(`🔼 Dropdown cerrado: ${dropdownId}`);
+
+        closeDropdown: () => set(() => ({
+          activeDropdown: null
+        })),
+
+        toggleDropdown: (dropdownId) => {
+          const current = get().activeDropdown;
+          if (current === dropdownId) {
+            get().closeDropdown();
           } else {
-            // Agregar a historial
-            if (state.activeDropdown) {
-              state.dropdownHistory.push(state.activeDropdown);
-              if (state.dropdownHistory.length > 5) {
-                state.dropdownHistory.shift();
-              }
-            }
-            
-            state.activeDropdown = dropdownId;
-            console.log(`🔽 Dropdown abierto: ${dropdownId}`);
+            get().openDropdown(dropdownId);
           }
-        }),
-        
-        closeAllDropdowns: () => set((state) => {
-          state.activeDropdown = null;
-          console.log('🔼 Todos los dropdowns cerrados');
-        }),
-        
+        },
+
+        closeAllDropdowns: () => set(() => ({
+          activeDropdown: null,
+          dropdownHistory: []
+        })),
+
         // ================================
         // ACCIONES DE NOTIFICACIONES
         // ================================
-        
+
         addNotification: (notification) => set((state) => {
           const newNotification = {
-            ...notification,
-            id: Date.now() + Math.random(),
+            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             timestamp: Date.now(),
-            unread: true,
-            time: 'Ahora'
+            read: false,
+            priority: 'normal',
+            type: 'info',
+            ...notification
           };
-          
-          // Agregar al inicio
-          state.notifications.unshift(newNotification);
-          
-          // Mantener máximo 50 notificaciones
-          if (state.notifications.length > 50) {
-            state.notifications = state.notifications.slice(0, 50);
-          }
-          
-          // Actualizar contadores
-          state.unreadNotifications = state.notifications.filter(n => n.unread).length;
-          state.lastUpdate = Date.now();
-          
-          console.log('🔔 Nueva notificación agregada:', newNotification.title);
+
+          const newNotifications = [newNotification, ...state.notifications];
+          const unreadCount = newNotifications.filter(n => !n.read).length;
+
+          return {
+            notifications: newNotifications,
+            notificationsMetadata: {
+              ...state.notificationsMetadata,
+              total_count: newNotifications.length,
+              unread_count: unreadCount,
+              last_update: new Date().toISOString()
+            }
+          };
         }),
-        
+
         markNotificationRead: (notificationId) => set((state) => {
-          const notification = state.notifications.find(n => n.id === notificationId);
-          if (notification && notification.unread) {
-            notification.unread = false;
-            state.unreadNotifications = state.notifications.filter(n => n.unread).length;
-            
-            console.log(`✅ Notificación marcada como leída: ${notification.title}`);
-          }
+          const notifications = state.notifications.map(notification =>
+            notification.id === notificationId
+              ? { ...notification, read: true }
+              : notification
+          );
+
+          const unreadCount = notifications.filter(n => !n.read).length;
+
+          return {
+            notifications,
+            notificationsMetadata: {
+              ...state.notificationsMetadata,
+              unread_count: unreadCount
+            }
+          };
         }),
-        
+
         markAllNotificationsRead: () => set((state) => {
-          const unreadCount = state.notifications.filter(n => n.unread).length;
-          
-          state.notifications.forEach(notification => {
-            notification.unread = false;
-          });
-          
-          state.unreadNotifications = 0;
-          
-          console.log(`✅ ${unreadCount} notificaciones marcadas como leídas`);
+          const notifications = state.notifications.map(notification => ({
+            ...notification,
+            read: true
+          }));
+
+          return {
+            notifications,
+            notificationsMetadata: {
+              ...state.notificationsMetadata,
+              unread_count: 0
+            }
+          };
         }),
-        
+
         removeNotification: (notificationId) => set((state) => {
-          const index = state.notifications.findIndex(n => n.id === notificationId);
-          if (index > -1) {
-            const removed = state.notifications.splice(index, 1)[0];
-            state.unreadNotifications = state.notifications.filter(n => n.unread).length;
-            
-            console.log(`🗑️ Notificación eliminada: ${removed.title}`);
+          const notifications = state.notifications.filter(n => n.id !== notificationId);
+
+          return {
+            notifications,
+            notificationsMetadata: {
+              ...state.notificationsMetadata,
+              total_count: notifications.length,
+              unread_count: notifications.filter(n => !n.read).length
+            }
+          };
+        }),
+
+        clearAllNotifications: () => set((state) => ({
+          notifications: [],
+          notificationsMetadata: {
+            ...state.notificationsMetadata,
+            total_count: 0,
+            unread_count: 0
           }
-        }),
-        
-        clearAllNotifications: () => set((state) => {
-          const count = state.notifications.length;
-          state.notifications = [];
-          state.unreadNotifications = 0;
-          
-          console.log(`🗑️ ${count} notificaciones eliminadas`);
-        }),
-        
+        })),
+
         // ================================
         // ACCIONES DE MENSAJES
         // ================================
-        
+
         addMessage: (message) => set((state) => {
           const newMessage = {
-            ...message,
-            id: Date.now() + Math.random(),
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             timestamp: Date.now(),
-            unread: true,
-            time: 'Ahora'
+            read: false,
+            priority: 'normal',
+            type: 'work',
+            attachments: [],
+            reply_count: 0,
+            ...message
           };
-          
-          // Agregar al inicio
-          state.messages.unshift(newMessage);
-          
-          // Mantener máximo 30 mensajes
-          if (state.messages.length > 30) {
-            state.messages = state.messages.slice(0, 30);
-          }
-          
-          // Actualizar contadores
-          state.unreadMessages = state.messages.filter(m => m.unread).length;
-          state.lastUpdate = Date.now();
-          
-          console.log('💬 Nuevo mensaje agregado de:', newMessage.sender);
+
+          const newMessages = [newMessage, ...state.messages];
+          const unreadCount = newMessages.filter(m => !m.read).length;
+
+          return {
+            messages: newMessages,
+            messagesMetadata: {
+              ...state.messagesMetadata,
+              total_count: newMessages.length,
+              unread_count: unreadCount,
+              last_update: new Date().toISOString()
+            }
+          };
         }),
-        
+
         markMessageRead: (messageId) => set((state) => {
-          const message = state.messages.find(m => m.id === messageId);
-          if (message && message.unread) {
-            message.unread = false;
-            state.unreadMessages = state.messages.filter(m => m.unread).length;
-            
-            console.log(`✅ Mensaje marcado como leído de: ${message.sender}`);
-          }
+          const messages = state.messages.map(message =>
+            message.id === messageId
+              ? { ...message, read: true }
+              : message
+          );
+
+          const unreadCount = messages.filter(m => !m.read).length;
+
+          return {
+            messages,
+            messagesMetadata: {
+              ...state.messagesMetadata,
+              unread_count: unreadCount
+            }
+          };
         }),
-        
+
         markAllMessagesRead: () => set((state) => {
-          const unreadCount = state.messages.filter(m => m.unread).length;
-          
-          state.messages.forEach(message => {
-            message.unread = false;
-          });
-          
-          state.unreadMessages = 0;
-          
-          console.log(`✅ ${unreadCount} mensajes marcados como leídos`);
+          const messages = state.messages.map(message => ({
+            ...message,
+            read: true
+          }));
+
+          return {
+            messages,
+            messagesMetadata: {
+              ...state.messagesMetadata,
+              unread_count: 0
+            }
+          };
         }),
-        
+
         removeMessage: (messageId) => set((state) => {
-          const index = state.messages.findIndex(m => m.id === messageId);
-          if (index > -1) {
-            const removed = state.messages.splice(index, 1)[0];
-            state.unreadMessages = state.messages.filter(m => m.unread).length;
-            
-            console.log(`🗑️ Mensaje eliminado de: ${removed.sender}`);
-          }
+          const messages = state.messages.filter(m => m.id !== messageId);
+
+          return {
+            messages,
+            messagesMetadata: {
+              ...state.messagesMetadata,
+              total_count: messages.length,
+              unread_count: messages.filter(m => !m.read).length
+            }
+          };
         }),
-        
-        // ================================
-        // ACCIONES DE CONFIGURACIÓN
-        // ================================
-        
-        updateConfig: (key, value) => set((state) => {
-          state.config[key] = value;
-          console.log(`⚙️ Configuración actualizada: ${key} = ${value}`);
+
+        replyToMessage: (messageId, replyContent) => set((state) => {
+          const messages = state.messages.map(message =>
+            message.id === messageId
+              ? { ...message, reply_count: (message.reply_count || 0) + 1 }
+              : message
+          );
+
+          return { messages };
         }),
-        
-        toggleConfig: (key) => set((state) => {
-          state.config[key] = !state.config[key];
-          console.log(`⚙️ Configuración toggled: ${key} = ${state.config[key]}`);
-        }),
-        
-        resetConfig: () => set((state) => {
-          state.config = { ...INITIAL_CONFIG };
-          console.log('⚙️ Configuración restablecida');
-        }),
-        
+
         // ================================
         // ACCIONES DE BÚSQUEDA
         // ================================
-        
+
         setSearchQuery: (query) => set((state) => {
-          state.searchQuery = query;
-          
-          // Agregar a historial si es nueva y no está vacía
-          if (query && !state.searchHistory.includes(query)) {
-            state.searchHistory.unshift(query);
-            
-            // Mantener máximo 10 búsquedas
-            if (state.searchHistory.length > 10) {
-              state.searchHistory.pop();
-            }
+          const updates = { searchQuery: query };
+
+          // Agregar al historial si no está vacío
+          if (query.trim() && !state.searchHistory.includes(query)) {
+            updates.searchHistory = [query, ...state.searchHistory.slice(0, 9)];
           }
+
+          return updates;
         }),
-        
-        clearSearch: () => set((state) => {
-          state.searchQuery = '';
-          state.searchSuggestions = [];
+
+        performSearch: async (query) => {
+          set({ isSearching: true, searchQuery: query });
+
+          try {
+            // Simular búsqueda
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const mockResults = [
+              { id: 1, type: 'product', title: `Producto relacionado con "${query}"`, url: '/products/1' },
+              { id: 2, type: 'client', title: `Cliente que contiene "${query}"`, url: '/clients/1' },
+              { id: 3, type: 'sale', title: `Venta #001 - ${query}`, url: '/sales/1' }
+            ];
+
+            set({
+              searchResults: mockResults,
+              isSearching: false
+            });
+
+          } catch (error) {
+            console.error('Error en búsqueda:', error);
+            set({
+              searchResults: [],
+              isSearching: false
+            });
+          }
+        },
+
+        clearSearch: () => set({
+          searchQuery: '',
+          searchResults: [],
+          isSearching: false
         }),
-        
-        clearSearchHistory: () => set((state) => {
-          state.searchHistory = [];
-          console.log('🔍 Historial de búsqueda limpiado');
-        }),
-        
+
         // ================================
-        // SIMULADORES DE DATOS EN TIEMPO REAL
+        // ACCIONES DE CONFIGURACIÓN
         // ================================
-        
+
+        updateConfig: (newConfig) => set((state) => ({
+          config: { ...state.config, ...newConfig }
+        })),
+
+        toggleConfigOption: (option) => set((state) => {
+          if (state.config.hasOwnProperty(option)) {
+            return {
+              config: {
+                ...state.config,
+                [option]: !state.config[option]
+              }
+            };
+          }
+          return state;
+        }),
+
+        // ================================
+        // SIMULACIÓN DE DATOS EN TIEMPO REAL
+        // ================================
+
         simulateNewNotification: () => {
-          const notifications = [
+          const mockNotifications = [
             {
-              type: 'warning',
+              type: NOTIFICATION_TYPES.STOCK_ALERT,
+              priority: PRIORITY_LEVELS.URGENT,
+              title: 'Stock Crítico - Mouse Inalámbrico',
+              message: 'Solo quedan 2 unidades en stock.',
               icon: '⚠️',
-              title: 'Stock Bajo Detectado',
-              message: 'El producto "Cable USB" tiene solo 5 unidades restantes.',
-              status: 'urgent'
+              category: 'inventory'
             },
             {
-              type: 'success',
-              icon: '💰',
-              title: 'Pago Recibido',
-              message: 'Cliente XYZ ha realizado un pago de $25,000.',
-              status: 'normal'
+              type: NOTIFICATION_TYPES.PAYMENT_RECEIVED,
+              priority: PRIORITY_LEVELS.NORMAL,
+              title: 'Pago Procesado',
+              message: 'Pago de $75,000 procesado exitosamente.',
+              icon: '💳',
+              category: 'finance'
             },
             {
-              type: 'info',
-              icon: '📦',
-              title: 'Nueva Orden',
-              message: 'Se ha registrado una nueva orden de compra #12345.',
-              status: 'normal'
-            },
-            {
-              type: 'system',
-              icon: '🔄',
-              title: 'Sincronización Completa',
-              message: 'Datos sincronizados correctamente con el servidor.',
-              status: 'low'
+              type: NOTIFICATION_TYPES.ORDER_PENDING,
+              priority: PRIORITY_LEVELS.NORMAL,
+              title: 'Nueva Orden Pendiente',
+              message: 'Orden #OC-2025-019 requiere aprobación.',
+              icon: '📋',
+              category: 'orders'
             }
           ];
-          
-          const randomNotification = notifications[Math.floor(Math.random() * notifications.length)];
+
+          const randomNotification = mockNotifications[Math.floor(Math.random() * mockNotifications.length)];
           get().addNotification(randomNotification);
         },
-        
+
         simulateNewMessage: () => {
-          const messages = [
-            {
-              sender: 'Luis Morales',
-              avatar: 'LM',
-              message: 'El inventario de la bodega sur está listo para revisión.',
-              status: 'normal'
-            },
-            {
-              sender: 'Patricia Silva',
-              avatar: 'PS',
-              message: '¿Podemos programar una reunión para revisar las ventas?',
-              status: 'normal'
-            },
-            {
-              sender: 'Roberto Vargas',
-              avatar: 'RV',
-              message: 'Necesito autorización para el descuento especial del cliente VIP.',
-              status: 'urgent'
-            },
-            {
-              sender: 'Sofia Martinez',
-              avatar: 'SM',
-              message: 'Los reportes del mes están listos para tu revisión.',
-              status: 'normal'
-            }
+          const mockSenders = [
+            { id: 'USR_009', name: 'Patricia Morales', avatar: 'PM', role: 'Vendedora', department: 'Ventas' },
+            { id: 'USR_010', name: 'Diego Castillo', avatar: 'DC', role: 'Bodeguero', department: 'Logística' },
+            { id: 'USR_011', name: 'Carmen López', avatar: 'CL', role: 'Contadora', department: 'Finanzas' }
           ];
-          
-          const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-          get().addMessage(randomMessage);
+
+          const mockMessages = [
+            'Necesito revisar el inventario de productos de temporada.',
+            '¿Podemos coordinar la entrega para mañana?',
+            'El cliente pregunta por descuentos en compras al por mayor.',
+            'Hay un problema con la impresora de la caja 2.',
+            'Los reportes de ayer están listos para revisión.'
+          ];
+
+          const randomSender = mockSenders[Math.floor(Math.random() * mockSenders.length)];
+          const randomMessage = mockMessages[Math.floor(Math.random() * mockMessages.length)];
+
+          get().addMessage({
+            sender: randomSender,
+            subject: randomMessage.substring(0, 30) + '...',
+            preview: randomMessage,
+            content: randomMessage + ' Por favor, confirma cuando puedas revisar esto.',
+            priority: Math.random() > 0.7 ? PRIORITY_LEVELS.URGENT : PRIORITY_LEVELS.NORMAL,
+            type: MESSAGE_TYPES.WORK
+          });
         },
-        
+
+        // ================================
+        // ACCIONES DE USUARIO
+        // ================================
+
+        updateUserPreferences: (preferences) => set((state) => ({
+          user: {
+            ...state.user,
+            preferences: { ...state.user.preferences, ...preferences }
+          }
+        })),
+
+        updateUserStatus: (status) => set((state) => ({
+          user: {
+            ...state.user,
+            status: { ...state.user.status, ...status }
+          }
+        })),
+
+        updateLastUpdate: () => set({
+          lastUpdate: Date.now()
+        }),
+
         // ================================
         // UTILIDADES Y HELPERS
         // ================================
-        
-        getNotificationsByType: (type) => {
-          return get().notifications.filter(notification => notification.type === type);
+
+        getUnreadCounts: () => {
+          const state = get();
+          return {
+            notifications: state.notifications.filter(n => !n.read).length,
+            messages: state.messages.filter(m => !m.read).length
+          };
         },
-        
-        getUnreadNotificationsByType: (type) => {
-          return get().notifications.filter(notification => 
-            notification.type === type && notification.unread
-          );
+
+        isDropdownOpen: (dropdownId) => {
+          return get().activeDropdown === dropdownId;
         },
-        
-        getMessagesBySender: (sender) => {
-          return get().messages.filter(message => message.sender === sender);
+
+        getNotificationsByCategory: (category) => {
+          return get().notifications.filter(n => n.category === category);
         },
-        
-        getUnreadMessages: () => {
-          return get().messages.filter(message => message.unread);
+
+        getMessagesByType: (type) => {
+          return get().messages.filter(m => m.type === type);
         },
-        
-        getRecentActivity: (hours = 24) => {
-          const cutoff = Date.now() - (hours * 60 * 60 * 1000);
-          
-          const recentNotifications = get().notifications
-            .filter(n => n.timestamp > cutoff)
-            .map(n => ({ ...n, type: 'notification' }));
-            
-          const recentMessages = get().messages
-            .filter(m => m.timestamp > cutoff)
-            .map(m => ({ ...m, type: 'message' }));
-          
-          return [...recentNotifications, ...recentMessages]
-            .sort((a, b) => b.timestamp - a.timestamp);
+
+        getRecentActivity: (limit = 5) => {
+          return get().recentActivity.slice(0, limit);
         },
-        
-        // ================================
-        // ACCIONES DE SISTEMA
-        // ================================
-        
-        setLoading: (isLoading) => set((state) => {
-          state.isLoading = isLoading;
-        }),
-        
-        updateLastUpdate: () => set((state) => {
-          state.lastUpdate = Date.now();
-        }),
-        
-        // ================================
-        // RESET Y LIMPIEZA
-        // ================================
-        
-        reset: () => set((state) => {
-          state.activeDropdown = null;
-          state.dropdownHistory = [];
-          state.notifications = [...INITIAL_NOTIFICATIONS];
-          state.unreadNotifications = INITIAL_NOTIFICATIONS.filter(n => n.unread).length;
-          state.messages = [...INITIAL_MESSAGES];
-          state.unreadMessages = INITIAL_MESSAGES.filter(m => m.unread).length;
-          state.config = { ...INITIAL_CONFIG };
-          state.searchQuery = '';
-          state.searchHistory = [];
-          state.searchSuggestions = [];
-          state.isLoading = false;
-          state.lastUpdate = Date.now();
-          
-          console.log('🔄 Header store restablecido');
-        }),
-        
+
         // ================================
         // DEBUGGING Y DESARROLLO
         // ================================
-        
+
         getState: () => {
           const state = get();
           return {
-            activeDropdown: state.activeDropdown,
-            notificationsCount: state.notifications.length,
-            unreadNotifications: state.unreadNotifications,
-            messagesCount: state.messages.length,
-            unreadMessages: state.unreadMessages,
-            config: state.config,
-            lastUpdate: new Date(state.lastUpdate).toLocaleString()
+            dropdowns: {
+              active: state.activeDropdown,
+              history: state.dropdownHistory
+            },
+            notifications: {
+              total: state.notifications.length,
+              unread: state.notifications.filter(n => !n.read).length
+            },
+            messages: {
+              total: state.messages.length,
+              unread: state.messages.filter(m => !m.read).length
+            },
+            search: {
+              query: state.searchQuery,
+              results: state.searchResults.length,
+              searching: state.isSearching
+            }
           };
         },
-        
-        logState: () => {
-          console.log('📊 Header Store State:', get().getState());
-        }
-      })),
+
+        resetStore: () => set(() => ({
+          activeDropdown: null,
+          dropdownHistory: [],
+          searchQuery: '',
+          searchResults: [],
+          isSearching: false,
+          notifications: [...INITIAL_NOTIFICATIONS],
+          messages: [...INITIAL_MESSAGES],
+          lastUpdate: Date.now()
+        }))
+
+      }),
       {
         name: 'header-store',
         partialize: (state) => ({
           config: state.config,
           searchHistory: state.searchHistory,
-          // Persistir solo configuración y historial, no notificaciones temporales
+          user: {
+            preferences: state.user.preferences
+          }
         }),
       }
     ),
@@ -546,139 +670,92 @@ export const useHeaderStore = create()(
 
 // Hook para dropdowns
 export const useDropdowns = () => {
-  const {
-    activeDropdown,
-    openDropdown,
-    closeDropdown,
-    toggleDropdown,
-    closeAllDropdowns
-  } = useHeaderStore();
-  
+  const store = useHeaderStore();
   return {
-    activeDropdown,
-    openDropdown,
-    closeDropdown,
-    toggleDropdown,
-    closeAllDropdowns,
-    isOpen: (dropdownId) => activeDropdown === dropdownId
+    activeDropdown: store.activeDropdown,
+    dropdownHistory: store.dropdownHistory,
+    openDropdown: store.openDropdown,
+    closeDropdown: store.closeDropdown,
+    toggleDropdown: store.toggleDropdown,
+    closeAllDropdowns: store.closeAllDropdowns,
+    isOpen: store.isDropdownOpen
   };
 };
 
 // Hook para notificaciones
 export const useNotifications = () => {
-  const {
-    notifications,
-    unreadNotifications,
-    addNotification,
-    markNotificationRead,
-    markAllNotificationsRead,
-    removeNotification,
-    clearAllNotifications,
-    simulateNewNotification
-  } = useHeaderStore();
-  
+  const store = useHeaderStore();
   return {
-    notifications,
-    unreadNotifications,
-    addNotification,
-    markNotificationRead,
-    markAllNotificationsRead,
-    removeNotification,
-    clearAllNotifications,
-    simulateNewNotification,
-    hasUnread: unreadNotifications > 0
+    notifications: store.notifications,
+    metadata: store.notificationsMetadata,
+    settings: store.notificationsSettings,
+    addNotification: store.addNotification,
+    markRead: store.markNotificationRead,
+    markAllRead: store.markAllNotificationsRead,
+    remove: store.removeNotification,
+    clearAll: store.clearAllNotifications,
+    simulate: store.simulateNewNotification,
+    unreadCount: store.notifications.filter(n => !n.read).length,
+    stats: {
+      total: store.notifications.length,
+      unread: store.notifications.filter(n => !n.read).length
+    }
   };
 };
 
 // Hook para mensajes
 export const useMessages = () => {
-  const {
-    messages,
-    unreadMessages,
-    addMessage,
-    markMessageRead,
-    markAllMessagesRead,
-    removeMessage,
-    simulateNewMessage
-  } = useHeaderStore();
-  
+  const store = useHeaderStore();
   return {
-    messages,
-    unreadMessages,
-    addMessage,
-    markMessageRead,
-    markAllMessagesRead,
-    removeMessage,
-    simulateNewMessage,
-    hasUnread: unreadMessages > 0
-  };
-};
-
-// Hook para configuración
-export const useHeaderConfig = () => {
-  const {
-    config,
-    updateConfig,
-    toggleConfig,
-    resetConfig
-  } = useHeaderStore();
-  
-  return {
-    config,
-    updateConfig,
-    toggleConfig,
-    resetConfig,
-    isEnabled: (key) => config[key]
+    messages: store.messages,
+    metadata: store.messagesMetadata,
+    settings: store.messagesSettings,
+    addMessage: store.addMessage,
+    markRead: store.markMessageRead,
+    markAllRead: store.markAllMessagesRead,
+    remove: store.removeMessage,
+    reply: store.replyToMessage,
+    simulate: store.simulateNewMessage,
+    unreadCount: store.messages.filter(m => !m.read).length
   };
 };
 
 // Hook para búsqueda
-export const useHeaderSearch = () => {
-  const {
-    searchQuery,
-    searchHistory,
-    searchSuggestions,
-    setSearchQuery,
-    clearSearch,
-    clearSearchHistory
-  } = useHeaderStore();
-  
+export const useSearch = () => {
+  const store = useHeaderStore();
   return {
-    searchQuery,
-    searchHistory,
-    searchSuggestions,
-    setSearchQuery,
-    clearSearch,
-    clearSearchHistory,
-    hasQuery: searchQuery.length > 0,
-    hasHistory: searchHistory.length > 0
+    query: store.searchQuery,
+    results: store.searchResults,
+    history: store.searchHistory,
+    isSearching: store.isSearching,
+    setQuery: store.setSearchQuery,
+    performSearch: store.performSearch,
+    clear: store.clearSearch
+  };
+};
+
+// Hook para usuario
+export const useHeaderUser = () => {
+  const store = useHeaderStore();
+  return {
+    user: store.user,
+    company: store.company,
+    session: store.currentSession,
+    quickActions: store.quickActions,
+    recentActivity: store.recentActivity,
+    updatePreferences: store.updateUserPreferences,
+    updateStatus: store.updateUserStatus
   };
 };
 
 // ====================================
-// SIMULADOR AUTOMÁTICO PARA DEMO
+// CONSTANTES EXPORTADAS
 // ====================================
 
-export const startHeaderSimulation = () => {
-  // Simular notificaciones cada 30 segundos
-  const notificationInterval = setInterval(() => {
-    if (Math.random() > 0.7) { // 30% probabilidad
-      useHeaderStore.getState().simulateNewNotification();
-    }
-  }, 30000);
-  
-  // Simular mensajes cada 45 segundos
-  const messageInterval = setInterval(() => {
-    if (Math.random() > 0.8) { // 20% probabilidad
-      useHeaderStore.getState().simulateNewMessage();
-    }
-  }, 45000);
-  
-  // Retornar función de limpieza
-  return () => {
-    clearInterval(notificationInterval);
-    clearInterval(messageInterval);
-  };
-};
+export { DROPDOWN_TYPES, NOTIFICATION_TYPES, MESSAGE_TYPES, PRIORITY_LEVELS };
+
+// ====================================
+// EXPORT POR DEFECTO
+// ====================================
 
 export default useHeaderStore;
