@@ -1,26 +1,15 @@
 // @/utils/cn.js
 
-/**
- * Utility function para combinar classNames
- * Versión básica sin dependencias externas
- */
-export function cn(...classes) {
-    return classes
-        .filter(Boolean)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 /**
- * Versión con clsx y tailwind-merge (descomenta si instalas las dependencias)
+ * Utility function para combinar classNames con Tailwind CSS
+ * Usa clsx para manejar condicionales y twMerge para resolver conflictos de Tailwind
  */
-// import { clsx } from 'clsx';
-// import { twMerge } from 'tailwind-merge';
-// 
-// export function cn(...inputs) {
-//   return twMerge(clsx(inputs));
-// }
+export function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
 
 // Export por defecto también
 export default cn;

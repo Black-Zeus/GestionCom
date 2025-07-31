@@ -14,7 +14,7 @@ import { shouldLog } from '@/utils/environment';
 // ==========================================
 
 class AuthService {
-  
+
   // ==========================================
   // AUTHENTICATION METHODS
   // ==========================================
@@ -30,7 +30,7 @@ class AuthService {
   async login(credentials) {
     try {
       if (shouldLog()) {
-        console.log('🔐 Attempting login for:', credentials.username);
+        //console.log('🔐 Attempting login for:', credentials.username);
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
@@ -41,7 +41,7 @@ class AuthService {
 
       if (response.data?.success && response.data?.data) {
         if (shouldLog()) {
-          console.log('✅ Login successful for:', credentials.username);
+          //console.log('✅ Login successful for:', credentials.username);
         }
         return response.data;
       }
@@ -50,7 +50,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Login failed:', formattedError);
       }
@@ -66,14 +66,14 @@ class AuthService {
   async logout() {
     try {
       if (shouldLog()) {
-        console.log('🚪 Attempting logout');
+        //console.log('🚪 Attempting logout');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.LOGOUT);
 
       if (response.data?.success) {
         if (shouldLog()) {
-          console.log('✅ Logout successful');
+          //console.log('✅ Logout successful');
         }
         return response.data;
       }
@@ -103,14 +103,14 @@ class AuthService {
   async refreshToken() {
     try {
       if (shouldLog()) {
-        console.log('🔄 Attempting token refresh');
+        //console.log('🔄 Attempting token refresh');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.REFRESH);
 
       if (response.data?.success && response.data?.data) {
         if (shouldLog()) {
-          console.log('✅ Token refresh successful');
+          //console.log('✅ Token refresh successful');
         }
         return response.data;
       }
@@ -119,7 +119,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Token refresh failed:', formattedError);
       }
@@ -144,7 +144,7 @@ class AuthService {
       }
 
       if (shouldLog()) {
-        console.log('🔍 Validating token');
+        //console.log('🔍 Validating token');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.VALIDATE_TOKEN, {
@@ -153,9 +153,9 @@ class AuthService {
 
       if (response.data?.success && response.data?.data) {
         const isValid = response.data.data.valid;
-        
+
         if (shouldLog()) {
-          console.log(`✅ Token validation: ${isValid ? 'VALID' : 'INVALID'}`);
+          //console.log(`✅ Token validation: ${isValid ? 'VALID' : 'INVALID'}`);
         }
 
         return response.data;
@@ -165,7 +165,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Token validation failed:', formattedError);
       }
@@ -189,7 +189,7 @@ class AuthService {
   async changePassword(passwordData) {
     try {
       if (shouldLog()) {
-        console.log('🔑 Attempting password change');
+        //console.log('🔑 Attempting password change');
       }
 
       // Validaciones básicas en frontend
@@ -213,7 +213,7 @@ class AuthService {
 
       if (response.data?.success) {
         if (shouldLog()) {
-          console.log('✅ Password changed successfully');
+          //console.log('✅ Password changed successfully');
         }
         return response.data;
       }
@@ -222,7 +222,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Password change failed:', formattedError);
       }
@@ -243,7 +243,7 @@ class AuthService {
   async adminChangePassword(adminPasswordData) {
     try {
       if (shouldLog()) {
-        console.log('🔑 Attempting admin password change for user:', adminPasswordData.target_user_id);
+        //console.log('🔑 Attempting admin password change for user:', adminPasswordData.target_user_id);
       }
 
       // Validaciones básicas
@@ -268,7 +268,7 @@ class AuthService {
 
       if (response.data?.success) {
         if (shouldLog()) {
-          console.log('✅ Admin password change successful');
+          //console.log('✅ Admin password change successful');
         }
         return response.data;
       }
@@ -277,7 +277,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Admin password change failed:', formattedError);
       }
@@ -302,7 +302,7 @@ class AuthService {
       }
 
       if (shouldLog()) {
-        console.log('📧 Requesting password reset for:', email);
+        //console.log('📧 Requesting password reset for:', email);
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
@@ -311,7 +311,7 @@ class AuthService {
 
       if (response.data?.success) {
         if (shouldLog()) {
-          console.log('✅ Password reset requested successfully');
+          //console.log('✅ Password reset requested successfully');
         }
         return response.data;
       }
@@ -320,7 +320,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Forgot password failed:', formattedError);
       }
@@ -341,7 +341,7 @@ class AuthService {
   async resetPassword(resetData) {
     try {
       if (shouldLog()) {
-        console.log('🔄 Attempting password reset for:', resetData.email);
+        //console.log('🔄 Attempting password reset for:', resetData.email);
       }
 
       // Validaciones básicas
@@ -370,7 +370,7 @@ class AuthService {
 
       if (response.data?.success) {
         if (shouldLog()) {
-          console.log('✅ Password reset successful');
+          //console.log('✅ Password reset successful');
         }
         return response.data;
       }
@@ -379,7 +379,7 @@ class AuthService {
 
     } catch (error) {
       const formattedError = getFormattedError(error);
-      
+
       if (shouldLog()) {
         console.error('❌ Password reset failed:', formattedError);
       }
@@ -399,7 +399,7 @@ class AuthService {
   hasValidTokens() {
     const accessToken = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
-    
+
     return !!(accessToken && refreshToken);
   }
 
@@ -410,7 +410,7 @@ class AuthService {
   getUserFromToken() {
     try {
       const accessToken = localStorage.getItem('access_token');
-      
+
       if (!accessToken) return null;
 
       // Decodificar JWT (sin verificar firma - solo para info básica)
@@ -418,7 +418,7 @@ class AuthService {
       if (tokenParts.length !== 3) return null;
 
       const payload = JSON.parse(atob(tokenParts[1]));
-      
+
       return {
         user_id: payload.user_id,
         username: payload.username,
@@ -445,12 +445,12 @@ class AuthService {
   isTokenExpiringSoon(bufferMinutes = 5) {
     try {
       const userInfo = this.getUserFromToken();
-      
+
       if (!userInfo?.exp) return false;
 
       const now = Math.floor(Date.now() / 1000);
       const expirationBuffer = bufferMinutes * 60;
-      
+
       return (userInfo.exp - now) <= expirationBuffer;
 
     } catch (error) {
@@ -465,12 +465,12 @@ class AuthService {
   getTokenTimeRemaining() {
     try {
       const userInfo = this.getUserFromToken();
-      
+
       if (!userInfo?.exp) return 0;
 
       const now = Math.floor(Date.now() / 1000);
       const remaining = userInfo.exp - now;
-      
+
       return Math.max(0, remaining);
 
     } catch (error) {
@@ -484,7 +484,7 @@ class AuthService {
   clearAuthData() {
     const keysToRemove = [
       'access_token',
-      'refresh_token', 
+      'refresh_token',
       'user_info',
       'auth_state'
     ];
@@ -494,7 +494,7 @@ class AuthService {
     });
 
     if (shouldLog()) {
-      console.log('🧹 Auth data cleared from storage');
+      //console.log('🧹 Auth data cleared from storage');
     }
   }
 }

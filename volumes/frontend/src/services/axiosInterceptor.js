@@ -54,13 +54,13 @@ const processQueue = (error, token = null) => {
       prom.resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
 const refreshAccessToken = async () => {
   const refreshToken = getToken('REFRESH');
-  
+
   if (!refreshToken) {
     throw new Error('No refresh token available');
   }
@@ -79,7 +79,7 @@ const refreshAccessToken = async () => {
 
     if (response.data?.success && response.data?.data) {
       const { access_token, refresh_token } = response.data.data;
-      
+
       // Guardar nuevos tokens
       setToken('ACCESS', access_token);
       if (refresh_token) {
@@ -87,7 +87,7 @@ const refreshAccessToken = async () => {
       }
 
       if (shouldLog()) {
-        console.log('✅ Token refreshed successfully');
+        //console.log('✅ Token refreshed successfully');
       }
 
       return access_token;
@@ -99,10 +99,10 @@ const refreshAccessToken = async () => {
     if (shouldLog()) {
       console.error('❌ Token refresh failed:', error);
     }
-    
+
     // Limpiar tokens si el refresh falló
     clearAllTokens();
-    
+
     // Trigger logout - se maneja en el response interceptor
     throw error;
   }
@@ -115,7 +115,7 @@ const refreshAccessToken = async () => {
 axiosInstance.interceptors.request.use(
   (config) => {
     const accessToken = getToken('ACCESS');
-    
+
     // Agregar token de acceso si existe
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
@@ -123,7 +123,7 @@ axiosInstance.interceptors.request.use(
 
     // Log en desarrollo
     if (shouldLog()) {
-      console.log(`🔄 ${config.method?.toUpperCase()} ${config.url}`);
+      //console.log(`🔄 ${config.method?.toUpperCase()} ${config.url}`);
     }
 
     return config;
@@ -144,7 +144,7 @@ axiosInstance.interceptors.response.use(
   (response) => {
     // Log successful responses en desarrollo
     if (shouldLog()) {
-      console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+      //console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
     }
 
     return response;
@@ -164,7 +164,7 @@ axiosInstance.interceptors.response.use(
       // Evitar refresh infinito en endpoints de auth
       const isAuthEndpoint = originalRequest.url?.includes('/auth/');
       const isRefreshEndpoint = originalRequest.url?.includes('/auth/refresh');
-      
+
       if (isRefreshEndpoint || isAuthEndpoint) {
         // Si falló refresh o login, limpiar tokens
         clearAllTokens();
@@ -191,17 +191,17 @@ axiosInstance.interceptors.response.use(
       try {
         const newToken = await refreshAccessToken();
         processQueue(null, newToken);
-        
+
         // Reintentar request original con nuevo token
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return axiosInstance(originalRequest);
 
       } catch (refreshError) {
         processQueue(refreshError, null);
-        
+
         // Notificar que se requiere login
         triggerLogout('Token refresh failed');
-        
+
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -212,7 +212,7 @@ axiosInstance.interceptors.response.use(
     // MANEJO DE OTROS ERRORES DE AUTH
     // ==========================================
     const parsedError = parseError(error);
-    
+
     if (shouldLogout(parsedError.code)) {
       clearAllTokens();
       triggerLogout(`Auth error: ${parsedError.code}`);
@@ -223,14 +223,14 @@ axiosInstance.interceptors.response.use(
     // ==========================================
     if (isRetryableError(parsedError.code) && !originalRequest._retryCount) {
       originalRequest._retryCount = 1;
-      
+
       // Esperar 1 segundo antes de reintentar
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       if (shouldLog()) {
-        console.log(`🔄 Retrying request: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`);
+        //console.log(`🔄 Retrying request: ${originalRequest.method?.toUpperCase()} ${originalRequest.url}`);
       }
-      
+
       return axiosInstance(originalRequest);
     }
 
@@ -269,7 +269,7 @@ const triggerLogout = (reason) => {
  */
 export const onLogoutRequired = (callback) => {
   logoutCallbacks.push(callback);
-  
+
   // Retornar función para remover el callback
   return () => {
     logoutCallbacks = logoutCallbacks.filter(cb => cb !== callback);
@@ -284,9 +284,9 @@ export const onLogoutRequired = (callback) => {
 export const setAuthTokens = (accessToken, refreshToken) => {
   if (accessToken) setToken('ACCESS', accessToken);
   if (refreshToken) setToken('REFRESH', refreshToken);
-  
+
   if (shouldLog()) {
-    console.log('🔐 Auth tokens configured');
+    //console.log('🔐 Auth tokens configured');
   }
 };
 
@@ -295,9 +295,9 @@ export const setAuthTokens = (accessToken, refreshToken) => {
  */
 export const clearAuthTokens = () => {
   clearAllTokens();
-  
+
   if (shouldLog()) {
-    console.log('🧹 Auth tokens cleared');
+    //console.log('🧹 Auth tokens cleared');
   }
 };
 

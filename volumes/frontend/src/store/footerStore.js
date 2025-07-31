@@ -41,7 +41,7 @@ const INITIAL_SYSTEM_STATUS = {
 
 const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
-  WARNING: 'warning', 
+  WARNING: 'warning',
   ERROR: 'error',
   INFO: 'info',
   SYSTEM: 'system'
@@ -58,17 +58,17 @@ export const useFooterStore = create()(
         // ================================
         // ESTADO PRINCIPAL
         // ================================
-        
+
         // Información de sesión
         sessionInfo: { ...INITIAL_SESSION_INFO },
-        
+
         // Estado del sistema
         systemStatus: { ...INITIAL_SYSTEM_STATUS },
-        
+
         // Notificaciones del footer
         footerNotification: null,
         notificationQueue: [],
-        
+
         // Estadísticas en tiempo real
         realtimeStats: {
           connectedUsers: 12,
@@ -76,7 +76,7 @@ export const useFooterStore = create()(
           systemUptime: '99.9%',
           responseTime: '120ms'
         },
-        
+
         // Configuración del footer
         footerConfig: {
           showSystemStatus: true,
@@ -86,58 +86,58 @@ export const useFooterStore = create()(
           notificationDuration: 3000,
           updateInterval: 30000
         },
-        
+
         // Estado UI
         isVisible: true,
         isMinimized: false,
         lastUpdate: Date.now(),
-        
+
         // ================================
         // ACCIONES DE SESIÓN
         // ================================
-        
+
         updateSessionInfo: (newInfo) => set((state) => {
           Object.assign(state.sessionInfo, newInfo);
           state.sessionInfo.lastActivity = Date.now();
           state.lastUpdate = Date.now();
-          
-          console.log('👤 Información de sesión actualizada:', newInfo);
+
+          //console.log('👤 Información de sesión actualizada:', newInfo);
         }),
-        
+
         updateBranch: (branchName, branchId = null) => set((state) => {
           state.sessionInfo.branch = branchName;
           if (branchId) state.sessionInfo.branchId = branchId;
           state.sessionInfo.lastActivity = Date.now();
-          
-          console.log(`🏢 Sucursal actualizada: ${branchName}`);
+
+          //console.log(`🏢 Sucursal actualizada: ${branchName}`);
         }),
-        
+
         updateCashRegister: (cashRegister, cashRegisterId = null) => set((state) => {
           state.sessionInfo.cashRegister = cashRegister;
           if (cashRegisterId) state.sessionInfo.cashRegisterId = cashRegisterId;
           state.sessionInfo.lastActivity = Date.now();
-          
-          console.log(`💰 Caja registradora actualizada: ${cashRegister}`);
+
+          //console.log(`💰 Caja registradora actualizada: ${cashRegister}`);
         }),
-        
+
         updateUser: (username, userId = null, role = null) => set((state) => {
           state.sessionInfo.user = username;
           if (userId) state.sessionInfo.userId = userId;
           if (role) state.sessionInfo.userRole = role;
           state.sessionInfo.lastActivity = Date.now();
-          
-          console.log(`👤 Usuario actualizado: ${username} (${role || state.sessionInfo.userRole})`);
+
+          //console.log(`👤 Usuario actualizado: ${username} (${role || state.sessionInfo.userRole})`);
         }),
-        
+
         updateShift: (shiftName, shiftId = null, status = 'active') => set((state) => {
           state.sessionInfo.shift = shiftName;
           if (shiftId) state.sessionInfo.shiftId = shiftId;
           state.sessionInfo.shiftStatus = status;
           state.sessionInfo.lastActivity = Date.now();
-          
-          console.log(`🕐 Turno actualizado: ${shiftName} (${status})`);
+
+          //console.log(`🕐 Turno actualizado: ${shiftName} (${status})`);
         }),
-        
+
         startNewSession: (sessionData) => set((state) => {
           state.sessionInfo = {
             ...INITIAL_SESSION_INFO,
@@ -145,14 +145,14 @@ export const useFooterStore = create()(
             sessionStartTime: Date.now(),
             lastActivity: Date.now()
           };
-          
-          console.log('🚀 Nueva sesión iniciada:', sessionData);
+
+          //console.log('🚀 Nueva sesión iniciada:', sessionData);
         }),
-        
+
         endSession: () => set((state) => {
           const sessionDuration = Date.now() - state.sessionInfo.sessionStartTime;
-          console.log(`🏁 Sesión terminada. Duración: ${Math.round(sessionDuration / 1000 / 60)} minutos`);
-          
+          //console.log(`🏁 Sesión terminada. Duración: ${Math.round(sessionDuration / 1000 / 60)} minutos`);
+
           // Mantener algunos datos básicos
           state.sessionInfo = {
             ...INITIAL_SESSION_INFO,
@@ -160,57 +160,57 @@ export const useFooterStore = create()(
             lastActivity: Date.now()
           };
         }),
-        
+
         // ================================
         // ACCIONES DE ESTADO DEL SISTEMA
         // ================================
-        
+
         updateSystemStatus: (statusUpdate) => set((state) => {
           Object.assign(state.systemStatus, statusUpdate);
           state.lastUpdate = Date.now();
-          
-          console.log('🖥️ Estado del sistema actualizado:', statusUpdate);
+
+          //console.log('🖥️ Estado del sistema actualizado:', statusUpdate);
         }),
-        
+
         setApiConnection: (status) => set((state) => {
           const previousStatus = state.systemStatus.apiConnection;
           state.systemStatus.apiConnection = status;
-          
+
           if (previousStatus !== status) {
             const statusMessages = {
               connected: '✅ API conectada correctamente',
               checking: '🔄 Verificando conexión API...',
               error: '❌ Error de conexión API'
             };
-            
+
             get().showNotification(statusMessages[status], status === 'error' ? 'error' : 'info');
           }
         }),
-        
+
         setDatabaseStatus: (status) => set((state) => {
           const previousStatus = state.systemStatus.databaseStatus;
           state.systemStatus.databaseStatus = status;
-          
+
           if (previousStatus !== status) {
             const statusMessages = {
               online: '✅ Base de datos en línea',
               slow: '⚠️ Base de datos responde lentamente',
               offline: '❌ Base de datos no disponible'
             };
-            
+
             get().showNotification(statusMessages[status], status === 'offline' ? 'error' : 'warning');
           }
         }),
-        
+
         updateRealtimeStats: (stats) => set((state) => {
           Object.assign(state.realtimeStats, stats);
           state.lastUpdate = Date.now();
         }),
-        
+
         // ================================
         // ACCIONES DE NOTIFICACIONES
         // ================================
-        
+
         showNotification: (message, type = 'info', duration = null) => set((state) => {
           const notification = {
             id: Date.now() + Math.random(),
@@ -219,94 +219,94 @@ export const useFooterStore = create()(
             timestamp: Date.now(),
             duration: duration || state.footerConfig.notificationDuration
           };
-          
+
           // Si hay una notificación activa, agregarla a la cola
           if (state.footerNotification) {
             state.notificationQueue.push(notification);
           } else {
             state.footerNotification = notification;
           }
-          
-          console.log(`📢 Notificación del footer: ${message}`);
+
+          //console.log(`📢 Notificación del footer: ${message}`);
         }),
-        
+
         hideNotification: () => set((state) => {
           state.footerNotification = null;
-          
+
           // Mostrar siguiente notificación de la cola
           if (state.notificationQueue.length > 0) {
             state.footerNotification = state.notificationQueue.shift();
           }
         }),
-        
+
         clearNotificationQueue: () => set((state) => {
           state.notificationQueue = [];
           state.footerNotification = null;
-          
-          console.log('🗑️ Cola de notificaciones del footer limpiada');
+
+          //console.log('🗑️ Cola de notificaciones del footer limpiada');
         }),
-        
+
         // ================================
         // ACCIONES DE CONFIGURACIÓN
         // ================================
-        
+
         updateFooterConfig: (configUpdate) => set((state) => {
           Object.assign(state.footerConfig, configUpdate);
-          console.log('⚙️ Configuración del footer actualizada:', configUpdate);
+          //console.log('⚙️ Configuración del footer actualizada:', configUpdate);
         }),
-        
+
         toggleFooterVisibility: () => set((state) => {
           state.isVisible = !state.isVisible;
-          console.log(`👁️ Footer ${state.isVisible ? 'mostrado' : 'oculto'}`);
+          //console.log(`👁️ Footer ${state.isVisible ? 'mostrado' : 'oculto'}`);
         }),
-        
+
         toggleFooterMinimized: () => set((state) => {
           state.isMinimized = !state.isMinimized;
-          console.log(`📐 Footer ${state.isMinimized ? 'minimizado' : 'expandido'}`);
+          //console.log(`📐 Footer ${state.isMinimized ? 'minimizado' : 'expandido'}`);
         }),
-        
+
         // ================================
         // ACCIONES AUTOMÁTICAS Y HELPERS
         // ================================
-        
+
         updateLastActivity: () => set((state) => {
           state.sessionInfo.lastActivity = Date.now();
         }),
-        
+
         getSessionDuration: () => {
           const { sessionStartTime } = get().sessionInfo;
           return Date.now() - sessionStartTime;
         },
-        
+
         getFormattedSessionDuration: () => {
           const duration = get().getSessionDuration();
           const hours = Math.floor(duration / (1000 * 60 * 60));
           const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
-          
+
           if (hours > 0) {
             return `${hours}h ${minutes}m`;
           }
           return `${minutes}m`;
         },
-        
+
         getLastActivityTime: () => {
           const { lastActivity } = get().sessionInfo;
           const elapsed = Date.now() - lastActivity;
           const minutes = Math.floor(elapsed / (1000 * 60));
-          
+
           if (minutes === 0) return 'Ahora';
           if (minutes === 1) return 'Hace 1 minuto';
           if (minutes < 60) return `Hace ${minutes} minutos`;
-          
+
           const hours = Math.floor(minutes / 60);
           if (hours === 1) return 'Hace 1 hora';
           return `Hace ${hours} horas`;
         },
-        
+
         // ================================
         // SIMULADORES Y DEMOS
         // ================================
-        
+
         simulateSystemActivity: () => {
           const activities = [
             { type: 'info', message: '✅ Backup completado exitosamente' },
@@ -315,65 +315,65 @@ export const useFooterStore = create()(
             { type: 'info', message: '👥 5 usuarios conectados' },
             { type: 'success', message: '💾 Datos guardados automáticamente' }
           ];
-          
+
           const randomActivity = activities[Math.floor(Math.random() * activities.length)];
           get().showNotification(randomActivity.message, randomActivity.type);
         },
-        
+
         simulateShiftChange: () => {
           const shifts = [
             { name: 'Mañana', status: 'active' },
             { name: 'Tarde', status: 'active' },
             { name: 'Noche', status: 'warning' }
           ];
-          
+
           const randomShift = shifts[Math.floor(Math.random() * shifts.length)];
           get().updateShift(randomShift.name, null, randomShift.status);
           get().showNotification(`🕐 Cambio de turno: ${randomShift.name}`, 'info');
         },
-        
+
         simulateBranchChange: () => {
           const branches = ['Central', 'Norte', 'Sur', 'Oriente', 'Poniente'];
           const randomBranch = branches[Math.floor(Math.random() * branches.length)];
-          
+
           get().updateBranch(randomBranch);
           get().showNotification(`🏢 Sucursal cambiada: ${randomBranch}`, 'info');
         },
-        
+
         simulateRealtimeUpdate: () => set((state) => {
           // Simular cambios realistas en las estadísticas
-          state.realtimeStats.connectedUsers = Math.max(1, 
+          state.realtimeStats.connectedUsers = Math.max(1,
             state.realtimeStats.connectedUsers + Math.floor(Math.random() * 6) - 3
           );
-          
+
           state.realtimeStats.pendingTasks = Math.max(0,
             state.realtimeStats.pendingTasks + Math.floor(Math.random() * 4) - 2
           );
-          
+
           state.realtimeStats.responseTime = `${Math.floor(80 + Math.random() * 100)}ms`;
-          
+
           // Actualizar estadísticas del sistema
           state.systemStatus.activeUsers = state.realtimeStats.connectedUsers;
           state.systemStatus.totalTransactions += Math.floor(Math.random() * 3);
           state.systemStatus.todayRevenue += Math.floor(Math.random() * 1000);
-          
+
           state.lastUpdate = Date.now();
         }),
-        
+
         // ================================
         // ACCIONES DE RESETEO Y LIMPIEZA
         // ================================
-        
+
         resetSessionInfo: () => set((state) => {
           state.sessionInfo = { ...INITIAL_SESSION_INFO };
-          console.log('🔄 Información de sesión restablecida');
+          //console.log('🔄 Información de sesión restablecida');
         }),
-        
+
         resetSystemStatus: () => set((state) => {
           state.systemStatus = { ...INITIAL_SYSTEM_STATUS };
-          console.log('🔄 Estado del sistema restablecido');
+          //console.log('🔄 Estado del sistema restablecido');
         }),
-        
+
         resetFooter: () => set((state) => {
           state.sessionInfo = { ...INITIAL_SESSION_INFO };
           state.systemStatus = { ...INITIAL_SYSTEM_STATUS };
@@ -388,14 +388,14 @@ export const useFooterStore = create()(
           state.isVisible = true;
           state.isMinimized = false;
           state.lastUpdate = Date.now();
-          
-          console.log('🔄 Footer completamente restablecido');
+
+          //console.log('🔄 Footer completamente restablecido');
         }),
-        
+
         // ================================
         // UTILIDADES Y ESTADO
         // ================================
-        
+
         getFooterState: () => {
           const state = get();
           return {
@@ -409,46 +409,46 @@ export const useFooterStore = create()(
             isMinimized: state.isMinimized
           };
         },
-        
+
         logFooterState: () => {
-          console.log('📊 Footer Store State:', get().getFooterState());
+          //console.log('📊 Footer Store State:', get().getFooterState());
         },
-        
+
         // ================================
         // ACCIONES DE NEGOCIO ESPECÍFICAS
         // ================================
-        
+
         recordTransaction: (amount, type = 'sale') => set((state) => {
           state.systemStatus.totalTransactions += 1;
           state.systemStatus.todayRevenue += amount;
           state.sessionInfo.lastActivity = Date.now();
-          
-          const message = type === 'sale' 
+
+          const message = type === 'sale'
             ? `💰 Venta registrada: $${amount.toLocaleString()}`
             : `📝 Transacción registrada: $${amount.toLocaleString()}`;
-            
+
           get().showNotification(message, 'success');
         }),
-        
+
         handleCashRegisterChange: (newRegister, reason = 'manual') => {
           get().updateCashRegister(newRegister);
-          
+
           const reasons = {
             manual: 'Cambio manual',
             automatic: 'Cambio automático',
             maintenance: 'Mantenimiento',
             shift: 'Cambio de turno'
           };
-          
+
           get().showNotification(
             `💰 ${reasons[reason] || 'Cambio'} de caja: ${newRegister}`,
             'info'
           );
         },
-        
+
         handleSystemMaintenance: (message, type = 'info') => {
           get().showNotification(`🔧 Mantenimiento: ${message}`, type);
-          
+
           // Simular impacto en performance durante mantenimiento
           if (type === 'warning') {
             get().updateSystemStatus({
@@ -497,7 +497,7 @@ export const useSessionInfo = () => {
     getLastActivityTime,
     updateLastActivity
   } = useFooterStore();
-  
+
   return {
     sessionInfo,
     updateSessionInfo,
@@ -522,7 +522,7 @@ export const useSystemStatus = () => {
     setDatabaseStatus,
     updateRealtimeStats
   } = useFooterStore();
-  
+
   return {
     systemStatus,
     realtimeStats,
@@ -543,7 +543,7 @@ export const useFooterNotifications = () => {
     hideNotification,
     clearNotificationQueue
   } = useFooterStore();
-  
+
   return {
     currentNotification: footerNotification,
     queueLength: notificationQueue.length,
@@ -565,7 +565,7 @@ export const useFooterConfig = () => {
     toggleFooterVisibility,
     toggleFooterMinimized
   } = useFooterStore();
-  
+
   return {
     config: footerConfig,
     updateConfig: updateFooterConfig,
@@ -585,39 +585,39 @@ export const startFooterSimulation = () => {
   const statsInterval = setInterval(() => {
     useFooterStore.getState().simulateRealtimeUpdate();
   }, 10000);
-  
+
   // Simular actividad del sistema cada 45 segundos
   const activityInterval = setInterval(() => {
     if (Math.random() > 0.6) { // 40% probabilidad
       useFooterStore.getState().simulateSystemActivity();
     }
   }, 45000);
-  
+
   // Simular cambios ocasionales cada 2 minutos
   const changesInterval = setInterval(() => {
     const random = Math.random();
-    
+
     if (random > 0.9) {
       useFooterStore.getState().simulateShiftChange();
     } else if (random > 0.8) {
       useFooterStore.getState().simulateBranchChange();
     }
   }, 120000);
-  
+
   // Actualizar actividad cada 30 segundos
   const activityUpdateInterval = setInterval(() => {
     useFooterStore.getState().updateLastActivity();
   }, 30000);
-  
-  console.log('🎬 Simulación del footer iniciada');
-  
+
+  //console.log('🎬 Simulación del footer iniciada');
+
   // Retornar función de limpieza
   return () => {
     clearInterval(statsInterval);
     clearInterval(activityInterval);
     clearInterval(changesInterval);
     clearInterval(activityUpdateInterval);
-    console.log('🛑 Simulación del footer detenida');
+    //console.log('🛑 Simulación del footer detenida');
   };
 };
 

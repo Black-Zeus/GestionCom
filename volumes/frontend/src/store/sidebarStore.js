@@ -42,7 +42,7 @@ const useSidebarStore = create(
           const newCollapsed = !state.isCollapsed;
 
           if (shouldLog()) {
-            console.log(`🔄 Sidebar ${newCollapsed ? 'collapsed' : 'expanded'}`);
+            //console.log(`🔄 Sidebar ${newCollapsed ? 'collapsed' : 'expanded'}`);
           }
 
           return { isCollapsed: newCollapsed };
@@ -103,7 +103,7 @@ const useSidebarStore = create(
           }
 
           if (shouldLog()) {
-            console.log(`🌙 Theme: ${newDarkMode ? 'Dark' : 'Light'}`);
+            //console.log(`🌙 Theme: ${newDarkMode ? 'Dark' : 'Light'}`);
           }
 
           return { isDarkMode: newDarkMode };
@@ -136,7 +136,7 @@ const useSidebarStore = create(
         set({ activeSection: section });
 
         if (shouldLog()) {
-          console.log(`📍 Active section: ${section}`);
+          //console.log(`📍 Active section: ${section}`);
         }
       },
 
@@ -270,7 +270,7 @@ const useSidebarStore = create(
         }
 
         if (shouldLog()) {
-          console.log('🚀 Sidebar store initialized');
+          //console.log('🚀 Sidebar store initialized');
         }
       },
 

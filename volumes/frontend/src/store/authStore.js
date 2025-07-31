@@ -27,19 +27,19 @@ const initialState = {
   // Auth tokens
   accessToken: null,
   refreshToken: null,
-  
+
   // User information
   user: null,
-  
+
   // Auth status
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
-  
+
   // Login session info
   sessionInfo: null,
   loginTimestamp: null,
-  
+
   // Error handling
   lastError: null
 };
@@ -63,7 +63,7 @@ const useAuthStore = create(
        */
       login: (loginResponse) => {
         const { data } = loginResponse;
-        
+
         if (!data?.access_token || !data?.user_info) {
           throw new Error('Invalid login response format');
         }
@@ -89,7 +89,7 @@ const useAuthStore = create(
         set(authState);
 
         if (shouldLog()) {
-          console.log('🔐 User logged in:', data.user_info.username);
+          //console.log('🔐 User logged in:', data.user_info.username);
         }
 
         return authState;
@@ -116,7 +116,7 @@ const useAuthStore = create(
         });
 
         if (shouldLog()) {
-          console.log('🚪 User logged out:', reason);
+          //console.log('🚪 User logged out:', reason);
         }
       },
 
@@ -131,7 +131,7 @@ const useAuthStore = create(
        */
       updateTokens: (accessToken, refreshToken = null) => {
         const updates = { accessToken };
-        
+
         if (refreshToken) {
           updates.refreshToken = refreshToken;
         }
@@ -145,7 +145,7 @@ const useAuthStore = create(
         set(updates);
 
         if (shouldLog()) {
-          console.log('🔄 Tokens updated');
+          //console.log('🔄 Tokens updated');
         }
       },
 
@@ -174,12 +174,12 @@ const useAuthStore = create(
        */
       updateUser: (userInfo) => {
         const updatedUser = { ...get().user, ...userInfo };
-        
+
         set({ user: updatedUser });
         localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(updatedUser));
 
         if (shouldLog()) {
-          console.log('👤 User info updated');
+          //console.log('👤 User info updated');
         }
       },
 
@@ -237,7 +237,7 @@ const useAuthStore = create(
 
           if (accessToken && userInfoStr) {
             const userInfo = JSON.parse(userInfoStr);
-            
+
             set({
               accessToken,
               refreshToken,
@@ -248,7 +248,7 @@ const useAuthStore = create(
             });
 
             if (shouldLog()) {
-              console.log('🔄 Auth state restored from storage');
+              //console.log('🔄 Auth state restored from storage');
             }
           } else {
             set({ isInitialized: true });
@@ -291,8 +291,8 @@ const useAuthStore = create(
       hasAnyPermission: (permissions) => {
         const user = get().user;
         if (!user?.permissions) return false;
-        
-        return permissions.some(permission => 
+
+        return permissions.some(permission =>
           user.permissions.includes(permission)
         );
       },
@@ -305,8 +305,8 @@ const useAuthStore = create(
       hasAllPermissions: (permissions) => {
         const user = get().user;
         if (!user?.permissions) return false;
-        
-        return permissions.every(permission => 
+
+        return permissions.every(permission =>
           user.permissions.includes(permission)
         );
       },
@@ -363,7 +363,7 @@ const useAuthStore = create(
         if (state) {
           state.setInitialized();
           if (shouldLog()) {
-            console.log('🏪 Auth store rehydrated');
+            //console.log('🏪 Auth store rehydrated');
           }
         }
       }
@@ -384,16 +384,16 @@ export const authSelectors = {
   isAuthenticated: (state) => state.isAuthenticated,
   isLoading: (state) => state.isLoading,
   isInitialized: (state) => state.isInitialized,
-  
+
   // User info
   user: (state) => state.user,
   userDisplay: (state) => state.getUserDisplay(),
   username: (state) => state.user?.username,
   userEmail: (state) => state.user?.email,
-  
+
   // Tokens
   hasTokens: (state) => !!(state.accessToken && state.refreshToken),
-  
+
   // Error
   lastError: (state) => state.lastError,
 
