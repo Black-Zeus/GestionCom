@@ -1,187 +1,230 @@
 /**
- * ModalManager.js
- * API Ultra Simple para manejar modales sin Provider
- * Uso: ModalManager.success({ title: "Éxito", message: "Todo bien" })
- */
+* ModalManager.jsx
+* Gestor global del sistema de modales
+* API unificada para mostrar cualquier tipo de modal
+*/
 
+import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { StrictMode } from 'react';
+import Modal from './Modal.jsx';
+import { 
+ generateModalId, 
+ isValidModalType, 
+ MODAL_CONFIG, 
+ MODAL_TYPES 
+} from './modalTypes.js';
 
 // ====================================
-// CONFIGURACIÓN Y CONSTANTES
-// ====================================
-
-const MODAL_CONFIG = {
-    // Contenedor donde se montarán los modales
-    containerId: 'modal-root',
-
-    // Z-index base para modales
-    baseZIndex: 1000,
-
-    // Duración de animaciones (ms)
-    animationDuration: 300,
-
-    // Auto-close para algunos tipos (ms)
-    autoClose: {
-        success: 3000,
-        error: 5000,
-        warning: 4000,
-        info: 3000
-    },
-
-    // Configuración por defecto para cada tipo
-    defaults: {
-        success: {
-            icon: '✅',
-            iconColor: 'text-green-500',
-            borderColor: 'border-green-200',
-            bgColor: 'bg-green-50 dark:bg-green-900/20'
-        },
-        error: {
-            icon: '❌',
-            iconColor: 'text-red-500',
-            borderColor: 'border-red-200',
-            bgColor: 'bg-red-50 dark:bg-red-900/20'
-        },
-        warning: {
-            icon: '⚠️',
-            iconColor: 'text-yellow-500',
-            borderColor: 'border-yellow-200',
-            bgColor: 'bg-yellow-50 dark:bg-yellow-900/20'
-        },
-        info: {
-            icon: 'ℹ️',
-            iconColor: 'text-blue-500',
-            borderColor: 'border-blue-200',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20'
-        },
-        confirm: {
-            icon: '❓',
-            iconColor: 'text-blue-500',
-            borderColor: 'border-blue-200',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20'
-        },
-        loading: {
-            icon: '⏳',
-            iconColor: 'text-blue-500',
-            borderColor: 'border-blue-200',
-            bgColor: 'bg-blue-50 dark:bg-blue-900/20'
-        }
-    }
-};
-
-// ====================================
-// ESTADO GLOBAL SIMPLE
+// ESTADO GLOBAL DE MODALES
 // ====================================
 
 class ModalState {
-    constructor() {
-        this.modals = [];
-        this.nextId = 1;
-        this.container = null;
-        this.root = null;
-    }
+ constructor() {
+   this.modals = [];
+   this.container = null;
+   this.root = null;
+   this.subscribers = [];
+   this.isInitialized = false;
+ }
 
-    // Crear contenedor si no existe
-    ensureContainer() {
-        if (!this.container) {
-            this.container = document.getElementById(MODAL_CONFIG.containerId);
+ // Asegurar que el contenedor existe
+ ensureContainer() {
+   if (!this.container) {
+     // Buscar contenedor existente o crear uno
+     this.container = document.getElementById('modal-root') || this.createContainer();
+   }
 
-            if (!this.container) {
-                this.container = document.createElement('div');
-                this.container.id = MODAL_CONFIG.containerId;
-                this.container.className = 'modal-manager-container';
-                document.body.appendChild(this.container);
-            }
+   if (!this.root) {
+     this.root = createRoot(this.container);
+     this.isInitialized = true;
+   }
 
-            if (!this.root) {
-                this.root = createRoot(this.container);
-            }
-        }
+   return this.container;
+ }
 
-        return this.container;
-    }
+ // Crear contenedor de modales
+ createContainer() {
+   const container = document.createElement('div');
+   container.id = 'modal-root';
+   container.className = 'modal-manager-root';
+   container.setAttribute('aria-live', 'polite');
+   container.setAttribute('aria-label', 'Modales del sistema');
+   document.body.appendChild(container);
+   return container;
+ }
 
-    // Agregar modal
-    addModal(modalData) {
-        const modal = {
-            id: `modal-${this.nextId++}`,
-            zIndex: MODAL_CONFIG.baseZIndex + this.modals.length,
-            createdAt: Date.now(),
-            ...modalData
-        };
+ // Agregar modal
+ addModal(modal) {
+   // Validar límite de modales concurrentes
+   if (this.modals.length >= MODAL_CONFIG.maxConcurrentModals) {
+     console.warn(`⚠️ ModalManager: Máximo ${MODAL_CONFIG.maxConcurrentModals} modales concurrentes alcanzado`);
+     // Cerrar el modal más antiguo
+     this.removeModal(this.modals[0].id);
+   }
 
-        this.modals.push(modal);
-        this.render();
+   // Agregar z-index incremental
+   modal.zIndex = MODAL_CONFIG.baseZIndex + this.modals.length;
+   
+   // Configurar auto-close si corresponde
+   if (modal.autoClose) {
+     const timeout = typeof modal.autoClose === 'number' ? modal.autoClose : MODAL_CONFIG.defaultAutoClose;
+     modal.autoCloseTimer = setTimeout(() => {
+       this.removeModal(modal.id);
+     }, timeout);
+   }
+   
+   this.modals.push(modal);
+   this.render();
+   this.notifySubscribers('modalAdded', modal);
+   
+   return modal.id;
+ }
 
-        // Auto-close si está configurado
-        if (modal.autoClose !== false && MODAL_CONFIG.autoClose[modal.type]) {
-            setTimeout(() => {
-                this.removeModal(modal.id);
-            }, modal.autoClose || MODAL_CONFIG.autoClose[modal.type]);
-        }
+ // Remover modal por ID
+ removeModal(id) {
+   const index = this.modals.findIndex(modal => modal.id === id);
+   if (index !== -1) {
+     const modal = this.modals[index];
+     
+     // ✅ NUEVO: Cleanup de timers
+     if (modal.autoCloseTimer) {
+       clearTimeout(modal.autoCloseTimer);
+       modal.autoCloseTimer = null;
+     }
+     
+     // ✅ NUEVO: Cleanup de otros timers/intervals si existen
+     if (modal.progressTimer) {
+       clearInterval(modal.progressTimer);
+       modal.progressTimer = null;
+     }
+     
+     this.modals.splice(index, 1);
+     this.render();
+     this.notifySubscribers('modalRemoved', modal);
+     
+     // ✅ NUEVO: Cleanup adicional después del render
+     setTimeout(() => {
+       if (modal.cleanup && typeof modal.cleanup === 'function') {
+         modal.cleanup();
+       }
+     }, 100);
+   }
+ }
 
-        return modal.id;
-    }
+ // Remover todos los modales
+ removeAll() {
+   const removedModals = [...this.modals];
+   
+   // ✅ NUEVO: Cleanup de todos los timers antes de remover
+   this.modals.forEach(modal => {
+     if (modal.autoCloseTimer) {
+       clearTimeout(modal.autoCloseTimer);
+     }
+     if (modal.progressTimer) {
+       clearInterval(modal.progressTimer);
+     }
+     if (modal.cleanup && typeof modal.cleanup === 'function') {
+       modal.cleanup();
+     }
+   });
+   
+   this.modals = [];
+   this.render();
+   this.notifySubscribers('allModalsRemoved', removedModals);
+ }
 
-    // Remover modal por ID
-    removeModal(id) {
-        const index = this.modals.findIndex(m => m.id === id);
-        if (index !== -1) {
-            const modal = this.modals[index];
+ // Obtener modal por ID
+ getModal(id) {
+   return this.modals.find(modal => modal.id === id);
+ }
 
-            // Ejecutar callback de cierre si existe
-            if (modal.onClose) {
-                modal.onClose();
-            }
+ // Obtener modal activo (el último)
+ getActiveModal() {
+   return this.modals[this.modals.length - 1] || null;
+ }
 
-            this.modals.splice(index, 1);
-            this.render();
-        }
-    }
+ // Verificar si hay modales abiertos
+ hasOpenModals() {
+   return this.modals.length > 0;
+ }
 
-    // Remover todos los modales
-    removeAll() {
-        this.modals.forEach(modal => {
-            if (modal.onClose) {
-                modal.onClose();
-            }
-        });
+ // Obtener estadísticas
+ getStats() {
+   return {
+     total: this.modals.length,
+     byType: this.modals.reduce((acc, modal) => {
+       acc[modal.type] = (acc[modal.type] || 0) + 1;
+       return acc;
+     }, {}),
+     maxConcurrent: MODAL_CONFIG.maxConcurrentModals,
+     isInitialized: this.isInitialized
+   };
+ }
 
-        this.modals = [];
-        this.render();
-    }
+ // Suscribirse a cambios
+ subscribe(callback) {
+   this.subscribers.push(callback);
+   return () => {
+     this.subscribers = this.subscribers.filter(sub => sub !== callback);
+   };
+ }
 
-    // Obtener modal activo (el último)
-    getActiveModal() {
-        return this.modals[this.modals.length - 1] || null;
-    }
+ // Notificar suscriptores
+ notifySubscribers(event, data) {
+   this.subscribers.forEach(callback => {
+     try {
+       callback(event, data, this.getStats());
+     } catch (error) {
+       console.error('Error in modal subscriber:', error);
+     }
+   });
+ }
 
-    // Renderizar modales
-    async render() {
-        this.ensureContainer();
+ // Renderizar modales
+ render() {
+   if (!this.isInitialized) {
+     this.ensureContainer();
+   }
 
-        // Importar Modal de forma dinámica para evitar dependencias circulares
-        try {
-            const { default: Modal } = await import('./Modal.jsx');
+   try {
+     this.root.render(
+       <StrictMode>
+         <div className="modal-manager-container">
+           {this.modals.map(modal => (
+             <Modal
+               key={modal.id}
+               {...modal}
+               isOpen={true}
+               onClose={() => this.removeModal(modal.id)}
+               onAfterClose={() => {
+                 // Callback adicional después del cierre
+                 modal.onAfterClose?.();
+               }}
+               style={{ zIndex: modal.zIndex }}
+             />
+           ))}
+         </div>
+       </StrictMode>
+     );
+   } catch (error) {
+     console.error('❌ Error rendering modals:', error);
+   }
+ }
 
-            this.root.render(
-                <StrictMode>
-                    <div className="modal-manager-root">
-                        {this.modals.map(modal => (
-                            <Modal
-                                key={modal.id}
-                                {...modal}
-                                onClose={() => this.removeModal(modal.id)}
-                            />
-                        ))}
-                    </div>
-                </StrictMode>
-            );
-        } catch (error) {
-            console.error('❌ Error loading Modal component:', error);
-        }
-    }
+ // Limpiar todo
+ cleanup() {
+   this.removeAll();
+   if (this.root) {
+     this.root.unmount();
+     this.root = null;
+   }
+   if (this.container && this.container.parentNode) {
+     this.container.parentNode.removeChild(this.container);
+     this.container = null;
+   }
+   this.subscribers = [];
+   this.isInitialized = false;
+ }
 }
 
 // Instancia global
@@ -192,324 +235,559 @@ const modalState = new ModalState();
 // ====================================
 
 class ModalManager {
+ 
+ // ====================================
+ // MÉTODOS PRINCIPALES
+ // ====================================
 
-    // ====================================
-    // MODALES ESTÁNDAR
-    // ====================================
+ /**
+  * Mostrar modal genérico
+  * @param {Object} options - Configuración del modal
+  * @returns {string} ID del modal
+  */
+ static show(options = {}) {
+   const {
+     type = MODAL_TYPES.INFO,
+     id = generateModalId(type),
+     timeout, // ✅ NUEVO: Soporte para timeout
+     ...modalProps
+   } = options;
 
-    /**
-     * Modal de éxito
-     * @param {Object} options - Opciones del modal
-     * @param {string} options.title - Título del modal
-     * @param {string} options.message - Mensaje del modal
-     * @param {Function} options.onClose - Callback al cerrar
-     * @param {boolean} options.autoClose - Auto-cerrar (default: true)
-     */
-    static success(options = {}) {
-        const config = {
-            type: 'success',
-            title: 'Operación Exitosa',
-            message: 'La operación se completó correctamente',
-            ...MODAL_CONFIG.defaults.success,
-            ...options
-        };
+   // Validar tipo
+   if (!isValidModalType(type)) {
+     console.warn(`⚠️ ModalManager: Tipo "${type}" no válido. Usando "info".`);
+     options.type = MODAL_TYPES.INFO;
+   }
 
-        return modalState.addModal(config);
-    }
+   const modal = {
+     id,
+     type,
+     timeout, // ✅ NUEVO: Agregar timeout al modal
+     ...modalProps
+   };
 
-    /**
-     * Modal de error
-     */
-    static error(options = {}) {
-        const config = {
-            type: 'error',
-            title: 'Error',
-            message: 'Ha ocurrido un error inesperado',
-            autoClose: false, // Los errores no se cierran automáticamente
-            ...MODAL_CONFIG.defaults.error,
-            ...options
-        };
+   return modalState.addModal(modal);
+ }
 
-        return modalState.addModal(config);
-    }
+ /**
+  * Cerrar modal por ID
+  * @param {string} id - ID del modal
+  */
+ static close(id) {
+   modalState.removeModal(id);
+ }
 
-    /**
-     * Modal de advertencia
-     */
-    static warning(options = {}) {
-        const config = {
-            type: 'warning',
-            title: 'Advertencia',
-            message: 'Por favor revise la información',
-            ...MODAL_CONFIG.defaults.warning,
-            ...options
-        };
+ /**
+  * Cerrar todos los modales
+  */
+ static closeAll() {
+   modalState.removeAll();
+ }
 
-        return modalState.addModal(config);
-    }
+ // ====================================
+ // MODALES BÁSICOS
+ // ====================================
 
-    /**
-     * Modal de información
-     */
-    static info(options = {}) {
-        const config = {
-            type: 'info',
-            title: 'Información',
-            message: 'Información importante del sistema',
-            ...MODAL_CONFIG.defaults.info,
-            ...options
-        };
+ /**
+  * Modal de información
+  * @param {Object} options - Opciones del modal
+  */
+ static info(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.INFO,
+     title: options.title || 'Información',
+     ...options
+   });
+ }
 
-        return modalState.addModal(config);
-    }
+ /**
+  * Modal de éxito
+  * @param {Object} options - Opciones del modal
+  */
+ static success(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.SUCCESS,
+     title: options.title || 'Éxito',
+     autoClose: options.autoClose !== undefined ? options.autoClose : 3000,
+     ...options
+   });
+ }
 
-    // ====================================
-    // MODALES INTERACTIVOS
-    // ====================================
+ /**
+  * Modal de advertencia
+  * @param {Object} options - Opciones del modal
+  */
+ static warning(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.WARNING,
+     title: options.title || 'Advertencia',
+     ...options
+   });
+ }
 
-    /**
-     * Modal de confirmación
-     */
-    static confirm(options = {}) {
-        return new Promise((resolve) => {
-            const config = {
-                type: 'confirm',
-                title: 'Confirmar Acción',
-                message: '¿Está seguro de que desea continuar?',
-                confirmText: 'Confirmar',
-                cancelText: 'Cancelar',
-                autoClose: false,
-                ...MODAL_CONFIG.defaults.confirm,
-                ...options,
-                onConfirm: () => {
-                    if (options.onConfirm) options.onConfirm();
-                    resolve(true);
-                    modalState.removeModal(modalId);
-                },
-                onCancel: () => {
-                    if (options.onCancel) options.onCancel();
-                    resolve(false);
-                    modalState.removeModal(modalId);
-                }
-            };
+ /**
+  * Modal de error
+  * @param {Object} options - Opciones del modal
+  */
+ static error(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.ERROR,
+     title: options.title || 'Error',
+     ...options
+   });
+ }
 
-            const modalId = modalState.addModal(config);
-        });
-    }
+ /**
+  * Modal de peligro
+  * @param {Object} options - Opciones del modal
+  */
+ static danger(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.DANGER,
+     title: options.title || 'Peligro',
+     closeOnOverlayClick: false,
+     closeOnEscape: false,
+     ...options
+   });
+ }
 
-    /**
-     * Modal de formulario
-     */
-    static form(options = {}) {
-        return new Promise((resolve, reject) => {
-            const config = {
-                type: 'form',
-                title: 'Formulario',
-                fields: [],
-                submitText: 'Guardar',
-                cancelText: 'Cancelar',
-                autoClose: false,
-                ...options,
-                onSubmit: (data) => {
-                    if (options.onSubmit) options.onSubmit(data);
-                    resolve(data);
-                    modalState.removeModal(modalId);
-                },
-                onCancel: () => {
-                    if (options.onCancel) options.onCancel();
-                    reject(new Error('Formulario cancelado'));
-                    modalState.removeModal(modalId);
-                }
-            };
+ // ====================================
+ // MODALES INTERACTIVOS
+ // ====================================
 
-            const modalId = modalState.addModal(config);
-        });
-    }
+ /**
+  * Modal de confirmación
+  * @param {Object} options - Opciones del modal
+  * @returns {Promise<boolean>} Promesa que resuelve con la decisión del usuario
+  */
+ static confirm(options = {}) {
+   return new Promise((resolve, reject) => {
+     // ✅ NUEVO: Soporte para timeout en confirms
+     const timeoutId = options.timeout ? setTimeout(() => {
+       this.close(modalId);
+       reject(new Error('Modal timeout'));
+     }, options.timeout) : null;
 
-    /**
-     * Modal de carga/progreso
-     */
-    static loading(options = {}) {
-        const config = {
-            type: 'loading',
-            title: 'Cargando...',
-            message: 'Por favor espere',
-            progress: 0,
-            autoClose: false,
-            showCloseButton: false,
-            ...MODAL_CONFIG.defaults.loading,
-            ...options
-        };
+     const modalId = this.show({
+       type: MODAL_TYPES.CONFIRM,
+       title: options.title || 'Confirmar Acción',
+       closeOnOverlayClick: false,
+       closeOnEscape: false,
+       ...options,
+       onConfirm: () => {
+         if (timeoutId) clearTimeout(timeoutId); // ✅ NUEVO: Cleanup timeout
+         this.close(modalId);
+         options.onConfirm?.();
+         resolve(true);
+       },
+       onCancel: () => {
+         if (timeoutId) clearTimeout(timeoutId); // ✅ NUEVO: Cleanup timeout
+         this.close(modalId);
+         options.onCancel?.();
+         resolve(false);
+       },
+       // ✅ NUEVO: Cleanup function para el modal
+       cleanup: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+       }
+     });
+   });
+ }
 
-        const modalId = modalState.addModal(config);
+ /**
+  * Modal de formulario
+  * @param {Object} options - Opciones del modal
+  * @returns {Promise<Object>} Promesa que resuelve con los datos del formulario
+  */
+ static form(options = {}) {
+   return new Promise((resolve, reject) => {
+     const timeoutId = options.timeout ? setTimeout(() => {
+       this.close(modalId);
+       reject(new Error('Form timeout'));
+     }, options.timeout) : null;
 
-        // Retornar objeto con métodos para controlar el loading
-        return {
-            id: modalId,
-            updateProgress: (progress) => {
-                const modal = modalState.modals.find(m => m.id === modalId);
-                if (modal) {
-                    modal.progress = progress;
-                    modalState.render();
-                }
-            },
-            updateMessage: (message) => {
-                const modal = modalState.modals.find(m => m.id === modalId);
-                if (modal) {
-                    modal.message = message;
-                    modalState.render();
-                }
-            },
-            close: () => modalState.removeModal(modalId)
-        };
-    }
+     const modalId = this.show({
+       type: MODAL_TYPES.FORM,
+       title: options.title || 'Formulario',
+       size: 'large',
+       ...options,
+       onSubmit: (data) => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onSubmit?.(data);
+         resolve(data);
+       },
+       onCancel: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onCancel?.();
+         reject(new Error('Form cancelled'));
+       },
+       cleanup: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+       }
+     });
+   });
+ }
 
-    /**
-     * Modal wizard (con pasos)
-     */
-    static wizard(options = {}) {
-        return new Promise((resolve, reject) => {
-            const config = {
-                type: 'wizard',
-                title: 'Asistente',
-                steps: [],
-                currentStep: 0,
-                autoClose: false,
-                ...options,
-                onComplete: (data) => {
-                    if (options.onComplete) options.onComplete(data);
-                    resolve(data);
-                    modalState.removeModal(modalId);
-                },
-                onCancel: () => {
-                    if (options.onCancel) options.onCancel();
-                    reject(new Error('Wizard cancelado'));
-                    modalState.removeModal(modalId);
-                }
-            };
+ /**
+  * Modal de wizard/asistente
+  * @param {Object} options - Opciones del modal
+  * @returns {Promise<Object>} Promesa que resuelve con los datos finales
+  */
+ static wizard(options = {}) {
+   return new Promise((resolve, reject) => {
+     const timeoutId = options.timeout ? setTimeout(() => {
+       this.close(modalId);
+       reject(new Error('Wizard timeout'));
+     }, options.timeout) : null;
 
-            const modalId = modalState.addModal(config);
-        });
-    }
+     const modalId = this.show({
+       type: MODAL_TYPES.WIZARD,
+       title: options.title || 'Asistente',
+       size: 'large',
+       ...options,
+       onComplete: (data) => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onComplete?.(data);
+         resolve(data);
+       },
+       onCancel: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onCancel?.();
+         reject(new Error('Wizard cancelled'));
+       },
+       cleanup: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+       }
+     });
+   });
+ }
 
-    // ====================================
-    // MÉTODOS DE CONTROL
-    // ====================================
+ /**
+  * Modal de login
+  * @param {Object} options - Opciones del modal
+  * @returns {Promise<Object>} Promesa que resuelve con las credenciales
+  */
+ static login(options = {}) {
+   return new Promise((resolve, reject) => {
+     const timeoutId = options.timeout ? setTimeout(() => {
+       this.close(modalId);
+       reject(new Error('Login timeout'));
+     }, options.timeout) : null;
 
-    /**
-     * Cerrar el modal activo (el último)
-     */
-    static close() {
-        const activeModal = modalState.getActiveModal();
-        if (activeModal) {
-            modalState.removeModal(activeModal.id);
-        }
-    }
+     const modalId = this.show({
+       type: MODAL_TYPES.LOGIN,
+       title: options.title || 'Iniciar Sesión',
+       ...options,
+       onSubmit: (credentials) => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onSubmit?.(credentials);
+         resolve(credentials);
+       },
+       onCancel: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+         this.close(modalId);
+         options.onCancel?.();
+         reject(new Error('Login cancelled'));
+       },
+       cleanup: () => {
+         if (timeoutId) clearTimeout(timeoutId);
+       }
+     });
+   });
+ }
 
-    /**
-     * Cerrar modal específico por ID
-     */
-    static closeById(id) {
-        modalState.removeModal(id);
-    }
+ // ====================================
+ // MODALES DE DATOS
+ // ====================================
 
-    /**
-     * Cerrar todos los modales
-     */
-    static closeAll() {
-        modalState.removeAll();
-    }
+ /**
+  * Modal de búsqueda
+  * @param {Object} options - Opciones del modal
+  */
+ static search(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.SEARCH,
+     title: options.title || 'Búsqueda Avanzada',
+     size: 'large',
+     ...options
+   });
+ }
 
-    /**
-     * Obtener información del estado actual
-     */
-    static getState() {
-        return {
-            modals: modalState.modals.length,
-            activeModal: modalState.getActiveModal(),
-            allModals: [...modalState.modals]
-        };
-    }
+ /**
+  * Modal de tabla de datos
+  * @param {Object} options - Opciones del modal
+  */
+ static datatable(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.DATATABLE,
+     title: options.title || 'Gestión de Datos',
+     size: 'xlarge',
+     ...options
+   });
+ }
 
-    // ====================================
-    // UTILIDADES Y SHORTCUTS
-    // ====================================
+ /**
+  * Modal de calendario
+  * @param {Object} options - Opciones del modal
+  */
+ static calendar(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.CALENDAR,
+     title: options.title || 'Calendario',
+     size: 'large',
+     ...options
+   });
+ }
 
-    /**
-     * Shortcut para mostrar resultado de operación
-     */
-    static result(success, options = {}) {
-        return success ? this.success(options) : this.error(options);
-    }
+ // ====================================
+ // MODALES DE MEDIA
+ // ====================================
 
-    /**
-     * Shortcut para validación simple
-     */
-    static validate(condition, options = {}) {
-        if (!condition) {
-            return this.warning(options);
-        }
-        return null;
-    }
+ /**
+  * Modal de imagen
+  * @param {Object} options - Opciones del modal
+  */
+ static image(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.IMAGE,
+     title: options.title || 'Vista Previa',
+     size: 'xlarge',
+     ...options
+   });
+ }
 
-    /**
-     * Modal personalizado (para casos especiales)
-     */
-    static custom(options = {}) {
-        const config = {
-            type: 'custom',
-            ...options
-        };
+ /**
+  * Modal de video
+  * @param {Object} options - Opciones del modal
+  */
+ static video(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.VIDEO,
+     title: options.title || 'Reproductor de Video',
+     size: 'xlarge',
+     ...options
+   });
+ }
 
-        return modalState.addModal(config);
-    }
+ /**
+  * Modal de galería
+  * @param {Object} options - Opciones del modal
+  */
+ static gallery(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.GALLERY,
+     title: options.title || 'Galería',
+     size: 'xlarge',
+     ...options
+   });
+ }
+
+ /**
+  * Modal de gestor de archivos
+  * @param {Object} options - Opciones del modal
+  */
+ static fileManager(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.FILEMANAGER,
+     title: options.title || 'Gestor de Archivos',
+     size: 'xlarge',
+     ...options
+   });
+ }
+
+ // ====================================
+ // MODALES DE SISTEMA
+ // ====================================
+
+ /**
+  * Modal de loading
+  * @param {Object} options - Opciones del modal
+  */
+ static loading(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.LOADING,
+     title: options.title || 'Cargando...',
+     size: 'small',
+     showCloseButton: false,
+     closeOnOverlayClick: false,
+     closeOnEscape: false,
+     ...options
+   });
+ }
+
+ /**
+  * Modal de progreso
+  * @param {Object} options - Opciones del modal
+  */
+ static progress(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.PROGRESS,
+     title: options.title || 'Procesando...',
+     size: 'medium',
+     showCloseButton: false,
+     closeOnOverlayClick: false,
+     closeOnEscape: false,
+     ...options
+   });
+ }
+
+ /**
+  * Modal de configuración
+  * @param {Object} options - Opciones del modal
+  */
+ static settings(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.SETTINGS,
+     title: options.title || 'Configuración',
+     size: 'xlarge',
+     ...options
+   });
+ }
+
+ /**
+  * Modal de ayuda
+  * @param {Object} options - Opciones del modal
+  */
+ static help(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.HELP,
+     title: options.title || 'Centro de Ayuda',
+     size: 'large',
+     ...options
+   });
+ }
+
+ /**
+  * Modal personalizado
+  * @param {Object} options - Opciones del modal
+  */
+ static custom(options = {}) {
+   return this.show({
+     type: MODAL_TYPES.CUSTOM,
+     title: options.title || 'Modal Personalizado',
+     ...options
+   });
+ }
+
+ // ====================================
+ // UTILIDADES
+ // ====================================
+
+ /**
+  * Actualizar modal existente
+  * @param {string} id - ID del modal
+  * @param {Object} updates - Propiedades a actualizar
+  */
+ static update(id, updates) {
+   const modal = modalState.getModal(id);
+   if (modal) {
+     Object.assign(modal, updates);
+     modalState.render();
+   }
+ }
+
+ /**
+  * Verificar si hay modales abiertos
+  * @returns {boolean}
+  */
+ static hasOpenModals() {
+   return modalState.hasOpenModals();
+ }
+
+ /**
+  * Obtener estadísticas de modales
+  * @returns {Object}
+  */
+ static getStats() {
+   return modalState.getStats();
+ }
+
+ /**
+  * Suscribirse a eventos de modales
+  * @param {Function} callback - Función callback
+  * @returns {Function} Función para desuscribirse
+  */
+ static subscribe(callback) {
+   return modalState.subscribe(callback);
+ }
+
+ /**
+  * Limpiar todo el sistema de modales
+  */
+ static cleanup() {
+   modalState.cleanup();
+ }
+
+ // ====================================
+ // MÉTODO DE NOTIFICACIÓN RÁPIDA
+ // ====================================
+
+ /**
+  * Mostrar notificación toast (no modal)
+  * @param {Object} options - Opciones de la notificación
+  */
+ static notify(options = {}) {
+   // Esta será una implementación de toast/notification
+   // que se puede mostrar sin bloquear la UI
+   console.log('🔔 Notification:', options);
+   
+   // TODO: Implementar sistema de notificaciones toast
+   // que aparezcan en esquina y se auto-cierren
+ }
 }
 
 // ====================================
-// EVENTOS GLOBALES
+// FUNCIONES DE INICIALIZACIÓN
 // ====================================
 
-// Cerrar con ESC
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        ModalManager.close();
-    }
-});
-
-// Prevenir scroll del body cuando hay modales abiertos
-const updateBodyScroll = () => {
-    const hasModals = modalState.modals.length > 0;
-    document.body.style.overflow = hasModals ? 'hidden' : '';
+/**
+* Inicializar el sistema de modales
+* @param {Object} config - Configuración personalizada
+*/
+export const initializeModalSystem = (config = {}) => {
+ // Sobrescribir configuración por defecto
+ Object.assign(MODAL_CONFIG, config);
+ 
+ // Asegurar que el contenedor existe
+ modalState.ensureContainer();
+ 
+ console.log('✅ Sistema de modales inicializado');
+ return modalState.getStats();
 };
 
-// Observer para cambios en modales
-const originalAddModal = modalState.addModal.bind(modalState);
-const originalRemoveModal = modalState.removeModal.bind(modalState);
-const originalRemoveAll = modalState.removeAll.bind(modalState);
-
-modalState.addModal = function (...args) {
-    const result = originalAddModal(...args);
-    updateBodyScroll();
-    return result;
+/**
+* Verificar si el sistema está listo
+* @returns {boolean}
+*/
+export const isModalSystemReady = () => {
+ return modalState.isInitialized;
 };
 
-modalState.removeModal = function (...args) {
-    const result = originalRemoveModal(...args);
-    updateBodyScroll();
-    return result;
-};
-
-modalState.removeAll = function (...args) {
-    const result = originalRemoveAll(...args);
-    updateBodyScroll();
-    return result;
+/**
+* Limpiar sistema de modales
+*/
+export const cleanupModalSystem = () => {
+ modalState.cleanup();
+ console.log('🧹 Sistema de modales limpiado');
 };
 
 // ====================================
-// EXPORT
+// EXPORTS
 // ====================================
 
+// Export principal
 export default ModalManager;
 
-// También exportar la configuración para testing
-export { MODAL_CONFIG, modalState };
+// Named exports
+export {
+ ModalManager,
+ modalState
+};
+
+// Export tipos para conveniencia
+export { MODAL_TYPES, MODAL_CONFIG } from './modalTypes.js';
