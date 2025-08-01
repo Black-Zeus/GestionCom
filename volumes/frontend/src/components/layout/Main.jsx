@@ -60,7 +60,8 @@ function ScrollToTopButton() {
     <button
       onClick={scrollToTop}
       className={cn(
-        "fixed bottom-6 right-6 z-50",
+        //"fixed bottom-6 right-6 z-50",
+        "fixed bottom-[40px] right-[15px] z-50",
         "w-12 h-12 bg-blue-500 hover:bg-blue-600",
         "text-white rounded-full shadow-lg hover:shadow-xl",
         "flex items-center justify-center",
