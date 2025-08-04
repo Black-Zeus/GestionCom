@@ -1,13 +1,18 @@
-// App.jsx
-import Layout from '@/components/layout';
-import ModalDemo from './demos/ModalDemo';
+// ./src/App.jsx
+import React from 'react';
+import AppRouter from '@/routes/AppRouter';
+import { useResourcePreloader } from '@/hooks/useResourcePreloader';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
-function App() {
+const App = () => {
+  // Precargar recursos críticos
+  useResourcePreloader();
+
   return (
-    <Layout>
-      <ModalDemo />
-    </Layout>
+    <ErrorBoundary>
+      <AppRouter />
+    </ErrorBoundary>
   );
-}
+};
 
 export default App;

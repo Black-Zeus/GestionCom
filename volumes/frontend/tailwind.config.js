@@ -408,7 +408,13 @@ export default {
         // Animaciones de carga mejoradas
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'spin-slow': 'spin 3s linear infinite',
-        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite'
+        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+
+        // Para Login
+        'slideInUp': 'slideInUp 0.6s ease-out',
+        'float': 'float 6s ease-in-out infinite',
+        'float-reverse': 'float 8s ease-in-out infinite reverse',
+        'shimmer': 'shimmer 4s ease-in-out infinite',
       },
 
       keyframes: {
@@ -497,6 +503,20 @@ export default {
         toastExit: {
           '0%': { transform: 'translateX(0) scale(1)', opacity: '1' },
           '100%': { transform: 'translateX(100%) scale(0.9)', opacity: '0' }
+        },
+
+        // KeyFrame Login
+        slideInUp: {
+          '0%': { opacity: '0', transform: 'translateY(30px) scale(0.95)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' }
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-20px) rotate(180deg)' }
+        },
+        shimmer: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '50%': { transform: 'rotate(180deg)' }
         }
       },
 

@@ -6,12 +6,14 @@
 import React, { useState, useEffect } from 'react';
 import ModalManager from '@/components/ui/modal';
 import { dataModalRenderers } from '@/components/ui/modal/types/DataModals';
-const CalendarModalContent = dataModalRenderers.calendar;
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
+const CalendarModalContent = dataModalRenderers.calendar;
 
 const ModalDemo = () => {
   const [demoResults, setDemoResults] = useState([]);
 
+  useDocumentTitle("Modal Demos | Inventory App");
   // ====================================
   // HELPERS
   // ====================================
