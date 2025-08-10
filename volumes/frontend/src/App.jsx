@@ -1,13 +1,8 @@
-// ./src/App.jsx
 import React from 'react';
-import AppRouter from '@/routes/AppRouter';
-import { useResourcePreloader } from '@/hooks/useResourcePreloader';
+import { AppRouter } from '@/routes';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const App = () => {
-  // Precargar recursos críticos
-  useResourcePreloader();
-
   return (
     <ErrorBoundary>
       <AppRouter />
