@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import ModalManager from '@/components/ui/modal';
 import { dataModalRenderers } from '@/components/ui/modal/types/DataModals';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const CalendarModalContent = dataModalRenderers.calendar;
 
