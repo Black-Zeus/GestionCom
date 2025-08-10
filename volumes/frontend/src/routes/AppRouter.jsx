@@ -1,162 +1,89 @@
-// ./src/routes/AppRouter.jsx
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ROUTES } from '@/constants';
-import LazyWrapper from '@/components/common/LazyWrapper';
-import ProtectedRoute from './ProtectedRoute';
-import { PublicRoute } from './PublicRoute';
+// AppRouter.jsx - Router principal limpio y modular
+// Usa React Router pero de forma simple y organizada
 
-// Import de páginas lazy
-import {
-  LoginPage,
-  ForgotPasswordPage,
-  ResetPasswordPage,
-  DashboardPage,
-  AnalyticsPage,
-  InventoryListPage,
-  InventoryDetailPage,
-  InventoryCreatePage,
-  UsersPage,
-  UserDetailPage,
-  SettingsPage,
-  ProfilePage
-} from './LazyRoutes';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { allRoutes } from './modules';
+import ProtectedRoute from './guards/ProtectedRoute';
+import PublicRoute from './guards/PublicRoute';
+import LazyWrapper from './LazyWrapper';
+
+// Import de páginas de error
+import NotFoundPage from '@/pages/errorPages/NotFoundPage';
+import ServerErrorPage from '@/pages/errorPages/ServerErrorPage';
+import ForbiddenPage from '@/pages/errorPages/ForbiddenPage';
 
 const AppRouter = () => {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* AUTH ROUTES - Public */}
-        <Route path={ROUTES.LOGIN} element={
-          <PublicRoute>
-            <LazyWrapper fallback={<div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-8 h-8 animate-spin rounded-full border-3 border-gray-200 border-t-blue-600 mx-auto mb-3" />
-                <p className="text-sm text-gray-600">Cargando sistema de acceso...</p>
-              </div>
-            </div>}>
-              <LoginPage />
-            </LazyWrapper>
-          </PublicRoute>
-        } />
+    return (
+        <BrowserRouter>
+            <Routes>
+                {allRoutes.map((route) => {
+                    const { path, component: Component, isPublic, requiresAuth, roles, ...routeProps } = route;
 
-        <Route path={ROUTES.FORGOT_PASSWORD} element={
-          <PublicRoute>
-            <LazyWrapper>
-              <ForgotPasswordPage />
-            </LazyWrapper>
-          </PublicRoute>
-        } />
+                    // Determinar el tipo de protección
+                    let routeElement = <Component {...routeProps} />;
 
-        <Route path={ROUTES.RESET_PASSWORD} element={
-          <PublicRoute>
-            <LazyWrapper>
-              <ResetPasswordPage />
-            </LazyWrapper>
-          </PublicRoute>
-        } />
+                    // Wrap con LazyWrapper para loading
+                    routeElement = (
+                        <LazyWrapper>
+                            {routeElement}
+                        </LazyWrapper>
+                    );
 
-        {/* PROTECTED ROUTES */}
-        <Route path={ROUTES.DASHBOARD} element={
-          <ProtectedRoute>
-            <LazyWrapper 
-              fallback={<div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-12 h-12 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600 mx-auto mb-4" />
-                  <p className="text-sm text-gray-600">Cargando dashboard...</p>
-                </div>
-              </div>}
-            >
-              <DashboardPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
+                    // Wrap con guards de protección
+                    if (isPublic) {
+                        routeElement = (
+                            <PublicRoute>
+                                {routeElement}
+                            </PublicRoute>
+                        );
+                    } else if (requiresAuth) {
+                        routeElement = (
+                            <ProtectedRoute requiredRoles={roles}>
+                                {routeElement}
+                            </ProtectedRoute>
+                        );
+                    }
 
-        <Route path="/analytics" element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <AnalyticsPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
+                    return (
+                        <Route
+                            key={path}
+                            path={path}
+                            element={routeElement}
+                        />
+                    );
+                })}
 
-        {/* INVENTORY ROUTES */}
-        <Route path="/inventory" element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <InventoryListPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
+                {/* Rutas de error explícitas */}
+                <Route
+                    path="/ForbiddenPage"
+                    element={
+                        <LazyWrapper>
+                            <ForbiddenPage />
+                        </LazyWrapper>
+                    }
+                />
+                <Route
+                    path="/ServerErrorPage"
+                    element={
+                        <LazyWrapper>
+                            <ServerErrorPage />
+                        </LazyWrapper>
+                    }
+                />
 
-        <Route path="/inventory/:id" element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <InventoryDetailPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/inventory/create" element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <InventoryCreatePage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        {/* ADMIN ROUTES */}
-        <Route path={ROUTES.USERS_MANAGEMENT} element={
-          <ProtectedRoute requireRole="admin">
-            <LazyWrapper>
-              <UsersPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        <Route path="/admin/users/:id" element={
-          <ProtectedRoute requireRole="admin">
-            <LazyWrapper>
-              <UserDetailPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        {/* SETTINGS ROUTES */}
-        <Route path={ROUTES.SETTINGS} element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <SettingsPage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        <Route path={ROUTES.PROFILE} element={
-          <ProtectedRoute>
-            <LazyWrapper>
-              <ProfilePage />
-            </LazyWrapper>
-          </ProtectedRoute>
-        } />
-
-        {/* REDIRECTS */}
-        <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
-        <Route path="*" element={
-          <LazyWrapper>
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-                <p className="text-gray-600 mb-4">Página no encontrada</p>
-                <a href={ROUTES.DASHBOARD} className="text-blue-600 hover:underline">
-                  Volver al Dashboard
-                </a>
-              </div>
-            </div>
-          </LazyWrapper>
-        } />
-      </Routes>
-    </BrowserRouter>
-  );
+                {/* Ruta 404 - siempre al final */}
+                <Route
+                    path="*"
+                    element={
+                        <LazyWrapper>
+                            <NotFoundPage />
+                        </LazyWrapper>
+                    }
+                />
+            </Routes>
+        </BrowserRouter>
+    );
 };
 
 export default AppRouter;

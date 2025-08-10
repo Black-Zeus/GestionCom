@@ -1,8 +1,26 @@
-// ./src/routes/index.js
-export { default as ProtectedRoute } from './ProtectedRoute';
-export { PublicRoute } from './PublicRoute';
-export { AdminRoute } from './AdminRoute';
-export { RoleBasedRoute } from './RoleBasedRoute';
+// routing/index.js - Setup principal del sistema de rutas
+// Export centralizado de todo el sistema
 
-// Re-export useAuth hook
-export { useAuth } from '../hooks/useAuth';
+// Componentes principales
+export { default as AppRouter } from './AppRouter';
+export { default as LazyWrapper } from './LazyWrapper';
+
+// Guards
+export { default as ProtectedRoute } from './guards/ProtectedRoute';
+export { default as PublicRoute } from './guards/PublicRoute';
+
+// Rutas y módulos
+export { allRoutes, authRoutes, dashboardRoutes } from './modules';
+
+// Hook personalizado (para uso futuro)
+export { default as useAppRouter } from '../hooks/useAppRouter';
+
+// Export por defecto - lo más usado
+export default {
+    AppRouter: () => import('./AppRouter'),
+    routes: () => import('./modules'),
+    guards: {
+        ProtectedRoute: () => import('./guards/ProtectedRoute'),
+        PublicRoute: () => import('./guards/PublicRoute')
+    }
+};
