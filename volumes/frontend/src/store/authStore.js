@@ -86,13 +86,12 @@ const useAuthStore = create(
         }
         localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(data.user_info));
 
+        // Actualizar el store
         set(authState);
 
         if (shouldLog()) {
-          //console.log('🔐 User logged in:', data.user_info.username);
+          console.log('✅ Auth state updated after login');
         }
-
-        return authState;
       },
 
       // ==========================================
@@ -100,24 +99,24 @@ const useAuthStore = create(
       // ==========================================
 
       /**
-       * Limpia todo el estado de auth (logout)
+       * Limpia el estado de autenticación
        * @param {string} reason - Razón del logout (opcional)
        */
       logout: (reason = 'Manual logout') => {
+        if (shouldLog()) {
+          console.log(`🚪 Logging out: ${reason}`);
+        }
+
         // Limpiar localStorage
         Object.values(STORAGE_KEYS).forEach(key => {
           localStorage.removeItem(key);
         });
 
-        // Reset state
+        // Reset del store
         set({
           ...initialState,
-          isInitialized: true, // Mantener inicializado
+          isInitialized: true
         });
-
-        if (shouldLog()) {
-          //console.log('🚪 User logged out:', reason);
-        }
       },
 
       // ==========================================
@@ -125,100 +124,87 @@ const useAuthStore = create(
       // ==========================================
 
       /**
-       * Actualiza tokens (usado por axios interceptor después de refresh)
-       * @param {string} accessToken - Nuevo access token
-       * @param {string} refreshToken - Nuevo refresh token (opcional)
+       * Actualiza solo los tokens (para refresh)
+       * @param {Object} tokens - Nuevos tokens
        */
-      updateTokens: (accessToken, refreshToken = null) => {
-        const updates = { accessToken };
-
-        if (refreshToken) {
-          updates.refreshToken = refreshToken;
+      updateTokens: (tokens) => {
+        if (!tokens.access_token) {
+          throw new Error('Access token is required');
         }
 
         // Actualizar localStorage
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-        if (refreshToken) {
-          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
+        if (tokens.refresh_token) {
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
         }
 
-        set(updates);
-
-        if (shouldLog()) {
-          //console.log('🔄 Tokens updated');
-        }
-      },
-
-      /**
-       * Marca tokens como inválidos (sin hacer logout completo)
-       */
-      invalidateTokens: () => {
+        // Actualizar store
         set({
-          accessToken: null,
-          refreshToken: null,
-          isAuthenticated: false
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || get().refreshToken,
+          lastError: null
         });
 
-        // Limpiar solo tokens, mantener user info temporalmente
-        localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-        localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+        if (shouldLog()) {
+          console.log('🔄 Tokens updated');
+        }
       },
-
-      // ==========================================
-      // ACTIONS - USER INFO
-      // ==========================================
 
       /**
        * Actualiza información del usuario
        * @param {Object} userInfo - Nueva información del usuario
        */
       updateUser: (userInfo) => {
-        const updatedUser = { ...get().user, ...userInfo };
+        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
 
-        set({ user: updatedUser });
-        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(updatedUser));
+        set({
+          user: userInfo,
+          lastError: null
+        });
 
         if (shouldLog()) {
-          //console.log('👤 User info updated');
+          console.log('👤 User info updated');
         }
       },
 
+      // ==========================================
+      // ACTIONS - ERROR HANDLING
+      // ==========================================
+
       /**
-       * Actualiza solo los permisos del usuario
-       * @param {Array} permissions - Nueva lista de permisos
+       * Establece un error de autenticación
+       * @param {string|Error} error - Error a establecer
        */
-      updatePermissions: (permissions) => {
-        const currentUser = get().user;
-        if (currentUser) {
-          get().updateUser({ permissions });
+      setError: (error) => {
+        const errorMessage = error instanceof Error ? error.message : error;
+
+        set({
+          lastError: errorMessage,
+          isLoading: false
+        });
+
+        if (shouldLog()) {
+          console.error('❌ Auth error set:', errorMessage);
         }
       },
 
+      /**
+       * Limpia el último error
+       */
+      clearError: () => {
+        set({ lastError: null });
+      },
+
       // ==========================================
-      // ACTIONS - LOADING STATES
+      // ACTIONS - LOADING
       // ==========================================
 
       /**
-       * Establece estado de carga
+       * Establece el estado de carga
        * @param {boolean} isLoading - Estado de carga
        */
       setLoading: (isLoading) => {
         set({ isLoading });
-      },
-
-      /**
-       * Establece que el store ha sido inicializado
-       */
-      setInitialized: () => {
-        set({ isInitialized: true });
-      },
-
-      /**
-       * Establece el último error
-       * @param {string|null} error - Mensaje de error
-       */
-      setError: (error) => {
-        set({ lastError: error });
       },
 
       // ==========================================
@@ -226,17 +212,16 @@ const useAuthStore = create(
       // ==========================================
 
       /**
-       * Inicializa el store desde localStorage
-       * Usado al cargar la app para restaurar sesión
+       * Inicializa el estado desde localStorage
        */
-      initializeFromStorage: () => {
+      initializeAuth: () => {
         try {
           const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
           const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-          const userInfoStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+          const userInfoString = localStorage.getItem(STORAGE_KEYS.USER_INFO);
 
-          if (accessToken && userInfoStr) {
-            const userInfo = JSON.parse(userInfoStr);
+          if (accessToken && userInfoString) {
+            const userInfo = JSON.parse(userInfoString);
 
             set({
               accessToken,
@@ -248,7 +233,7 @@ const useAuthStore = create(
             });
 
             if (shouldLog()) {
-              //console.log('🔄 Auth state restored from storage');
+              console.log('🔄 Auth state restored from storage');
             }
           } else {
             set({ isInitialized: true });
@@ -323,33 +308,50 @@ const useAuthStore = create(
           id: user.id,
           username: user.username,
           email: user.email,
-          fullName: user.full_name || user.username,
-          isActive: user.is_active,
-          roles: user.roles || [],
-          initials: (user.full_name || user.username)
+          fullName: user.full_name,
+          initials: (user.full_name || user.username || user.email)
             .split(' ')
-            .map(n => n[0])
+            .map(name => name[0])
             .join('')
             .toUpperCase()
-            .slice(0, 2)
+            .substring(0, 2),
+          roles: user.roles || [],
+          permissions: user.permissions || []
         };
       },
 
       /**
        * Verifica si la sesión está próxima a expirar
-       * @param {number} bufferMinutes - Minutos de buffer (default: 5)
+       * @param {number} bufferMinutes - Minutos de buffer antes de expiración
        * @returns {boolean}
        */
       isSessionExpiringSoon: (bufferMinutes = 5) => {
-        // Esta lógica podría expandirse si el backend envía tiempo de expiración
-        // Por ahora, returna false - el refresh automático maneja la expiración
-        return false;
+        const { accessToken } = get();
+        if (!accessToken) return false;
+
+        try {
+          // Decodificar el token JWT sin verificar la firma
+          const payload = JSON.parse(atob(accessToken.split('.')[1]));
+          const expirationTime = payload.exp * 1000; // Convertir a milliseconds
+          const currentTime = Date.now();
+          const bufferTime = bufferMinutes * 60 * 1000; // Convertir minutos a milliseconds
+
+          return (expirationTime - currentTime) <= bufferTime;
+        } catch (error) {
+          console.error('Error checking token expiration:', error);
+          return true; // Si hay error, asumir que expira pronto
+        }
       }
     }),
+
+    // ==========================================
+    // PERSIST CONFIGURATION
+    // ==========================================
     {
-      name: 'auth-store',
+      name: STORAGE_KEYS.AUTH_STATE,
       storage: createJSONStorage(() => localStorage),
-      // Solo persistir ciertos campos críticos
+
+      // Solo persistir datos esenciales
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
@@ -358,40 +360,42 @@ const useAuthStore = create(
         sessionInfo: state.sessionInfo,
         loginTimestamp: state.loginTimestamp
       }),
-      // Callback después de hidratar desde storage
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setInitialized();
-          if (shouldLog()) {
-            //console.log('🏪 Auth store rehydrated');
-          }
+
+      // Version para migración si es necesario
+      version: 1,
+
+      // Función de migración si cambia la estructura
+      migrate: (persistedState, version) => {
+        if (version === 0) {
+          // Migrar de versión 0 a 1 si es necesario
+          return {
+            ...persistedState,
+            isInitialized: false
+          };
         }
+        return persistedState;
       }
     }
   )
 );
 
 // ==========================================
-// SELECTORS (para optimizar re-renders)
+// SELECTORS OPTIMIZADOS
 // ==========================================
 
-/**
- * Selectors para usar con React components
- * Ayudan a optimizar re-renders al subscribirse solo a campos específicos
- */
 export const authSelectors = {
-  // Estados básicos
+  // Auth status
   isAuthenticated: (state) => state.isAuthenticated,
   isLoading: (state) => state.isLoading,
   isInitialized: (state) => state.isInitialized,
 
-  // User info
+  // User data
   user: (state) => state.user,
   userDisplay: (state) => state.getUserDisplay(),
-  username: (state) => state.user?.username,
-  userEmail: (state) => state.user?.email,
 
   // Tokens
+  accessToken: (state) => state.accessToken,
+  refreshToken: (state) => state.refreshToken,
   hasTokens: (state) => !!(state.accessToken && state.refreshToken),
 
   // Error

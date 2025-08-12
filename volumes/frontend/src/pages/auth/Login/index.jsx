@@ -1,25 +1,31 @@
 // ====================================
 // src/pages/auth/Login/index.jsx
 // ====================================
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/store/authStore';
-import { login as authLogin } from '@/services/authService';
-import { ROUTES } from '@/constants';
-import LoginLayout from './components/LoginLayout';
-import LoginForm from './components/LoginForm';
-import { isDevelopment } from '@/utils/environment';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/store/authStore";
+import { login as authLogin } from "@/services/authService";
+import { ROUTES } from "@/constants";
+import LoginLayout from "./components/LoginLayout";
+import LoginForm from "./components/LoginForm";
+import { isDevelopment } from "@/utils/environment";
 
 const Login = () => {
   const navigate = useNavigate();
-  const { setCredentials, isAuthenticated, isLoading: authLoading } = useAuth();
-  
+
+  // 🔧 CORRECCIÓN: Usar la función correcta del store
+  const {
+    login: setAuthCredentials,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [credentials, setCredentialsState] = useState({
-    username: isDevelopment ? 'admin.demo' : '', // Cambiado de email a username
-    password: isDevelopment ? 'admin123' : '',
-    remember: false
+    username: isDevelopment ? "admin.demo" : "",
+    password: isDevelopment ? "admin123" : "",
+    remember: false,
   });
 
   // Redirect if already authenticated
@@ -34,32 +40,32 @@ const Login = () => {
       setIsLoading(true);
       setError(null);
 
+      // Llamar al servicio de autenticación
       const response = await authLogin({
-        username: formData.username, // Ya no necesitamos mapear email -> username
+        username: formData.username,
         password: formData.password,
-        remember_me: formData.remember
+        remember_me: formData.remember,
       });
 
       if (response.success && response.data) {
-        // Store auth data using the store
-        setCredentials(response.data);
-        
+        // 🔧 CORRECCIÓN: Usar setAuthCredentials en lugar de setCredentials
+        setAuthCredentials(response);
+
         // Navigate to dashboard
         navigate(ROUTES.DASHBOARD, { replace: true });
       }
-
     } catch (error) {
-      console.error('Login failed:', error);
-      setError(error.message || 'Error de acceso. Verifica tus credenciales.');
+      console.error("Login failed:", error);
+      setError(error.message || "Error de acceso. Verifica tus credenciales.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleInputChange = (field, value) => {
-    setCredentialsState(prev => ({
+    setCredentialsState((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     // Clear error when user starts typing
     if (error) setError(null);

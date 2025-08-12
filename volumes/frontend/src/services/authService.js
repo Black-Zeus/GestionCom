@@ -10,6 +10,16 @@ import { parseError, getFormattedError } from '@/utils/errors';
 import { shouldLog } from '@/utils/environment';
 
 // ==========================================
+// STORAGE KEYS
+// ==========================================
+
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'access_token',
+  REFRESH_TOKEN: 'refresh_token',
+  USER_INFO: 'user_info'
+};
+
+// ==========================================
 // AUTH SERVICE CLASS
 // ==========================================
 
@@ -30,7 +40,7 @@ class AuthService {
   async login(credentials) {
     try {
       if (shouldLog()) {
-        //console.log('🔐 Attempting login for:', credentials.username);
+        console.log('🔐 Attempting login for:', credentials.username);
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
@@ -41,7 +51,7 @@ class AuthService {
 
       if (response.data?.success && response.data?.data) {
         if (shouldLog()) {
-          //console.log('✅ Login successful for:', credentials.username);
+          console.log('✅ Login successful for:', credentials.username);
         }
         return response.data;
       }
@@ -66,14 +76,14 @@ class AuthService {
   async logout() {
     try {
       if (shouldLog()) {
-        //console.log('🚪 Attempting logout');
+        console.log('🚪 Attempting logout');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.LOGOUT);
 
       if (response.data?.success) {
         if (shouldLog()) {
-          //console.log('✅ Logout successful');
+          console.log('✅ Logout successful');
         }
         return response.data;
       }
@@ -102,20 +112,28 @@ class AuthService {
    */
   async refreshToken() {
     try {
-      if (shouldLog()) {
-        //console.log('🔄 Attempting token refresh');
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
       }
 
-      const response = await api.post(API_ENDPOINTS.AUTH.REFRESH);
+      if (shouldLog()) {
+        console.log('🔄 Attempting token refresh');
+      }
+
+      const response = await api.post(API_ENDPOINTS.AUTH.REFRESH, {
+        refresh_token: refreshToken
+      });
 
       if (response.data?.success && response.data?.data) {
         if (shouldLog()) {
-          //console.log('✅ Token refresh successful');
+          console.log('✅ Token refresh successful');
         }
         return response.data;
       }
 
-      throw new Error('Invalid refresh response');
+      throw new Error('Invalid refresh response format');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
@@ -128,40 +146,35 @@ class AuthService {
     }
   }
 
-  // ==========================================
-  // TOKEN VALIDATION
-  // ==========================================
-
   /**
-   * Validar token JWT
-   * @param {string} token - Token a validar
-   * @returns {Promise<Object>} Resultado de validación
+   * Validar token actual
+   * @param {string} token - Token a validar (opcional, usa el del storage si no se proporciona)
+   * @returns {Promise<Object>} Respuesta de la validación
    */
-  async validateToken(token) {
+  async validateToken(token = null) {
     try {
-      if (!token) {
-        throw new Error('Token is required for validation');
+      const tokenToValidate = token || localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+
+      if (!tokenToValidate) {
+        throw new Error('No token to validate');
       }
 
       if (shouldLog()) {
-        //console.log('🔍 Validating token');
+        console.log('🔍 Validating token');
       }
 
-      const response = await api.post(API_ENDPOINTS.AUTH.VALIDATE_TOKEN, {
-        token: token
+      const response = await api.post(API_ENDPOINTS.AUTH.VALIDATE, {
+        token: tokenToValidate
       });
 
-      if (response.data?.success && response.data?.data) {
-        const isValid = response.data.data.valid;
-
+      if (response.data?.success) {
         if (shouldLog()) {
-          //console.log(`✅ Token validation: ${isValid ? 'VALID' : 'INVALID'}`);
+          console.log('✅ Token is valid');
         }
-
         return response.data;
       }
 
-      throw new Error('Invalid validation response');
+      throw new Error('Token validation failed');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
@@ -179,33 +192,20 @@ class AuthService {
   // ==========================================
 
   /**
-   * Cambiar contraseña del usuario autenticado
+   * Cambiar contraseña del usuario actual
    * @param {Object} passwordData - Datos de cambio de contraseña
    * @param {string} passwordData.current_password - Contraseña actual
    * @param {string} passwordData.new_password - Nueva contraseña
    * @param {string} passwordData.confirm_password - Confirmación de nueva contraseña
-   * @returns {Promise<Object>} Resultado del cambio
+   * @returns {Promise<Object>} Respuesta del cambio
    */
   async changePassword(passwordData) {
     try {
       if (shouldLog()) {
-        //console.log('🔑 Attempting password change');
+        console.log('🔑 Attempting password change');
       }
 
-      // Validaciones básicas en frontend
-      if (!passwordData.current_password) {
-        throw new Error('Current password is required');
-      }
-
-      if (!passwordData.new_password) {
-        throw new Error('New password is required');
-      }
-
-      if (passwordData.new_password !== passwordData.confirm_password) {
-        throw new Error('Password confirmation does not match');
-      }
-
-      const response = await api.put(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+      const response = await api.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
         confirm_password: passwordData.confirm_password
@@ -213,12 +213,12 @@ class AuthService {
 
       if (response.data?.success) {
         if (shouldLog()) {
-          //console.log('✅ Password changed successfully');
+          console.log('✅ Password changed successfully');
         }
         return response.data;
       }
 
-      throw new Error('Invalid password change response');
+      throw new Error('Password change failed');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
@@ -232,48 +232,33 @@ class AuthService {
   }
 
   /**
-   * Cambiar contraseña de cualquier usuario (solo administradores)
-   * @param {Object} adminPasswordData - Datos de cambio admin
-   * @param {number} adminPasswordData.target_user_id - ID del usuario objetivo
+   * Cambio de contraseña por administrador
+   * @param {Object} adminPasswordData - Datos del cambio admin
+   * @param {number} adminPasswordData.user_id - ID del usuario
    * @param {string} adminPasswordData.new_password - Nueva contraseña
    * @param {string} adminPasswordData.confirm_password - Confirmación
-   * @param {string} adminPasswordData.reason - Razón del cambio (opcional)
-   * @returns {Promise<Object>} Resultado del cambio
+   * @returns {Promise<Object>} Respuesta del cambio
    */
   async adminChangePassword(adminPasswordData) {
     try {
       if (shouldLog()) {
-        //console.log('🔑 Attempting admin password change for user:', adminPasswordData.target_user_id);
+        console.log('🔑 Admin attempting password change for user:', adminPasswordData.user_id);
       }
 
-      // Validaciones básicas
-      if (!adminPasswordData.target_user_id) {
-        throw new Error('Target user ID is required');
-      }
-
-      if (!adminPasswordData.new_password) {
-        throw new Error('New password is required');
-      }
-
-      if (adminPasswordData.new_password !== adminPasswordData.confirm_password) {
-        throw new Error('Password confirmation does not match');
-      }
-
-      const response = await api.put(API_ENDPOINTS.AUTH.CHANGE_PASSWORD_ADMIN, {
-        target_user_id: adminPasswordData.target_user_id,
+      const response = await api.post(API_ENDPOINTS.AUTH.ADMIN_CHANGE_PASSWORD, {
+        user_id: adminPasswordData.user_id,
         new_password: adminPasswordData.new_password,
-        confirm_password: adminPasswordData.confirm_password,
-        reason: adminPasswordData.reason || 'Password reset by administrator'
+        confirm_password: adminPasswordData.confirm_password
       });
 
       if (response.data?.success) {
         if (shouldLog()) {
-          //console.log('✅ Admin password change successful');
+          console.log('✅ Admin password change successful');
         }
         return response.data;
       }
 
-      throw new Error('Invalid admin password change response');
+      throw new Error('Admin password change failed');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
@@ -286,43 +271,35 @@ class AuthService {
     }
   }
 
-  // ==========================================
-  // PASSWORD RESET FLOW
-  // ==========================================
-
   /**
-   * Solicitar código de recuperación de contraseña
+   * Solicitar reset de contraseña (forgot password)
    * @param {string} email - Email del usuario
-   * @returns {Promise<Object>} Resultado de la solicitud
+   * @returns {Promise<Object>} Respuesta de la solicitud
    */
   async forgotPassword(email) {
     try {
-      if (!email) {
-        throw new Error('Email is required');
-      }
-
       if (shouldLog()) {
-        //console.log('📧 Requesting password reset for:', email);
+        console.log('📧 Requesting password reset for:', email);
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-        email: email.toLowerCase().trim()
+        email: email
       });
 
       if (response.data?.success) {
         if (shouldLog()) {
-          //console.log('✅ Password reset requested successfully');
+          console.log('✅ Password reset email sent');
         }
         return response.data;
       }
 
-      throw new Error('Invalid forgot password response');
+      throw new Error('Password reset request failed');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
 
       if (shouldLog()) {
-        console.error('❌ Forgot password failed:', formattedError);
+        console.error('❌ Password reset request failed:', formattedError);
       }
 
       throw formattedError;
@@ -330,52 +307,33 @@ class AuthService {
   }
 
   /**
-   * Restablecer contraseña usando código de recuperación
-   * @param {Object} resetData - Datos de restablecimiento
-   * @param {string} resetData.email - Email del usuario
-   * @param {string} resetData.reset_code - Código de recuperación
+   * Resetear contraseña con token
+   * @param {Object} resetData - Datos del reset
+   * @param {string} resetData.token - Token de reset
    * @param {string} resetData.new_password - Nueva contraseña
    * @param {string} resetData.confirm_password - Confirmación
-   * @returns {Promise<Object>} Resultado del restablecimiento
+   * @returns {Promise<Object>} Respuesta del reset
    */
   async resetPassword(resetData) {
     try {
       if (shouldLog()) {
-        //console.log('🔄 Attempting password reset for:', resetData.email);
-      }
-
-      // Validaciones básicas
-      if (!resetData.email) {
-        throw new Error('Email is required');
-      }
-
-      if (!resetData.reset_code) {
-        throw new Error('Reset code is required');
-      }
-
-      if (!resetData.new_password) {
-        throw new Error('New password is required');
-      }
-
-      if (resetData.new_password !== resetData.confirm_password) {
-        throw new Error('Password confirmation does not match');
+        console.log('🔄 Attempting password reset');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-        email: resetData.email.toLowerCase().trim(),
-        reset_code: resetData.reset_code.trim(),
+        token: resetData.token,
         new_password: resetData.new_password,
         confirm_password: resetData.confirm_password
       });
 
       if (response.data?.success) {
         if (shouldLog()) {
-          //console.log('✅ Password reset successful');
+          console.log('✅ Password reset successful');
         }
         return response.data;
       }
 
-      throw new Error('Invalid password reset response');
+      throw new Error('Password reset failed');
 
     } catch (error) {
       const formattedError = getFormattedError(error);
@@ -389,7 +347,7 @@ class AuthService {
   }
 
   // ==========================================
-  // UTILITY METHODS
+  // TOKEN UTILITIES
   // ==========================================
 
   /**
@@ -397,41 +355,39 @@ class AuthService {
    * @returns {boolean} True si hay tokens
    */
   hasValidTokens() {
-    const accessToken = localStorage.getItem('access_token');
-    const refreshToken = localStorage.getItem('refresh_token');
+    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 
     return !!(accessToken && refreshToken);
   }
 
   /**
-   * Obtiene información del usuario desde el token (sin validar en servidor)
+   * Obtiene información del usuario desde el token JWT
    * @returns {Object|null} Info del usuario decodificada del token
    */
   getUserFromToken() {
     try {
-      const accessToken = localStorage.getItem('access_token');
+      const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+      if (!token) return null;
 
-      if (!accessToken) return null;
-
-      // Decodificar JWT (sin verificar firma - solo para info básica)
-      const tokenParts = accessToken.split('.');
-      if (tokenParts.length !== 3) return null;
-
-      const payload = JSON.parse(atob(tokenParts[1]));
+      // Decodificar el payload del JWT (segunda parte)
+      const payload = JSON.parse(atob(token.split('.')[1]));
 
       return {
         user_id: payload.user_id,
         username: payload.username,
         email: payload.email,
+        is_active: payload.is_active,
         roles: payload.roles || [],
         permissions: payload.permissions || [],
+        token_type: payload.token_type,
         exp: payload.exp,
         iat: payload.iat
       };
 
     } catch (error) {
       if (shouldLog()) {
-        console.warn('⚠️ Could not decode token:', error.message);
+        console.error('Error decoding token:', error);
       }
       return null;
     }
@@ -439,54 +395,62 @@ class AuthService {
 
   /**
    * Verifica si el token está próximo a expirar
-   * @param {number} bufferMinutes - Minutos de buffer (default: 5)
+   * @param {number} bufferMinutes - Minutos de buffer antes de expiración
    * @returns {boolean} True si expira pronto
    */
   isTokenExpiringSoon(bufferMinutes = 5) {
     try {
       const userInfo = this.getUserFromToken();
+      if (!userInfo?.exp) return true;
 
-      if (!userInfo?.exp) return false;
+      const expirationTime = userInfo.exp * 1000; // Convertir a milliseconds
+      const currentTime = Date.now();
+      const bufferTime = bufferMinutes * 60 * 1000; // Convertir minutos a milliseconds
 
-      const now = Math.floor(Date.now() / 1000);
-      const expirationBuffer = bufferMinutes * 60;
-
-      return (userInfo.exp - now) <= expirationBuffer;
+      return (expirationTime - currentTime) <= bufferTime;
 
     } catch (error) {
-      return false;
+      if (shouldLog()) {
+        console.error('Error checking token expiration:', error);
+      }
+      return true; // Si hay error, asumir que expira pronto
     }
   }
 
   /**
    * Obtiene el tiempo restante del token en segundos
-   * @returns {number} Segundos restantes (0 si expirado)
+   * @returns {number} Segundos restantes (0 si expirado o error)
    */
   getTokenTimeRemaining() {
     try {
       const userInfo = this.getUserFromToken();
-
       if (!userInfo?.exp) return 0;
 
-      const now = Math.floor(Date.now() / 1000);
-      const remaining = userInfo.exp - now;
+      const expirationTime = userInfo.exp * 1000;
+      const currentTime = Date.now();
+      const timeRemaining = Math.max(0, (expirationTime - currentTime) / 1000);
 
-      return Math.max(0, remaining);
+      return Math.floor(timeRemaining);
 
     } catch (error) {
+      if (shouldLog()) {
+        console.error('Error calculating token time remaining:', error);
+      }
       return 0;
     }
   }
+
+  // ==========================================
+  // CLEANUP UTILITIES
+  // ==========================================
 
   /**
    * Limpia toda la información de auth del localStorage
    */
   clearAuthData() {
     const keysToRemove = [
-      'access_token',
-      'refresh_token',
-      'user_info',
-      'auth_state'
+      ...Object.values(STORAGE_KEYS),
+      'auth_state' // Zustand persist key
     ];
 
     keysToRemove.forEach(key => {
@@ -494,7 +458,59 @@ class AuthService {
     });
 
     if (shouldLog()) {
-      //console.log('🧹 Auth data cleared from storage');
+      console.log('🧹 Auth data cleared from storage');
+    }
+  }
+
+  // ==========================================
+  // SESSION MANAGEMENT
+  // ==========================================
+
+  /**
+   * Verifica si la sesión es válida
+   * @returns {boolean} True si la sesión es válida
+   */
+  isSessionValid() {
+    try {
+      const hasTokens = this.hasValidTokens();
+      const userInfo = this.getUserFromToken();
+      const isNotExpired = !this.isTokenExpiringSoon(0); // Sin buffer para verificación estricta
+
+      return hasTokens && userInfo && isNotExpired;
+
+    } catch (error) {
+      if (shouldLog()) {
+        console.error('Error validating session:', error);
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Obtiene información completa de la sesión actual
+   * @returns {Object|null} Información de la sesión
+   */
+  getSessionInfo() {
+    try {
+      const userInfo = this.getUserFromToken();
+      if (!userInfo) return null;
+
+      return {
+        isValid: this.isSessionValid(),
+        user: userInfo,
+        timeRemaining: this.getTokenTimeRemaining(),
+        expiringSoon: this.isTokenExpiringSoon(),
+        tokens: {
+          hasAccess: !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+          hasRefresh: !!localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
+        }
+      };
+
+    } catch (error) {
+      if (shouldLog()) {
+        console.error('Error getting session info:', error);
+      }
+      return null;
     }
   }
 }
@@ -591,6 +607,18 @@ export const isTokenExpiringSoon = (bufferMinutes) => authService.isTokenExpirin
  * @returns {number} Segundos restantes
  */
 export const getTokenTimeRemaining = () => authService.getTokenTimeRemaining();
+
+/**
+ * Verifica si la sesión es válida
+ * @returns {boolean} True si la sesión es válida
+ */
+export const isSessionValid = () => authService.isSessionValid();
+
+/**
+ * Obtiene información completa de la sesión
+ * @returns {Object|null} Información de la sesión
+ */
+export const getSessionInfo = () => authService.getSessionInfo();
 
 /**
  * Limpia toda la información de auth del localStorage
