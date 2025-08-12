@@ -1,0 +1,250 @@
+{
+  "user": {
+    "id": "USR_001",
+    "username": "admin",
+    "email": "admin@sistema-inventario.cl",
+    "profile": {
+      "first_name": "Juan",
+      "last_name": "Díaz",
+      "full_name": "Juan Díaz",
+      "display_name": "Juan D.",
+      "avatar": "JD",
+      "avatar_url": null,
+      "phone": "+56 9 8765 4321",
+      "employee_id": "EMP-001",
+      "document": {
+        "type": "RUT",
+        "number": "12.345.678-9"
+      }
+    },
+    "role": {
+      "id": "ROLE_001",
+      "name": "Administrador",
+      "level": "admin",
+      "permissions": [
+        "inventory.read",
+        "inventory.write",
+        "inventory.delete",
+        "sales.read",
+        "sales.write",
+        "clients.read",
+        "clients.write",
+        "reports.read",
+        "reports.generate",
+        "users.manage",
+        "system.config",
+        "finance.read",
+        "finance.write"
+      ]
+    },
+    "department": {
+      "id": "DEPT_001",
+      "name": "Administración",
+      "manager": "Gerente General"
+    },
+    "session": {
+      "id": "SESS_20250131_001",
+      "login_time": "2025-01-31T08:00:00Z",
+      "last_activity": "2025-01-31T14:30:00Z",
+      "ip_address": "192.168.1.100",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "location": {
+        "country": "Chile",
+        "city": "Santiago",
+        "timezone": "America/Santiago"
+      },
+      "device": {
+        "type": "desktop",
+        "os": "Windows 10",
+        "browser": "Chrome 120.0.0"
+      }
+    },
+    "preferences": {
+      "theme": "light",
+      "language": "es",
+      "timezone": "America/Santiago",
+      "date_format": "DD/MM/YYYY",
+      "time_format": "24h",
+      "currency": "CLP",
+      "number_format": "1.234.567,89",
+      "notifications": {
+        "email": true,
+        "desktop": true,
+        "sound": true,
+        "mobile_push": false
+      },
+      "dashboard": {
+        "default_view": "summary",
+        "widgets": [
+          "sales_today",
+          "stock_alerts",
+          "pending_orders",
+          "recent_activity"
+        ],
+        "refresh_interval": 30
+      },
+      "sidebar": {
+        "collapsed": false,
+        "pinned_sections": [
+          "dashboard",
+          "inventory",
+          "sales"
+        ]
+      }
+    },
+    "status": {
+      "online": true,
+      "availability": "available",
+      "last_seen": "2025-01-31T14:30:00Z",
+      "status_message": "Disponible para consultas"
+    }
+  },
+  "company": {
+    "id": "COMP_001",
+    "name": "Sistema de Inventario y Punto de Venta",
+    "short_name": "SIPV",
+    "logo_url": null,
+    "website": "www.sistema-inventario.cl",
+    "contact": {
+      "email": "contacto@sistema-inventario.cl",
+      "phone": "+56 2 2345 6789",
+      "address": {
+        "street": "Av. Providencia 1234",
+        "city": "Santiago",
+        "region": "Región Metropolitana",
+        "country": "Chile",
+        "postal_code": "7500000"
+      }
+    },
+    "settings": {
+      "currency": "CLP",
+      "tax_rate": 19,
+      "business_hours": {
+        "start": "08:00",
+        "end": "18:00",
+        "timezone": "America/Santiago"
+      },
+      "fiscal_year_start": "01-01"
+    }
+  },
+  "current_session": {
+    "branch": {
+      "id": "BRANCH_001",
+      "name": "Central",
+      "code": "CENT",
+      "address": "Av. Providencia 1234, Santiago",
+      "manager": "Juan Díaz",
+      "phone": "+56 2 2345 6789",
+      "status": "active"
+    },
+    "cash_register": {
+      "id": "CASH_001",
+      "number": "#1234",
+      "name": "Caja Principal",
+      "status": "open",
+      "opened_at": "2025-01-31T08:00:00Z",
+      "opened_by": "USR_001",
+      "initial_amount": 50000,
+      "current_amount": 125670,
+      "transactions_count": 45
+    },
+    "shift": {
+      "id": "SHIFT_001",
+      "name": "Mañana",
+      "start_time": "08:00",
+      "end_time": "16:00",
+      "status": "active",
+      "started_at": "2025-01-31T08:00:00Z",
+      "supervisor": "Juan Díaz"
+    },
+    "permissions_context": {
+      "can_manage_cash": true,
+      "can_approve_discounts": true,
+      "can_void_transactions": true,
+      "can_access_reports": true,
+      "can_manage_inventory": true,
+      "max_discount_percent": 50,
+      "max_transaction_amount": 10000000
+    }
+  },
+  "quick_actions": [
+    {
+      "id": "new_sale",
+      "label": "Nueva Venta",
+      "icon": "💰",
+      "url": "/pos/new-sale",
+      "shortcut": "Ctrl+N"
+    },
+    {
+      "id": "search_product",
+      "label": "Buscar Producto",
+      "icon": "🔍",
+      "url": "/inventory/search",
+      "shortcut": "Ctrl+F"
+    },
+    {
+      "id": "daily_report",
+      "label": "Reporte Diario",
+      "icon": "📊",
+      "url": "/reports/daily",
+      "shortcut": "Ctrl+R"
+    },
+    {
+      "id": "cash_count",
+      "label": "Arqueo de Caja",
+      "icon": "💵",
+      "url": "/cash/count",
+      "shortcut": "Ctrl+C"
+    }
+  ],
+  "recent_activity": [
+    {
+      "id": "act_001",
+      "type": "sale",
+      "description": "Venta realizada por $45,670",
+      "timestamp": "2025-01-31T14:25:00Z",
+      "reference": "V-2025-001245"
+    },
+    {
+      "id": "act_002",
+      "type": "inventory",
+      "description": "Stock actualizado para 'Teclado RGB'",
+      "timestamp": "2025-01-31T14:15:00Z",
+      "reference": "PROD_001"
+    },
+    {
+      "id": "act_003",
+      "type": "report",
+      "description": "Reporte mensual generado",
+      "timestamp": "2025-01-31T14:00:00Z",
+      "reference": "RPT_202501"
+    }
+  ],
+  "navigation_history": [
+    {
+      "url": "/dashboard",
+      "title": "Dashboard",
+      "timestamp": "2025-01-31T14:30:00Z"
+    },
+    {
+      "url": "/inventory/products",
+      "title": "Lista de Productos",
+      "timestamp": "2025-01-31T14:15:00Z"
+    },
+    {
+      "url": "/sales/invoices",
+      "title": "Facturas",
+      "timestamp": "2025-01-31T14:00:00Z"
+    }
+  ],
+  "metadata": {
+    "last_login": "2025-01-31T08:00:00Z",
+    "login_count": 1247,
+    "account_created": "2024-01-15T10:00:00Z",
+    "last_password_change": "2024-12-01T15:30:00Z",
+    "profile_completion": 95,
+    "security_score": 85,
+    "total_sessions": 1247,
+    "average_session_duration": 8.5
+  }
+}

@@ -1,0 +1,106 @@
+/* sidebar.css - Estilos específicos del componente Sidebar */
+
+/* Scrollbar personalizado y suave - Solo para el sidebar */
+.sidebar-nav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-nav:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar {
+  width: 6px;
+  display: block;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Animaciones específicas del sidebar */
+@keyframes sidebarSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sidebarFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Clases de animación para el sidebar */
+.sidebar-animate-slide-in {
+  animation: sidebarSlideIn 0.3s ease-out;
+}
+
+.sidebar-animate-fade-in-up {
+  animation: sidebarFadeInUp 0.3s ease-out;
+}
+
+/* Transiciones suaves específicas del sidebar */
+.sidebar-smooth-transition {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mejora para el botón de toggle específico */
+.sidebar-toggle-shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-toggle-shadow:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Efecto de hover específico para items del sidebar */
+.sidebar-nav-item {
+  position: relative;
+}
+
+.sidebar-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav-item:hover::before {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-nav-item.active::before {
+  background: var(--primary-color, #3b82f6);
+}

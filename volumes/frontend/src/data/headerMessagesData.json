@@ -1,0 +1,233 @@
+{
+  "messages": [
+    {
+      "id": "msg_001",
+      "sender": {
+        "id": "USR_002",
+        "name": "María García",
+        "avatar": "MG",
+        "role": "Supervisora de Inventario",
+        "department": "Logística",
+        "status": "online"
+      },
+      "subject": "Discrepancias en Inventario - Bodega Norte",
+      "preview": "¿Podrías revisar el inventario de la bodega norte? Creo que hay discrepancias en los productos electrónicos...",
+      "content": "Hola, he estado revisando los reportes de inventario de esta semana y he encontrado algunas discrepancias en la bodega norte, específicamente en la sección de productos electrónicos. Los números no cuadran con las entradas y salidas registradas. ¿Podrías hacer una revisión física cuando tengas tiempo? Adjunto el reporte detallado.",
+      "timestamp": "2025-01-31T14:10:00Z",
+      "read": false,
+      "priority": "normal",
+      "type": "work",
+      "attachments": [
+        {
+          "id": "att_001",
+          "name": "Reporte_Inventario_BodegaNorte.pdf",
+          "size": "1.2 MB",
+          "type": "application/pdf"
+        }
+      ],
+      "thread_id": "thread_001",
+      "reply_count": 0
+    },
+    {
+      "id": "msg_002",
+      "sender": {
+        "id": "USR_003",
+        "name": "Carlos López",
+        "avatar": "CL",
+        "role": "Ejecutivo de Ventas",
+        "department": "Ventas",
+        "status": "online"
+      },
+      "subject": "Cotización Urgente - Empresa XYZ",
+      "preview": "El cliente Empresa XYZ está solicitando una cotización urgente para 500 unidades del producto SKU-2024-150...",
+      "content": "Necesito tu ayuda con una cotización urgente. El cliente Empresa XYZ (RUT: 96.123.456-7) está solicitando 500 unidades del producto SKU-2024-150 (Tablet 10') para entrega la próxima semana. Necesitan el precio final incluyendo descuentos por volumen y la disponibilidad exacta. Es un cliente VIP así que necesitamos responder rápido.",
+      "timestamp": "2025-01-31T13:30:00Z",
+      "read": false,
+      "priority": "urgent",
+      "type": "work",
+      "attachments": [],
+      "thread_id": "thread_002",
+      "reply_count": 2,
+      "tags": ["urgente", "cliente-vip", "cotización"]
+    },
+    {
+      "id": "msg_003",
+      "sender": {
+        "id": "USR_004",
+        "name": "Ana Rodríguez",
+        "avatar": "AR",
+        "role": "Cajera Principal",
+        "department": "Finanzas",
+        "status": "away"
+      },
+      "subject": "Cierre de Caja Completado",
+      "preview": "He completado el cierre de caja del turno de mañana. Todo cuadra perfecto, adjunto el resumen...",
+      "content": "Hola equipo, les informo que he completado el cierre de caja del turno de mañana (07:00 - 15:00). Todos los montos cuadran perfectamente:\n\n- Efectivo: $245,670\n- Tarjetas: $1,128,450\n- Transferencias: $567,890\n- Total: $1,942,010\n\nNo hay diferencias y todos los comprobantes están archivados. El dinero en efectivo ya está en la caja fuerte. Buen día a todos!",
+      "timestamp": "2025-01-31T15:05:00Z",
+      "read": false,
+      "priority": "normal",
+      "type": "info",
+      "attachments": [
+        {
+          "id": "att_002",
+          "name": "Cierre_Caja_20250131_Mañana.xlsx",
+          "size": "456 KB",
+          "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+      ],
+      "thread_id": "thread_003",
+      "reply_count": 1
+    },
+    {
+      "id": "msg_004",
+      "sender": {
+        "id": "USR_005",
+        "name": "Pedro Morales",
+        "avatar": "PM",
+        "role": "Técnico IT",
+        "department": "Sistemas",
+        "status": "busy"
+      },
+      "subject": "Mantenimiento Programado - Servidor Principal",
+      "preview": "Recordatorio: El mantenimiento del servidor principal está programado para mañana a las 02:00...",
+      "content": "Equipo, les recuerdo que mañana sábado 01/02/2025 a las 02:00 AM realizaremos el mantenimiento programado del servidor principal. Se estima una duración de 2 horas.\n\nDurante este período:\n- El sistema estará fuera de línea\n- No se podrán procesar ventas\n- El acceso a reportes estará limitado\n\nPor favor coordinen para completar todas las operaciones críticas antes de las 01:30 AM. Cualquier duda, me contactan.",
+      "timestamp": "2025-01-31T11:20:00Z",
+      "read": true,
+      "priority": "normal",
+      "type": "system",
+      "attachments": [],
+      "thread_id": "thread_004",
+      "reply_count": 3,
+      "tags": ["mantenimiento", "sistema", "downtime"]
+    },
+    {
+      "id": "msg_005",
+      "sender": {
+        "id": "USR_006",
+        "name": "Laura Silva",
+        "avatar": "LS",
+        "role": "Gerente de Compras",
+        "department": "Compras",
+        "status": "online"
+      },
+      "subject": "Aprobación Requerida - Orden de Compra",
+      "preview": "Necesito tu aprobación para la orden de compra OC-2025-018 por $2,500,000 con el proveedor TechnoMax...",
+      "content": "Hola, necesito tu aprobación urgente para la orden de compra OC-2025-018 por un monto de $2,500,000 CLP con el proveedor TechnoMax Ltda.\n\nDetalles:\n- 50 Laptops HP EliteBook\n- 30 Monitores Samsung 27'\n- 25 Impresoras Epson L3250\n\nEs para reponer el stock que se agotó esta semana. Los precios están dentro del presupuesto aprobado y el proveedor es de confianza. Plazo de entrega: 7 días hábiles.",
+      "timestamp": "2025-01-31T10:45:00Z",
+      "read": true,
+      "priority": "urgent",
+      "type": "approval",
+      "attachments": [
+        {
+          "id": "att_003",
+          "name": "OC-2025-018_TechnoMax.pdf",
+          "size": "890 KB",
+          "type": "application/pdf"
+        },
+        {
+          "id": "att_004",
+          "name": "Cotizacion_TechnoMax.pdf",
+          "size": "654 KB",
+          "type": "application/pdf"
+        }
+      ],
+      "thread_id": "thread_005",
+      "reply_count": 0,
+      "tags": ["aprobación", "orden-compra", "urgente"]
+    },
+    {
+      "id": "msg_006",
+      "sender": {
+        "id": "USR_007",
+        "name": "Roberto Chen",
+        "avatar": "RC",
+        "role": "Analista de Datos",
+        "department": "Administración",
+        "status": "online"
+      },
+      "subject": "Reporte Semanal de Ventas",
+      "preview": "Adjunto el reporte semanal de ventas. Esta semana tuvimos un incremento del 15% comparado con la semana anterior...",
+      "content": "Buen día equipo,\n\nAdjunto el reporte semanal de ventas (25-31 Enero 2025). Puntos destacados:\n\n✅ Incremento del 15% vs semana anterior\n✅ Productos más vendidos: Smartphones y Accesorios\n✅ Mejor día: Viernes con $456,789 en ventas\n✅ Meta mensual: 78% completada\n\nRecomendaciones:\n- Impulsar venta de tablets (stock alto)\n- Promover accesorios de gama alta\n- Continuar estrategia actual en smartphones\n\nCualquier duda sobre los datos, me contactan.",
+      "timestamp": "2025-01-31T09:30:00Z",
+      "read": true,
+      "priority": "normal",
+      "type": "report",
+      "attachments": [
+        {
+          "id": "att_005",
+          "name": "Reporte_Ventas_Semanal_S04_2025.pdf",
+          "size": "2.1 MB",
+          "type": "application/pdf"
+        },
+        {
+          "id": "att_006",
+          "name": "Datos_Detallados_S04.xlsx",
+          "size": "1.8 MB",
+          "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+      ],
+      "thread_id": "thread_006",
+      "reply_count": 4,
+      "tags": ["reporte", "ventas", "semanal"]
+    },
+    {
+      "id": "msg_007",
+      "sender": {
+        "id": "USR_008",
+        "name": "Claudia Vargas",
+        "avatar": "CV",
+        "role": "Coordinadora de RRHH",
+        "department": "Recursos Humanos",
+        "status": "offline"
+      },
+      "subject": "Recordatorio: Evaluaciones de Desempeño",
+      "preview": "Recordatorio amable sobre las evaluaciones de desempeño que deben completarse antes del 5 de febrero...",
+      "content": "Hola,\n\nEste es un recordatorio amable sobre las evaluaciones de desempeño del primer trimestre.\n\nPendientes:\n- 3 evaluaciones de tu equipo\n- Fecha límite: 5 de febrero\n- Formularios disponibles en el portal de RRHH\n\nPor favor, coordina con tu equipo para completar este proceso a tiempo. Si necesitas ayuda con el sistema o tienes preguntas sobre los criterios de evaluación, no dudes en contactarme.\n\nGracias por tu colaboración.",
+      "timestamp": "2025-01-30T16:15:00Z",
+      "read": true,
+      "priority": "normal",
+      "type": "reminder",
+      "attachments": [],
+      "thread_id": "thread_007",
+      "reply_count": 1,
+      "tags": ["rrhh", "evaluaciones", "recordatorio"]
+    }
+  ],
+  "metadata": {
+    "total_count": 7,
+    "unread_count": 3,
+    "last_update": "2025-01-31T15:05:00Z",
+    "types": {
+      "work": 2,
+      "info": 1,
+      "system": 1,
+      "approval": 1,
+      "report": 1,
+      "reminder": 1
+    },
+    "priority_counts": {
+      "urgent": 2,
+      "normal": 5
+    },
+    "departments": {
+      "Logística": 1,
+      "Ventas": 1,
+      "Finanzas": 1,
+      "Sistemas": 1,
+      "Compras": 1,
+      "Administración": 1,
+      "Recursos Humanos": 1
+    }
+  },
+  "settings": {
+    "auto_refresh_interval": 45000,
+    "max_messages": 100,
+    "show_read_messages": true,
+    "group_by_sender": false,
+    "preview_length": 100,
+    "sound_enabled": true,
+    "desktop_notifications": true,
+    "email_forwarding": false,
+    "auto_mark_read": false
+  }
+}

@@ -1,0 +1,463 @@
+{
+  "auth": {
+    "login": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/auth/login",
+      "method": "POST",
+      "message": "Login exitoso",
+      "data": {
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "user_info": {
+          "id": 1,
+          "username": "vsoto",
+          "email": "vsoto@empresa.com",
+          "full_name": "Victor Soto",
+          "is_active": true,
+          "roles": ["ADMIN", "MANAGER"],
+          "permissions": [
+            "warehouse_access",
+            "returns_create",
+            "returns_approve",
+            "users_management",
+            "reports_view"
+          ]
+        },
+        "session_info": {
+          "session_id": "sess_12345",
+          "login_time": "2025-07-30T15:47:45.781093+00:00",
+          "ip_address": "192.168.1.100",
+          "user_agent": "Mozilla/5.0..."
+        }
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 57
+      }
+    },
+    "refresh": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T16:00:00.000000+00:00",
+      "path": "/auth/refresh",
+      "method": "POST", 
+      "message": "Token renovado exitosamente",
+      "data": {
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+        "expires_in": 3600
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 45
+      }
+    },
+    "logout": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T18:00:00.000000+00:00",
+      "path": "/auth/logout",
+      "method": "POST",
+      "message": "Logout exitoso",
+      "data": {
+        "logged_out": true,
+        "session_ended": "2025-07-30T18:00:00.000000+00:00"
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 23
+      }
+    }
+  },
+  "notifications": {
+    "list": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/notifications",
+      "method": "GET",
+      "message": "Notificaciones obtenidas exitosamente",
+      "data": {
+        "notifications": [
+          {
+            "id": 1,
+            "type": "warning", 
+            "icon": "⚠️",
+            "title": "Stock Crítico Detectado",
+            "message": "El producto 'Teclado Mecánico' tiene solo 3 unidades en stock.",
+            "status": "urgent",
+            "unread": true,
+            "timestamp": "2025-07-30T15:42:45.781093+00:00",
+            "time_ago": "Hace 5 min",
+            "actions": [
+              {
+                "label": "Ver Producto",
+                "action": "view_product",
+                "data": { "product_id": 123 }
+              },
+              {
+                "label": "Reabastecer",
+                "action": "restock_product", 
+                "data": { "product_id": 123 }
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "type": "danger",
+            "icon": "💰", 
+            "title": "Cliente Excedió Límite",
+            "message": "Empresa ABC ha superado su límite de crédito autorizado.",
+            "status": "urgent",
+            "unread": true,
+            "timestamp": "2025-07-30T15:32:45.781093+00:00",
+            "time_ago": "Hace 15 min",
+            "actions": [
+              {
+                "label": "Ver Cliente",
+                "action": "view_client",
+                "data": { "client_id": 456 }
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "type": "info",
+            "icon": "📊",
+            "title": "Reporte Mensual Listo", 
+            "message": "El reporte de ventas de diciembre está disponible para descargar.",
+            "status": "normal",
+            "unread": false,
+            "timestamp": "2025-07-30T13:47:45.781093+00:00",
+            "time_ago": "Hace 2 horas",
+            "actions": [
+              {
+                "label": "Descargar",
+                "action": "download_report",
+                "data": { "report_id": "sales_december_2024" }
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "type": "system",
+            "icon": "🔄",
+            "title": "Actualización del Sistema",
+            "message": "Nueva versión 2.1.1 disponible con mejoras de seguridad.",
+            "status": "low", 
+            "unread": false,
+            "timestamp": "2025-07-29T15:47:45.781093+00:00",
+            "time_ago": "Ayer",
+            "actions": [
+              {
+                "label": "Ver Detalles",
+                "action": "view_update",
+                "data": { "version": "2.1.1" }
+              }
+            ]
+          }
+        ],
+        "unread_count": 2,
+        "total_count": 4
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 34
+      }
+    },
+    "mark_read": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:50:00.000000+00:00",
+      "path": "/notifications/1/mark-read",
+      "method": "PATCH",
+      "message": "Notificación marcada como leída",
+      "data": {
+        "notification_id": 1,
+        "marked_read": true,
+        "read_at": "2025-07-30T15:50:00.000000+00:00"
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 12
+      }
+    }
+  },
+  "messages": {
+    "list": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/messages",
+      "method": "GET",
+      "message": "Mensajes obtenidos exitosamente",
+      "data": {
+        "messages": [
+          {
+            "id": 1,
+            "sender": {
+              "id": 2,
+              "name": "María García",
+              "avatar": "MG",
+              "role": "Supervisor"
+            },
+            "message": "¿Podrías revisar el inventario de la bodega norte? Creo que hay discrepancias...",
+            "status": "normal",
+            "unread": true,
+            "timestamp": "2025-07-30T15:37:45.781093+00:00",
+            "time_ago": "Hace 10 min",
+            "thread_id": "thread_001"
+          },
+          {
+            "id": 2,
+            "sender": {
+              "id": 3,
+              "name": "Carlos López",
+              "avatar": "CL", 
+              "role": "Vendedor"
+            },
+            "message": "El cliente Empresa XYZ está solicitando una cotización urgente para 500 unidades.",
+            "status": "urgent",
+            "unread": true,
+            "timestamp": "2025-07-30T15:17:45.781093+00:00",
+            "time_ago": "Hace 30 min",
+            "thread_id": "thread_002"
+          },
+          {
+            "id": 3,
+            "sender": {
+              "id": 4,
+              "name": "Ana Rodríguez",
+              "avatar": "AR",
+              "role": "Contadora"
+            },
+            "message": "He completado el cierre de caja. Todo cuadra perfecto.",
+            "status": "normal",
+            "unread": true,
+            "timestamp": "2025-07-30T14:47:45.781093+00:00",
+            "time_ago": "Hace 1 hora",
+            "thread_id": "thread_003"
+          }
+        ],
+        "unread_count": 3,
+        "total_count": 3
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 28
+      }
+    }
+  },
+  "dashboard": {
+    "stats": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/dashboard/stats",
+      "method": "GET",
+      "message": "Estadísticas del dashboard obtenidas exitosamente",
+      "data": {
+        "sales": {
+          "today": {
+            "amount": 125000.50,
+            "transactions": 47,
+            "growth": 12.5
+          },
+          "month": {
+            "amount": 2847293.75,
+            "transactions": 1205,
+            "growth": 8.3
+          }
+        },
+        "inventory": {
+          "total_products": 1247,
+          "low_stock_alerts": 12,
+          "out_of_stock": 3,
+          "reorder_needed": 8
+        },
+        "system": {
+          "active_users": 12,
+          "response_time": "120ms",
+          "uptime": "99.9%",
+          "last_backup": "2025-07-30T12:00:00.000000+00:00"
+        },
+        "recent_activity": [
+          {
+            "type": "sale",
+            "description": "Venta #VTA-2025-001247",
+            "amount": 2500.00,
+            "timestamp": "2025-07-30T15:45:00.000000+00:00"
+          },
+          {
+            "type": "inventory",
+            "description": "Stock actualizado: Producto ABC",
+            "quantity": 50,
+            "timestamp": "2025-07-30T15:30:00.000000+00:00"
+          }
+        ]
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 156
+      }
+    }
+  },
+  "user": {
+    "profile": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/users/profile",
+      "method": "GET",
+      "message": "Perfil de usuario obtenido exitosamente",
+      "data": {
+        "user": {
+          "id": 1,
+          "username": "vsoto",
+          "email": "vsoto@empresa.com",
+          "full_name": "Victor Soto",
+          "avatar": "VS",
+          "role": "Administrador",
+          "is_active": true,
+          "created_at": "2024-01-15T10:30:00.000000+00:00",
+          "last_login": "2025-07-30T15:47:45.781093+00:00",
+          "preferences": {
+            "theme": "light",
+            "notifications": true,
+            "sounds": false,
+            "autosave": true,
+            "compact_mode": false
+          },
+          "session": {
+            "branch": "Central",
+            "branch_id": "BR001",
+            "cash_register": "#1234",
+            "cash_register_id": "CR001",
+            "shift": "Mañana",
+            "shift_id": "SH001",
+            "shift_status": "active"
+          }
+        }
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 45
+      }
+    },
+    "update_preferences": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:50:00.000000+00:00",
+      "path": "/users/preferences",
+      "method": "PATCH",
+      "message": "Preferencias actualizadas exitosamente",
+      "data": {
+        "preferences": {
+          "theme": "dark",
+          "notifications": true,
+          "sounds": true,
+          "autosave": true,
+          "compact_mode": false
+        },
+        "updated_at": "2025-07-30T15:50:00.000000+00:00"
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 23
+      }
+    }
+  },
+  "session": {
+    "info": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/session/info",
+      "method": "GET",
+      "message": "Información de sesión obtenida exitosamente",
+      "data": {
+        "session": {
+          "branch": {
+            "id": "BR001",
+            "name": "Central",
+            "address": "Av. Principal 123"
+          },
+          "cash_register": {
+            "id": "CR001", 
+            "number": "#1234",
+            "status": "active"
+          },
+          "shift": {
+            "id": "SH001",
+            "name": "Mañana",
+            "start_time": "08:00",
+            "end_time": "16:00",
+            "status": "active"
+          },
+          "user": {
+            "username": "vsoto",
+            "full_name": "Victor Soto",
+            "role": "Administrador"
+          },
+          "started_at": "2025-07-30T08:15:00.000000+00:00",
+          "duration_minutes": 452
+        }
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 34
+      }
+    }
+  },
+  "system": {
+    "status": {
+      "success": true,
+      "status": 200,
+      "timestamp": "2025-07-30T15:47:45.781093+00:00",
+      "path": "/system/status",
+      "method": "GET",
+      "message": "Estado del sistema obtenido exitosamente",
+      "data": {
+        "api_connection": "connected",
+        "database_status": "online",
+        "backup_status": "completed",
+        "last_backup": "2025-07-30T13:47:45.781093+00:00",
+        "system_load": "normal",
+        "active_users": 12,
+        "total_transactions_today": 2547,
+        "today_revenue": 125000.50,
+        "uptime": "99.9%",
+        "response_time": "120ms",
+        "version": "2.1.0"
+      },
+      "error": {},
+      "meta": {
+        "trace_id": "607aa64a-443b-4714-a2c3-982648dd9c75",
+        "version": "v1",
+        "execution_time_ms": 67
+      }
+    }
+  }
+}
