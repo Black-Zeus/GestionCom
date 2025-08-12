@@ -4,7 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  
+
   server: {
     host: process.env.VITE_FRONTEND_HOST || '0.0.0.0',
     port: parseInt(process.env.VITE_FRONTEND_PORT) || 3000,
@@ -22,13 +22,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ''),
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
-            //console.log('🔴 [Main API] Proxy error:', err.message);
+            console.log('🔴 [Main API] Proxy error:', err.message);
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
-            //console.log('🔗 [Main API] Proxying:', req.method, req.url, '→', proxyReq.path);
+            console.log('🔗 [Main API] Proxying:', req.method, req.url, '→', proxyReq.path);
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
-            //console.log('🔗 [Main API] Response:', proxyRes.statusCode, req.url);
+            console.log('🔗 [Main API] Response:', proxyRes.statusCode, req.url);
           });
         },
       }
@@ -60,7 +60,7 @@ export default defineConfig({
   // ====================================
   build: {
     sourcemap: true,
-    
+
     // Configuración de chunks optimizada para tus archivos existentes
     rollupOptions: {
       output: {
@@ -68,44 +68,44 @@ export default defineConfig({
           // ====================================
           // VENDOR CHUNKS - Librerías externas
           // ====================================
-          
+
           // React ecosystem
           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
             return 'vendor-react';
           }
-          
+
           // Router
           if (id.includes('node_modules/react-router') || id.includes('node_modules/react-router-dom')) {
             return 'vendor-router';
           }
-          
+
           // HTTP y servicios
           if (id.includes('node_modules/axios')) {
             return 'vendor-http';
           }
-          
+
           // Iconos (si usas lucide-react como veo en tu modal)
-          if (id.includes('node_modules/lucide-react') || 
-              id.includes('node_modules/@heroicons') ||
-              id.includes('node_modules/@tabler/icons')) {
+          if (id.includes('node_modules/lucide-react') ||
+            id.includes('node_modules/@heroicons') ||
+            id.includes('node_modules/@tabler/icons')) {
             return 'vendor-icons';
           }
-          
+
           // Estado global (Zustand que veo que usas)
-          if (id.includes('node_modules/zustand') || 
-              id.includes('node_modules/immer')) {
+          if (id.includes('node_modules/zustand') ||
+            id.includes('node_modules/immer')) {
             return 'vendor-state';
           }
-          
+
           // Utilidades comunes
-          if (id.includes('node_modules/lodash') || 
-              id.includes('node_modules/date-fns') ||
-              id.includes('node_modules/dayjs') ||
-              id.includes('node_modules/clsx') ||
-              id.includes('node_modules/classnames')) {
+          if (id.includes('node_modules/lodash') ||
+            id.includes('node_modules/date-fns') ||
+            id.includes('node_modules/dayjs') ||
+            id.includes('node_modules/clsx') ||
+            id.includes('node_modules/classnames')) {
             return 'vendor-utils';
           }
-          
+
           // Otras librerías de node_modules
           if (id.includes('node_modules')) {
             return 'vendor-misc';
@@ -114,47 +114,47 @@ export default defineConfig({
           // ====================================
           // CHUNKS BASADOS EN TUS ARCHIVOS EXISTENTES
           // ====================================
-          
+
           // Auth pages (tienes Login)
           if (id.includes('/pages/auth/')) {
             return 'pages-auth';
           }
-          
+
           // Modal system (tienes un sistema completo de modales)
           if (id.includes('/components/ui/modal/')) {
             return 'components-modal';
           }
-          
+
           // Layout components (tienes header, breadcrumb, etc.)
           if (id.includes('/components/layout/')) {
             return 'components-layout';
           }
-          
+
           // Demos (tienes ModalDemo)
           if (id.includes('/demos/') || id.includes('/demo')) {
             return 'demos';
           }
-          
+
           // Services (tienes authService)
           if (id.includes('/services/')) {
             return 'services';
           }
-          
+
           // Store (tienes authStore)
           if (id.includes('/store/')) {
             return 'store';
           }
-          
+
           // Utils y helpers
           if (id.includes('/utils/') || id.includes('/helpers/')) {
             return 'utils';
           }
-          
+
           // Constants
           if (id.includes('/constants/')) {
             return 'constants';
           }
-          
+
           // Hooks
           if (id.includes('/hooks/')) {
             return 'hooks';
@@ -179,13 +179,13 @@ export default defineConfig({
         entryFileNames: 'js/[name]-[hash].js'
       }
     },
-    
+
     // ====================================
     // CONFIGURACIÓN DE TAMAÑO Y MINIFICACIÓN
     // ====================================
-    
+
     chunkSizeWarningLimit: 1000,
-    
+
     minify: 'terser',
     terserOptions: {
       compress: {
@@ -206,14 +206,14 @@ export default defineConfig({
         keep_fnames: process.env.NODE_ENV !== 'production',
         keep_classnames: process.env.NODE_ENV !== 'production'
       },
-      
+
       mangle: {
         keep_fnames: process.env.NODE_ENV !== 'production',
         keep_classnames: process.env.NODE_ENV !== 'production',
         toplevel: true,
         safari10: true
       },
-      
+
       format: {
         comments: false,
         beautify: false,
@@ -221,7 +221,7 @@ export default defineConfig({
         webkit: true
       }
     },
-    
+
     target: [
       'es2020',
       'chrome80',
@@ -229,7 +229,7 @@ export default defineConfig({
       'safari14',
       'edge88'
     ],
-    
+
     cssTarget: 'chrome80',
     assetsDir: 'assets',
     assetsInlineLimit: 4096
@@ -238,7 +238,7 @@ export default defineConfig({
   // ====================================
   // OPTIMIZACIÓN DE DEPENDENCIAS
   // ====================================
-  
+
   optimizeDeps: {
     include: [
       'react',
@@ -248,7 +248,7 @@ export default defineConfig({
       'zustand', // Veo que usas Zustand en tu authStore
       'lucide-react' // Veo que usas Lucide en tu modal system
     ],
-    
+
     esbuildOptions: {
       target: 'es2020',
       jsx: 'automatic',
@@ -274,7 +274,7 @@ export default defineConfig({
   // ====================================
   // VARIABLES DE ENTORNO Y DEFINE
   // ====================================
-  
+
   define: {
     __DEV__: process.env.NODE_ENV === 'development',
     __PROD__: process.env.NODE_ENV === 'production',
@@ -285,12 +285,12 @@ export default defineConfig({
   // ====================================
   // CONFIGURACIÓN ADICIONAL
   // ====================================
-  
+
   json: {
     namedExports: true,
     stringify: false
   },
-  
+
   logLevel: process.env.NODE_ENV === 'development' ? 'info' : 'warn',
   cacheDir: 'node_modules/.vite',
   base: process.env.VITE_BASE_URL || '/'
