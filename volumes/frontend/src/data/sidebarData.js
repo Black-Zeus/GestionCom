@@ -30,6 +30,15 @@ export const sidebarNavData = {
                         badge: 5,
                         hasSubmenu: false,
                         active: false
+                    },
+                    {
+                        id: "profile",
+                        text: "Mi Perfil",
+                        icon: "👤",
+                        path: "/profile",
+                        badge: null,
+                        hasSubmenu: false,
+                        active: false
                     }
                 ]
             },
