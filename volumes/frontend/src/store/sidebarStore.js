@@ -19,17 +19,6 @@ const useSidebarStore = create(
       activeSection: 'Dashboard',
       openSubmenus: [], // Array de IDs de submenús abiertos
 
-      // User profile dropdown
-      isProfileDropdownOpen: false,
-
-      // Session/user info display
-      sessionInfo: {
-        branch: 'Central',
-        cashRegister: '#1234',
-        shift: 'Mañana',
-        shiftStatus: 'success'
-      },
-
       // ==========================================
       // ACCIONES - LAYOUT
       // ==========================================
@@ -113,12 +102,12 @@ const useSidebarStore = create(
       /**
        * Set theme directly
        */
-      setTheme: (isDark) => {
-        set({ isDarkMode: isDark });
+      setTheme: (darkMode) => {
+        set({ isDarkMode: darkMode });
 
-        // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
+        // Aplicar clase al DOM
         if (typeof window !== 'undefined') {
-          if (isDark) {
+          if (darkMode) {
             document.body.classList.add('dark');
           } else {
             document.body.classList.remove('dark');
@@ -135,30 +124,24 @@ const useSidebarStore = create(
        */
       setActiveSection: (section) => {
         set({ activeSection: section });
-
-        if (shouldLog()) {
-          //console.log(`📍 Active section: ${section}`);
-        }
       },
 
       /**
        * Toggle submenu open/close
        */
       toggleSubmenu: (submenuId) => {
-        set((state) => {
-          const isOpen = state.openSubmenus.includes(submenuId);
-          let newOpenSubmenus;
+        set((state) => ({
+          openSubmenus: state.openSubmenus.includes(submenuId)
+            ? state.openSubmenus.filter(id => id !== submenuId)
+            : [...state.openSubmenus, submenuId]
+        }));
+      },
 
-          if (isOpen) {
-            // Cerrar submenu
-            newOpenSubmenus = state.openSubmenus.filter(id => id !== submenuId);
-          } else {
-            // Abrir submenu (cerrar otros si es necesario)
-            newOpenSubmenus = [...state.openSubmenus, submenuId];
-          }
-
-          return { openSubmenus: newOpenSubmenus };
-        });
+      /**
+       * Check if submenu is open
+       */
+      isSubmenuOpen: (submenuId) => {
+        return get().openSubmenus.includes(submenuId);
       },
 
       /**
@@ -189,29 +172,6 @@ const useSidebarStore = create(
         });
       },
 
-      /**
-       * Toggle profile dropdown
-       */
-      toggleProfileDropdown: () => {
-        set((state) => ({ isProfileDropdownOpen: !state.isProfileDropdownOpen }));
-      },
-
-      /**
-       * Close profile dropdown
-       */
-      closeProfileDropdown: () => {
-        set({ isProfileDropdownOpen: false });
-      },
-
-      /**
-       * Update session info
-       */
-      updateSessionInfo: (newInfo) => {
-        set((state) => ({
-          sessionInfo: { ...state.sessionInfo, ...newInfo }
-        }));
-      },
-
       // ==========================================
       // ACCIONES - UTILIDADES
       // ==========================================
@@ -232,12 +192,12 @@ const useSidebarStore = create(
         }
 
         if (shouldLog()) {
-          //console.log('🚀 Sidebar store initialized');
+          //console.log('🏗️ Sidebar initialized');
         }
       },
 
       /**
-       * Reset to default state
+       * Reset sidebar to default state
        */
       reset: () => {
         set({
@@ -245,20 +205,17 @@ const useSidebarStore = create(
           isMobileOpen: false,
           isDarkMode: false,
           activeSection: 'Dashboard',
-          openSubmenus: [],
-          isProfileDropdownOpen: false,
-          sessionInfo: {
-            branch: 'Central',
-            cashRegister: '#1234',
-            shift: 'Mañana',
-            shiftStatus: 'success'
-          }
+          openSubmenus: []
         });
 
-        // ✅ CORRECCIÓN CRÍTICA: Limpiar clase 'dark' según tailwind.config.js
+        // Reset DOM classes
         if (typeof window !== 'undefined') {
           document.body.classList.remove('dark');
           document.body.style.overflow = '';
+        }
+
+        if (shouldLog()) {
+          //console.log('🔄 Sidebar reset to defaults');
         }
       },
 
@@ -267,14 +224,7 @@ const useSidebarStore = create(
       // ==========================================
 
       /**
-       * Check if submenu is open
-       */
-      isSubmenuOpen: (submenuId) => {
-        return get().openSubmenus.includes(submenuId);
-      },
-
-      /**
-       * Get current layout classes for CSS
+       * Get layout classes for CSS
        */
       getLayoutClasses: () => {
         const state = get();
@@ -293,8 +243,7 @@ const useSidebarStore = create(
       partialize: (state) => ({
         isCollapsed: state.isCollapsed,
         isDarkMode: state.isDarkMode,
-        activeSection: state.activeSection,
-        sessionInfo: state.sessionInfo
+        activeSection: state.activeSection
       }),
       // Callback después de cargar desde localStorage
       onRehydrateStorage: () => (state) => {
@@ -319,12 +268,6 @@ export const sidebarSelectors = {
   // Navigation
   activeSection: (state) => state.activeSection,
   openSubmenus: (state) => state.openSubmenus,
-
-  // Profile
-  isProfileDropdownOpen: (state) => state.isProfileDropdownOpen,
-
-  // Session
-  sessionInfo: (state) => state.sessionInfo,
 
   // Computed
   layoutClasses: (state) => state.getLayoutClasses(),
