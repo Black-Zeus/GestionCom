@@ -1,13 +1,14 @@
 // ====================================
-// INFO GROUP WITH ICON COMPONENT
-// Componente reutilizable para mostrar información operativa con icono clickeable
+// INFO GROUP WITH ICON COMPONENT - VERSIÓN COMPLETAMENTE CLICKEABLE
+// Componente reutilizable para mostrar información operativa
+// ✅ MODIFICADO: Todo el contenido es clickeable, no solo el icono
 // ====================================
 
 import { cn } from "@/utils/cn";
 
 /**
- * Componente para mostrar grupos de información con icono clickeable
- * Usado en el footer para sucursal, caja, usuario y turno
+ * Componente para mostrar grupos de información completamente clickeables
+ * ✅ NUEVO: Soporte para onClick en todo el componente + onIconClick específico
  *
  * @param {string} label - Etiqueta del campo (ej: "Sucursal:")
  * @param {string} value - Valor principal a mostrar
@@ -17,8 +18,10 @@ import { cn } from "@/utils/cn";
  * @param {boolean} compact - Versión compacta para móvil
  * @param {string} title - Tooltip al hacer hover
  * @param {string|React.Node} icon - Icono a mostrar (emoji o componente)
- * @param {Function} onIconClick - Handler cuando se hace click en el icono
- * @param {boolean} iconClickable - Si el icono es clickeable (por defecto true si hay onIconClick)
+ * @param {Function} onClick - Handler cuando se hace click en TODO el componente ✅ NUEVO
+ * @param {Function} onIconClick - Handler cuando se hace click SOLO en el icono
+ * @param {boolean} clickable - Si todo el componente es clickeable ✅ NUEVO
+ * @param {boolean} iconClickable - Si el icono es clickeable por separado
  * @param {string} iconPosition - Posición del icono: 'left' o 'right'
  * @param {string} className - Clases adicionales
  */
@@ -31,40 +34,50 @@ function InfoGroupWithIcon({
   compact = false,
   title,
   icon,
+  onClick, // ✅ NUEVO: Click en todo el componente
   onIconClick,
-  iconClickable = true,
+  clickable = !!onClick, // ✅ NUEVO: Auto-detecta si es clickeable
+  iconClickable = !!onIconClick,
   iconPosition = "left",
   className,
   ...props
 }) {
   // ====================================
-  // CONFIGURACIÓN DE ESTILOS - ACTUALIZADA CON NUEVA PALETA
+  // CONFIGURACIÓN DE ESTILOS
   // ====================================
 
   const statusColors = {
-    success: "text-success-600 dark:text-success-400",
-    warning: "text-warning-600 dark:text-warning-400",
-    danger: "text-danger-600 dark:text-danger-400",
-    normal: "text-theme", // Usa la nueva utilidad
+    success: "text-green-600 dark:text-green-400",
+    warning: "text-yellow-600 dark:text-yellow-400",
+    danger: "text-red-600 dark:text-red-400",
+    normal: "text-gray-700 dark:text-gray-300",
   };
 
   const indicatorColors = {
-    success: "bg-success-500",
-    warning: "bg-warning-500",
-    danger: "bg-danger-500",
-    normal: "bg-secondary-500",
+    success: "bg-green-500",
+    warning: "bg-yellow-500",
+    danger: "bg-red-500",
+    normal: "bg-gray-500",
   };
 
   // ====================================
   // HANDLERS
   // ====================================
 
+  // ✅ NUEVO: Handler para click en todo el componente
+  const handleClick = (e) => {
+    if (clickable && onClick) {
+      onClick(e);
+    }
+  };
+
+  // Handler para click específico del icono
   const handleIconClick = (e) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // ✅ IMPORTANTE: Evita que se dispare el onClick general
 
     if (onIconClick && iconClickable) {
-      onIconClick();
+      onIconClick(e);
     }
   };
 
@@ -79,33 +92,23 @@ function InfoGroupWithIcon({
     const iconElement =
       typeof icon === "string" ? <span className="text-sm">{icon}</span> : icon;
 
+    // ✅ MODIFICADO: Icono clickeable independiente si se especifica
     if (onIconClick && iconClickable) {
       return (
         <button
           onClick={handleIconClick}
           className={cn(
-            // Estilos base del botón con nueva paleta
             "flex items-center justify-center",
-            "transition-theme", // Nueva utilidad
+            "transition-all duration-200",
             "rounded-sm p-1",
-            "focus-ring", // Nueva utilidad
-
-            // Estados de hover y active
-            "text-secondary-400 hover:text-primary-500",
-            "hover:bg-secondary-100 dark:hover:bg-secondary-700",
+            "text-gray-400 hover:text-blue-500 dark:hover:text-blue-400",
+            "hover:bg-gray-100 dark:hover:bg-gray-700",
             "active:scale-95",
-
-            // Cursor
             "cursor-pointer",
-
-            // Responsive
+            "focus:outline-none focus:ring-2 focus:ring-blue-500",
             compact && "p-0.5"
           )}
-          title={
-            title
-              ? `${title} - Click para cambiar`
-              : `Cambiar ${label.toLowerCase()}`
-          }
+          title={`${title} - Click para cambiar`}
           aria-label={`Cambiar ${label.toLowerCase()}`}
         >
           {iconElement}
@@ -113,10 +116,11 @@ function InfoGroupWithIcon({
       );
     }
 
+    // Icono no clickeable
     return (
       <span
         className={cn(
-          "text-secondary-400 flex items-center justify-center",
+          "text-gray-400 flex items-center justify-center",
           compact && "text-xs"
         )}
         title={title}
@@ -134,7 +138,7 @@ function InfoGroupWithIcon({
       <div className="flex items-center ml-1">
         <div
           className={cn(
-            "w-2 h-2 rounded-full transition-theme",
+            "w-2 h-2 rounded-full transition-all duration-200",
             indicatorColors[status],
             status === "success" && "animate-pulse",
             compact && "w-1.5 h-1.5"
@@ -150,7 +154,7 @@ function InfoGroupWithIcon({
     <>
       <span
         className={cn(
-          "text-muted", // Nueva utilidad
+          "text-gray-500 dark:text-gray-400",
           "text-xs lg:text-sm",
           compact && "text-xs"
         )}
@@ -160,7 +164,7 @@ function InfoGroupWithIcon({
 
       <span
         className={cn(
-          "font-semibold transition-theme",
+          "font-semibold transition-all duration-200",
           "text-xs lg:text-sm",
           statusColors[status],
           compact && "text-xs"
@@ -173,7 +177,7 @@ function InfoGroupWithIcon({
       {role && (
         <span
           className={cn(
-            "text-muted transition-theme",
+            "text-gray-500 dark:text-gray-400 transition-all duration-200",
             compact ? "text-xs max-sm:text-[10px]" : "text-xs lg:text-sm"
           )}
         >
@@ -190,15 +194,27 @@ function InfoGroupWithIcon({
   // RENDER PRINCIPAL
   // ====================================
 
+  // ✅ MODIFICADO: El componente base puede ser clickeable
+  const Component = clickable ? "button" : "div";
+
   return (
-    <div
+    <Component
+      onClick={clickable ? handleClick : undefined}
       className={cn(
         // Layout base
         "flex items-center whitespace-nowrap",
-        "transition-theme",
-
-        // Espaciado base
+        "transition-all duration-200",
         "gap-1",
+
+        // ✅ NUEVO: Estilos para componente clickeable
+        clickable && [
+          "cursor-pointer",
+          "rounded-md px-2 py-1",
+          "hover:bg-gray-100 dark:hover:bg-gray-700",
+          "focus:outline-none focus:ring-2 focus:ring-offset-2",
+          "focus:ring-blue-500 dark:focus:ring-offset-gray-900",
+          "active:scale-[0.98]",
+        ],
 
         // Responsive - Modo compacto
         compact && [
@@ -206,15 +222,11 @@ function InfoGroupWithIcon({
           "max-sm:text-xs max-sm:items-start",
         ],
 
-        // Hover effect sutil en todo el grupo con nueva paleta
-        "hover:bg-secondary-50 dark:hover:bg-secondary-800/50",
-        "rounded-sm px-1 py-0.5",
-        "-mx-1 -my-0.5",
-
         className
       )}
       title={title}
-      {...props}
+      disabled={clickable && props.disabled}
+      {...(clickable ? {} : props)} // Solo pasar props extra si no es button
     >
       {/* Icono a la izquierda */}
       {iconPosition === "left" && <IconComponent />}
@@ -223,7 +235,7 @@ function InfoGroupWithIcon({
       <div
         className={cn(
           "flex items-center",
-          "transition-theme",
+          "transition-all duration-200",
           compact ? "gap-0.5" : "gap-1",
           compact && "max-sm:flex-col max-sm:items-start max-sm:gap-0"
         )}
@@ -233,18 +245,19 @@ function InfoGroupWithIcon({
 
       {/* Icono a la derecha */}
       {iconPosition === "right" && <IconComponent />}
-    </div>
+    </Component>
   );
 }
 
 // ====================================
-// VARIANTES PREDEFINIDAS - ACTUALIZADAS
+// VARIANTES PREDEFINIDAS - ACTUALIZADAS PARA SER COMPLETAMENTE CLICKEABLES
 // ====================================
 
 /**
  * Variante específica para Sucursal
+ * ✅ MODIFICADO: Completamente clickeable
  */
-export const BranchInfoGroup = ({ branch, branchCode, ...props }) => (
+export const BranchInfoGroup = ({ branch, branchCode, onClick, ...props }) => (
   <InfoGroupWithIcon
     label="Sucursal:"
     value={branch}
@@ -253,14 +266,17 @@ export const BranchInfoGroup = ({ branch, branchCode, ...props }) => (
     status="normal"
     iconPosition="left"
     title={`Sucursal: ${branch} (${branchCode})`}
+    onClick={onClick} // ✅ NUEVO: Todo clickeable
+    clickable={!!onClick} // ✅ NUEVO: Auto-detecta
     {...props}
   />
 );
 
 /**
  * Variante específica para Caja
+ * ✅ MODIFICADO: Completamente clickeable
  */
-export const CashInfoGroup = ({ cashRegister, ...props }) => (
+export const CashInfoGroup = ({ cashRegister, onClick, ...props }) => (
   <InfoGroupWithIcon
     label="Caja:"
     value={cashRegister}
@@ -268,14 +284,23 @@ export const CashInfoGroup = ({ cashRegister, ...props }) => (
     status="normal"
     iconPosition="left"
     title={`Caja Registradora: ${cashRegister}`}
+    onClick={onClick} // ✅ NUEVO: Todo clickeable
+    clickable={!!onClick} // ✅ NUEVO: Auto-detecta
     {...props}
   />
 );
 
 /**
  * Variante específica para Usuario
+ * ✅ MODIFICADO: Puede ser clickeable o no
  */
-export const UserInfoGroup = ({ user, userFullName, userRole, ...props }) => (
+export const UserInfoGroup = ({
+  user,
+  userFullName,
+  userRole,
+  onClick,
+  ...props
+}) => (
   <InfoGroupWithIcon
     label="Usuario:"
     value={userFullName || user}
@@ -285,45 +310,29 @@ export const UserInfoGroup = ({ user, userFullName, userRole, ...props }) => (
     iconPosition="left"
     compact={true}
     title={`Usuario: ${userFullName || user} (${userRole})`}
+    onClick={onClick} // ✅ NUEVO: Opcional
+    clickable={!!onClick} // ✅ NUEVO: Solo si se pasa onClick
     {...props}
   />
 );
 
 /**
- * Variante específica para Turno - ¡AGREGADA!
+ * Variante específica para Turno
+ * ✅ MODIFICADO: Puede ser clickeable
  */
-export const ShiftInfoGroup = ({ shift, shiftStatus, ...props }) => {
-  // Determinar el status basado en shiftStatus
-  const getShiftStatus = (status) => {
-    switch (status) {
-      case "active":
-        return "success";
-      case "warning":
-        return "warning";
-      case "expired":
-      case "closed":
-        return "danger";
-      default:
-        return "normal";
-    }
-  };
-
-  return (
-    <InfoGroupWithIcon
-      label="Turno:"
-      value={shift}
-      icon="🕐"
-      status={getShiftStatus(shiftStatus)}
-      iconPosition="left"
-      withIndicator={true}
-      title={`Turno: ${shift} - Estado: ${shiftStatus}`}
-      {...props}
-    />
-  );
-};
-
-// ====================================
-// EXPORT POR DEFECTO Y VARIANTES
-// ====================================
+export const ShiftInfoGroup = ({ shift, shiftStatus, onClick, ...props }) => (
+  <InfoGroupWithIcon
+    label="Turno:"
+    value={shift}
+    icon="🕐"
+    status={shiftStatus || "normal"}
+    iconPosition="left"
+    title={`Turno: ${shift}`}
+    onClick={onClick} // ✅ NUEVO: Opcional
+    clickable={!!onClick} // ✅ NUEVO: Solo si se pasa onClick
+    withIndicator={true} // Mostrar indicador de estado para turnos
+    {...props}
+  />
+);
 
 export default InfoGroupWithIcon;

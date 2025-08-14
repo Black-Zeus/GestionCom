@@ -1,22 +1,22 @@
 // ====================================
-// BRANCH SELECTOR COMPONENT - VERSIÓN SIMPLE FUNCIONAL
-// Modal/Dropdown para selección y cambio de sucursal
+// CASH SELECTOR COMPONENT - MISMO FORMATO QUE BRANCH SELECTOR
+// Modal/Dropdown para selección y cambio de caja registradora
 // ====================================
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 
 /**
- * Componente para seleccionar y cambiar la sucursal activa
- * Versión simple que funciona tanto como modal como dropdown
+ * Componente para seleccionar y cambiar la caja registradora activa
+ * Versión con el mismo formato y estilo que BranchSelector
  */
-function BranchSelector({
+function CashSelector({
   isOpen = false,
   onClose,
-  onBranchChange,
-  currentBranch = "Central",
+  onCashChange,
+  currentCash = "#1234",
   displayMode = "dropdown", // 'modal' | 'dropdown'
-  branches = [],
+  cashRegisters = [],
   position = { x: 0, y: 0 },
   className,
   ...props
@@ -30,26 +30,57 @@ function BranchSelector({
   const [isChanging, setIsChanging] = useState(false);
 
   // ====================================
-  // DATOS DE PRUEBA - Sucursales ficticias
+  // DATOS DE PRUEBA - Cajas registradoras ficticias
   // ====================================
-  const defaultBranches =
-    branches.length > 0
-      ? branches
+  const defaultCashRegisters =
+    cashRegisters.length > 0
+      ? cashRegisters
       : [
-          { id: 1, name: "Central", code: "CEN", status: "active" },
-          { id: 2, name: "Mall Plaza", code: "MPZ", status: "active" },
-          { id: 3, name: "Centro Histórico", code: "CHI", status: "active" },
-          { id: 4, name: "Zona Norte", code: "ZNO", status: "maintenance" },
-          { id: 5, name: "Aeropuerto", code: "AER", status: "active" },
+          {
+            id: 1,
+            name: "#1234",
+            code: "POS-001",
+            status: "active",
+            location: "Principal",
+          },
+          {
+            id: 2,
+            name: "#5678",
+            code: "POS-002",
+            status: "active",
+            location: "Secundaria",
+          },
+          {
+            id: 3,
+            name: "#9012",
+            code: "POS-003",
+            status: "maintenance",
+            location: "Express",
+          },
+          {
+            id: 4,
+            name: "#3456",
+            code: "POS-004",
+            status: "active",
+            location: "Autoservicio",
+          },
+          {
+            id: 5,
+            name: "#7890",
+            code: "POS-005",
+            status: "inactive",
+            location: "Reserva",
+          },
         ];
 
   // ====================================
-  // FILTRADO DE SUCURSALES
+  // FILTRADO DE CAJAS
   // ====================================
-  const filteredBranches = defaultBranches.filter(
-    (branch) =>
-      branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      branch.code.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCashRegisters = defaultCashRegisters.filter(
+    (cash) =>
+      cash.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cash.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cash.location.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // ====================================
@@ -113,22 +144,22 @@ function BranchSelector({
     setSearchTerm(e.target.value);
   };
 
-  const handleBranchSelect = async (branch) => {
-    if (branch.status !== "active" || isChanging) return;
+  const handleCashSelect = async (cash) => {
+    if (cash.status !== "active" || isChanging) return;
 
     setIsChanging(true);
-    console.log("🏢 Cambiando a sucursal:", branch.name);
+    console.log("💰 Cambiando a caja:", cash.name);
 
     try {
       // Simular delay de cambio
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Llamar callback
-      onBranchChange?.(branch);
+      onCashChange?.(cash);
 
-      console.log("✅ Sucursal cambiada exitosamente");
+      console.log("✅ Caja cambiada exitosamente");
     } catch (error) {
-      console.error("❌ Error cambiando sucursal:", error);
+      console.error("❌ Error cambiando caja:", error);
     } finally {
       setIsChanging(false);
     }
@@ -168,7 +199,7 @@ function BranchSelector({
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Cambiar Sucursal
+            Cambiar Caja Registradora
           </h3>
           <button
             onClick={handleClose}
@@ -184,7 +215,7 @@ function BranchSelector({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Buscar sucursal..."
+            placeholder="Buscar caja..."
             value={searchTerm}
             onChange={handleSearchChange}
             disabled={isChanging}
@@ -194,7 +225,7 @@ function BranchSelector({
               "rounded-md bg-white dark:bg-gray-700",
               "text-gray-900 dark:text-gray-100",
               "placeholder-gray-500 dark:placeholder-gray-400",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500",
+              "focus:outline-none focus:ring-2 focus:ring-orange-500",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           />
@@ -202,31 +233,31 @@ function BranchSelector({
         </div>
       </div>
 
-      {/* Lista de sucursales */}
+      {/* Lista de cajas */}
       <div className="max-h-64 overflow-y-auto p-4 space-y-2">
-        {filteredBranches.length > 0 ? (
-          filteredBranches.map((branch) => {
-            const isSelected = branch.name === currentBranch;
-            const isActive = branch.status === "active";
+        {filteredCashRegisters.length > 0 ? (
+          filteredCashRegisters.map((cash) => {
+            const isSelected = cash.name === currentCash;
+            const isActive = cash.status === "active";
 
             return (
               <button
-                key={branch.id}
-                onClick={() => handleBranchSelect(branch)}
+                key={cash.id}
+                onClick={() => handleCashSelect(cash)}
                 disabled={!isActive || isChanging}
                 className={cn(
                   // Layout base
                   "w-full p-3 text-left transition-all duration-200",
                   "border border-transparent rounded-lg",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500",
+                  "focus:outline-none focus:ring-2 focus:ring-orange-500",
 
                   // Estados base
                   isActive && "hover:bg-gray-50 dark:hover:bg-gray-700",
 
                   // Estado seleccionado
                   isSelected && [
-                    "bg-blue-50 dark:bg-blue-900/20",
-                    "border-blue-200 dark:border-blue-700",
+                    "bg-orange-50 dark:bg-orange-900/20",
+                    "border-orange-200 dark:border-orange-700",
                   ],
 
                   // Estado deshabilitado
@@ -243,53 +274,61 @@ function BranchSelector({
                   {/* Información principal */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {/* Nombre de la sucursal */}
+                      {/* Nombre de la caja */}
                       <h4
                         className={cn(
                           "font-semibold",
                           isSelected
-                            ? "text-blue-700 dark:text-blue-400"
+                            ? "text-orange-700 dark:text-orange-400"
                             : "text-gray-900 dark:text-gray-100",
                           "truncate"
                         )}
                       >
-                        {branch.name}
+                        {cash.name}
                       </h4>
 
                       {/* Código */}
                       <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
-                        {branch.code}
+                        {cash.code}
                       </span>
 
                       {/* Indicador actual */}
                       {isSelected && (
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded font-medium">
+                        <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2 py-1 rounded font-medium">
                           Actual
                         </span>
                       )}
                     </div>
 
-                    {/* Estado */}
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "w-2 h-2 rounded-full",
-                          branch.status === "active" && "bg-green-500",
-                          branch.status === "maintenance" && "bg-yellow-500",
-                          branch.status === "inactive" && "bg-red-500"
-                        )}
-                      />
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {branch.status === "active" && "Activa"}
-                        {branch.status === "maintenance" && "Mantenimiento"}
-                        {branch.status === "inactive" && "Inactiva"}
+                    {/* Ubicación y Estado */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600 dark:text-gray-400">
+                        📍 {cash.location}
                       </span>
+
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            cash.status === "active" && "bg-green-500",
+                            cash.status === "maintenance" && "bg-yellow-500",
+                            cash.status === "inactive" && "bg-red-500"
+                          )}
+                        />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {cash.status === "active" && "Activa"}
+                          {cash.status === "maintenance" && "Mantenimiento"}
+                          {cash.status === "inactive" && "Inactiva"}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
                   {/* Icono de selección */}
                   {isSelected && (
-                    <div className="text-blue-500 dark:text-blue-400">✓</div>
+                    <div className="text-orange-500 dark:text-orange-400">
+                      ✓
+                    </div>
                   )}
                 </div>
               </button>
@@ -297,7 +336,7 @@ function BranchSelector({
           })
         ) : (
           <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-            No se encontraron sucursales
+            No se encontraron cajas registradoras
           </div>
         )}
       </div>
@@ -305,11 +344,11 @@ function BranchSelector({
       {/* Footer con información */}
       <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {filteredBranches.length} sucursal
-          {filteredBranches.length !== 1 ? "es" : ""}
+          {filteredCashRegisters.length} caja
+          {filteredCashRegisters.length !== 1 ? "s" : ""}
           {searchTerm
-            ? ` encontrada${filteredBranches.length !== 1 ? "s" : ""}`
-            : " disponible" + (filteredBranches.length !== 1 ? "s" : "")}
+            ? ` encontrada${filteredCashRegisters.length !== 1 ? "s" : ""}`
+            : " disponible" + (filteredCashRegisters.length !== 1 ? "s" : "")}
         </p>
       </div>
     </div>
@@ -342,7 +381,7 @@ function BranchSelector({
       {isChanging && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-90 rounded-lg">
           <div className="flex items-center gap-2 text-sm">
-            <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+            <div className="animate-spin w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full" />
             <span>Cambiando...</span>
           </div>
         </div>
@@ -351,4 +390,4 @@ function BranchSelector({
   );
 }
 
-export default BranchSelector;
+export default CashSelector;

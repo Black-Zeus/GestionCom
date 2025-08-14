@@ -1,102 +1,199 @@
 // ====================================
-// FOOTER COMPONENT - SINCRONIZADO CON SIDEBAR DARKMODE
-// Versión optimizada con sincronización perfecta del tema
+// FOOTER COMPONENT - VERSIÓN FINAL LIMPIA
+// Sin Usuario, sin Modal TEST, solo Sucursal y Caja con modales
 // ====================================
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/store/authStore";
 import { useLayoutStore } from "@/store/layoutStore";
-import { useSidebar } from "@/store/sidebarStore"; // ✅ AÑADIDO: Conexión con sidebar
+import { useSidebar } from "@/store/sidebarStore";
+import { Modal } from "@/components/ui/modal";
 
 // Importar componentes del footer
 import FooterLink from "./FooterLink";
-import {
-  BranchInfoGroup,
-  CashInfoGroup,
-  UserInfoGroup,
-  ShiftInfoGroup,
-} from "./InfoGroupWithIcon";
+import { BranchInfoGroup, CashInfoGroup } from "./InfoGroupWithIcon";
+
+// Importar selectores para modales
+import BranchSelector from "./BranchSelector";
+import CashSelector from "./CashSelector";
 
 /**
- * Componente Footer optimizado con sincronización de tema
- * ✅ MEJORADO: Conectado al sidebarStore para darkMode sincronizado
+ * Componente Footer - Versión final limpia
+ * ✅ SOLO: Soporte, Ayuda, Docs | Sucursal, Caja, Turno
+ * ✅ SIN: Usuario, Modal TEST
  */
 function Footer({ className }) {
   // ====================================
-  // HOOKS Y ESTADO - SELECTORES ESPECÍFICOS
+  // HOOKS Y ESTADO
   // ====================================
 
-  // Usuario desde authStore (SSOT)
+  // Usuario desde authStore (solo para verificar si existe)
   const user = useAuth((state) => state.user);
 
-  // Layout context - Selectores específicos para evitar re-renders
+  // Layout context
   const layoutContext = useLayoutStore((state) => state.layoutContext);
-  const activeFooterSelector = useLayoutStore(
-    (state) => state.activeFooterSelector
-  );
-  const setActiveFooterSelector = useLayoutStore(
-    (state) => state.setActiveFooterSelector
-  );
-  const closeFooterSelector = useLayoutStore(
-    (state) => state.closeFooterSelector
-  );
 
-  // ✅ CONECTAR AL SIDEBAR STORE PARA TEMA SINCRONIZADO
-  const { isDarkMode, isCollapsed } = useSidebar();
+  // Tema sincronizado
+  const { isDarkMode } = useSidebar();
 
-  // ====================================
-  // DATOS MEMOIZADOS
-  // ====================================
+  // Estados para modales
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [pendingChange, setPendingChange] = useState(null);
 
-  const sessionInfo = useMemo(
-    () => ({
-      // Datos del usuario desde authStore
-      user: user?.username || "sistema",
-      userFullName: user?.full_name || "Usuario",
-      userRole: user?.roles?.[0] || "User",
-      userEmail: user?.email || "",
-
-      // Contexto de trabajo desde layoutStore
-      branch: layoutContext?.currentBranch?.name || "Central",
-      branchCode: layoutContext?.currentBranch?.code || "CEN",
-      cashRegister: layoutContext?.currentCashRegister?.name || "#1234",
-      shift: layoutContext?.currentShift?.name || "Mañana",
-      shiftStatus: layoutContext?.currentShift?.status || "active",
-    }),
-    [user, layoutContext]
-  );
+  // Estado local para sessionInfo
+  const [sessionInfo, setSessionInfo] = useState(() => ({
+    // Solo datos operativos - SIN datos de usuario ni turno
+    branch: layoutContext?.currentBranch?.name || "Central",
+    branchCode: layoutContext?.currentBranch?.code || "CEN",
+    branchId: layoutContext?.currentBranch?.id || 1,
+    cashRegister: layoutContext?.currentCashRegister?.name || "#1234",
+    cashId: layoutContext?.currentCashRegister?.id || 1,
+    cashStatus: layoutContext?.currentCashRegister?.status || "active",
+  }));
 
   // ====================================
-  // HANDLERS ESTABLES
+  // HANDLERS
   // ====================================
 
-  const handleSelectorClick = useMemo(
-    () => (selectorType) => {
-      if (activeFooterSelector === selectorType) {
-        closeFooterSelector();
-      } else {
-        setActiveFooterSelector(selectorType);
-      }
+  // Handlers para abrir modales
+  const handleBranchClick = useMemo(
+    () => () => {
+      console.log("🎯 Abriendo modal de sucursal");
+      setIsBranchModalOpen(true);
     },
-    [activeFooterSelector, closeFooterSelector, setActiveFooterSelector]
+    []
   );
 
+  const handleCashClick = useMemo(
+    () => () => {
+      console.log("🎯 Abriendo modal de caja");
+      setIsCashModalOpen(true);
+    },
+    []
+  );
+
+  // Handlers para cerrar modales
+  const handleCloseBranchModal = useMemo(
+    () => () => {
+      setIsBranchModalOpen(false);
+    },
+    []
+  );
+
+  const handleCloseCashModal = useMemo(
+    () => () => {
+      setIsCashModalOpen(false);
+    },
+    []
+  );
+
+  // Handlers para cambios con confirmación
+  const handleBranchChange = useMemo(
+    () => (newBranch) => {
+      console.log("🔄 Solicitando cambio de sucursal a:", newBranch);
+
+      // Si es la misma sucursal, solo cerrar
+      if (newBranch.name === sessionInfo.branch) {
+        console.log("⚠️ Misma sucursal seleccionada");
+        handleCloseBranchModal();
+        return;
+      }
+
+      // Preparar confirmación
+      setPendingChange({
+        type: "branch",
+        data: newBranch,
+        current: { name: sessionInfo.branch, code: sessionInfo.branchCode },
+      });
+
+      handleCloseBranchModal();
+      setIsConfirmationModalOpen(true);
+    },
+    [sessionInfo.branch, sessionInfo.branchCode, handleCloseBranchModal]
+  );
+
+  const handleCashChange = useMemo(
+    () => (newCash) => {
+      console.log("🔄 Solicitando cambio de caja a:", newCash);
+
+      // Si es la misma caja, solo cerrar
+      if (newCash.name === sessionInfo.cashRegister) {
+        console.log("⚠️ Misma caja seleccionada");
+        handleCloseCashModal();
+        return;
+      }
+
+      // Preparar confirmación
+      setPendingChange({
+        type: "cash",
+        data: newCash,
+        current: { name: sessionInfo.cashRegister, id: sessionInfo.cashId },
+      });
+
+      handleCloseCashModal();
+      setIsConfirmationModalOpen(true);
+    },
+    [sessionInfo.cashRegister, sessionInfo.cashId, handleCloseCashModal]
+  );
+
+  // Handlers para confirmación
+  const handleConfirmChange = useMemo(
+    () => () => {
+      if (!pendingChange) return;
+
+      console.log(`✅ Confirmando cambio de ${pendingChange.type}`);
+
+      if (pendingChange.type === "branch") {
+        setSessionInfo((prev) => ({
+          ...prev,
+          branch: pendingChange.data.name,
+          branchCode: pendingChange.data.code,
+          branchId: pendingChange.data.id,
+        }));
+      } else if (pendingChange.type === "cash") {
+        setSessionInfo((prev) => ({
+          ...prev,
+          cashRegister: pendingChange.data.name,
+          cashId: pendingChange.data.id,
+          cashStatus: pendingChange.data.status,
+        }));
+      }
+
+      setPendingChange(null);
+      setIsConfirmationModalOpen(false);
+    },
+    [pendingChange]
+  );
+
+  const handleCancelChange = useMemo(
+    () => () => {
+      console.log("❌ Cambio cancelado");
+      setPendingChange(null);
+      setIsConfirmationModalOpen(false);
+    },
+    []
+  );
+
+  // Handler para links del footer
   const handleFooterLink = useMemo(
     () => (action) => {
       const actions = {
         support: () => {
           console.log("Abrir soporte técnico");
-          // Aquí puedes integrar con tu sistema de soporte
           window.open("mailto:soporte@tuempresa.com", "_blank");
         },
         help: () => {
-          console.log("Abrir ayuda");
-          // Aquí puedes abrir un modal de ayuda o documentación
+          console.log("Navegando a ayuda en la misma página");
+          // Navegación interna - misma página
+          window.location.href = "/help";
+          // O si usas React Router: navigate("/help");
         },
         docs: () => {
-          console.log("Abrir documentación");
-          // Aquí puedes abrir la documentación del sistema
+          console.log("Abrir documentación en nueva pestaña");
+          // Nueva pestaña
           window.open("/docs", "_blank");
         },
       };
@@ -107,89 +204,75 @@ function Footer({ className }) {
   );
 
   // ====================================
-  // INICIALIZACIÓN (SOLO UNA VEZ)
+  // EFECTOS
   // ====================================
 
   useEffect(() => {
-    console.log("🦶 Footer del sistema inicializado correctamente");
-    console.log(`🎨 Tema inicial: ${isDarkMode ? "Oscuro" : "Claro"}`);
-  }, []); // Array vacío - solo se ejecuta una vez
-
-  // ✅ LOG OPCIONAL PARA DEBUG DE TEMA (comentado para producción)
-  // useEffect(() => {
-  //   console.log(`🦶 Footer - Tema cambiado a: ${isDarkMode ? 'Oscuro' : 'Claro'}`);
-  // }, [isDarkMode]);
+    console.log("🦶 Footer inicializado correctamente");
+    console.log(`🎨 Tema: ${isDarkMode ? "Oscuro" : "Claro"}`);
+  }, [isDarkMode]);
 
   // ====================================
-  // RENDER PRINCIPAL
+  // RENDER
   // ====================================
 
   return (
-    <footer
-      className={cn(
-        // === LAYOUT BASE ===
-        "flex items-center justify-between",
-        "relative z-20", // ✅ MEJORADO: z-index consistente con header
-        "h-12", // ✅ MEJORADO: altura explícita en lugar de variable
-        "px-6 lg:px-8 xl:px-12",
-        "min-w-0 flex-shrink-0",
+    <>
+      <footer
+        className={cn(
+          // Layout base
+          "flex items-center justify-between",
+          "relative z-20 h-12",
+          "px-6 lg:px-8 xl:px-12",
+          "min-w-0 flex-shrink-0",
 
-        // ✅ FONDOS SINCRONIZADOS CON TAILWIND DARKMODE
-        "bg-white dark:bg-gray-900",
-        "border-t border-gray-200 dark:border-gray-700",
+          // Fondos y bordes
+          "bg-white dark:bg-gray-900",
+          "border-t border-gray-200 dark:border-gray-700",
 
-        // ✅ TEXTOS SINCRONIZADOS
-        "text-sm text-gray-600 dark:text-gray-400",
+          // Textos
+          "text-sm text-gray-600 dark:text-gray-400",
 
-        // ✅ TRANSICIONES SUAVES PARA CAMBIOS DE TEMA
-        "transition-all duration-300 ease-in-out",
+          // Transiciones y sombras
+          "transition-all duration-300 ease-in-out",
+          "shadow-[0_-1px_3px_rgba(0,0,0,0.05)]",
+          "dark:shadow-[0_-1px_3px_rgba(0,0,0,0.15)]",
 
-        // ✅ SOMBRAS SINCRONIZADAS
-        "shadow-[0_-1px_3px_rgba(0,0,0,0.05)]",
-        "dark:shadow-[0_-1px_3px_rgba(0,0,0,0.15)]",
+          className
+        )}
+        id="systemFooter"
+      >
+        {/* SECCIÓN IZQUIERDA - ENLACES */}
+        <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
+          <div className="flex items-center gap-4">
+            <FooterLink
+              onClick={() => handleFooterLink("support")}
+              className={cn(
+                "transition-all duration-200",
+                "hover:text-blue-600 dark:hover:text-blue-400",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                "dark:focus:ring-offset-gray-900"
+              )}
+            >
+              Soporte
+            </FooterLink>
 
-        // ✅ ESTADOS MEJORADOS
-        activeFooterSelector && "bg-gray-50 dark:bg-gray-800/50",
-
-        className
-      )}
-      id="systemFooter"
-    >
-      {/* ================================ */}
-      {/* SECCIÓN IZQUIERDA - ENLACES */}
-      {/* ================================ */}
-      <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
-        {/* Enlaces de navegación */}
-        <div className="flex items-center gap-4">
-          <FooterLink
-            onClick={() => handleFooterLink("support")}
-            className={cn(
-              "transition-all duration-200",
-              "hover:text-blue-600 dark:hover:text-blue-400",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-              "dark:focus:ring-offset-gray-900"
-            )}
-          >
-            Soporte
-          </FooterLink>
-
-          <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
-
-          <FooterLink
-            onClick={() => handleFooterLink("help")}
-            className={cn(
-              "transition-all duration-200",
-              "hover:text-blue-600 dark:hover:text-blue-400",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-              "dark:focus:ring-offset-gray-900"
-            )}
-          >
-            Ayuda
-          </FooterLink>
-
-          {/* Documentación - Solo tablet+ */}
-          <div className="hidden md:flex items-center gap-4">
             <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
+            <FooterLink
+              onClick={() => handleFooterLink("help")}
+              className={cn(
+                "transition-all duration-200",
+                "hover:text-blue-600 dark:hover:text-blue-400",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                "dark:focus:ring-offset-gray-900"
+              )}
+            >
+              Ayuda
+            </FooterLink>
+
+            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
             <FooterLink
               onClick={() => handleFooterLink("docs")}
               className={cn(
@@ -203,120 +286,158 @@ function Footer({ className }) {
             </FooterLink>
           </div>
         </div>
-      </div>
 
-      {/* ================================ */}
-      {/* SECCIÓN DERECHA - INFORMACIÓN OPERATIVA */}
-      {/* ================================ */}
-      <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
-        {/* Información de Sucursal */}
-        <BranchInfoGroup
-          branch={sessionInfo.branch}
-          branchCode={sessionInfo.branchCode}
-          onClick={() => handleSelectorClick("branch")}
-          className={cn(
-            "transition-all duration-200 cursor-pointer",
-            "px-2 py-1 rounded-md",
-            "hover:bg-gray-100 dark:hover:bg-gray-700",
-            activeFooterSelector === "branch" && [
-              "bg-blue-50 dark:bg-blue-900/20",
-              "text-blue-600 dark:text-blue-400",
-            ]
-          )}
-        />
+        {/* SECCIÓN DERECHA - INFORMACIÓN OPERATIVA */}
+        <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
+          {/* Sucursal - Clickeable */}
+          <BranchInfoGroup
+            branch={sessionInfo.branch}
+            branchCode={sessionInfo.branchCode}
+            onClick={handleBranchClick}
+            className={cn("hover:text-blue-600 dark:hover:text-blue-400")}
+          />
 
-        {/* Separador */}
-        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+          {/* Separador */}
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
 
-        {/* Información de Caja */}
-        <CashInfoGroup
-          cashRegister={sessionInfo.cashRegister}
-          onClick={() => handleSelectorClick("cash")}
-          className={cn(
-            "transition-all duration-200 cursor-pointer",
-            "px-2 py-1 rounded-md",
-            "hover:bg-gray-100 dark:hover:bg-gray-700",
-            activeFooterSelector === "cash" && [
-              "bg-orange-50 dark:bg-orange-900/20",
-              "text-orange-600 dark:text-orange-400",
-            ]
-          )}
-        />
-
-        {/* Separador - Solo laptop+ */}
-        <div className="hidden lg:block w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
-
-        {/* Información de Usuario - Solo laptop+ */}
-        <div className="hidden lg:block">
-          <UserInfoGroup
-            user={sessionInfo.user}
-            userFullName={sessionInfo.userFullName}
-            userRole={sessionInfo.userRole}
-            onClick={() => handleSelectorClick("user")}
-            className={cn(
-              "transition-all duration-200 cursor-pointer",
-              "px-2 py-1 rounded-md",
-              "hover:bg-gray-100 dark:hover:bg-gray-700",
-              activeFooterSelector === "user" && [
-                "bg-green-50 dark:bg-green-900/20",
-                "text-green-600 dark:text-green-400",
-              ]
-            )}
+          {/* Caja - Clickeable */}
+          <CashInfoGroup
+            cashRegister={sessionInfo.cashRegister}
+            onClick={handleCashClick}
+            className={cn("hover:text-orange-600 dark:hover:text-orange-400")}
           />
         </div>
+      </footer>
 
-        {/* Separador - Solo desktop */}
-        <div className="hidden xl:block w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+      {/* MODALES */}
 
-        {/* Información de Turno - Solo desktop */}
-        <div className="hidden xl:block">
-          <ShiftInfoGroup
-            shift={sessionInfo.shift}
-            shiftStatus={sessionInfo.shiftStatus}
-            onClick={() => handleSelectorClick("shift")}
-            className={cn(
-              "transition-all duration-200 cursor-pointer",
-              "px-2 py-1 rounded-md",
-              "hover:bg-gray-100 dark:hover:bg-gray-700",
-              activeFooterSelector === "shift" && [
-                "bg-cyan-50 dark:bg-cyan-900/20",
-                "text-cyan-600 dark:text-cyan-400",
-              ]
-            )}
+      {/* Modal de Sucursal */}
+      {isBranchModalOpen && (
+        <Modal
+          isOpen={isBranchModalOpen}
+          onClose={handleCloseBranchModal}
+          title="Seleccionar Sucursal"
+          size="medium"
+          type="custom"
+        >
+          <BranchSelector
+            isOpen={isBranchModalOpen}
+            onClose={handleCloseBranchModal}
+            currentBranch={sessionInfo.branch}
+            displayMode="modal"
+            onBranchChange={handleBranchChange}
           />
-        </div>
+        </Modal>
+      )}
 
-        {/* ✅ INDICADOR DE STATUS MEJORADO CON TEMA SINCRONIZADO */}
-        <div className="flex items-center gap-2 ml-2">
-          <div
-            className={cn(
-              "w-2 h-2 rounded-full transition-all duration-300",
-              "bg-green-500 dark:bg-green-400",
-              "shadow-sm shadow-green-500/30",
-              "animate-pulse"
-            )}
+      {/* Modal de Caja */}
+      {isCashModalOpen && (
+        <Modal
+          isOpen={isCashModalOpen}
+          onClose={handleCloseCashModal}
+          title="Seleccionar Caja"
+          size="medium"
+          type="custom"
+        >
+          <CashSelector
+            isOpen={isCashModalOpen}
+            onClose={handleCloseCashModal}
+            currentCash={sessionInfo.cashRegister}
+            displayMode="modal"
+            onCashChange={handleCashChange}
           />
-          <span className="text-xs text-gray-500 dark:text-gray-400 hidden md:inline transition-colors duration-300">
-            Online
-          </span>
-        </div>
+        </Modal>
+      )}
 
-        {/* ✅ INDICADOR VISUAL DEL ESTADO DEL SIDEBAR (OPCIONAL) */}
-        {isCollapsed && (
-          <div className="flex items-center gap-1 ml-2 hidden lg:flex">
-            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-400 rounded-full animate-pulse" />
-            <span className="text-xs text-blue-600 dark:text-blue-400">
-              Compacto
-            </span>
+      {/* Modal de Confirmación */}
+      {isConfirmationModalOpen && pendingChange && (
+        <Modal
+          isOpen={isConfirmationModalOpen}
+          onClose={handleCancelChange}
+          title="Confirmar Cambio"
+          size="small"
+          type="warning"
+        >
+          <div className="p-6">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center">
+                <span className="text-yellow-600 dark:text-yellow-400 text-xl">
+                  {pendingChange.type === "branch" ? "🏢" : "💰"}
+                </span>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {pendingChange.type === "branch"
+                    ? "Cambiar Sucursal"
+                    : "Cambiar Caja"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Esta acción afectará tu sesión actual
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Actual:
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {pendingChange.type === "branch"
+                      ? `${pendingChange.current.name} (${pendingChange.current.code})`
+                      : pendingChange.current.name}
+                  </p>
+                </div>
+                <div className="text-gray-400 text-xl">→</div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Nuevo:
+                  </p>
+                  <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                    {pendingChange.type === "branch"
+                      ? `${pendingChange.data.name} (${pendingChange.data.code})`
+                      : pendingChange.data.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <span className="text-blue-500 dark:text-blue-400 text-sm">
+                    ℹ️
+                  </span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    {pendingChange.type === "branch"
+                      ? "Al cambiar de sucursal, podrías perder acceso a algunos datos específicos de la sucursal actual."
+                      : "Al cambiar de caja, se cerrará la sesión actual y deberás validar la nueva caja."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelChange}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmChange}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Confirmar Cambio
+              </button>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* ================================ */}
-      {/* EFECTO VISUAL SUTIL SINCRONIZADO */}
-      {/* ================================ */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent opacity-60 transition-colors duration-300" />
-    </footer>
+        </Modal>
+      )}
+    </>
   );
 }
 
