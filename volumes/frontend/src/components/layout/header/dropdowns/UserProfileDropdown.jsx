@@ -1,17 +1,18 @@
 // ====================================
-// USER PROFILE DROPDOWN COMPONENT - SIMPLIFICADO
+// USER PROFILE DROPDOWN COMPONENT - CORREGIDO PARA DARKMODE
 // ====================================
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/utils/cn";
 import { useHeaderUser } from "@/store/headerStore";
+import { useSidebar } from "@/store/sidebarStore"; // ✅ AÑADIDO: Para darkMode sincronizado
 import { logout } from "@/services/authService";
 import { useAuth } from "@/store/authStore";
 
 /**
- * Componente dropdown del perfil de usuario simplificado
- * Solo muestra información del usuario y acciones básicas
+ * Componente dropdown del perfil de usuario
+ * ✅ CORREGIDO: Sincronizado con darkMode del sistema
  */
 function UserProfileDropdown({ isOpen, onClose }) {
   const [hoveredItem, setHoveredItem] = useState(null);
@@ -19,6 +20,9 @@ function UserProfileDropdown({ isOpen, onClose }) {
 
   const { user, company, session } = useHeaderUser();
   const { logout: logoutFromStore, user: authUser } = useAuth();
+
+  // ✅ CONECTAR AL SIDEBAR STORE PARA DARKMODE SINCRONIZADO
+  const { isDarkMode } = useSidebar();
 
   // ====================================
   // OPCIONES DEL MENÚ - SIMPLIFICADAS
@@ -63,72 +67,91 @@ function UserProfileDropdown({ isOpen, onClose }) {
   // HANDLERS
   // ====================================
 
-  const handleProfileAction = (action) => {
+  const handleAction = async (action) => {
     onClose();
-    navigate(action.url);
+
+    switch (action.id) {
+      case "view_profile":
+      case "account_settings":
+      case "notifications_settings":
+      case "security":
+        navigate(action.url);
+        break;
+      default:
+        console.log(`Acción ${action.id} no implementada`);
+    }
   };
 
   const handleLogout = async () => {
     try {
+      onClose();
       await logout();
-      logoutFromStore("User logout");
+      logoutFromStore();
       navigate("/login");
     } catch (error) {
-      console.error("Error during logout:", error);
-      // Logout local incluso si la API falla
-      logoutFromStore("Logout error");
-      navigate("/login");
+      console.error("Error al cerrar sesión:", error);
     }
-    onClose();
   };
 
   // ====================================
   // RENDER HELPERS
   // ====================================
 
-  const renderActionItem = (action, handler) => (
+  const getActionStyles = (action) => {
+    const baseStyles =
+      "px-4 py-3 flex items-center gap-3 w-full text-left transition-all duration-200";
+
+    // ✅ COLORES SINCRONIZADOS CON DARKMODE
+    const colorMap = {
+      blue: "hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400",
+      purple:
+        "hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400",
+      orange:
+        "hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400",
+      red: "hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400",
+    };
+
+    return cn(
+      baseStyles,
+      colorMap[action.color] || colorMap.blue,
+      // ✅ TEXTOS BASE SINCRONIZADOS
+      "text-gray-700 dark:text-gray-300",
+      // Efectos hover
+      "hover:translate-x-1",
+      // Focus states
+      "focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+    );
+  };
+
+  const renderActionButton = (action) => (
     <button
       key={action.id}
-      onClick={() => handler(action)}
+      onClick={() => handleAction(action)}
       onMouseEnter={() => setHoveredItem(action.id)}
       onMouseLeave={() => setHoveredItem(null)}
-      className={cn(
-        // Layout
-        "w-full flex items-center gap-3 px-4 py-3",
-        "text-left transition-all duration-200",
-
-        // Estados hover
-        "hover:bg-gray-50 dark:hover:bg-gray-800",
-        hoveredItem === action.id && "bg-gray-50 dark:bg-gray-800",
-
-        // Focus
-        "focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"
-      )}
+      className={getActionStyles(action)}
     >
       {/* Icono */}
-      <div
-        className={cn(
-          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-          `bg-${action.color}-100 dark:bg-${action.color}-900/30`
-        )}
-      >
-        <span className="text-sm">{action.icon}</span>
-      </div>
+      <span className="text-xl flex-shrink-0">{action.icon}</span>
 
       {/* Contenido */}
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-          {action.label}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="font-medium">{action.label}</div>
+        <div
+          className={cn(
+            "text-xs mt-0.5",
+            // ✅ DESCRIPCIÓN SINCRONIZADA CON DARKMODE
+            "text-gray-500 dark:text-gray-400"
+          )}
+        >
           {action.description}
         </div>
       </div>
 
-      {/* Arrow */}
+      {/* Flecha */}
       <div
         className={cn(
-          "text-gray-400 transition-transform duration-200",
+          "text-gray-400 dark:text-gray-500 transition-transform duration-200",
           hoveredItem === action.id && "translate-x-1"
         )}
       >
@@ -160,22 +183,24 @@ function UserProfileDropdown({ isOpen, onClose }) {
       className={cn(
         // Posición
         "absolute top-full right-0 mt-2",
-        "z-dropdown",
+        "z-50", // ✅ MEJORADO: z-index explícito
 
         // Tamaño
         "w-80 lg:w-96",
         "max-h-[36rem]",
 
-        // Estilos
-        "bg-white rounded-xl shadow-xl border border-gray-200",
+        // ✅ ESTILOS SINCRONIZADOS CON DARKMODE
+        "bg-white dark:bg-gray-900",
+        "rounded-xl shadow-xl",
+        "border border-gray-200 dark:border-gray-700",
         "backdrop-blur-sm",
         "overflow-hidden",
 
-        // Modo oscuro
-        "dark:bg-gray-900 dark:border-gray-700",
+        // ✅ TRANSICIONES SUAVES
+        "transition-all duration-300",
 
         // Animación
-        "animate-slide-in-up"
+        "animate-in slide-in-from-top-2 fade-in-0 duration-200"
       )}
     >
       {/* ================================ */}
@@ -223,17 +248,13 @@ function UserProfileDropdown({ isOpen, onClose }) {
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-white/70">
-                  {authUser?.roles?.[0] || "Sin rol"}
+                  {authUser?.roles?.[0] || "Usuario"}
                 </span>
-                {/* Comentado temporalmente - información de compañía */}
-                {/* {company?.name && (
-                  <>
-                    <span className="text-white/50">•</span>
-                    <span className="text-xs text-white/70">
-                      {company.name}
-                    </span>
-                  </>
-                )} */}
+                <span className="text-white/50">•</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-xs text-white/70">Online</span>
+                </div>
               </div>
             </div>
           </div>
@@ -241,55 +262,60 @@ function UserProfileDropdown({ isOpen, onClose }) {
       </div>
 
       {/* ================================ */}
-      {/* OPCIONES DE PERFIL */}
+      {/* ACCIONES DEL PERFIL */}
       {/* ================================ */}
-      <div className="border-b border-gray-100 dark:border-gray-700">
-        <div className="px-4 py-2">
-          <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-            Perfil y Cuenta
-          </h4>
-        </div>
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          {profileActions.map((action) =>
-            renderActionItem(action, handleProfileAction)
-          )}
-        </div>
+      <div
+        className={cn(
+          "py-2",
+          // ✅ FONDO SINCRONIZADO
+          "bg-white dark:bg-gray-900"
+        )}
+      >
+        {profileActions.map(renderActionButton)}
       </div>
 
       {/* ================================ */}
       {/* INFORMACIÓN DE SESIÓN */}
       {/* ================================ */}
       {session && (
-        <div className="border-b border-gray-100 dark:border-gray-700">
-          <div className="px-4 py-3">
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Información de Sesión
-            </h4>
-            <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-              {session.login_time && (
-                <div className="flex justify-between">
-                  <span>Última conexión:</span>
-                  <span>{new Date(session.login_time).toLocaleString()}</span>
-                </div>
+        <div
+          className={cn(
+            "px-4 py-3",
+            // ✅ BORDES SINCRONIZADOS
+            "border-t border-gray-200 dark:border-gray-700",
+            // ✅ FONDO SINCRONIZADO
+            "bg-gray-50 dark:bg-gray-800/50"
+          )}
+        >
+          <div className="text-xs space-y-1">
+            <div
+              className={cn(
+                "flex justify-between",
+                // ✅ TEXTOS SINCRONIZADOS
+                "text-gray-600 dark:text-gray-400"
               )}
-              {session.ip_address && (
-                <div className="flex justify-between">
-                  <span>IP:</span>
-                  <span className="font-mono">{session.ip_address}</span>
-                </div>
-              )}
-              {session.device_info && (
-                <div className="flex justify-between">
-                  <span>Dispositivo:</span>
-                  <span
-                    className="truncate max-w-32"
-                    title={session.device_info}
-                  >
-                    {session.device_info}
-                  </span>
-                </div>
-              )}
+            >
+              <span>Última conexión:</span>
+              <span>
+                {session.last_activity
+                  ? new Date(session.last_activity).toLocaleString()
+                  : "Ahora"}
+              </span>
             </div>
+            {session.device_info && (
+              <div
+                className={cn(
+                  "flex justify-between",
+                  // ✅ TEXTOS SINCRONIZADOS
+                  "text-gray-600 dark:text-gray-400"
+                )}
+              >
+                <span>Dispositivo:</span>
+                <span className="truncate ml-2 max-w-32">
+                  {session.device_info}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -305,19 +331,19 @@ function UserProfileDropdown({ isOpen, onClose }) {
             "w-full flex items-center justify-center gap-2",
             "px-4 py-3 rounded-lg",
 
-            // Estilos
+            // ✅ ESTILOS SINCRONIZADOS CON DARKMODE
             "bg-red-50 hover:bg-red-100",
+            "dark:bg-red-900/20 dark:hover:bg-red-900/30",
             "text-red-600 hover:text-red-700",
+            "dark:text-red-400 dark:hover:text-red-300",
             "border border-red-200 hover:border-red-300",
+            "dark:border-red-800 dark:hover:border-red-700",
+
+            // Transiciones
             "transition-all duration-200",
 
             // Focus
-            "focus:outline-none focus:ring-2 focus:ring-red-500",
-
-            // Modo oscuro
-            "dark:bg-red-900/20 dark:hover:bg-red-900/30",
-            "dark:text-red-400 dark:hover:text-red-300",
-            "dark:border-red-800 dark:hover:border-red-700"
+            "focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400"
           )}
         >
           <span className="text-sm">🚪</span>
