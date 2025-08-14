@@ -4,12 +4,12 @@
 // agregada funcionalidad modal para Sucursal y Caja
 // ====================================
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { cn } from "@/utils/cn";
 import { useAuth } from "@/store/authStore";
 import { useLayoutStore } from "@/store/layoutStore";
 import { useSidebar } from "@/store/sidebarStore";
-import { Modal } from "@/components/ui/modal"; // ✅ CORREGIDO: Import directo del Modal
+import { useModal } from "@/components/ui/modal"; // ✅ AGREGADO
 
 // Importar componentes del footer
 import FooterLink from "./FooterLink";
@@ -42,9 +42,20 @@ function Footer({ className }) {
   // Tema sincronizado
   const { isDarkMode } = useSidebar();
 
-  // ✅ AGREGADO: Estados para modales simples
-  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
-  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  // ✅ AGREGADO: Hooks para modales
+  const [isBranchModalOpen, openBranchModal, closeBranchModal, BranchModal] =
+    useModal({
+      type: "custom",
+      size: "medium",
+      title: "Seleccionar Sucursal",
+    });
+
+  // ❌ COMENTADO: CashSelector no existe aún
+  // const [isCashModalOpen, openCashModal, closeCashModal, CashModal] = useModal({
+  //   type: 'custom',
+  //   size: 'medium',
+  //   title: 'Seleccionar Caja'
+  // });
 
   // ====================================
   // DATOS MEMOIZADOS
@@ -75,39 +86,10 @@ function Footer({ className }) {
   // ✅ AGREGADO: Handlers para modales
   const handleBranchClick = useMemo(
     () => () => {
-      console.log("🎯 handleBranchClick ejecutado");
-      console.log("🎯 Estado antes:", isBranchModalOpen);
-      setIsBranchModalOpen(true);
-      console.log("🎯 Modal de sucursal debería abrirse");
+      console.log("Abriendo modal de sucursal");
+      openBranchModal();
     },
-    [isBranchModalOpen]
-  );
-
-  const handleCashClick = useMemo(
-    () => () => {
-      console.log("🎯 handleCashClick ejecutado");
-      console.log("🎯 Estado antes:", isCashModalOpen);
-      setIsCashModalOpen(true);
-      console.log("🎯 Modal de caja debería abrirse");
-    },
-    [isCashModalOpen]
-  );
-
-  // ✅ AGREGADO: Handlers para cerrar modales
-  const handleCloseBranchModal = useMemo(
-    () => () => {
-      console.log("Cerrando modal de sucursal");
-      setIsBranchModalOpen(false);
-    },
-    []
-  );
-
-  const handleCloseCashModal = useMemo(
-    () => () => {
-      console.log("Cerrando modal de caja");
-      setIsCashModalOpen(false);
-    },
-    []
+    [openBranchModal]
   );
 
   // ✅ MODIFICADO: Usuario sin funcionalidad de click
@@ -115,6 +97,14 @@ function Footer({ className }) {
     () => () => {
       // Usuario ya no cambia colores, solo es informativo
       console.log("Usuario - solo informativo");
+    },
+    []
+  );
+
+  // ❌ TEMPORAL: Cash sin modal hasta crear CashSelector
+  const handleCashClick = useMemo(
+    () => () => {
+      console.log("Modal de caja pendiente - CashSelector no creado aún");
     },
     []
   );
@@ -139,16 +129,6 @@ function Footer({ className }) {
     },
     []
   );
-
-  // ====================================
-  // INICIALIZACIÓN
-  // ====================================
-
-  // ✅ AGREGADO: Debug effect
-  useEffect(() => {
-    console.log("🔍 Estado del modal de sucursal:", isBranchModalOpen);
-    console.log("🔍 Estado del modal de caja:", isCashModalOpen);
-  }, [isBranchModalOpen, isCashModalOpen]);
 
   // ====================================
   // INICIALIZACIÓN
@@ -222,20 +202,6 @@ function Footer({ className }) {
             >
               Ayuda
             </FooterLink>
-
-            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
-
-            <FooterLink
-              onClick={() => handleFooterLink("docs")}
-              className={cn(
-                "transition-all duration-200",
-                "hover:text-blue-600 dark:hover:text-blue-400",
-                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                "dark:focus:ring-offset-gray-900"
-              )}
-            >
-              Docs
-            </FooterLink>
           </div>
         </div>
 
@@ -243,22 +209,32 @@ function Footer({ className }) {
         {/* SECCIÓN DERECHA - INFORMACIÓN OPERATIVA */}
         {/* ================================ */}
         <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
-          {/* ✅ MODIFICADO: Información de Sucursal - Completamente clickeable */}
+          {/* ✅ MODIFICADO: Información de Sucursal - Ahora clickeable para modal */}
           <BranchInfoGroup
             branch={sessionInfo.branch}
             branchCode={sessionInfo.branchCode}
-            onClick={handleBranchClick} // ✅ NUEVO: Todo el componente clickeable
-            className={cn("hover:text-blue-600 dark:hover:text-blue-400")}
+            onIconClick={handleBranchClick}
+            className={cn(
+              "transition-all duration-200 cursor-pointer",
+              "px-2 py-1 rounded-md",
+              "hover:bg-gray-100 dark:hover:bg-gray-700",
+              "hover:text-blue-600 dark:hover:text-blue-400"
+            )}
           />
 
           {/* Separador */}
           <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
 
-          {/* ✅ MODIFICADO: Información de Caja - Completamente clickeable */}
+          {/* ✅ MODIFICADO: Información de Caja - Ahora clickeable para modal */}
           <CashInfoGroup
             cashRegister={sessionInfo.cashRegister}
-            onClick={handleCashClick} // ✅ NUEVO: Todo el componente clickeable
-            className={cn("hover:text-orange-600 dark:hover:text-orange-400")}
+            onIconClick={handleCashClick}
+            className={cn(
+              "transition-all duration-200 cursor-pointer",
+              "px-2 py-1 rounded-md",
+              "hover:bg-gray-100 dark:hover:bg-gray-700",
+              "hover:text-orange-600 dark:hover:text-orange-400"
+            )}
           />
 
           {/* Separador - Solo laptop+ */}
@@ -270,7 +246,13 @@ function Footer({ className }) {
               user={sessionInfo.user}
               userFullName={sessionInfo.userFullName}
               userRole={sessionInfo.userRole}
-              // ✅ SIN onClick = No clickeable automáticamente
+              onIconClick={handleUserClick}
+              iconClickable={false} // ✅ DESACTIVADO: No clickeable
+              className={cn(
+                "transition-all duration-200",
+                "px-2 py-1 rounded-md"
+                // ✅ ELIMINADO: Sin hover effects ni cambios de color
+              )}
             />
           </div>
 
@@ -294,51 +276,36 @@ function Footer({ className }) {
       </footer>
 
       {/* ================================ */}
-      {/* ✅ AGREGADO: MODALES SIMPLES */}
+      {/* ✅ AGREGADO: MODALES */}
       {/* ================================ */}
 
       {/* Modal de Sucursal */}
-      {isBranchModalOpen && (
-        <Modal
+      <BranchModal>
+        <BranchSelector
           isOpen={isBranchModalOpen}
-          onClose={handleCloseBranchModal}
-          title="Seleccionar Sucursal"
-          size="medium"
-          type="custom"
-        >
-          <BranchSelector
-            isOpen={isBranchModalOpen}
-            onClose={handleCloseBranchModal}
-            currentBranch={sessionInfo.branch}
-            displayMode="modal"
-            onBranchChange={(branch) => {
-              console.log("Sucursal cambiada:", branch);
-              handleCloseBranchModal();
-            }}
-          />
-        </Modal>
-      )}
+          onClose={closeBranchModal}
+          currentBranch={sessionInfo.branch}
+          displayMode="modal"
+          onBranchChange={(branch) => {
+            console.log("Sucursal cambiada:", branch);
+            closeBranchModal();
+          }}
+        />
+      </BranchModal>
 
-      {/* Modal de Caja */}
-      {isCashModalOpen && (
-        <Modal
+      {/* ❌ COMENTADO: Modal de Caja pendiente */}
+      {/* <CashModal>
+        <CashSelector
           isOpen={isCashModalOpen}
-          onClose={handleCloseCashModal}
-          title="Seleccionar Caja"
-          size="medium"
-          type="custom"
-        >
-          <div className="p-4">
-            <p>Modal de Caja - CashSelector pendiente de crear</p>
-            <button
-              onClick={handleCloseCashModal}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Cerrar
-            </button>
-          </div>
-        </Modal>
-      )}
+          onClose={closeCashModal}
+          currentCash={sessionInfo.cashRegister}
+          displayMode="modal"
+          onCashChange={(cash) => {
+            console.log("Caja cambiada:", cash);
+            closeCashModal();
+          }}
+        />
+      </CashModal> */}
     </>
   );
 }

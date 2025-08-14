@@ -1,51 +1,58 @@
 // ====================================
-// USE FOOTER SELECTORS HOOK
-// Hook unificado para manejar todos los selectores del footer
-// (Sucursal, Caja, Usuario, Turno)
+// HOOK PARA SELECTORES DEL FOOTER - ACTUALIZADO CON MODALES
+// Gestión completa de selectores con soporte modal y dropdown
+// ✅ MODIFICADO: displayMode cambiado a 'modal' para Branch y Cash
 // ====================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Hook principal para manejar todos los selectores del footer
- * Proporciona estado unificado y funciones para cada tipo de selector
+ * Hook principal para manejar selectores del footer
+ * ✅ MODIFICADO: Cambiado displayMode a 'modal' para sucursal y caja
  */
-export const useFooterSelectors = (initialSession = {}) => {
-
+const useFooterSelectors = (initialSession = {}) => {
     // ====================================
-    // ESTADO PRINCIPAL
+    // ESTADO DEL HOOK
     // ====================================
 
+    // Información de sesión
+    const [sessionInfo, setSessionInfo] = useState({
+        // Datos de usuario
+        username: initialSession.username || 'sistema',
+        userFullName: initialSession.userFullName || 'Usuario',
+        userRole: initialSession.userRole || 'User',
+        userEmail: initialSession.userEmail || '',
+
+        // Datos de trabajo
+        branch: initialSession.branch || 'Central',
+        branchCode: initialSession.branchCode || 'CEN',
+        branchId: initialSession.branchId || 1,
+
+        cashRegister: initialSession.cashRegister || '#1234',
+        cashId: initialSession.cashId || 1,
+        cashStatus: initialSession.cashStatus || 'active',
+
+        shift: initialSession.shift || 'Mañana',
+        shiftId: initialSession.shiftId || 1,
+        shiftStatus: initialSession.shiftStatus || 'active',
+        shiftStart: initialSession.shiftStart || null,
+        shiftEnd: initialSession.shiftEnd || null,
+
+        // Metadatos
+        sessionStart: initialSession.sessionStart || Date.now(),
+        lastActivity: initialSession.lastActivity || Date.now()
+    });
+
+    // Control de selectores
     const [activeSelector, setActiveSelector] = useState(null);
     const [selectorPosition, setSelectorPosition] = useState({ x: 0, y: 0 });
     const [isChanging, setIsChanging] = useState(false);
+
+    // Referencias
     const changeTimeoutRef = useRef(null);
 
-    // Estado de sesión unificado
-    const [sessionInfo, setSessionInfo] = useState({
-        branch: initialSession.branch || 'Central',
-        branchCode: initialSession.branchCode || 'CEN',
-        branchId: initialSession.branchId || 'central',
-
-        cashRegister: initialSession.cashRegister || '#1234',
-        cashId: initialSession.cashId || 'cash-001',
-        cashStatus: initialSession.cashStatus || 'active',
-
-        username: initialSession.username || 'vsoto',
-        userId: initialSession.userId || 'user-001',
-        userFullName: initialSession.userFullName || 'Víctor Soto',
-        userRole: initialSession.userRole || 'Admin',
-        userEmail: initialSession.userEmail || 'v.soto@empresa.cl',
-
-        shift: initialSession.shift || 'Mañana',
-        shiftId: initialSession.shiftId || 'morning',
-        shiftStatus: initialSession.shiftStatus || 'success',
-        shiftStart: initialSession.shiftStart || '08:00',
-        shiftEnd: initialSession.shiftEnd || '17:00'
-    });
-
     // ====================================
-    // DATOS DE SELECTORES - CONFIGURACIÓN
+    // CONFIGURACIÓN DE SELECTORES - ✅ MODIFICADA
     // ====================================
 
     const selectorConfig = {
@@ -53,13 +60,13 @@ export const useFooterSelectors = (initialSession = {}) => {
             title: 'Cambiar Sucursal',
             icon: '🏢',
             storageKey: 'selectedBranch',
-            displayMode: 'modal' // 'modal' | 'dropdown'
+            displayMode: 'modal' // ✅ CAMBIADO: de 'dropdown' a 'modal'
         },
         cash: {
             title: 'Cambiar Caja',
             icon: '💰',
             storageKey: 'selectedCash',
-            displayMode: 'dropdown'
+            displayMode: 'modal' // ✅ CAMBIADO: de 'dropdown' a 'modal'
         },
         user: {
             title: 'Cambiar Usuario',
@@ -71,7 +78,7 @@ export const useFooterSelectors = (initialSession = {}) => {
             title: 'Cambiar Turno',
             icon: '🕐',
             storageKey: 'selectedShift',
-            displayMode: 'dropdown'
+            displayMode: 'dropdown' // ✅ MANTENIDO: sigue siendo dropdown
         }
     };
 
@@ -138,46 +145,49 @@ export const useFooterSelectors = (initialSession = {}) => {
      * @param {Object} position - Posición para dropdowns {x, y}
      * @param {Object} options - Opciones adicionales
      */
-    const openSelector = useCallback((selectorType, position = null, options = {}) => {
-        // Cerrar selector activo si hay uno
-        if (activeSelector) {
-            closeSelector();
+    const openSelector = useCallback((selectorType, position = { x: 0, y: 0 }, options = {}) => {
+        if (!selectorConfig[selectorType]) {
+            console.warn(`❌ Selector tipo "${selectorType}" no existe`);
+            return;
         }
 
-        // Configurar posición si se proporciona
-        if (position) {
+        // ✅ MODIFICADO: Solo establecer posición para dropdowns
+        if (selectorConfig[selectorType].displayMode === 'dropdown') {
             setSelectorPosition(position);
         }
 
-        // Abrir nuevo selector
         setActiveSelector(selectorType);
-
-        console.log(`📝 Abriendo selector: ${selectorConfig[selectorType]?.title || selectorType}`);
-    }, [activeSelector, selectorConfig]);
+        console.log(`🎯 Abriendo selector: ${selectorConfig[selectorType].title}`);
+    }, [selectorConfig]);
 
     /**
      * Cerrar el selector activo
      */
     const closeSelector = useCallback(() => {
-        if (!isChanging) { // Prevenir cierre durante cambios
-            setActiveSelector(null);
-            setSelectorPosition({ x: 0, y: 0 });
-        }
-    }, [isChanging]);
+        setActiveSelector(null);
+        setSelectorPosition({ x: 0, y: 0 });
+        console.log('❌ Selector cerrado');
+    }, []);
 
     /**
-     * Cambiar valor de un tipo específico
-     * @param {string} type - Tipo: 'branch', 'cash', 'user', 'shift'
-     * @param {Object} newValue - Nuevo valor con propiedades específicas
+     * Cambiar valor de un selector
+     * @param {string} type - Tipo de selector
+     * @param {any} newValue - Nuevo valor
      */
     const changeValue = useCallback(async (type, newValue) => {
+        if (!selectorConfig[type]) {
+            throw new Error(`Tipo de selector "${type}" no válido`);
+        }
+
         setIsChanging(true);
 
         try {
             // Simular delay de cambio
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => {
+                changeTimeoutRef.current = setTimeout(resolve, 800);
+            });
 
-            // Actualizar estado según el tipo
+            // Actualizar según el tipo
             switch (type) {
                 case 'branch':
                     setSessionInfo(prev => ({
@@ -191,7 +201,7 @@ export const useFooterSelectors = (initialSession = {}) => {
                 case 'cash':
                     setSessionInfo(prev => ({
                         ...prev,
-                        cashRegister: newValue.number,
+                        cashRegister: newValue.name,
                         cashId: newValue.id,
                         cashStatus: newValue.status
                     }));
@@ -201,7 +211,6 @@ export const useFooterSelectors = (initialSession = {}) => {
                     setSessionInfo(prev => ({
                         ...prev,
                         username: newValue.username,
-                        userId: newValue.id,
                         userFullName: newValue.fullName,
                         userRole: newValue.role,
                         userEmail: newValue.email
@@ -239,7 +248,7 @@ export const useFooterSelectors = (initialSession = {}) => {
     // FUNCIONES ESPECÍFICAS POR TIPO
     // ====================================
 
-    // Sucursal
+    // Sucursal - ✅ AHORA ABRE MODAL
     const openBranchSelector = useCallback((position) => {
         openSelector('branch', position);
     }, [openSelector]);
@@ -248,7 +257,7 @@ export const useFooterSelectors = (initialSession = {}) => {
         return changeValue('branch', branchData);
     }, [changeValue]);
 
-    // Caja
+    // Caja - ✅ AHORA ABRE MODAL
     const openCashSelector = useCallback((position) => {
         openSelector('cash', position);
     }, [openSelector]);
@@ -266,7 +275,7 @@ export const useFooterSelectors = (initialSession = {}) => {
         return changeValue('user', userData);
     }, [changeValue]);
 
-    // Turno
+    // Turno - ✅ MANTIENE DROPDOWN
     const openShiftSelector = useCallback((position) => {
         openSelector('shift', position);
     }, [openSelector]);
@@ -282,169 +291,95 @@ export const useFooterSelectors = (initialSession = {}) => {
     /**
      * Obtener posición de un elemento para dropdown
      * @param {HTMLElement} element - Elemento de referencia
-     * @returns {Object} Posición {x, y}
      */
     const getElementPosition = useCallback((element) => {
         if (!element) return { x: 0, y: 0 };
 
         const rect = element.getBoundingClientRect();
         return {
-            x: rect.left + rect.width / 2, // Centro horizontal
-            y: rect.bottom // Parte inferior del elemento
+            x: rect.left + rect.width / 2,
+            y: rect.top
         };
     }, []);
 
     /**
-     * Handler para click en icono de InfoGroup
-     * @param {string} type - Tipo de selector
+     * Handler para click en iconos (simplificado para modales)
+     * @param {string} selectorType - Tipo de selector
      * @param {Event} event - Evento de click
      */
-    const handleIconClick = useCallback((type, event) => {
-        event.preventDefault();
-        event.stopPropagation();
+    const handleIconClick = useCallback((selectorType, event) => {
+        event?.preventDefault();
+        event?.stopPropagation();
 
-        const element = event.currentTarget;
-        const position = getElementPosition(element);
+        const config = selectorConfig[selectorType];
 
-        openSelector(type, position);
-    }, [openSelector, getElementPosition]);
-
-    /**
-     * Resetear toda la sesión a valores por defecto
-     */
-    const resetSession = useCallback(() => {
-        setSessionInfo({
-            branch: 'Central',
-            branchCode: 'CEN',
-            branchId: 'central',
-            cashRegister: '#1234',
-            cashId: 'cash-001',
-            cashStatus: 'active',
-            username: 'vsoto',
-            userId: 'user-001',
-            userFullName: 'Víctor Soto',
-            userRole: 'Admin',
-            userEmail: 'v.soto@empresa.cl',
-            shift: 'Mañana',
-            shiftId: 'morning',
-            shiftStatus: 'success',
-            shiftStart: '08:00',
-            shiftEnd: '17:00'
-        });
-
-        console.log('🔄 Sesión reseteada a valores por defecto');
-    }, []);
+        if (config?.displayMode === 'modal') {
+            // ✅ PARA MODALES: Solo abrir, sin posición
+            openSelector(selectorType);
+        } else {
+            // Para dropdowns: calcular posición
+            const position = getElementPosition(event?.currentTarget);
+            openSelector(selectorType, position);
+        }
+    }, [openSelector, getElementPosition, selectorConfig]);
 
     /**
      * Verificar si un selector está activo
-     * @param {string} type - Tipo de selector
-     * @returns {boolean}
+     * @param {string} selectorType - Tipo de selector
      */
-    const isSelectorActive = useCallback((type) => {
-        return activeSelector === type;
+    const isSelectorActive = useCallback((selectorType) => {
+        return activeSelector === selectorType;
     }, [activeSelector]);
 
     /**
      * Obtener configuración de un selector
-     * @param {string} type - Tipo de selector
-     * @returns {Object}
+     * @param {string} selectorType - Tipo de selector
      */
-    const getSelectorConfig = useCallback((type) => {
-        return selectorConfig[type] || {};
+    const getSelectorConfig = useCallback((selectorType) => {
+        return selectorConfig[selectorType];
     }, [selectorConfig]);
 
-    // ====================================
-    // VALIDACIONES Y ESTADO
-    // ====================================
+    /**
+     * Verificar si se puede cambiar un selector
+     * @param {string} selectorType - Tipo de selector
+     */
+    const canChange = useCallback((selectorType) => {
+        return !isChanging && selectorConfig[selectorType];
+    }, [isChanging, selectorConfig]);
 
     /**
-     * Validar si se puede cambiar un valor
-     * @param {string} type - Tipo de cambio
-     * @returns {boolean}
+     * Resetear sesión a valores por defecto
      */
-    const canChange = useCallback((type) => {
-        if (isChanging) return false;
+    const resetSession = useCallback(() => {
+        setSessionInfo({
+            username: 'sistema',
+            userFullName: 'Usuario',
+            userRole: 'User',
+            userEmail: '',
+            branch: 'Central',
+            branchCode: 'CEN',
+            branchId: 1,
+            cashRegister: '#1234',
+            cashId: 1,
+            cashStatus: 'active',
+            shift: 'Mañana',
+            shiftId: 1,
+            shiftStatus: 'active',
+            shiftStart: null,
+            shiftEnd: null,
+            sessionStart: Date.now(),
+            lastActivity: Date.now()
+        });
 
-        // Aquí podrían ir validaciones específicas por tipo
-        switch (type) {
-            case 'branch':
-                return true; // Siempre se puede cambiar sucursal
-            case 'cash':
-                return sessionInfo.cashStatus === 'active';
-            case 'user':
-                return true; // Validaciones de permisos aquí
-            case 'shift':
-                return sessionInfo.shiftStatus !== 'locked';
-            default:
-                return false;
-        }
-    }, [isChanging, sessionInfo]);
-
-    // ====================================
-    // API GLOBAL - COMPATIBILIDAD CON TEMPLATE
-    // ====================================
-
-    useEffect(() => {
-        // Exponer funciones globales para compatibilidad
-        window.FooterSelectorsAPI = {
-            // Funciones principales
-            openBranchSelector,
-            openCashSelector,
-            openUserSelector,
-            openShiftSelector,
-
-            // Funciones de cambio
-            changeBranch,
-            changeCash,
-            changeUser,
-            changeShift,
-
-            // Utilidades
-            closeSelector,
-            resetSession,
-            getSessionInfo: () => sessionInfo,
-
-            // Estado
-            isChanging,
-            activeSelector
-        };
-
-        // Función de compatibilidad con template original
-        window.updateSystemFooter = (type, value) => {
-            switch (type) {
-                case 'branch':
-                    changeBranch(value);
-                    break;
-                case 'cash':
-                    changeCash(value);
-                    break;
-                case 'user':
-                    changeUser(value);
-                    break;
-                case 'shift':
-                    changeShift(value);
-                    break;
-                default:
-                    console.warn('Tipo de actualización no reconocido:', type);
-            }
-        };
-
-        return () => {
-            // Cleanup API global
-            delete window.FooterSelectorsAPI;
-            delete window.updateSystemFooter;
-        };
-    }, [
-        openBranchSelector, openCashSelector, openUserSelector, openShiftSelector,
-        changeBranch, changeCash, changeUser, changeShift,
-        closeSelector, resetSession, sessionInfo, isChanging, activeSelector
-    ]);
+        closeSelector();
+        console.log('🔄 Sesión reseteada');
+    }, [closeSelector]);
 
     // ====================================
-    // RETURN - API DEL HOOK
+    // MEMOIZAR RESULTADO PARA RENDIMIENTO
     // ====================================
 
-    return {
+    return useMemo(() => ({
         // Estado principal
         sessionInfo,
         activeSelector,
@@ -480,7 +415,15 @@ export const useFooterSelectors = (initialSession = {}) => {
         // Persistencia
         loadSessionFromStorage,
         saveSessionToStorage
-    };
+    }), [
+        sessionInfo, activeSelector, selectorPosition, isChanging,
+        openSelector, closeSelector, changeValue,
+        openBranchSelector, changeBranch, openCashSelector, changeCash,
+        openUserSelector, changeUser, openShiftSelector, changeShift,
+        handleIconClick, getElementPosition, resetSession,
+        isSelectorActive, getSelectorConfig, canChange,
+        selectorConfig, loadSessionFromStorage, saveSessionToStorage
+    ]);
 };
 
 // ====================================
@@ -489,6 +432,7 @@ export const useFooterSelectors = (initialSession = {}) => {
 
 /**
  * Hook específico para selector de sucursal
+ * ✅ AHORA FUNCIONA CON MODAL
  */
 export const useBranchSelector = (initialBranch) => {
     const {
@@ -518,6 +462,7 @@ export const useBranchSelector = (initialBranch) => {
 
 /**
  * Hook específico para selector de caja
+ * ✅ AHORA FUNCIONA CON MODAL
  */
 export const useCashSelector = (initialCash) => {
     const {
@@ -580,6 +525,7 @@ export const useUserSelector = (initialUser) => {
 
 /**
  * Hook específico para selector de turno
+ * ✅ MANTIENE FUNCIONALIDAD DROPDOWN
  */
 export const useShiftSelector = (initialShift) => {
     const {
