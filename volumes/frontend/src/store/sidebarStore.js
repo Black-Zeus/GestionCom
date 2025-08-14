@@ -93,12 +93,12 @@ const useSidebarStore = create(
         set((state) => {
           const newDarkMode = !state.isDarkMode;
 
-          // Aplicar clase al body
+          // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
           if (typeof window !== 'undefined') {
             if (newDarkMode) {
-              document.body.classList.add('dark-mode');
+              document.body.classList.add('dark');
             } else {
-              document.body.classList.remove('dark-mode');
+              document.body.classList.remove('dark');
             }
           }
 
@@ -116,11 +116,12 @@ const useSidebarStore = create(
       setTheme: (isDark) => {
         set({ isDarkMode: isDark });
 
+        // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
         if (typeof window !== 'undefined') {
           if (isDark) {
-            document.body.classList.add('dark-mode');
+            document.body.classList.add('dark');
           } else {
-            document.body.classList.remove('dark-mode');
+            document.body.classList.remove('dark');
           }
         }
       },
@@ -174,9 +175,11 @@ const useSidebarStore = create(
         set((state) => {
           const updates = { activeSection: section };
 
-          // Cerrar móvil si está abierto
+          // Cerrar mobile sidebar si está abierto
           if (closeMobileAfter && state.isMobileOpen) {
             updates.isMobileOpen = false;
+
+            // Restaurar scroll del body
             if (typeof window !== 'undefined') {
               document.body.style.overflow = '';
             }
@@ -186,17 +189,11 @@ const useSidebarStore = create(
         });
       },
 
-      // ==========================================
-      // ACCIONES - PROFILE DROPDOWN
-      // ==========================================
-
       /**
        * Toggle profile dropdown
        */
       toggleProfileDropdown: () => {
-        set((state) => ({
-          isProfileDropdownOpen: !state.isProfileDropdownOpen
-        }));
+        set((state) => ({ isProfileDropdownOpen: !state.isProfileDropdownOpen }));
       },
 
       /**
@@ -206,47 +203,12 @@ const useSidebarStore = create(
         set({ isProfileDropdownOpen: false });
       },
 
-      // ==========================================
-      // ACCIONES - SESSION INFO
-      // ==========================================
-
       /**
-       * Update session info (for footer display)
+       * Update session info
        */
-      updateSessionInfo: (updates) => {
+      updateSessionInfo: (newInfo) => {
         set((state) => ({
-          sessionInfo: { ...state.sessionInfo, ...updates }
-        }));
-      },
-
-      /**
-       * Update branch
-       */
-      updateBranch: (branch) => {
-        set((state) => ({
-          sessionInfo: { ...state.sessionInfo, branch }
-        }));
-      },
-
-      /**
-       * Update cash register
-       */
-      updateCashRegister: (cashRegister) => {
-        set((state) => ({
-          sessionInfo: { ...state.sessionInfo, cashRegister }
-        }));
-      },
-
-      /**
-       * Update shift info
-       */
-      updateShift: (shift, shiftStatus = 'success') => {
-        set((state) => ({
-          sessionInfo: {
-            ...state.sessionInfo,
-            shift,
-            shiftStatus
-          }
+          sessionInfo: { ...state.sessionInfo, ...newInfo }
         }));
       },
 
@@ -260,12 +222,12 @@ const useSidebarStore = create(
       initialize: () => {
         const state = get();
 
-        // Aplicar tema al body
+        // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
         if (typeof window !== 'undefined') {
           if (state.isDarkMode) {
-            document.body.classList.add('dark-mode');
+            document.body.classList.add('dark');
           } else {
-            document.body.classList.remove('dark-mode');
+            document.body.classList.remove('dark');
           }
         }
 
@@ -293,8 +255,9 @@ const useSidebarStore = create(
           }
         });
 
+        // ✅ CORRECCIÓN CRÍTICA: Limpiar clase 'dark' según tailwind.config.js
         if (typeof window !== 'undefined') {
-          document.body.classList.remove('dark-mode');
+          document.body.classList.remove('dark');
           document.body.style.overflow = '';
         }
       },

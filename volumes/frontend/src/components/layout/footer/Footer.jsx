@@ -1,306 +1,322 @@
 // ====================================
-// FOOTER COMPONENT - COMPONENTE PRINCIPAL INTEGRADO
-// Versión final con todos los componentes y hooks desarrollados
+// FOOTER COMPONENT - SINCRONIZADO CON SIDEBAR DARKMODE
+// Versión optimizada con sincronización perfecta del tema
 // ====================================
 
-import { useEffect } from 'react';
-import { cn } from '@/utils/cn';
-import { useFooterSelectors } from '@/hooks/useFooterSelectors';
-import { BranchInfoGroup,  CashInfoGroup,  UserInfoGroup  } from './InfoGroupWithIcon';
-import Divider from './Divider';
+import { useEffect, useMemo } from "react";
+import { cn } from "@/utils/cn";
+import { useAuth } from "@/store/authStore";
+import { useLayoutStore } from "@/store/layoutStore";
+import { useSidebar } from "@/store/sidebarStore"; // ✅ AÑADIDO: Conexión con sidebar
 
-import FooterLink from './FooterLink';
+// Importar componentes del footer
+import FooterLink from "./FooterLink";
+import {
+  BranchInfoGroup,
+  CashInfoGroup,
+  UserInfoGroup,
+  ShiftInfoGroup,
+} from "./InfoGroupWithIcon";
 
 /**
- * Componente principal del Footer
- * Integra todos los selectores, hooks y funcionalidades desarrolladas
+ * Componente Footer optimizado con sincronización de tema
+ * ✅ MEJORADO: Conectado al sidebarStore para darkMode sincronizado
  */
 function Footer({ className }) {
-  
   // ====================================
-  // HOOK PRINCIPAL - GESTIÓN UNIFICADA
-  // ====================================
-  
-  const {
-    // Estado principal
-    sessionInfo,
-    activeSelector,
-    isChanging,
-    
-    // Funciones específicas por tipo
-    openBranchSelector,
-    changeBranch,
-    openCashSelector,
-    changeCash,
-    openUserSelector,
-    changeUser,
-    openShiftSelector,
-    changeShift,
-    
-    // Utilidades
-    closeSelector,
-    resetSession,
-    getSelectorConfig
-  } = useFooterSelectors();
-
-  // ====================================
-  // INICIALIZACIÓN - REPLICA DEL TEMPLATE
+  // HOOKS Y ESTADO - SELECTORES ESPECÍFICOS
   // ====================================
 
-  useEffect(() => {
-    setupFooter();
-  }, []);
+  // Usuario desde authStore (SSOT)
+  const user = useAuth((state) => state.user);
 
-  const setupFooter = () => {
-    try {
-      console.log('🦶 Footer del sistema inicializado correctamente');
-      console.log('📋 Información de sesión cargada:', sessionInfo);
-      
-    } catch (error) {
-      console.error('❌ Error inicializando footer:', error);
-    }
-  };
+  // Layout context - Selectores específicos para evitar re-renders
+  const layoutContext = useLayoutStore((state) => state.layoutContext);
+  const activeFooterSelector = useLayoutStore(
+    (state) => state.activeFooterSelector
+  );
+  const setActiveFooterSelector = useLayoutStore(
+    (state) => state.setActiveFooterSelector
+  );
+  const closeFooterSelector = useLayoutStore(
+    (state) => state.closeFooterSelector
+  );
 
-  // ====================================
-  // MANEJO DE ENLACES - REPLICA DEL TEMPLATE
-  // ====================================
-
-  const handleFooterLink = (action, linkText) => {
-    const actions = {
-      support: () => openModal('Soporte Técnico', 'Se abriría el centro de soporte técnico del sistema'),
-      help: () => openModal('Centro de Ayuda', 'Se abriría la documentación completa del sistema')
-    };
-
-    if (actions[action]) {
-      actions[action]();
-    }
-    
-    console.log(`🔗 Enlace clickeado: ${linkText}`);
-  };
-
-  const openModal = (title, content) => {
-    // Por ahora usar alert, igual que el template original
-    // En una implementación real, aquí se abriría un modal personalizado
-    alert(`${title}\n\n${content}`);
-  };
+  // ✅ CONECTAR AL SIDEBAR STORE PARA TEMA SINCRONIZADO
+  const { isDarkMode, isCollapsed } = useSidebar();
 
   // ====================================
-  // HANDLERS ESPECÍFICOS PARA ICONOS
+  // DATOS MEMOIZADOS
   // ====================================
 
-  const handleBranchIconClick = (event) => {
-    openModal('branch', "Esto es contenido")
-    //handleIconClick('branch', event);
-  };
+  const sessionInfo = useMemo(
+    () => ({
+      // Datos del usuario desde authStore
+      user: user?.username || "sistema",
+      userFullName: user?.full_name || "Usuario",
+      userRole: user?.roles?.[0] || "User",
+      userEmail: user?.email || "",
 
-  const handleCashIconClick = (event) => {
-    openModal('branch', "Esto es contenido")
-    //handleIconClick('cash', event);
-  };
-
-  // const handleUserIconClick = (event) => {
-  //   //handleIconClick('user', event);
-  // };
-
-  // const handleShiftIconClick = (event) => {
-  //   //handleIconClick('shift', event);
-  // };
-
-  // ====================================
-  // HANDLERS PARA CAMBIOS DE VALORES
-  // ====================================
-
-  const handleBranchChange = (branchData) => {
-    console.log('🏢 Cambiando sucursal:', branchData);
-    //changeBranch(branchData);
-  };
-
-  // const handleCashChange = (cashData) => {
-  //   console.log('💰 Cambiando caja:', cashData);
-  //   changeCash(cashData);
-  // };
-
-  // const handleUserChange = (userData) => {
-  //   console.log('👤 Cambiando usuario:', userData);
-  //   changeUser(userData);
-  // };
-
-  // const handleShiftChange = (shiftData) => {
-  //   console.log('🕐 Cambiando turno:', shiftData);
-  //   changeShift(shiftData);
-  // };
+      // Contexto de trabajo desde layoutStore
+      branch: layoutContext?.currentBranch?.name || "Central",
+      branchCode: layoutContext?.currentBranch?.code || "CEN",
+      cashRegister: layoutContext?.currentCashRegister?.name || "#1234",
+      shift: layoutContext?.currentShift?.name || "Mañana",
+      shiftStatus: layoutContext?.currentShift?.status || "active",
+    }),
+    [user, layoutContext]
+  );
 
   // ====================================
-  // EXPONER API GLOBAL - COMPATIBILIDAD CON TEMPLATE
+  // HANDLERS ESTABLES
   // ====================================
 
-  useEffect(() => {
-    // API global para compatibilidad con el template original
-    window.SystemFooterAPI = {
-      // Información de sesión
-      getSessionInfo: () => sessionInfo,
-      
-      // Funciones de cambio directo (compatibilidad)
-      changeBranch: (branchName) => {
-        //changeBranch({ name: branchName, code: branchName.slice(0, 3).toUpperCase(), id: branchName.toLowerCase() });
-      },
-      changeCashRegister: (cashNumber) => {
-        //changeCash({ number: cashNumber, id: `cash-${cashNumber}`, status: 'active' });
-      },
-      changeUser: (username, fullName, role) => {
-        //changeUser({ username, fullName, role, id: `user-${username}`, email: `${username}@empresa.cl` });
-      },
-      changeShift: (shiftName, status = 'success') => {
-        //changeShift({ name: shiftName, status, id: shiftName.toLowerCase(), start: '08:00', end: '17:00' });
-      },
-      
-      // Funciones de apertura de selectores
-      openBranchSelector,
-      openCashSelector,
-      openUserSelector,
-      openShiftSelector,
-      
-      // Utilidades
-      closeSelector,
-      resetSession,
-      isChanging
-    };
-
-    // Función de compatibilidad con template original
-    window.updateSystemFooter = (type, value) => {
-      switch(type) {
-        case 'branch':
-          window.SystemFooterAPI.changeBranch(value);
-          break;
-        case 'cash':
-          window.SystemFooterAPI.changeCashRegister(value);
-          break;
-        case 'user':
-          window.SystemFooterAPI.changeUser(value.username, value.fullName, value.role);
-          break;
-        case 'shift':
-          window.SystemFooterAPI.changeShift(value.name, value.status);
-          break;
-        default:
-          console.warn('Tipo de actualización no reconocido:', type);
+  const handleSelectorClick = useMemo(
+    () => (selectorType) => {
+      if (activeFooterSelector === selectorType) {
+        closeFooterSelector();
+      } else {
+        setActiveFooterSelector(selectorType);
       }
-    };
+    },
+    [activeFooterSelector, closeFooterSelector, setActiveFooterSelector]
+  );
 
-    return () => {
-      // Cleanup API global
-      delete window.SystemFooterAPI;
-      delete window.updateSystemFooter;
-    };
-  }, [
-    sessionInfo, changeBranch, changeCash, changeUser, changeShift,
-    openBranchSelector, openCashSelector, openUserSelector, openShiftSelector,
-    closeSelector, resetSession, isChanging
-  ]);
+  const handleFooterLink = useMemo(
+    () => (action) => {
+      const actions = {
+        support: () => {
+          console.log("Abrir soporte técnico");
+          // Aquí puedes integrar con tu sistema de soporte
+          window.open("mailto:soporte@tuempresa.com", "_blank");
+        },
+        help: () => {
+          console.log("Abrir ayuda");
+          // Aquí puedes abrir un modal de ayuda o documentación
+        },
+        docs: () => {
+          console.log("Abrir documentación");
+          // Aquí puedes abrir la documentación del sistema
+          window.open("/docs", "_blank");
+        },
+      };
+
+      actions[action]?.();
+    },
+    []
+  );
+
+  // ====================================
+  // INICIALIZACIÓN (SOLO UNA VEZ)
+  // ====================================
+
+  useEffect(() => {
+    console.log("🦶 Footer del sistema inicializado correctamente");
+    console.log(`🎨 Tema inicial: ${isDarkMode ? "Oscuro" : "Claro"}`);
+  }, []); // Array vacío - solo se ejecuta una vez
+
+  // ✅ LOG OPCIONAL PARA DEBUG DE TEMA (comentado para producción)
+  // useEffect(() => {
+  //   console.log(`🦶 Footer - Tema cambiado a: ${isDarkMode ? 'Oscuro' : 'Claro'}`);
+  // }, [isDarkMode]);
 
   // ====================================
   // RENDER PRINCIPAL
   // ====================================
 
   return (
-    <>
-      <footer 
-        className={cn(
-          // Layout base - REPLICA EXACTA DEL CSS DEL TEMPLATE
-          "flex items-center justify-between",
-          "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300",
-          "border-t border-gray-200 dark:border-gray-700",
-          "px-6 lg:px-8 xl:px-12",
-          "h-12", // Altura fija
-          "relative z-10",
-          
-          // Transiciones
-          "transition-all duration-300 ease-in-out",
-          
-          // Sombra sutil
-          "shadow-[0_-1px_3px_rgba(0,0,0,0.1)]",
-          
-          // Responsive
-          "text-sm",
-          "min-w-0 flex-shrink-0",
-          
-          // Estados
-          isChanging && "opacity-75 pointer-events-none",
-          
-          className
-        )}
-        id="systemFooter"
-      >
-        
-        {/* Sección Izquierda - Copyright y Enlaces */}
-        <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
-          
-          {/* Enlaces - Ocultos en móvil */}
-          <div className="hidden md:flex items-center gap-4">
-            <FooterLink onClick={() => handleFooterLink('support', 'Soporte')}>
-              Soporte
-            </FooterLink>
-            <span className="text-gray-400 dark:text-gray-500">|</span>
-            <FooterLink onClick={() => handleFooterLink('help', 'Ayuda')}>
-              Ayuda
-            </FooterLink>
-          </div>
-        </div>
-        
-        {/* Sección Derecha - Información Operativa CON ICONOS CLICKEABLES */}
-        <div className="flex items-center gap-4 lg:gap-6 min-w-0 flex-shrink-0 font-medium">
-          
-          {/* Sucursal CON ICONO - Usando componente específico */}
-          <BranchInfoGroup 
-            label="Sucursal:"
-            value={sessionInfo.branch}
-            title="Sucursal actual - Click para cambiar"
-            onIconClick={handleBranchIconClick}
-            
-          />
-          
-          <Divider />
-          
-          {/* Caja CON ICONO - Oculto en móvil pequeño */}
-          <CashInfoGroup 
-            label="Caja:"
-            value={sessionInfo.cashRegister}
-            className="hidden sm:flex"
-            title="Caja registradora activa - Click para cambiar"
-            onIconClick={handleCashIconClick}
-          />
-          
-          <Divider className="hidden sm:block" />
-          
-          {/* Usuario CON ICONO - Versión compacta en móvil */}
-          <UserInfoGroup 
-            label="Usuario:"
-            value={sessionInfo.username}
-            role={sessionInfo.userRole}
-            iconClickable={false}
-          />
-        </div>
+    <footer
+      className={cn(
+        // === LAYOUT BASE ===
+        "flex items-center justify-between",
+        "relative z-20", // ✅ MEJORADO: z-index consistente con header
+        "h-12", // ✅ MEJORADO: altura explícita en lugar de variable
+        "px-6 lg:px-8 xl:px-12",
+        "min-w-0 flex-shrink-0",
 
-        {/* Indicador de carga global */}
-        {isChanging && (
-          <div className="absolute inset-0 bg-white dark:bg-gray-800 bg-opacity-50 flex items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-              <span>Actualizando...</span>
-            </div>
-          </div>
-        )}
-      </footer>
+        // ✅ FONDOS SINCRONIZADOS CON TAILWIND DARKMODE
+        "bg-white dark:bg-gray-900",
+        "border-t border-gray-200 dark:border-gray-700",
 
+        // ✅ TEXTOS SINCRONIZADOS
+        "text-sm text-gray-600 dark:text-gray-400",
 
+        // ✅ TRANSICIONES SUAVES PARA CAMBIOS DE TEMA
+        "transition-all duration-300 ease-in-out",
 
-      {/* Overlay para cerrar selectores (click fuera) */}
-      {activeSelector && getSelectorConfig(activeSelector).displayMode === 'modal' && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={closeSelector}
-        />
+        // ✅ SOMBRAS SINCRONIZADAS
+        "shadow-[0_-1px_3px_rgba(0,0,0,0.05)]",
+        "dark:shadow-[0_-1px_3px_rgba(0,0,0,0.15)]",
+
+        // ✅ ESTADOS MEJORADOS
+        activeFooterSelector && "bg-gray-50 dark:bg-gray-800/50",
+
+        className
       )}
-    </>
+      id="systemFooter"
+    >
+      {/* ================================ */}
+      {/* SECCIÓN IZQUIERDA - ENLACES */}
+      {/* ================================ */}
+      <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
+        {/* Enlaces de navegación */}
+        <div className="flex items-center gap-4">
+          <FooterLink
+            onClick={() => handleFooterLink("support")}
+            className={cn(
+              "transition-all duration-200",
+              "hover:text-blue-600 dark:hover:text-blue-400",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+              "dark:focus:ring-offset-gray-900"
+            )}
+          >
+            Soporte
+          </FooterLink>
+
+          <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
+          <FooterLink
+            onClick={() => handleFooterLink("help")}
+            className={cn(
+              "transition-all duration-200",
+              "hover:text-blue-600 dark:hover:text-blue-400",
+              "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+              "dark:focus:ring-offset-gray-900"
+            )}
+          >
+            Ayuda
+          </FooterLink>
+
+          {/* Documentación - Solo tablet+ */}
+          <div className="hidden md:flex items-center gap-4">
+            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+            <FooterLink
+              onClick={() => handleFooterLink("docs")}
+              className={cn(
+                "transition-all duration-200",
+                "hover:text-blue-600 dark:hover:text-blue-400",
+                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                "dark:focus:ring-offset-gray-900"
+              )}
+            >
+              Docs
+            </FooterLink>
+          </div>
+        </div>
+      </div>
+
+      {/* ================================ */}
+      {/* SECCIÓN DERECHA - INFORMACIÓN OPERATIVA */}
+      {/* ================================ */}
+      <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
+        {/* Información de Sucursal */}
+        <BranchInfoGroup
+          branch={sessionInfo.branch}
+          branchCode={sessionInfo.branchCode}
+          onClick={() => handleSelectorClick("branch")}
+          className={cn(
+            "transition-all duration-200 cursor-pointer",
+            "px-2 py-1 rounded-md",
+            "hover:bg-gray-100 dark:hover:bg-gray-700",
+            activeFooterSelector === "branch" && [
+              "bg-blue-50 dark:bg-blue-900/20",
+              "text-blue-600 dark:text-blue-400",
+            ]
+          )}
+        />
+
+        {/* Separador */}
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
+        {/* Información de Caja */}
+        <CashInfoGroup
+          cashRegister={sessionInfo.cashRegister}
+          onClick={() => handleSelectorClick("cash")}
+          className={cn(
+            "transition-all duration-200 cursor-pointer",
+            "px-2 py-1 rounded-md",
+            "hover:bg-gray-100 dark:hover:bg-gray-700",
+            activeFooterSelector === "cash" && [
+              "bg-orange-50 dark:bg-orange-900/20",
+              "text-orange-600 dark:text-orange-400",
+            ]
+          )}
+        />
+
+        {/* Separador - Solo laptop+ */}
+        <div className="hidden lg:block w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
+        {/* Información de Usuario - Solo laptop+ */}
+        <div className="hidden lg:block">
+          <UserInfoGroup
+            user={sessionInfo.user}
+            userFullName={sessionInfo.userFullName}
+            userRole={sessionInfo.userRole}
+            onClick={() => handleSelectorClick("user")}
+            className={cn(
+              "transition-all duration-200 cursor-pointer",
+              "px-2 py-1 rounded-md",
+              "hover:bg-gray-100 dark:hover:bg-gray-700",
+              activeFooterSelector === "user" && [
+                "bg-green-50 dark:bg-green-900/20",
+                "text-green-600 dark:text-green-400",
+              ]
+            )}
+          />
+        </div>
+
+        {/* Separador - Solo desktop */}
+        <div className="hidden xl:block w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+
+        {/* Información de Turno - Solo desktop */}
+        <div className="hidden xl:block">
+          <ShiftInfoGroup
+            shift={sessionInfo.shift}
+            shiftStatus={sessionInfo.shiftStatus}
+            onClick={() => handleSelectorClick("shift")}
+            className={cn(
+              "transition-all duration-200 cursor-pointer",
+              "px-2 py-1 rounded-md",
+              "hover:bg-gray-100 dark:hover:bg-gray-700",
+              activeFooterSelector === "shift" && [
+                "bg-cyan-50 dark:bg-cyan-900/20",
+                "text-cyan-600 dark:text-cyan-400",
+              ]
+            )}
+          />
+        </div>
+
+        {/* ✅ INDICADOR DE STATUS MEJORADO CON TEMA SINCRONIZADO */}
+        <div className="flex items-center gap-2 ml-2">
+          <div
+            className={cn(
+              "w-2 h-2 rounded-full transition-all duration-300",
+              "bg-green-500 dark:bg-green-400",
+              "shadow-sm shadow-green-500/30",
+              "animate-pulse"
+            )}
+          />
+          <span className="text-xs text-gray-500 dark:text-gray-400 hidden md:inline transition-colors duration-300">
+            Online
+          </span>
+        </div>
+
+        {/* ✅ INDICADOR VISUAL DEL ESTADO DEL SIDEBAR (OPCIONAL) */}
+        {isCollapsed && (
+          <div className="flex items-center gap-1 ml-2 hidden lg:flex">
+            <div className="w-1 h-1 bg-blue-500 dark:bg-blue-400 rounded-full animate-pulse" />
+            <span className="text-xs text-blue-600 dark:text-blue-400">
+              Compacto
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ================================ */}
+      {/* EFECTO VISUAL SUTIL SINCRONIZADO */}
+      {/* ================================ */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent opacity-60 transition-colors duration-300" />
+    </footer>
   );
 }
 
