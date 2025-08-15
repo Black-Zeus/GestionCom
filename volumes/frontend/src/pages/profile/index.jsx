@@ -1,6 +1,6 @@
 // ====================================
 // volumes/frontend/src/pages/profile/index.jsx
-// Página principal del perfil de usuario
+// Página principal del perfil de usuario - Layout Bento
 // ====================================
 
 import React from "react";
@@ -20,62 +20,43 @@ const Profile = () => {
         {/* Header principal */}
         <ProfileHeader />
 
-        {/* Grid principal de contenido */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Columna izquierda - Formularios principales */}
-          <div className="xl:col-span-2 space-y-8">
-            {/* Información personal */}
-            <PersonalInfoForm />
-
-            {/* Cambio de contraseña */}
-            <PasswordChangeForm />
-          </div>
-
-          {/* Columna derecha - Cards de información */}
-          <div className="xl:col-span-1 space-y-8">
-            {/* Información de cuenta */}
-            <AccountInfoCard />
-
-            {/* Roles y permisos */}
-            <RolesCard />
-
-            {/* Acceso a bodegas */}
-            <WarehouseCard />
-          </div>
-        </div>
-
-        {/* Footer de la página */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            {/* Información de ayuda */}
-            <div className="text-center md:text-left">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                ¿Necesitas ayuda?
-              </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Contacta al administrador del sistema para cambios en roles o
-                permisos
-              </p>
+        {/* Fila 1: Información Personal + Información de Cuenta */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" style={{ gridAutoRows: '1fr' }}>
+          {/* Información personal - 70% */}
+          <div className="lg:col-span-2 flex flex-col h-full">
+            <div className="h-full flex flex-col">
+              <PersonalInfoForm />
             </div>
+          </div>
 
-            {/* Botones de acción */}
-            <div className="flex space-x-3">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500">
-                📞 Soporte
-              </button>
-              <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500">
-                📧 Contactar Admin
-              </button>
+          {/* Información de cuenta - 30% */}
+          <div className="lg:col-span-1 flex flex-col h-full">
+            <div className="h-full flex flex-col">
+              <AccountInfoCard />
             </div>
           </div>
         </div>
 
-        {/* Información de privacidad */}
-        <div className="text-center py-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Tu información personal está protegida y solo es visible para ti y
-            los administradores del sistema.
-          </p>
+        {/* Fila 2: Cambiar Contraseña + Acceso a Bodegas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ gridAutoRows: '1fr' }}>
+          {/* Cambiar contraseña - 50% */}
+          <div className="flex flex-col h-full">
+            <div className="h-full flex flex-col">
+              <PasswordChangeForm />
+            </div>
+          </div>
+
+          {/* Acceso a bodegas - 50% */}
+          <div className="flex flex-col h-full">
+            <div className="h-full flex flex-col">
+              <WarehouseCard />
+            </div>
+          </div>
+        </div>
+
+        {/* Fila 3: Roles y Permisos - Ancho completo */}
+        <div>
+          <RolesCard />
         </div>
       </div>
     </div>

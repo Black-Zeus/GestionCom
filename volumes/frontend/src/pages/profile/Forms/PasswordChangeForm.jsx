@@ -1,6 +1,6 @@
 // ====================================
 // volumes/frontend/src/pages/profile/Forms/PasswordChangeForm.jsx
-// Formulario para cambio de contraseña
+// Formulario para cambio de contraseña con iconos del login
 // ====================================
 
 import React, { useState } from "react";
@@ -58,67 +58,61 @@ const PasswordChangeForm = () => {
           ...prev,
           confirmPassword: "Las contraseñas no coinciden",
         }));
-      } else if (confirmPassword && newPassword === confirmPassword) {
+      } else {
         setErrors((prev) => ({ ...prev, confirmPassword: "" }));
       }
     }
-
-    setSuccess(false);
   };
 
   const togglePasswordVisibility = (field) => {
-    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
+    setShowPasswords((prev) => ({
+      ...prev,
+      [field]: !prev[field],
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrors({});
-
-    // Validaciones
-    const newErrors = {};
-
-    if (!formData.currentPassword) {
-      newErrors.currentPassword = "La contraseña actual es requerida";
-    }
-
-    if (!formData.newPassword) {
-      newErrors.newPassword = "La nueva contraseña es requerida";
-    } else if (!isPasswordValid) {
-      newErrors.newPassword = "La contraseña no cumple con los requisitos";
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Confirma tu nueva contraseña";
-    } else if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
-    }
-
-    if (formData.currentPassword === formData.newPassword) {
-      newErrors.newPassword =
-        "La nueva contraseña debe ser diferente a la actual";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setIsLoading(false);
-      return;
-    }
 
     try {
-      // Simulación de API call
+      // Validar datos antes de enviar
+      const newErrors = {};
+
+      if (!formData.currentPassword) {
+        newErrors.currentPassword = "La contraseña actual es requerida";
+      }
+
+      if (!isPasswordValid) {
+        newErrors.newPassword = "La nueva contraseña no cumple los requisitos";
+      }
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        newErrors.confirmPassword = "Las contraseñas no coinciden";
+      }
+
+      if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        return;
+      }
+
+      // Simular API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Simular éxito
+      // Éxito
       setSuccess(true);
       setFormData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
+
+      // Ocultar mensaje de éxito después de 5 segundos
+      setTimeout(() => setSuccess(false), 5000);
     } catch (error) {
       setErrors({
-        submit: "Error al cambiar la contraseña. Intenta nuevamente.",
+        submit:
+          "Error al cambiar la contraseña. Verifica tu contraseña actual e intenta nuevamente.",
       });
     } finally {
       setIsLoading(false);
@@ -129,8 +123,28 @@ const PasswordChangeForm = () => {
     return isValid ? "✅" : "❌";
   };
 
+  // Componente para el icono de mostrar/ocultar (igual que en login)
+  const EyeIcon = ({ show }) => {
+    if (show) {
+      // Icono "Eye Off" (ocultar)
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+        </svg>
+      );
+    } else {
+      // Icono "Eye" (mostrar)
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      );
+    }
+  };
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 flex-1 flex flex-col">
       {/* Header */}
       <div className="flex items-center space-x-3 mb-6">
         <div className="flex-shrink-0">
@@ -165,7 +179,7 @@ const PasswordChangeForm = () => {
       )}
 
       {/* Formulario */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 flex-1">
         {/* Contraseña actual */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -178,7 +192,7 @@ const PasswordChangeForm = () => {
               onChange={(e) =>
                 handleInputChange("currentPassword", e.target.value)
               }
-              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              className={`w-full px-3 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                 errors.currentPassword ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Ingresa tu contraseña actual"
@@ -186,9 +200,10 @@ const PasswordChangeForm = () => {
             <button
               type="button"
               onClick={() => togglePasswordVisibility("current")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 focus:outline-none focus:scale-110"
+              aria-label={showPasswords.current ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPasswords.current ? "🙈" : "👁️"}
+              <EyeIcon show={showPasswords.current} />
             </button>
           </div>
           {errors.currentPassword && (
@@ -208,17 +223,18 @@ const PasswordChangeForm = () => {
               type={showPasswords.new ? "text" : "password"}
               value={formData.newPassword}
               onChange={(e) => handleInputChange("newPassword", e.target.value)}
-              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              className={`w-full px-3 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                 errors.newPassword ? "border-red-500" : "border-gray-300"
               }`}
-              placeholder="Ingresa tu nueva contraseña"
+              placeholder="Mínimo 8 caracteres"
             />
             <button
               type="button"
               onClick={() => togglePasswordVisibility("new")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 focus:outline-none focus:scale-110"
+              aria-label={showPasswords.new ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPasswords.new ? "🙈" : "👁️"}
+              <EyeIcon show={showPasswords.new} />
             </button>
           </div>
           {errors.newPassword && (
@@ -229,80 +245,57 @@ const PasswordChangeForm = () => {
 
           {/* Validaciones de contraseña */}
           {formData.newPassword && (
-            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Requisitos de la contraseña:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
-                <div className="flex items-center space-x-2">
-                  <span>
-                    {getValidationIcon(passwordValidations.minLength)}
-                  </span>
-                  <span
-                    className={
-                      passwordValidations.minLength
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    Mínimo 8 caracteres
-                  </span>
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                <div
+                  className={`flex items-center space-x-2 ${
+                    passwordValidations.minLength
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <span>{getValidationIcon(passwordValidations.minLength)}</span>
+                  <span>Mínimo 8 caracteres</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span>
-                    {getValidationIcon(passwordValidations.hasUppercase)}
-                  </span>
-                  <span
-                    className={
-                      passwordValidations.hasUppercase
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    Mayúscula
-                  </span>
+                <div
+                  className={`flex items-center space-x-2 ${
+                    passwordValidations.hasUppercase
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <span>{getValidationIcon(passwordValidations.hasUppercase)}</span>
+                  <span>Al menos una letra mayúscula</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span>
-                    {getValidationIcon(passwordValidations.hasLowercase)}
-                  </span>
-                  <span
-                    className={
-                      passwordValidations.hasLowercase
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    Minúscula
-                  </span>
+                <div
+                  className={`flex items-center space-x-2 ${
+                    passwordValidations.hasLowercase
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <span>{getValidationIcon(passwordValidations.hasLowercase)}</span>
+                  <span>Al menos una letra minúscula</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span>
-                    {getValidationIcon(passwordValidations.hasNumber)}
-                  </span>
-                  <span
-                    className={
-                      passwordValidations.hasNumber
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    Número
-                  </span>
+                <div
+                  className={`flex items-center space-x-2 ${
+                    passwordValidations.hasNumber
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <span>{getValidationIcon(passwordValidations.hasNumber)}</span>
+                  <span>Al menos un número</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span>
-                    {getValidationIcon(passwordValidations.hasSpecial)}
-                  </span>
-                  <span
-                    className={
-                      passwordValidations.hasSpecial
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }
-                  >
-                    Carácter especial
-                  </span>
+                <div
+                  className={`flex items-center space-x-2 ${
+                    passwordValidations.hasSpecial
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <span>{getValidationIcon(passwordValidations.hasSpecial)}</span>
+                  <span>Al menos un carácter especial</span>
                 </div>
               </div>
             </div>
@@ -321,17 +314,18 @@ const PasswordChangeForm = () => {
               onChange={(e) =>
                 handleInputChange("confirmPassword", e.target.value)
               }
-              className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              className={`w-full px-3 py-2 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
                 errors.confirmPassword ? "border-red-500" : "border-gray-300"
               }`}
-              placeholder="Confirma tu nueva contraseña"
+              placeholder="Repite tu nueva contraseña"
             />
             <button
               type="button"
               onClick={() => togglePasswordVisibility("confirm")}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 focus:outline-none focus:scale-110"
+              aria-label={showPasswords.confirm ? "Ocultar contraseña" : "Mostrar contraseña"}
             >
-              {showPasswords.confirm ? "🙈" : "👁️"}
+              <EyeIcon show={showPasswords.confirm} />
             </button>
           </div>
           {errors.confirmPassword && (
@@ -341,7 +335,7 @@ const PasswordChangeForm = () => {
           )}
         </div>
 
-        {/* Error de envío */}
+        {/* Error general */}
         {errors.submit && (
           <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-sm text-red-700 dark:text-red-300">
@@ -350,53 +344,15 @@ const PasswordChangeForm = () => {
           </div>
         )}
 
-        {/* Botones */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <button
-            type="button"
-            onClick={() => {
-              setFormData({
-                currentPassword: "",
-                newPassword: "",
-                confirmPassword: "",
-              });
-              setErrors({});
-              setSuccess(false);
-            }}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500"
-          >
-            Cancelar
-          </button>
+        {/* Botón de envío */}
+        <div className="flex justify-end mt-auto">
           <button
             type="submit"
-            disabled={
-              isLoading ||
-              !isPasswordValid ||
-              formData.newPassword !== formData.confirmPassword
-            }
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            disabled={isLoading || !isPasswordValid || formData.newPassword !== formData.confirmPassword}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-2"
           >
             {isLoading && (
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             )}
             <span>{isLoading ? "Actualizando..." : "Cambiar Contraseña"}</span>
           </button>

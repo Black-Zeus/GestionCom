@@ -14,17 +14,17 @@ const WarehouseCard = () => {
     const types = {
       FULL: {
         color:
-          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+          "text-green-800",
         icon: "✅",
         text: "Completo",
       },
       READ_ONLY: {
-        color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+        color: "text-blue-800",
         icon: "👁️",
         text: "Solo lectura",
       },
       DENIED: {
-        color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+        color: "text-red-800",
         icon: "❌",
         text: "Denegado",
       },
@@ -137,7 +137,7 @@ const WarehouseCard = () => {
                     </div>
                   </div>
                 </div>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-yellow-800 dark:text-yellow-200">
                   👑 Responsable
                 </span>
               </div>

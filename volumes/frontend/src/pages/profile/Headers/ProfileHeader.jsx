@@ -5,26 +5,10 @@
 
 import React from "react";
 import { mockUserData } from "@/data/mockData";
+import { formatDateTimeTechnical } from "@/utils/formats";
 
 const ProfileHeader = () => {
   const { personal, account, roles } = mockUserData;
-
-  const formatLastLogin = (dateString) => {
-    if (!dateString) return "Nunca";
-    return new Date(dateString).toLocaleString("es-CL", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusColor = (isActive) => {
-    return isActive
-      ? "text-green-600 dark:text-green-400"
-      : "text-red-600 dark:text-red-400";
-  };
 
   const getMainRole = () => {
     if (roles.has_admin_role)
@@ -65,6 +49,7 @@ const ProfileHeader = () => {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-lg shadow-lg p-8 text-white mb-8">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-6 lg:space-y-0">
+        
         {/* Información principal del usuario */}
         <div className="flex items-center space-x-6">
           {/* Avatar */}
@@ -73,19 +58,6 @@ const ProfileHeader = () => {
               <span className="text-4xl font-bold text-white">
                 {personal.initials}
               </span>
-            </div>
-
-            {/* Badge de estado */}
-            <div className="absolute -bottom-1 -right-1">
-              <div
-                className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center ${
-                  account.is_active ? "bg-green-500" : "bg-red-500"
-                }`}
-              >
-                <span className="text-xs text-white">
-                  {account.is_active ? "✓" : "✕"}
-                </span>
-              </div>
             </div>
           </div>
 
@@ -108,15 +80,6 @@ const ProfileHeader = () => {
                 <span className="mr-1">{mainRole.icon}</span>
                 {mainRole.role}
               </span>
-
-              {/* Estado de cuenta */}
-              <span
-                className={`text-sm font-medium ${getStatusColor(
-                  account.is_active
-                )}`}
-              >
-                {account.is_active ? "🟢 Activo" : "🔴 Inactivo"}
-              </span>
             </div>
 
             {/* Email */}
@@ -127,99 +90,141 @@ const ProfileHeader = () => {
           </div>
         </div>
 
-        {/* Panel de estadísticas rápidas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-          {/* Roles */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="text-2xl font-bold text-white">
-              {roles.role_names.length}
-            </div>
-            <div className="text-xs text-blue-100 dark:text-purple-100">
-              Roles
-            </div>
-          </div>
-
-          {/* Permisos */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="text-2xl font-bold text-white">
-              {roles.permission_codes.length}
-            </div>
-            <div className="text-xs text-blue-100 dark:text-purple-100">
-              Permisos
-            </div>
-          </div>
-
-          {/* Bodegas */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="text-2xl font-bold text-white">
-              {roles.warehouse_count}
-            </div>
-            <div className="text-xs text-blue-100 dark:text-purple-100">
-              Bodegas
-            </div>
-          </div>
-
-          {/* Días desde último login */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <div className="text-2xl font-bold text-white">
-              {account.has_recent_login
-                ? "✓"
-                : Math.floor(
-                    (new Date() - new Date(account.last_login_at)) /
-                      (1000 * 60 * 60 * 24)
-                  ) || 0}
-            </div>
-            <div className="text-xs text-blue-100 dark:text-purple-100">
-              {account.has_recent_login ? "Reciente" : "Días sin acceso"}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Información adicional */}
-      <div className="mt-6 pt-6 border-t border-white/20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          {/* Último acceso */}
-          <div className="flex items-center space-x-2">
-            <span className="text-blue-200 dark:text-purple-200">🕒</span>
-            <div>
-              <div className="text-blue-100 dark:text-purple-100">
-                Último acceso:
+        {/* Panel de estadísticas y datos adicionales alineado a la derecha */}
+        <div className="flex justify-end w-full gap-6 pr-4">
+          
+          {/* Contadores en grid 2x2 */}
+          <div className="grid grid-cols-2 gap-4 text-center">
+            {/* Roles */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <div className="text-2xl font-bold text-white">
+                {roles.role_names.length}
               </div>
-              <div className="text-white font-medium">
-                {formatLastLogin(account.last_login_at)}
+              <div className="text-xs text-blue-100 dark:text-purple-100">
+                Roles
               </div>
             </div>
+
+            {/* Permisos */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <div className="text-2xl font-bold text-white">
+                {roles.permission_codes.length}
+              </div>
+              <div className="text-xs text-blue-100 dark:text-purple-100">
+                Permisos
+              </div>
+            </div>
+
+            {/* Bodegas */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <div className="text-2xl font-bold text-white">
+                {roles.warehouse_count}
+              </div>
+              <div className="text-xs text-blue-100 dark:text-purple-100">
+                Bodegas
+              </div>
+            </div>
+
+            {/* Estado de la cuenta */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              {(() => {
+                const isActive = account.is_active;
+                const palette = isActive
+                  ? {
+                      label: "ACTIVO",
+                      badge:
+                        "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-200",
+                      iconFill: "text-green-600 dark:text-green-300",
+                      desc: "Estado de cuenta",
+                    }
+                  : {
+                      label: "INACTIVO",
+                      badge:
+                        "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200",
+                      iconFill: "text-red-600 dark:text-red-300",
+                      desc: "Estado de cuenta",
+                    };
+
+                return (
+                  <div className="flex flex-col items-center text-center">
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      aria-label={`Cuenta ${palette.label.toLowerCase()}`}
+                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${palette.badge}`}
+                    >
+                      {isActive ? (
+                        <svg
+                          className={`h-4 w-4 ${palette.iconFill}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M20 7L9 18l-5-5"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className={`h-4 w-4 ${palette.iconFill}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M18.364 5.636a9 9 0 1 0 0 12.728A9 9 0 0 0 18.364 5.636zm-12.728 0L18.364 18.364"
+                          />
+                        </svg>
+                      )}
+                      {palette.label}
+                    </span>
+
+                    <div className="mt-2 text-xs text-blue-100 dark:text-purple-100">
+                      {palette.desc}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
 
-          {/* Teléfono */}
-          {personal.phone && (
-            <div className="flex items-center space-x-2">
-              <span className="text-blue-200 dark:text-purple-200">📱</span>
+          {/* Información adicional */}
+          <div className="grid grid-cols-1 gap-4 w-[220px]">
+            {/* Último acceso */}
+            <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+              <span className="text-blue-200 dark:text-purple-200 text-xl">🕒</span>
               <div>
-                <div className="text-blue-100 dark:text-purple-100">
-                  Teléfono:
+                <div className="text-blue-100 dark:text-purple-100 text-sm">
+                  Último acceso:
                 </div>
-                <div className="text-white font-medium">{personal.phone}</div>
+                <div className="text-white font-medium">
+                  {formatDateTimeTechnical(account.last_login_at)}
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Cuenta desde */}
-          <div className="flex items-center space-x-2">
-            <span className="text-blue-200 dark:text-purple-200">📅</span>
-            <div>
-              <div className="text-blue-100 dark:text-purple-100">
-                Miembro desde:
+            {/* Teléfono */}
+            {personal.phone && (
+              <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                <span className="text-blue-200 dark:text-purple-200 text-xl">📱</span>
+                <div>
+                  <div className="text-blue-100 dark:text-purple-100 text-sm">
+                    Teléfono:
+                  </div>
+                  <div className="text-white font-medium">{personal.phone}</div>
+                </div>
               </div>
-              <div className="text-white font-medium">
-                {new Date(account.created_at).toLocaleDateString("es-CL", {
-                  year: "numeric",
-                  month: "long",
-                })}
-              </div>
-            </div>
+            )}
           </div>
+
         </div>
       </div>
 
@@ -233,10 +238,8 @@ const ProfileHeader = () => {
                 Acción requerida
               </div>
               <div className="text-yellow-200 text-sm mt-1">
-                {account.needs_password_change &&
-                  "Tu contraseña debe ser actualizada. "}
-                {!account.has_recent_login &&
-                  "No has accedido recientemente al sistema."}
+                {account.needs_password_change && "Tu contraseña debe ser actualizada. "}
+                {!account.has_recent_login && "No has accedido recientemente al sistema."}
               </div>
             </div>
           </div>
