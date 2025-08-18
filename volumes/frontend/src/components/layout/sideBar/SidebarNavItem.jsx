@@ -7,7 +7,7 @@ import SidebarTooltip from './SidebarTooltip';
 
 function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
   const location = useLocation();
-  const { activeSection, setActiveSection } = useSidebar();
+  const { activeSection, setActiveSection, toggleSubmenu, openSubmenus } = useSidebar();
 
   const {
     id,
@@ -19,39 +19,53 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     submenu,
   } = item;
 
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
+  // Estado local simple para el submenu
+  const isSubmenuOpen = openSubmenus.includes(id);
   const [activeSubmenuItem, setActiveSubmenuItem] = useState(null);
 
   // Match por ruta para marcar activo
   const submenuMatch = useMemo(() => {
     if (!hasSubmenu || !submenu) return null;
-    return submenu.find(
-      (s) => s.path && location.pathname.startsWith(s.path)
-    );
+    return submenu.find(subitem => {
+      if (!subitem.path) return false;
+      // Coincidencia exacta o que la ruta actual inicie con la ruta del subitem
+      return location.pathname === subitem.path || 
+             location.pathname.startsWith(subitem.path + '/');
+    });
   }, [hasSubmenu, submenu, location.pathname]);
 
+  // Mejorar lógica de elemento activo
   const isItemActive = useMemo(() => {
-    if (hasSubmenu) return Boolean(submenuMatch);
-    if (path) return location.pathname === path;
-    return activeSection === text; // fallback por si hay items sin path
+    if (hasSubmenu) {
+      // Para items con submenú, está activo si algún subitem coincide
+      return Boolean(submenuMatch);
+    }
+    
+    if (path) {
+      // Para items sin submenú, coincidencia exacta o de dashboard
+      if (path === '/dashboard' && (location.pathname === '/' || location.pathname === '/dashboard')) return true;
+      if (path === '/' && (location.pathname === '/' || location.pathname === '/dashboard')) return true;
+      return location.pathname === path || location.pathname.startsWith(path + '/');
+    }
+    
+    // Fallback por texto de sección
+    return activeSection === text;
   }, [hasSubmenu, submenuMatch, path, location.pathname, activeSection, text]);
 
-  // Abrir submenú y fijar subitem activo según la URL
+  // Sincronizar estado activo con submenu match - SIN causar bucles
   useEffect(() => {
-    if (submenuMatch) {
-      setIsSubmenuOpen(true);
+    if (submenuMatch && submenuMatch.id !== activeSubmenuItem) {
       setActiveSubmenuItem(submenuMatch.id);
       setActiveSection(submenuMatch.text);
-    } else if (!hasSubmenu && isItemActive) {
+    } else if (!hasSubmenu && isItemActive && activeSection !== text) {
       setActiveSection(text);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submenuMatch, isItemActive, hasSubmenu]);
+  }, [submenuMatch?.id, isItemActive, hasSubmenu, text]); // Solo dependencias específicas
 
   const handleClickParent = (e) => {
     if (hasSubmenu) {
       e.preventDefault();
-      setIsSubmenuOpen((v) => !v);
+      toggleSubmenu(id);
       if (!activeSubmenuItem) setActiveSection(text);
     }
   };
@@ -105,26 +119,32 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     </>
   );
 
-  // Si NO tiene submenú => usar NavLink (marca activo al navegar o recargar)
+  // Si NO tiene submenú => usar NavLink (navegación real)
   if (!hasSubmenu) {
     return (
       <div className="relative">
         <NavLink
           to={path || '#'}
-          end
+          end={path === '/'}
           onClick={() => setActiveSection(text)}
           className={({ isActive }) =>
             cn(
-              'flex items-center px-6 py-3 relative cursor-pointer border-l-3 border-transparent mb-0.5',
-              'sidebar-nav-item text-white/90 sidebar-smooth-transition',
-              'hover:bg-white/10 hover:text-white hover:border-l-primary-color hover:translate-x-0.5',
+              // Estilos base
+              'flex items-center px-6 py-3 relative cursor-pointer mb-0.5',
+              'text-white/90 transition-all duration-200',
+              
+              // Borde izquierdo y efectos hover
+              'border-l-4 border-transparent',
+              'hover:bg-white/10 hover:text-white hover:border-l-blue-400',
+              
+              // Estado activo con estilos más visibles
               (isActive || isItemActive) && [
-                'bg-primary-color/20',
-                'text-white',
-                'border-l-primary-color',
-                'font-medium',
-                'shadow-sm',
+                'bg-blue-500/30 border-l-blue-400',
+                'text-white font-semibold',
+                'shadow-lg shadow-blue-500/20',
               ],
+              
+              // Estilos para collapsed
               isCollapsed && ['justify-center', 'px-4'],
               className
             )
@@ -138,30 +158,36 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     );
   }
 
-  // Con submenú => botón para expandir/contraer; subitems usan NavLink
+  // Con submenú => botón para expandir/contraer
   return (
     <div className="relative">
-      <a
-        href="#"
+      <button
+        type="button"
         onClick={handleClickParent}
         className={cn(
-          'flex items-center px-6 py-3 relative cursor-pointer border-l-3 border-transparent mb-0.5',
-          'sidebar-nav-item text-white/90 sidebar-smooth-transition',
-          'hover:bg-white/10 hover:text-white hover:border-l-primary-color hover:translate-x-0.5',
+          // Estilos base
+          'flex items-center px-6 py-3 relative cursor-pointer mb-0.5 w-full text-left',
+          'text-white/90 transition-all duration-200',
+          
+          // Borde izquierdo y efectos hover
+          'border-l-4 border-transparent',
+          'hover:bg-white/10 hover:text-white hover:border-l-blue-400',
+          
+          // Estado activo con estilos más visibles
           isItemActive && [
-            'bg-primary-color/20',
-            'text-white',
-            'border-l-primary-color',
-            'font-medium',
-            'shadow-sm',
+            'bg-blue-500/30 border-l-blue-400',
+            'text-white font-semibold',
+            'shadow-lg shadow-blue-500/20',
           ],
+          
+          // Estilos para collapsed
           isCollapsed && ['justify-center', 'px-4'],
           className
         )}
         data-tooltip={isCollapsed ? text : ''}
       >
         <ItemContent />
-      </a>
+      </button>
 
       {isCollapsed && <SidebarTooltip text={text} />}
 

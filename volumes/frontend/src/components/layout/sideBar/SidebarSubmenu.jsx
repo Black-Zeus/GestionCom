@@ -1,5 +1,5 @@
 import { cn } from '@/utils/cn';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 /**
  * Componente de Submenú Expandible
@@ -13,6 +13,8 @@ function SidebarSubmenu({
   onSubmenuItemClick,
   className,
 }) {
+  const location = useLocation();
+
   const baseItemCls = cn(
     'flex items-center',
     'pl-8 pr-6 py-3',
@@ -32,6 +34,17 @@ function SidebarSubmenu({
     'pl-10'
   );
 
+  // Helper para verificar si un subitem está activo
+  const isSubitemActive = (subitem) => {
+    if (!subitem.path) return activeSubmenuItem === subitem.id;
+    
+    // Verificar coincidencia de ruta
+    if (location.pathname === subitem.path) return true;
+    if (subitem.path === '/' && location.pathname === '/dashboard') return true;
+    if (subitem.path === '/dashboard' && location.pathname === '/') return true;
+    return location.pathname.startsWith(subitem.path + '/');
+  };
+
   return (
     <div
       className={cn(
@@ -44,12 +57,16 @@ function SidebarSubmenu({
       )}
     >
       <div className={cn('py-1', 'transition-all duration-300 ease-out', isOpen ? 'delay-100' : '')}>
-        {items.map((subitem) => {
+        {items?.map((subitem) => {
+          if (!subitem) return null;
+
+          const isActive = isSubitemActive(subitem);
+
           const content = (
             <>
               {/* Icono */}
               <span className="w-5 text-center text-base flex-shrink-0 mr-3">
-                {subitem.icon}
+                {subitem.icon || '•'}
               </span>
               {/* Texto */}
               <span className="flex-1 whitespace-nowrap overflow-hidden">
@@ -64,10 +81,10 @@ function SidebarSubmenu({
               <NavLink
                 key={subitem.id}
                 to={subitem.path}
-                end
+                end={subitem.path === '/'}
                 onClick={() => onSubmenuItemClick?.(subitem)}
-                className={({ isActive }) =>
-                  cn(baseItemCls, (activeSubmenuItem === subitem.id || isActive) && activeCls)
+                className={({ isActive: navIsActive }) =>
+                  cn(baseItemCls, (isActive || navIsActive) && activeCls)
                 }
               >
                 {content}
@@ -81,7 +98,7 @@ function SidebarSubmenu({
               key={subitem.id}
               type="button"
               onClick={() => onSubmenuItemClick?.(subitem)}
-              className={cn(baseItemCls, activeSubmenuItem === subitem.id && activeCls, 'w-full text-left')}
+              className={cn(baseItemCls, isActive && activeCls, 'w-full text-left')}
             >
               {content}
             </button>
