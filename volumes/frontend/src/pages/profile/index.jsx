@@ -1,6 +1,6 @@
 // ====================================
 // volumes/frontend/src/pages/profile/index.jsx
-// Página principal del perfil de usuario - Layout Bento
+// Página principal del perfil de usuario
 // ====================================
 
 import React from "react";
@@ -20,44 +20,23 @@ const Profile = () => {
         {/* Header principal */}
         <ProfileHeader />
 
-        {/* Fila 1: Información Personal + Información de Cuenta */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8" style={{ gridAutoRows: '1fr' }}>
-          {/* Información personal - 70% */}
-          <div className="lg:col-span-2 flex flex-col h-full">
-            <div className="h-full flex flex-col">
-              <PersonalInfoForm />
-            </div>
-          </div>
+        {/* Información de Cuenta - 100% ancho */}
+        <AccountInfoCard />
 
-          {/* Información de cuenta - 30% */}
-          <div className="lg:col-span-1 flex flex-col h-full">
-            <div className="h-full flex flex-col">
-              <AccountInfoCard />
-            </div>
-          </div>
+        {/* Información Personal - 100% ancho */}
+        <PersonalInfoForm />
+
+        {/* Grid de 2 columnas para Contraseña y Bodegas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Cambiar Contraseña */}
+          <PasswordChangeForm />
+          
+          {/* Acceso a Bodegas */}
+          <WarehouseCard />
         </div>
 
-        {/* Fila 2: Cambiar Contraseña + Acceso a Bodegas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ gridAutoRows: '1fr' }}>
-          {/* Cambiar contraseña - 50% */}
-          <div className="flex flex-col h-full">
-            <div className="h-full flex flex-col">
-              <PasswordChangeForm />
-            </div>
-          </div>
-
-          {/* Acceso a bodegas - 50% */}
-          <div className="flex flex-col h-full">
-            <div className="h-full flex flex-col">
-              <WarehouseCard />
-            </div>
-          </div>
-        </div>
-
-        {/* Fila 3: Roles y Permisos - Ancho completo */}
-        <div>
-          <RolesCard />
-        </div>
+        {/* Roles y Permisos - 100% ancho */}
+        <RolesCard />
       </div>
     </div>
   );

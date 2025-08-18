@@ -1,14 +1,89 @@
 // ====================================
 // volumes/frontend/src/pages/profile/Headers/ProfileHeader.jsx
-// Header principal de la página de perfil
+// Header principal de la página de perfil (reactivo al store)
 // ====================================
 
-import React from "react";
-import { mockUserData } from "@/data/mockData";
+import React, { useMemo, useEffect } from "react";
+import { useUserProfile, useProfileLoading, useAuth } from "@/store/authStore";
 import { formatDateTimeTechnical } from "@/utils/formats";
 
+// Fallback simple si backend no provee flag "isRecentlyActive"
+const computeHasRecentLogin = (lastLoginAt, days = 30) => {
+  if (!lastLoginAt) return false;
+  const last = new Date(lastLoginAt).getTime();
+  const now = Date.now();
+  const diffDays = (now - last) / (1000 * 60 * 60 * 24);
+  return diffDays <= days;
+};
+
 const ProfileHeader = () => {
-  const { personal, account, roles } = mockUserData;
+  const userProfile = useUserProfile();
+  const isProfileLoading = useProfileLoading();
+  const { loadUserProfile } = useAuth();
+
+  // Cargar perfil si no está disponible
+  useEffect(() => {
+    if (!userProfile && !isProfileLoading) {
+      loadUserProfile();
+    }
+  }, [userProfile, isProfileLoading, loadUserProfile]);
+
+  // ViewModel: adapta userProfile al shape usado por el header original
+  const vm = useMemo(() => {
+    if (!userProfile) return null;
+
+    const roles = {
+      has_admin_role: !!userProfile.hasAdminRole,
+      has_manager_role: !!userProfile.hasManagerRole,
+      is_supervisor: !!userProfile.isSupervisor,
+      is_cashier: !!userProfile.isCashier,
+      role_names: userProfile.roleNames || [],
+      permission_codes: userProfile.permissions || [], // mapea a "permissions" del perfil
+      warehouse_count: userProfile.warehouseCount || 0,
+    };
+
+    const account = {
+      is_active: !!userProfile.isActive,
+      last_login_at: userProfile.lastLoginAt || null,
+      has_recent_login:
+        typeof userProfile.isRecentlyActive === "boolean"
+          ? userProfile.isRecentlyActive
+          : computeHasRecentLogin(userProfile.lastLoginAt),
+      needs_password_change: !!userProfile.needsPasswordChange,
+    };
+
+    const personal = {
+      initials: userProfile.initials || "",
+      full_name: userProfile.displayName || userProfile.fullName || "",
+      username: userProfile.username || "",
+      email: userProfile.email || "",
+      phone: userProfile.phone || "",
+    };
+
+    return { personal, account, roles };
+  }, [userProfile]);
+
+  // Loading / vacío
+  if (isProfileLoading && !vm) {
+    return (
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-lg shadow-lg p-8 text-white mb-8">
+        <div className="animate-pulse">
+          <div className="h-6 bg-white/30 rounded w-1/3 mb-4"></div>
+          <div className="h-10 bg-white/20 rounded w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vm) {
+    return (
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-lg shadow-lg p-8 text-white mb-8">
+        <div className="text-white/90">No se pudo cargar el perfil.</div>
+      </div>
+    );
+  }
+
+  const { personal, account, roles } = vm;
 
   const getMainRole = () => {
     if (roles.has_admin_role)
