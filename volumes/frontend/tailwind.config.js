@@ -280,13 +280,31 @@ export default {
         'scale-in': {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' }
-        }
+        },
+
+        // ====================================
+        // ANIMACIONES PARA TOAST
+        // ====================================
+        'toast-enter': {
+          '0%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'toast-leave': {
+          '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+          '100%': { opacity: '0', transform: 'translateY(8px) scale(0.98)' },
+        },
       },
 
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
         'slide-in': 'slide-in 0.3s ease-out',
-        'scale-in': 'scale-in 0.15s ease-out'
+        'scale-in': 'scale-in 0.15s ease-out',
+
+        // ====================================
+        // ANIMACIONES PARA TOAST
+        // ====================================
+        'toast-enter': 'toast-enter 0.18s cubic-bezier(0.2, 0, 0, 1) forwards',
+        'toast-leave': 'toast-leave 0.15s ease-in forwards',
       }
     }
   },
