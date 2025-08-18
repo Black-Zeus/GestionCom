@@ -1,85 +1,113 @@
 // ====================================
-// BRANCH SELECTOR COMPONENT - VERSIÓN SIMPLE FUNCIONAL
+// BRANCH SELECTOR COMPONENT - USA STORE (headerStore.company)
 // Modal/Dropdown para selección y cambio de sucursal
 // ====================================
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
+import { useHeaderUser } from "@/store/headerStore"; // ← tomamos company del store
 
 /**
- * Componente para seleccionar y cambiar la sucursal activa
- * Versión simple que funciona tanto como modal como dropdown
+ * Normaliza una sucursal a { id, name, code, status }
  */
+const normalizeBranch = (b = {}) => {
+  // intenta deducir status
+  let status = b.status || b.state || b.is_active;
+  if (typeof status === "boolean") status = status ? "active" : "inactive";
+  status = String(status || "active").toLowerCase(); // active | inactive | maintenance
+
+  return {
+    id: b.id ?? b.branch_id ?? b.code ?? b.name ?? Math.random().toString(36).slice(2),
+    name: b.name ?? b.branch_name ?? "Sucursal",
+    code: b.code ?? b.short_code ?? (b.name ? b.name.slice(0, 3).toUpperCase() : "N/A"),
+    status,
+  };
+};
+
 function BranchSelector({
   isOpen = false,
   onClose,
   onBranchChange,
-  currentBranch = "Central",
+  currentBranch,           // opcional: nombre de la sucursal actual
   displayMode = "dropdown", // 'modal' | 'dropdown'
-  branches = [],
+  branches = [],            // opcional: si lo pasas por props tendrá prioridad
   position = { x: 0, y: 0 },
   className,
   ...props
 }) {
-  // ====================================
-  // ESTADOS Y REFS
-  // ====================================
   const selectorRef = useRef(null);
   const searchInputRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isChanging, setIsChanging] = useState(false);
 
-  // ====================================
-  // DATOS DE PRUEBA - Sucursales ficticias
-  // ====================================
-  const defaultBranches =
-    branches.length > 0
-      ? branches
-      : [
-          { id: 1, name: "Central", code: "CEN", status: "active" },
-          { id: 2, name: "Mall Plaza", code: "MPZ", status: "active" },
-          { id: 3, name: "Centro Histórico", code: "CHI", status: "active" },
-          { id: 4, name: "Zona Norte", code: "ZNO", status: "maintenance" },
-          { id: 5, name: "Aeropuerto", code: "AER", status: "active" },
-        ];
+  // ===============================
+  // Datos desde el STORE
+  // ===============================
+  const { company } = useHeaderUser() || {};
 
-  // ====================================
-  // FILTRADO DE SUCURSALES
-  // ====================================
-  const filteredBranches = defaultBranches.filter(
-    (branch) =>
-      branch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      branch.code.toLowerCase().includes(searchTerm.toLowerCase())
+  // Lista de sucursales del store con varios posibles nombres de clave
+  const storeBranchesRaw =
+    company?.branches ??
+    company?.availableBranches ??
+    company?.sites ??
+    company?.locations ??
+    [];
+
+  // Normaliza sucursales (store)
+  const storeBranches = useMemo(
+    () => (Array.isArray(storeBranchesRaw) ? storeBranchesRaw.map(normalizeBranch) : []),
+    [storeBranchesRaw]
   );
 
-  // ====================================
-  // EFECTOS
-  // ====================================
+  // Si vienen por props, tienen prioridad (y también se normalizan)
+  const dataBranches = useMemo(
+    () => (branches?.length ? branches.map(normalizeBranch) : storeBranches),
+    [branches, storeBranches]
+  );
 
-  // Auto-focus en el input de búsqueda al abrir
+  // Sucursal actual: props > store (varios posibles lugares/nombres)
+  const currentBranchName =
+    currentBranch ??
+    company?.activeBranch?.name ??
+    company?.current_branch?.name ??
+    company?.currentBranch?.name ??
+    company?.branch?.name ??
+    "";
+
+  // ===============================
+  // Filtrado de sucursales
+  // ===============================
+  const filteredBranches = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return dataBranches;
+    return dataBranches.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        String(b.code).toLowerCase().includes(q)
+    );
+  }, [dataBranches, searchTerm]);
+
+  // ===============================
+  // Efectos
+  // ===============================
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      const t = setTimeout(() => searchInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [isOpen]);
 
-  // Cerrar con Escape
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose?.();
-      }
+      if (e.key === "Escape" && isOpen) onClose?.();
     };
-
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
   }, [isOpen, onClose]);
 
-  // Cerrar al hacer click fuera (solo en modo dropdown)
+  // Cerrar al hacer click fuera (solo dropdown)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -91,76 +119,72 @@ function BranchSelector({
         onClose?.();
       }
     };
-
     if (isOpen && displayMode === "dropdown") {
       document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, displayMode, onClose]);
 
-  // ====================================
-  // HANDLERS
-  // ====================================
-
+  // ===============================
+  // Handlers
+  // ===============================
   const handleClose = () => {
-    if (!isChanging) {
-      onClose?.();
-    }
+    if (!isChanging) onClose?.();
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
   const handleBranchSelect = async (branch) => {
     if (branch.status !== "active" || isChanging) return;
-
     setIsChanging(true);
-    console.log("🏢 Cambiando a sucursal:", branch.name);
-
     try {
-      // Simular delay de cambio
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Llamar callback
+      // Si necesitas llamar a un endpoint aquí, hazlo antes del callback.
+      await new Promise((r) => setTimeout(r, 300)); // pequeño feedback
       onBranchChange?.(branch);
-
-      console.log("✅ Sucursal cambiada exitosamente");
-    } catch (error) {
-      console.error("❌ Error cambiando sucursal:", error);
+    } catch (err) {
+      console.error("❌ Error cambiando sucursal:", err);
     } finally {
       setIsChanging(false);
     }
   };
 
-  // ====================================
-  // RENDER CONDICIONAL
-  // ====================================
+  // ===============================
+  // UI helpers
+  // ===============================
+  const statusDot = (status) =>
+    cn(
+      "w-2 h-2 rounded-full",
+      status === "active" && "bg-green-500",
+      status === "maintenance" && "bg-yellow-500",
+      status === "inactive" && "bg-red-500"
+    );
+
+  const statusLabel = (status) =>
+    status === "active"
+      ? "Activa"
+      : status === "maintenance"
+      ? "Mantenimiento"
+      : "Inactiva";
 
   if (!isOpen) return null;
-
-  // ====================================
-  // CONTENIDO DEL SELECTOR
-  // ====================================
 
   const SelectorContent = () => (
     <div
       className={cn(
         displayMode === "modal"
           ? [
-              // Estilos de modal
               "bg-white dark:bg-gray-800",
               "rounded-lg shadow-xl",
               "w-full max-w-md mx-4",
               "max-h-[80vh] overflow-hidden",
+              className,
             ]
           : [
-              // Estilos de dropdown
               "bg-white dark:bg-gray-800",
               "rounded-lg shadow-xl border border-gray-200 dark:border-gray-700",
               "w-80",
               "max-h-96 overflow-hidden",
+              className,
             ]
       )}
     >
@@ -202,11 +226,14 @@ function BranchSelector({
         </div>
       </div>
 
-      {/* Lista de sucursales */}
+      {/* Lista */}
       <div className="max-h-64 overflow-y-auto p-4 space-y-2">
         {filteredBranches.length > 0 ? (
           filteredBranches.map((branch) => {
-            const isSelected = branch.name === currentBranch;
+            const isSelected =
+              branch.name === currentBranchName ||
+              branch.code === currentBranchName;
+
             const isActive = branch.status === "active";
 
             return (
@@ -215,53 +242,32 @@ function BranchSelector({
                 onClick={() => handleBranchSelect(branch)}
                 disabled={!isActive || isChanging}
                 className={cn(
-                  // Layout base
                   "w-full p-3 text-left transition-all duration-200",
                   "border border-transparent rounded-lg",
                   "focus:outline-none focus:ring-2 focus:ring-blue-500",
-
-                  // Estados base
                   isActive && "hover:bg-gray-50 dark:hover:bg-gray-700",
-
-                  // Estado seleccionado
                   isSelected && [
                     "bg-blue-50 dark:bg-blue-900/20",
                     "border-blue-200 dark:border-blue-700",
                   ],
-
-                  // Estado deshabilitado
-                  !isActive && [
-                    "opacity-50 cursor-not-allowed",
-                    "bg-gray-50 dark:bg-gray-800",
-                  ],
-
-                  // Estado cargando
+                  !isActive && ["opacity-50 cursor-not-allowed", "bg-gray-50 dark:bg-gray-800"],
                   isChanging && "opacity-50 cursor-wait"
                 )}
               >
                 <div className="flex items-center justify-between">
-                  {/* Información principal */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {/* Nombre de la sucursal */}
                       <h4
                         className={cn(
-                          "font-semibold",
-                          isSelected
-                            ? "text-blue-700 dark:text-blue-400"
-                            : "text-gray-900 dark:text-gray-100",
-                          "truncate"
+                          "font-semibold truncate",
+                          isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-900 dark:text-gray-100"
                         )}
                       >
                         {branch.name}
                       </h4>
-
-                      {/* Código */}
                       <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
                         {branch.code}
                       </span>
-
-                      {/* Indicador actual */}
                       {isSelected && (
                         <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded font-medium">
                           Actual
@@ -269,28 +275,15 @@ function BranchSelector({
                       )}
                     </div>
 
-                    {/* Estado */}
                     <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "w-2 h-2 rounded-full",
-                          branch.status === "active" && "bg-green-500",
-                          branch.status === "maintenance" && "bg-yellow-500",
-                          branch.status === "inactive" && "bg-red-500"
-                        )}
-                      />
+                      <div className={statusDot(branch.status)} />
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {branch.status === "active" && "Activa"}
-                        {branch.status === "maintenance" && "Mantenimiento"}
-                        {branch.status === "inactive" && "Inactiva"}
+                        {statusLabel(branch.status)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Icono de selección */}
-                  {isSelected && (
-                    <div className="text-blue-500 dark:text-blue-400">✓</div>
-                  )}
+                  {isSelected && <div className="text-blue-500 dark:text-blue-400">✓</div>}
                 </div>
               </button>
             );
@@ -302,43 +295,34 @@ function BranchSelector({
         )}
       </div>
 
-      {/* Footer con información */}
+      {/* Footer */}
       <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {filteredBranches.length} sucursal
           {filteredBranches.length !== 1 ? "es" : ""}
           {searchTerm
             ? ` encontrada${filteredBranches.length !== 1 ? "s" : ""}`
-            : " disponible" + (filteredBranches.length !== 1 ? "s" : "")}
+            : ` disponible${filteredBranches.length !== 1 ? "s" : ""}`}
         </p>
       </div>
     </div>
   );
 
-  // ====================================
-  // RENDER SEGÚN MODO
-  // ====================================
-
+  // Render según modo
   if (displayMode === "modal") {
-    // Modo Modal - El contenido se renderiza directamente
     return <SelectorContent />;
   }
 
-  // Modo Dropdown - Posicionamiento absoluto
   return (
     <div
       ref={selectorRef}
       className="fixed z-50"
-      style={{
-        left: position.x,
-        top: position.y,
-        transform: "translate(-50%, 8px)",
-      }}
+      style={{ left: position.x, top: position.y, transform: "translate(-50%, 8px)" }}
       {...props}
     >
       <SelectorContent />
 
-      {/* Loading Overlay para dropdown */}
+      {/* Loading overlay (dropdown) */}
       {isChanging && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-90 rounded-lg">
           <div className="flex items-center gap-2 text-sm">

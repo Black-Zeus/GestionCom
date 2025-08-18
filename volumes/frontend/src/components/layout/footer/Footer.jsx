@@ -1,6 +1,5 @@
 // ====================================
-// FOOTER COMPONENT - VERSIÓN FINAL LIMPIA
-// Sin Usuario, sin Modal TEST, solo Sucursal y Caja con modales
+// FOOTER COMPONENT - VERSIÓN SINCRONIZADA CON STORE
 // ====================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -10,105 +9,89 @@ import { useLayoutStore } from "@/store/layoutStore";
 import { useSidebar } from "@/store/sidebarStore";
 import { Modal } from "@/components/ui/modal";
 
-// Importar componentes del footer
 import FooterLink from "./FooterLink";
 import { BranchInfoGroup, CashInfoGroup } from "./InfoGroupWithIcon";
 
-// Importar selectores para modales
 import BranchSelector from "./BranchSelector";
 import CashSelector from "./CashSelector";
 
-/**
- * Componente Footer - Versión final limpia
- * ✅ SOLO: Soporte, Ayuda, Docs | Sucursal, Caja, Turno
- * ✅ SIN: Usuario, Modal TEST
- */
 function Footer({ className }) {
-  // ====================================
-  // HOOKS Y ESTADO
-  // ====================================
-
-  // Usuario desde authStore (solo para verificar si existe)
+  // Usuario (no lo usamos para mostrar, pero mantiene consistencia)
   const user = useAuth((state) => state.user);
 
-  // Layout context
+  // Tomamos el layoutContext desde el store (ahí vendrá la sucursal/caja actuales)
   const layoutContext = useLayoutStore((state) => state.layoutContext);
 
-  // Tema sincronizado
   const { isDarkMode } = useSidebar();
 
-  // Estados para modales
+  // Modales
   const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [pendingChange, setPendingChange] = useState(null);
 
-  // Estado local para sessionInfo
-  const [sessionInfo, setSessionInfo] = useState(() => ({
-    // Solo datos operativos - SIN datos de usuario ni turno
-    branch: layoutContext?.currentBranch?.name || "Central",
-    branchCode: layoutContext?.currentBranch?.code || "CEN",
-    branchId: layoutContext?.currentBranch?.id || 1,
-    cashRegister: layoutContext?.currentCashRegister?.name || "#1234",
-    cashId: layoutContext?.currentCashRegister?.id || 1,
-    cashStatus: layoutContext?.currentCashRegister?.status || "active",
-  }));
+  // Estado de lo que se muestra en el footer (sin defaults duros)
+  const [sessionInfo, setSessionInfo] = useState({
+    branch: "—",
+    branchCode: "",
+    branchId: null,
+    cashRegister: "—",
+    cashId: null,
+    cashStatus: "",
+  });
 
-  // ====================================
-  // HANDLERS
-  // ====================================
+  // 🔄 Sincronizar con el store siempre que cambie layoutContext
+  useEffect(() => {
+    const b = layoutContext?.currentBranch;
+    const c = layoutContext?.currentCashRegister;
 
-  // Handlers para abrir modales
+    setSessionInfo((prev) => ({
+      ...prev,
+      branch: b?.name || "—",
+      branchCode: b?.code || "",
+      branchId: b?.id ?? null,
+      cashRegister: c?.name || "—",
+      cashId: c?.id ?? null,
+      cashStatus: c?.status || "",
+    }));
+  }, [
+    layoutContext?.currentBranch?.name,
+    layoutContext?.currentBranch?.code,
+    layoutContext?.currentBranch?.id,
+    layoutContext?.currentCashRegister?.name,
+    layoutContext?.currentCashRegister?.id,
+    layoutContext?.currentCashRegister?.status,
+  ]);
+
+  // Openers
   const handleBranchClick = useMemo(
-    () => () => {
-      console.log("🎯 Abriendo modal de sucursal");
-      setIsBranchModalOpen(true);
-    },
+    () => () => setIsBranchModalOpen(true),
     []
   );
+  const handleCashClick = useMemo(() => () => setIsCashModalOpen(true), []);
 
-  const handleCashClick = useMemo(
-    () => () => {
-      console.log("🎯 Abriendo modal de caja");
-      setIsCashModalOpen(true);
-    },
-    []
-  );
-
-  // Handlers para cerrar modales
+  // Closers
   const handleCloseBranchModal = useMemo(
-    () => () => {
-      setIsBranchModalOpen(false);
-    },
+    () => () => setIsBranchModalOpen(false),
     []
   );
-
   const handleCloseCashModal = useMemo(
-    () => () => {
-      setIsCashModalOpen(false);
-    },
+    () => () => setIsCashModalOpen(false),
     []
   );
 
-  // Handlers para cambios con confirmación
+  // Peticiones de cambio (pre-confirmación)
   const handleBranchChange = useMemo(
     () => (newBranch) => {
-      console.log("🔄 Solicitando cambio de sucursal a:", newBranch);
-
-      // Si es la misma sucursal, solo cerrar
       if (newBranch.name === sessionInfo.branch) {
-        console.log("⚠️ Misma sucursal seleccionada");
         handleCloseBranchModal();
         return;
       }
-
-      // Preparar confirmación
       setPendingChange({
         type: "branch",
         data: newBranch,
         current: { name: sessionInfo.branch, code: sessionInfo.branchCode },
       });
-
       handleCloseBranchModal();
       setIsConfirmationModalOpen(true);
     },
@@ -117,34 +100,26 @@ function Footer({ className }) {
 
   const handleCashChange = useMemo(
     () => (newCash) => {
-      console.log("🔄 Solicitando cambio de caja a:", newCash);
-
-      // Si es la misma caja, solo cerrar
       if (newCash.name === sessionInfo.cashRegister) {
-        console.log("⚠️ Misma caja seleccionada");
         handleCloseCashModal();
         return;
       }
-
-      // Preparar confirmación
       setPendingChange({
         type: "cash",
         data: newCash,
         current: { name: sessionInfo.cashRegister, id: sessionInfo.cashId },
       });
-
       handleCloseCashModal();
       setIsConfirmationModalOpen(true);
     },
     [sessionInfo.cashRegister, sessionInfo.cashId, handleCloseCashModal]
   );
 
-  // Handlers para confirmación
+  // Confirmación de cambio (actualiza lo visible; idealmente aquí también
+  // deberías disparar una acción del store para persistir en backend si aplica)
   const handleConfirmChange = useMemo(
     () => () => {
       if (!pendingChange) return;
-
-      console.log(`✅ Confirmando cambio de ${pendingChange.type}`);
 
       if (pendingChange.type === "branch") {
         setSessionInfo((prev) => ({
@@ -153,6 +128,7 @@ function Footer({ className }) {
           branchCode: pendingChange.data.code,
           branchId: pendingChange.data.id,
         }));
+        // TODO (opcional): useLayoutStore.getState().setCurrentBranch(pendingChange.data)
       } else if (pendingChange.type === "cash") {
         setSessionInfo((prev) => ({
           ...prev,
@@ -160,6 +136,7 @@ function Footer({ className }) {
           cashId: pendingChange.data.id,
           cashStatus: pendingChange.data.status,
         }));
+        // TODO (opcional): useLayoutStore.getState().setCurrentCash(pendingChange.data)
       }
 
       setPendingChange(null);
@@ -170,79 +147,48 @@ function Footer({ className }) {
 
   const handleCancelChange = useMemo(
     () => () => {
-      console.log("❌ Cambio cancelado");
       setPendingChange(null);
       setIsConfirmationModalOpen(false);
     },
     []
   );
 
-  // Handler para links del footer
+  // Links
   const handleFooterLink = useMemo(
     () => (action) => {
       const actions = {
-        support: () => {
-          console.log("Abrir soporte técnico");
-          window.open("mailto:soporte@tuempresa.com", "_blank");
-        },
-        help: () => {
-          console.log("Navegando a ayuda en la misma página");
-          // Navegación interna - misma página
-          window.location.href = "/help";
-          // O si usas React Router: navigate("/help");
-        },
-        docs: () => {
-          console.log("Abrir documentación en nueva pestaña");
-          // Nueva pestaña
-          window.open("/docs", "_blank");
-        },
+        support: () => window.open("mailto:soporte@tuempresa.com", "_blank"),
+        help: () => (window.location.href = "/help"),
+        docs: () => window.open("/docs", "_blank"),
       };
-
       actions[action]?.();
     },
     []
   );
 
-  // ====================================
-  // EFECTOS
-  // ====================================
-
   useEffect(() => {
-    console.log("🦶 Footer inicializado correctamente");
-    console.log(`🎨 Tema: ${isDarkMode ? "Oscuro" : "Claro"}`);
+    // Log liviano
+    // console.log("Footer listo. Tema:", isDarkMode ? "Oscuro" : "Claro");
   }, [isDarkMode]);
-
-  // ====================================
-  // RENDER
-  // ====================================
 
   return (
     <>
       <footer
         className={cn(
-          // Layout base
           "flex items-center justify-between",
           "relative z-20 h-12",
           "px-6 lg:px-8 xl:px-12",
           "min-w-0 flex-shrink-0",
-
-          // Fondos y bordes
           "bg-white dark:bg-gray-900",
           "border-t border-gray-200 dark:border-gray-700",
-
-          // Textos
           "text-sm text-gray-600 dark:text-gray-400",
-
-          // Transiciones y sombras
           "transition-all duration-300 ease-in-out",
-          "shadow-[0_-1px_3px_rgba(0,0,0,0.05)]",
-          "dark:shadow-[0_-1px_3px_rgba(0,0,0,0.15)]",
-
+          "shadow-[0_-1px_3px_rgba(0,0,0,0.05)] dark:shadow-[0_-1px_3px_rgba(0,0,0,0.15)]",
           className
         )}
         id="systemFooter"
       >
-        {/* SECCIÓN IZQUIERDA - ENLACES */}
+        {/* Izquierda: enlaces */}
         <div className="flex items-center gap-6 min-w-0 flex-shrink-1">
           <div className="flex items-center gap-4">
             <FooterLink
@@ -257,7 +203,7 @@ function Footer({ className }) {
               Soporte
             </FooterLink>
 
-            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
 
             <FooterLink
               onClick={() => handleFooterLink("help")}
@@ -271,7 +217,7 @@ function Footer({ className }) {
               Ayuda
             </FooterLink>
 
-            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+            <div className="w-px h-3 bg-gray-300 dark:bg-gray-600" />
 
             <FooterLink
               onClick={() => handleFooterLink("docs")}
@@ -287,31 +233,26 @@ function Footer({ className }) {
           </div>
         </div>
 
-        {/* SECCIÓN DERECHA - INFORMACIÓN OPERATIVA */}
+        {/* Derecha: info operativa */}
         <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
-          {/* Sucursal - Clickeable */}
           <BranchInfoGroup
             branch={sessionInfo.branch}
-            branchCode={sessionInfo.branchCode}
+            branchCode={sessionInfo.branchCode /* no muestra () si está vacío */}
             onClick={handleBranchClick}
-            className={cn("hover:text-blue-600 dark:hover:text-blue-400")}
+            className="hover:text-blue-600 dark:hover:text-blue-400"
           />
 
-          {/* Separador */}
-          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 transition-colors duration-300" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600" />
 
-          {/* Caja - Clickeable */}
           <CashInfoGroup
             cashRegister={sessionInfo.cashRegister}
             onClick={handleCashClick}
-            className={cn("hover:text-orange-600 dark:hover:text-orange-400")}
+            className="hover:text-orange-600 dark:hover:text-orange-400"
           />
         </div>
       </footer>
 
-      {/* MODALES */}
-
-      {/* Modal de Sucursal */}
+      {/* Modal Sucursal */}
       {isBranchModalOpen && (
         <Modal
           isOpen={isBranchModalOpen}
@@ -330,7 +271,7 @@ function Footer({ className }) {
         </Modal>
       )}
 
-      {/* Modal de Caja */}
+      {/* Modal Caja */}
       {isCashModalOpen && (
         <Modal
           isOpen={isCashModalOpen}
@@ -349,7 +290,7 @@ function Footer({ className }) {
         </Modal>
       )}
 
-      {/* Modal de Confirmación */}
+      {/* Confirmación */}
       {isConfirmationModalOpen && pendingChange && (
         <Modal
           isOpen={isConfirmationModalOpen}
@@ -367,9 +308,7 @@ function Footer({ className }) {
               </div>
               <div className="ml-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {pendingChange.type === "branch"
-                    ? "Cambiar Sucursal"
-                    : "Cambiar Caja"}
+                  {pendingChange.type === "branch" ? "Cambiar Sucursal" : "Cambiar Caja"}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Esta acción afectará tu sesión actual
@@ -385,7 +324,7 @@ function Footer({ className }) {
                   </p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                     {pendingChange.type === "branch"
-                      ? `${pendingChange.current.name} (${pendingChange.current.code})`
+                      ? `${pendingChange.current.name}${pendingChange.current.code ? ` (${pendingChange.current.code})` : ""}`
                       : pendingChange.current.name}
                   </p>
                 </div>
@@ -396,25 +335,8 @@ function Footer({ className }) {
                   </p>
                   <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                     {pendingChange.type === "branch"
-                      ? `${pendingChange.data.name} (${pendingChange.data.code})`
+                      ? `${pendingChange.data.name}${pendingChange.data.code ? ` (${pendingChange.data.code})` : ""}`
                       : pendingChange.data.name}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <span className="text-blue-500 dark:text-blue-400 text-sm">
-                    ℹ️
-                  </span>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    {pendingChange.type === "branch"
-                      ? "Al cambiar de sucursal, podrías perder acceso a algunos datos específicos de la sucursal actual."
-                      : "Al cambiar de caja, se cerrará la sesión actual y deberás validar la nueva caja."}
                   </p>
                 </div>
               </div>
