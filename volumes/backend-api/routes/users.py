@@ -29,6 +29,7 @@ from core.constants import ErrorCode, ErrorType, HTTPStatus
 
 # Utils imports
 from utils.permissions_utils import require_permission
+from utils.profile_helpers import ProfileHelper 
 
 # ==========================================
 # CONFIGURACIÓN DEL ROUTER
@@ -80,7 +81,8 @@ def user_to_dict(user: User, include_sensitive: bool = False) -> dict:
         "is_authenticated": user.is_authenticated,
         "petty_cash_limit": float(user.petty_cash_limit) if user.petty_cash_limit else None,
         "has_petty_cash_access": user.has_petty_cash_access,
-        "is_recently_active": user.is_recently_active,
+        #"is_recently_active": user.is_recently_active,
+        "is_recently_active": user.has_recent_login,
         # Arrays vacíos preparados para futuro módulo de permisos
         "roles": [],
         "permissions": [],
@@ -98,6 +100,103 @@ def user_to_dict(user: User, include_sensitive: bool = False) -> dict:
         })
     
     return base_dict
+
+async def get_profile(session, user_id: int, requesting_user_id: int, is_own_profile: bool = False) -> dict:
+    """
+    Función unificada para obtener perfil completo de usuario
+    
+    Args:
+        session: Sesión de base de datos
+        user_id: ID del usuario cuyo perfil se solicita
+        requesting_user_id: ID del usuario que hace la solicitud
+        is_own_profile: Si es el propio perfil o de otro usuario
+        
+    Returns:
+        Dict con información completa del perfil
+    """
+    try:
+        # ==========================================
+        # OBTENER USUARIO BASE
+        # ==========================================
+        stmt = select(User).where(
+            and_(
+                User.id == user_id,
+                User.deleted_at.is_(None)
+            )
+        )
+        
+        result = await session.execute(stmt)
+        target_user = result.scalar_one_or_none()
+        
+        if not target_user:
+            return None
+        
+        # Para perfiles de otros usuarios, verificar que esté activo
+        if not is_own_profile and not target_user.is_active:
+            return None
+        
+        # ==========================================
+        # OBTENER INFORMACIÓN BÁSICA DEL USUARIO
+        # ==========================================
+        user_basic_data = user_to_dict(target_user, include_sensitive=True)
+        
+        # ==========================================
+        # OBTENER ROLES Y PERMISOS
+        # ==========================================
+        roles_and_permissions = await ProfileHelper.get_user_roles_and_permissions(session, user_id)
+        
+        # ==========================================
+        # OBTENER ACCESOS A BODEGAS
+        # ==========================================
+        warehouse_accesses = await ProfileHelper.get_user_warehouse_accesses(session, user_id)
+        
+        # ==========================================
+        # CONSTRUIR RESPUESTA UNIFICADA
+        # ==========================================
+        profile_data = {
+            # Información básica del usuario
+            **user_basic_data,
+            
+            # Información de roles y permisos
+            "roles": roles_and_permissions.get("role_codes", []),
+            "role_names": roles_and_permissions.get("role_names", []),
+            "permissions": roles_and_permissions.get("permission_codes", []),
+            "role_details": roles_and_permissions.get("role_details", []),
+            "permission_details": roles_and_permissions.get("permission_details", []),
+            
+            # Contadores de roles y permisos
+            "role_count": roles_and_permissions.get("role_count", 0),
+            "permission_count": roles_and_permissions.get("permission_count", 0),
+            
+            # Propiedades derivadas de roles
+            "has_admin_role": roles_and_permissions.get("has_admin_role", False),
+            "has_manager_role": roles_and_permissions.get("has_manager_role", False),
+            "is_supervisor": roles_and_permissions.get("is_supervisor", False),
+            "is_cashier": roles_and_permissions.get("is_cashier", False),
+            
+            # Información de bodegas
+            "warehouse_accesses": warehouse_accesses.get("accesses", []),
+            "warehouse_count": warehouse_accesses.get("total_warehouses", 0),
+            "responsible_warehouse_count": warehouse_accesses.get("responsible_warehouses", 0),
+            "warehouse_access_types": warehouse_accesses.get("access_types", []),
+            
+            # Metadatos del perfil
+            "is_own_profile": is_own_profile,
+            "profile_requested_by": requesting_user_id,
+            "profile_generated_at": datetime.now(timezone.utc).isoformat(),
+            
+            # Información adicional para el frontend
+            "profile_completeness": ProfileHelper.calculate_profile_completeness(target_user),
+            "security_score": ProfileHelper.calculate_security_score(target_user, roles_and_permissions),
+        }
+        
+        logger.info(f"Perfil generado para usuario {user_id} {'(propio)' if is_own_profile else '(por manager)'}")
+        
+        return profile_data
+        
+    except Exception as e:
+        logger.error(f"Error en get_profile para usuario {user_id}: {e}")
+        raise
 
 # ==========================================
 # ENDPOINTS CRUD BÁSICOS
@@ -634,29 +733,71 @@ async def toggle_user_activation(
 # ENDPOINTS DE INFORMACIÓN ADICIONAL
 # ==========================================
 
+@router.get("/me/profile", response_class=JSONResponse)
+async def get_my_profile(
+    request: Request = None,
+    user: dict = Depends(require_read_permission)
+):
+    """Obtener mi perfil completo - Siempre permitido para usuarios autenticados"""
+    
+    try:
+        async with db_manager.get_async_session() as session:
+            
+            # Usar función unificada
+            profile_data = await get_profile(
+                session=session,
+                user_id=user['user_id'],
+                requesting_user_id=user['user_id'],
+                is_own_profile=True
+            )
+            
+            if not profile_data:
+                return ResponseManager.error(
+                    message="Tu perfil no fue encontrado",
+                    status_code=HTTPStatus.NOT_FOUND,
+                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request
+                )
+            
+            logger.info(f"Usuario {user['username']} consultó su propio perfil completo")
+            
+            return ResponseManager.success(
+                data=profile_data,
+                message="Perfil personal obtenido exitosamente",
+                request=request
+            )
+        
+    except Exception as e:
+        logger.error(f"Error al obtener mi perfil: {e}")
+        import traceback
+        traceback.print_exc()
+        return ResponseManager.internal_server_error(
+            message="Error al obtener tu perfil",
+            details=str(e),
+            request=request
+        )
+
 @router.get("/{user_id}/profile", response_class=JSONResponse)
 async def get_user_profile(
     user_id: int = Path(..., description="ID del usuario"),
     request: Request = None,
-    user: dict = Depends(require_read_permission)
+    user: dict = Depends(require_manager_permission)  # ✅ CAMBIO: Solo managers
 ):
-    """Obtener perfil público de usuario (solo información básica)"""
+    """Obtener perfil completo de cualquier usuario - Solo para managers"""
     
     try:
         async with db_manager.get_async_session() as session:
-            # Obtener usuario
-            stmt = select(User).where(
-                and_(
-                    User.id == user_id,
-                    User.deleted_at.is_(None),
-                    User.is_active == True  # Solo usuarios activos en perfil público
-                )
+            
+            # Usar función unificada
+            profile_data = await get_profile(
+                session=session,
+                user_id=user_id,
+                requesting_user_id=user['user_id'],
+                is_own_profile=False
             )
             
-            result = await session.execute(stmt)
-            target_user = result.scalar_one_or_none()
-            
-            if not target_user:
+            if not profile_data:
                 return ResponseManager.error(
                     message=f"Usuario no encontrado o inactivo: {user_id}",
                     status_code=HTTPStatus.NOT_FOUND,
@@ -665,29 +806,16 @@ async def get_user_profile(
                     request=request
                 )
             
-            # Información pública básica
-            profile_data = {
-                "id": target_user.id,
-                "username": target_user.username,
-                "full_name": target_user.full_name,
-                "display_name": target_user.display_name,
-                "initials": target_user.initials,
-                "is_active": target_user.is_active,
-                "is_recently_active": target_user.is_recently_active,
-                "roles": [],  # Preparado para futuro
-                "permissions": []  # Preparado para futuro
-            }
-            
-            logger.info(f"Usuario {user['username']} consultó perfil de usuario: {target_user.username}")
+            logger.info(f"Manager {user['username']} consultó perfil completo de usuario {user_id}")
             
             return ResponseManager.success(
                 data=profile_data,
-                message="Perfil de usuario encontrado",
+                message="Perfil de usuario obtenido exitosamente",
                 request=request
             )
         
     except Exception as e:
-        logger.error(f"Error al obtener perfil usuario {user_id}: {e}")
+        logger.error(f"Error al obtener perfil de usuario {user_id}: {e}")
         import traceback
         traceback.print_exc()
         return ResponseManager.internal_server_error(
@@ -695,56 +823,7 @@ async def get_user_profile(
             details=str(e),
             request=request
         )
-
-@router.get("/me/profile", response_class=JSONResponse)
-async def get_my_profile(
-    request: Request = None,
-    user: dict = Depends(require_read_permission)
-):
-    """Obtener perfil del usuario actual"""
     
-    try:
-        async with db_manager.get_async_session() as session:
-            # Obtener usuario actual
-            stmt = select(User).where(
-                and_(
-                    User.id == user['user_id'],
-                    User.deleted_at.is_(None)
-                )
-            )
-            
-            result = await session.execute(stmt)
-            current_user = result.scalar_one_or_none()
-            
-            if not current_user:
-                return ResponseManager.error(
-                    message="Usuario actual no encontrado",
-                    status_code=HTTPStatus.NOT_FOUND,
-                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
-                    error_type=ErrorType.RESOURCE_ERROR,
-                    request=request
-                )
-            
-            user_dict = user_to_dict(current_user, include_sensitive=True)
-            
-            logger.info(f"Usuario {user['username']} consultó su propio perfil")
-            
-            return ResponseManager.success(
-                data=user_dict,
-                message="Perfil personal obtenido",
-                request=request
-            )
-        
-    except Exception as e:
-        logger.error(f"Error al obtener perfil personal: {e}")
-        import traceback
-        traceback.print_exc()
-        return ResponseManager.internal_server_error(
-            message="Error al obtener perfil personal",
-            details=str(e),
-            request=request
-        )
-
 # ==========================================
 # ENDPOINT DE ESTADÍSTICAS
 # ==========================================

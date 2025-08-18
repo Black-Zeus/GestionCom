@@ -1,0 +1,33 @@
+{
+  "modules": {
+    "USER": "Usuarios",
+    "WAREHOUSE": "Bodega",
+    "WAREHOUSE_ZONE": "Zona de Bodegas",
+    "RETURNS": "Devoluciones",
+    "MENU": "Menú",
+    "INVENTORY": "Inventario",
+    "SALES": "Ventas",
+    "REPORTS": "Reportes",
+    "ADMIN": "Administración",
+    "SETTINGS": "Configuración"
+  },
+  "levels": {
+    "READ": "Leer",
+    "WRITE": "Escribir",
+    "DELETE": "Eliminar",
+    "ADMIN": "Administrar",
+    "MANAGER": "Gestionar",
+    "GRANT": "Otorgar",
+    "REVOKE": "Revocar",
+    "CONFIGURE": "Configurar",
+    "PROCESS": "Procesar",
+    "VIEW": "Ver",
+    "CREATE": "Crear",
+    "APPROVE": "Aprobar",
+    "ACCESS": "Acceder",
+    "BULK_MANAGE": "Gestión Masiva",
+    "VIEW_ALL": "Ver Todo",
+    "LOCATION_TRACKING": "Seguimiento de Ubicación",
+    "ZONE_LOCATION_TRACKING": "Seguimiento de Zonas"
+  }
+}

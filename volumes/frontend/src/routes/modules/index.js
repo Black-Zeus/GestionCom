@@ -3,11 +3,14 @@
 
 import { authRoutes } from './auth.routes';
 import { dashboardRoutes } from './dashboard.routes';
+import profileRoutes from "./profile";
+
 
 // Combinar todas las rutas en orden de prioridad
 export const allRoutes = [
     ...authRoutes,
-    ...dashboardRoutes
+    ...dashboardRoutes,
+    ...profileRoutes,
     // Agregar aquí nuevos módulos: ...inventoryRoutes, ...salesRoutes, etc.
 ];
 

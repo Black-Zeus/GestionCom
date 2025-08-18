@@ -1,116 +1,122 @@
 // ====================================
-// CASH SELECTOR COMPONENT - MISMO FORMATO QUE BRANCH SELECTOR
+// CASH SELECTOR COMPONENT - USA STORE (sin mocks)
 // Modal/Dropdown para selección y cambio de caja registradora
 // ====================================
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
+import { useLayoutStore } from "@/store/layoutStore";
+import { useHeaderUser } from "@/store/headerStore";
 
 /**
- * Componente para seleccionar y cambiar la caja registradora activa
- * Versión con el mismo formato y estilo que BranchSelector
+ * Normaliza una caja desde distintas estructuras posibles del store/props.
  */
+const normalizeCash = (raw = {}) => ({
+  id:
+    raw.id ??
+    raw.cash_id ??
+    raw.cashRegisterId ??
+    raw.register_id ??
+    null,
+  name:
+    raw.name ??
+    raw.label ??
+    raw.register_name ??
+    raw.display_name ??
+    "",
+  code:
+    raw.code ??
+    raw.pos_code ??
+    raw.register_code ??
+    "",
+  status:
+    raw.status ??
+    raw.state ??
+    "active",
+  location:
+    raw.location ??
+    raw.branch ??
+    raw.site ??
+    raw.area ??
+    "",
+});
+
 function CashSelector({
   isOpen = false,
   onClose,
   onCashChange,
   currentCash = "#1234",
   displayMode = "dropdown", // 'modal' | 'dropdown'
-  cashRegisters = [],
+  cashRegisters = [], // si vienen por props, tienen prioridad
   position = { x: 0, y: 0 },
   className,
   ...props
 }) {
-  // ====================================
-  // ESTADOS Y REFS
-  // ====================================
+  // ================================
+  // STORE SOURCES
+  // ================================
+  const layoutContext = useLayoutStore((s) => s.layoutContext);
+  const { company } = useHeaderUser() || {};
+
+  // Posibles ubicaciones en store
+  const storeCashRaw =
+    cashRegisters?.length
+      ? cashRegisters
+      : layoutContext?.cashRegisters ??
+        layoutContext?.availableCashRegisters ??
+        layoutContext?.posRegisters ??
+        company?.cashRegisters ??
+        company?.posRegisters ??
+        [];
+
+  // Normalizar
+  const dataCashRegisters = useMemo(
+    () => (Array.isArray(storeCashRaw) ? storeCashRaw.map(normalizeCash) : []),
+    [storeCashRaw]
+  );
+
+  // ================================
+  // ESTADOS / REFS
+  // ================================
   const selectorRef = useRef(null);
   const searchInputRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isChanging, setIsChanging] = useState(false);
 
-  // ====================================
-  // DATOS DE PRUEBA - Cajas registradoras ficticias
-  // ====================================
-  const defaultCashRegisters =
-    cashRegisters.length > 0
-      ? cashRegisters
-      : [
-          {
-            id: 1,
-            name: "#1234",
-            code: "POS-001",
-            status: "active",
-            location: "Principal",
-          },
-          {
-            id: 2,
-            name: "#5678",
-            code: "POS-002",
-            status: "active",
-            location: "Secundaria",
-          },
-          {
-            id: 3,
-            name: "#9012",
-            code: "POS-003",
-            status: "maintenance",
-            location: "Express",
-          },
-          {
-            id: 4,
-            name: "#3456",
-            code: "POS-004",
-            status: "active",
-            location: "Autoservicio",
-          },
-          {
-            id: 5,
-            name: "#7890",
-            code: "POS-005",
-            status: "inactive",
-            location: "Reserva",
-          },
-        ];
+  // ================================
+  // FILTRADO
+  // ================================
+  const filteredCashRegisters = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return dataCashRegisters;
+    return dataCashRegisters.filter((c) => {
+      const name = (c.name || "").toLowerCase();
+      const code = (c.code || "").toLowerCase();
+      const loc = (c.location || "").toLowerCase();
+      return name.includes(q) || code.includes(q) || loc.includes(q);
+    });
+  }, [dataCashRegisters, searchTerm]);
 
-  // ====================================
-  // FILTRADO DE CAJAS
-  // ====================================
-  const filteredCashRegisters = defaultCashRegisters.filter(
-    (cash) =>
-      cash.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cash.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cash.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // ====================================
+  // ================================
   // EFECTOS
-  // ====================================
-
-  // Auto-focus en el input de búsqueda al abrir
+  // ================================
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      const t = setTimeout(() => searchInputRef.current?.focus(), 100);
+      return () => clearTimeout(t);
     }
   }, [isOpen]);
 
-  // Cerrar con Escape
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose?.();
-      }
+      if (e.key === "Escape" && isOpen) onClose?.();
     };
-
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
   }, [isOpen, onClose]);
 
-  // Cerrar al hacer click fuera (solo en modo dropdown)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -122,77 +128,58 @@ function CashSelector({
         onClose?.();
       }
     };
-
     if (isOpen && displayMode === "dropdown") {
       document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [isOpen, displayMode, onClose]);
 
-  // ====================================
+  // ================================
   // HANDLERS
-  // ====================================
-
+  // ================================
   const handleClose = () => {
-    if (!isChanging) {
-      onClose?.();
-    }
+    if (!isChanging) onClose?.();
   };
 
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
   const handleCashSelect = async (cash) => {
     if (cash.status !== "active" || isChanging) return;
-
     setIsChanging(true);
-    console.log("💰 Cambiando a caja:", cash.name);
-
     try {
-      // Simular delay de cambio
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // Llamar callback
+      // si necesitas latencia real, aquí iría la llamada al backend
+      await new Promise((r) => setTimeout(r, 300));
       onCashChange?.(cash);
-
-      console.log("✅ Caja cambiada exitosamente");
-    } catch (error) {
-      console.error("❌ Error cambiando caja:", error);
     } finally {
       setIsChanging(false);
     }
   };
 
-  // ====================================
-  // RENDER CONDICIONAL
-  // ====================================
-
+  // ================================
+  // EARLY RETURN
+  // ================================
   if (!isOpen) return null;
 
-  // ====================================
-  // CONTENIDO DEL SELECTOR
-  // ====================================
-
+  // ================================
+  // UI
+  // ================================
   const SelectorContent = () => (
     <div
       className={cn(
         displayMode === "modal"
           ? [
-              // Estilos de modal
               "bg-white dark:bg-gray-800",
               "rounded-lg shadow-xl",
               "w-full max-w-md mx-4",
               "max-h-[80vh] overflow-hidden",
             ]
           : [
-              // Estilos de dropdown
               "bg-white dark:bg-gray-800",
               "rounded-lg shadow-xl border border-gray-200 dark:border-gray-700",
               "w-80",
               "max-h-96 overflow-hidden",
-            ]
+            ],
+        className
       )}
     >
       {/* Header */}
@@ -233,66 +220,54 @@ function CashSelector({
         </div>
       </div>
 
-      {/* Lista de cajas */}
+      {/* Lista */}
       <div className="max-h-64 overflow-y-auto p-4 space-y-2">
         {filteredCashRegisters.length > 0 ? (
           filteredCashRegisters.map((cash) => {
             const isSelected = cash.name === currentCash;
             const isActive = cash.status === "active";
-
             return (
               <button
-                key={cash.id}
+                key={`${cash.id ?? cash.code ?? cash.name}`}
                 onClick={() => handleCashSelect(cash)}
                 disabled={!isActive || isChanging}
                 className={cn(
-                  // Layout base
                   "w-full p-3 text-left transition-all duration-200",
                   "border border-transparent rounded-lg",
                   "focus:outline-none focus:ring-2 focus:ring-orange-500",
-
-                  // Estados base
                   isActive && "hover:bg-gray-50 dark:hover:bg-gray-700",
-
-                  // Estado seleccionado
                   isSelected && [
                     "bg-orange-50 dark:bg-orange-900/20",
                     "border-orange-200 dark:border-orange-700",
                   ],
-
-                  // Estado deshabilitado
                   !isActive && [
                     "opacity-50 cursor-not-allowed",
                     "bg-gray-50 dark:bg-gray-800",
                   ],
-
-                  // Estado cargando
                   isChanging && "opacity-50 cursor-wait"
                 )}
               >
                 <div className="flex items-center justify-between">
-                  {/* Información principal */}
+                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {/* Nombre de la caja */}
                       <h4
                         className={cn(
-                          "font-semibold",
+                          "font-semibold truncate",
                           isSelected
                             ? "text-orange-700 dark:text-orange-400"
-                            : "text-gray-900 dark:text-gray-100",
-                          "truncate"
+                            : "text-gray-900 dark:text-gray-100"
                         )}
                       >
-                        {cash.name}
+                        {cash.name || "Sin nombre"}
                       </h4>
 
-                      {/* Código */}
-                      <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
-                        {cash.code}
-                      </span>
+                      {cash.code ? (
+                        <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
+                          {cash.code}
+                        </span>
+                      ) : null}
 
-                      {/* Indicador actual */}
                       {isSelected && (
                         <span className="text-xs bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-2 py-1 rounded font-medium">
                           Actual
@@ -300,10 +275,9 @@ function CashSelector({
                       )}
                     </div>
 
-                    {/* Ubicación y Estado */}
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
-                        📍 {cash.location}
+                      <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                        📍 {cash.location || "—"}
                       </span>
 
                       <div className="flex items-center gap-2">
@@ -324,11 +298,8 @@ function CashSelector({
                     </div>
                   </div>
 
-                  {/* Icono de selección */}
                   {isSelected && (
-                    <div className="text-orange-500 dark:text-orange-400">
-                      ✓
-                    </div>
+                    <div className="text-orange-500 dark:text-orange-400">✓</div>
                   )}
                 </div>
               </button>
@@ -336,12 +307,12 @@ function CashSelector({
           })
         ) : (
           <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-            No se encontraron cajas registradoras
+            No hay cajas registradoras disponibles
           </div>
         )}
       </div>
 
-      {/* Footer con información */}
+      {/* Footer info */}
       <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600">
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {filteredCashRegisters.length} caja
@@ -354,16 +325,11 @@ function CashSelector({
     </div>
   );
 
-  // ====================================
-  // RENDER SEGÚN MODO
-  // ====================================
-
+  // Render según modo
   if (displayMode === "modal") {
-    // Modo Modal - El contenido se renderiza directamente
     return <SelectorContent />;
   }
 
-  // Modo Dropdown - Posicionamiento absoluto
   return (
     <div
       ref={selectorRef}
@@ -377,7 +343,6 @@ function CashSelector({
     >
       <SelectorContent />
 
-      {/* Loading Overlay para dropdown */}
       {isChanging && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-90 rounded-lg">
           <div className="flex items-center gap-2 text-sm">

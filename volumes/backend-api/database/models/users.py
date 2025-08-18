@@ -514,6 +514,29 @@ class User(BaseModel):
         """Verificar si es supervisor"""
         return self.has_role('SUPERVISOR') or self.has_manager_role
     
+    @property 
+    def has_petty_cash_access(self) -> bool:
+        '''Verificar si el usuario tiene acceso a caja chica'''
+        return (
+            self.petty_cash_limit is not None and 
+            float(self.petty_cash_limit or 0) > 0 and 
+            self.is_active
+        )
+    
+    @property
+    def needs_password_change(self) -> bool:
+        """Verificar si necesita cambiar contraseña (más de 90 días)"""
+        return self.password_age_days > 90
+    
+    @property 
+    def has_petty_cash_access(self) -> bool:
+        '''Verificar si el usuario tiene acceso a caja chica'''
+        return (
+            self.petty_cash_limit is not None and 
+            float(self.petty_cash_limit or 0) > 0 and 
+            self.is_active
+        )
+
     # MÉTODOS DE UTILIDAD
     
     def to_dict_safe(self) -> dict:

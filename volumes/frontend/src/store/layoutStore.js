@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
+import { shouldLog } from '@/utils/environment';
 
 // ====================================
 // CONFIGURACIÓN Y CONSTANTES
@@ -25,11 +26,6 @@ const DROPDOWN_TYPES = {
 // ====================================
 // UTILIDADES
 // ====================================
-
-const shouldLog = () => {
-    return import.meta.env?.DEV || process.env.NODE_ENV === 'development';
-};
-
 const applyDarkModeToDOM = (isDark) => {
     if (typeof window !== 'undefined') {
         const html = document.documentElement;

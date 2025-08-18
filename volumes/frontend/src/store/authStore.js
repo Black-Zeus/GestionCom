@@ -1,12 +1,13 @@
 /**
  * stores/authStore.js
- * Store de autenticación con Zustand
- * Maneja tokens, user info, estado de login/logout y persistencia
+ * Store de autenticación con Zustand - ACTUALIZADO CON USERSERVICE
+ * Maneja tokens, user info, estado de login/logout, persistencia y perfil de usuario
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { shouldLog } from '@/utils/environment';
+import { getMyProfile, transformProfileData } from '@/services/userService';
 
 // ==========================================
 // STORAGE KEYS
@@ -16,7 +17,8 @@ const STORAGE_KEYS = {
   ACCESS_TOKEN: 'access_token',
   REFRESH_TOKEN: 'refresh_token',
   USER_INFO: 'user_info',
-  AUTH_STATE: 'auth_state'
+  AUTH_STATE: 'auth_state',
+  USER_PROFILE: 'user_profile'
 };
 
 // ==========================================
@@ -30,11 +32,17 @@ const initialState = {
 
   // User information
   user: null,
+  userProfile: null, // ✅ NUEVO: Perfil completo del usuario
 
   // Auth status
   isAuthenticated: false,
   isLoading: false,
   isInitialized: false,
+
+  // Profile loading status
+  isProfileLoading: false, // ✅ NUEVO: Estado de carga del perfil
+  profileLoadError: null,  // ✅ NUEVO: Errores de carga del perfil
+  profileLastFetch: null,  // ✅ NUEVO: Timestamp de última carga
 
   // Login session info
   sessionInfo: null,
@@ -76,7 +84,11 @@ const useAuthStore = create(
           isLoading: false,
           sessionInfo: data.session_info || null,
           loginTimestamp: new Date().toISOString(),
-          lastError: null
+          lastError: null,
+          // Reset profile state on new login
+          userProfile: null,
+          profileLastFetch: null,
+          profileLoadError: null
         };
 
         // Guardar tokens en localStorage separadamente (para axios interceptor)
@@ -92,6 +104,9 @@ const useAuthStore = create(
         if (shouldLog()) {
           console.log('✅ Auth state updated after login');
         }
+
+        // Auto-cargar perfil después del login
+        get().loadUserProfile();
       },
 
       // ==========================================
@@ -120,120 +135,188 @@ const useAuthStore = create(
       },
 
       // ==========================================
+      // ACTIONS - USER PROFILE (NUEVAS)
+      // ==========================================
+
+      /**
+       * Cargar perfil completo del usuario desde el backend
+       * @param {boolean} forceRefresh - Forzar recarga aunque ya esté cargado
+       */
+      loadUserProfile: async (forceRefresh = false) => {
+        const state = get();
+        
+        // No cargar si no está autenticado
+        if (!state.isAuthenticated || !state.user) {
+          return;
+        }
+
+        // No cargar si ya está cargando
+        if (state.isProfileLoading) {
+          return;
+        }
+
+        // Verificar si necesita recarga (cache de 5 minutos)
+        const cacheTime = 5 * 60 * 1000; // 5 minutos
+        const now = new Date().getTime();
+        const lastFetch = state.profileLastFetch ? new Date(state.profileLastFetch).getTime() : 0;
+        
+        if (!forceRefresh && state.userProfile && (now - lastFetch) < cacheTime) {
+          if (shouldLog()) {
+            console.log('📋 Using cached user profile');
+          }
+          return;
+        }
+
+        // Iniciar carga
+        set({
+          isProfileLoading: true,
+          profileLoadError: null
+        });
+
+        try {
+          if (shouldLog()) {
+            console.log('📋 Loading user profile...');
+          }
+
+          const response = await getMyProfile();
+          const transformedProfile = transformProfileData(response);
+
+          set({
+            userProfile: transformedProfile,
+            isProfileLoading: false,
+            profileLoadError: null,
+            profileLastFetch: new Date().toISOString()
+          });
+
+          // Guardar en localStorage para persistencia
+          localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(transformedProfile));
+
+          if (shouldLog()) {
+            console.log('✅ User profile loaded successfully');
+          }
+
+        } catch (error) {
+          if (shouldLog()) {
+            console.error('❌ Failed to load user profile:', error);
+          }
+
+          set({
+            isProfileLoading: false,
+            profileLoadError: error.message || 'Error al cargar perfil'
+          });
+        }
+      },
+
+      /**
+       * Actualizar datos del perfil en el store después de una modificación
+       * @param {Object} updatedData - Datos actualizados
+       */
+      updateUserProfile: (updatedData) => {
+        const currentProfile = get().userProfile;
+        
+        if (!currentProfile) {
+          return;
+        }
+
+        const updatedProfile = {
+          ...currentProfile,
+          ...updatedData,
+          updatedAt: new Date().toISOString()
+        };
+
+        set({
+          userProfile: updatedProfile,
+          profileLastFetch: new Date().toISOString()
+        });
+
+        // Actualizar en localStorage
+        localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(updatedProfile));
+
+        if (shouldLog()) {
+          console.log('✅ User profile updated in store');
+        }
+      },
+
+      /**
+       * Limpiar datos del perfil
+       */
+      clearUserProfile: () => {
+        set({
+          userProfile: null,
+          profileLastFetch: null,
+          profileLoadError: null,
+          isProfileLoading: false
+        });
+
+        localStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
+
+        if (shouldLog()) {
+          console.log('🧹 User profile cleared from store');
+        }
+      },
+
+      // ==========================================
       // ACTIONS - TOKEN MANAGEMENT
       // ==========================================
 
       /**
-       * Actualiza solo los tokens (para refresh)
-       * @param {Object} tokens - Nuevos tokens
+       * Actualiza tokens después de un refresh
+       * @param {Object} newTokens - Nuevos tokens
        */
-      updateTokens: (tokens) => {
-        if (!tokens.access_token) {
-          throw new Error('Access token is required');
-        }
+      updateTokens: (newTokens) => {
+        const { access_token, refresh_token } = newTokens;
+
+        const tokenState = {
+          accessToken: access_token,
+          ...(refresh_token && { refreshToken: refresh_token }),
+          lastError: null
+        };
 
         // Actualizar localStorage
-        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, tokens.access_token);
-        if (tokens.refresh_token) {
-          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, tokens.refresh_token);
+        localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access_token);
+        if (refresh_token) {
+          localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh_token);
         }
 
         // Actualizar store
-        set({
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || get().refreshToken,
-          lastError: null
-        });
+        set(tokenState);
 
         if (shouldLog()) {
-          console.log('🔄 Tokens updated');
+          console.log('🔄 Tokens updated in store');
         }
       },
 
       /**
-       * Actualiza información del usuario
-       * @param {Object} userInfo - Nueva información del usuario
+       * Marcar como iniciado desde storage
        */
-      updateUser: (userInfo) => {
-        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
-
-        set({
-          user: userInfo,
-          lastError: null
-        });
-
-        if (shouldLog()) {
-          console.log('👤 User info updated');
-        }
-      },
-
-      // ==========================================
-      // ACTIONS - ERROR HANDLING
-      // ==========================================
-
-      /**
-       * Establece un error de autenticación
-       * @param {string|Error} error - Error a establecer
-       */
-      setError: (error) => {
-        const errorMessage = error instanceof Error ? error.message : error;
-
-        set({
-          lastError: errorMessage,
-          isLoading: false
-        });
-
-        if (shouldLog()) {
-          console.error('❌ Auth error set:', errorMessage);
-        }
-      },
-
-      /**
-       * Limpia el último error
-       */
-      clearError: () => {
-        set({ lastError: null });
-      },
-
-      // ==========================================
-      // ACTIONS - LOADING
-      // ==========================================
-
-      /**
-       * Establece el estado de carga
-       * @param {boolean} isLoading - Estado de carga
-       */
-      setLoading: (isLoading) => {
-        set({ isLoading });
-      },
-
-      // ==========================================
-      // ACTIONS - INITIALIZATION
-      // ==========================================
-
-      /**
-       * Inicializa el estado desde localStorage
-       */
-      initializeAuth: () => {
+      initFromStorage: async () => {
         try {
           const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
           const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-          const userInfoString = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+          const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+          const userProfile = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
 
-          if (accessToken && userInfoString) {
-            const userInfo = JSON.parse(userInfoString);
+          if (accessToken && userInfo) {
+            const parsedUser = JSON.parse(userInfo);
+            const parsedProfile = userProfile ? JSON.parse(userProfile) : null;
 
             set({
               accessToken,
               refreshToken,
-              user: userInfo,
+              user: parsedUser,
+              userProfile: parsedProfile,
               isAuthenticated: true,
               isInitialized: true,
-              lastError: null
+              profileLastFetch: parsedProfile?.profileLastFetch || null
             });
 
             if (shouldLog()) {
               console.log('🔄 Auth state restored from storage');
+            }
+
+            // Cargar perfil si no está en cache o es muy viejo
+            if (!parsedProfile) {
+              get().loadUserProfile();
             }
           } else {
             set({ isInitialized: true });
@@ -245,27 +328,39 @@ const useAuthStore = create(
       },
 
       // ==========================================
-      // GETTERS / COMPUTED VALUES
+      // GETTERS / COMPUTED VALUES (ACTUALIZADOS)
       // ==========================================
 
       /**
        * Verifica si el usuario tiene un rol específico
-       * @param {string} role - Rol a verificar
+       * @param {string|Array} role - Rol(es) a verificar
        * @returns {boolean}
        */
       hasRole: (role) => {
-        const user = get().user;
-        return user?.roles?.includes(role) || false;
+        const userProfile = get().userProfile;
+        const userRoles = userProfile?.roles || get().user?.roles || [];
+        
+        if (Array.isArray(role)) {
+          return role.some(r => userRoles.includes(r));
+        }
+        
+        return userRoles.includes(role);
       },
 
       /**
        * Verifica si el usuario tiene un permiso específico
-       * @param {string} permission - Permiso a verificar
+       * @param {string|Array} permission - Permiso(s) a verificar
        * @returns {boolean}
        */
       hasPermission: (permission) => {
-        const user = get().user;
-        return user?.permissions?.includes(permission) || false;
+        const userProfile = get().userProfile;
+        const userPermissions = userProfile?.permissions || get().user?.permissions || [];
+        
+        if (Array.isArray(permission)) {
+          return permission.some(p => userPermissions.includes(p));
+        }
+        
+        return userPermissions.includes(permission);
       },
 
       /**
@@ -274,139 +369,134 @@ const useAuthStore = create(
        * @returns {boolean}
        */
       hasAnyPermission: (permissions) => {
-        const user = get().user;
-        if (!user?.permissions) return false;
+        const userProfile = get().userProfile;
+        const userPermissions = userProfile?.permissions || get().user?.permissions || [];
+        
+        if (!userPermissions || !Array.isArray(userPermissions)) return false;
 
         return permissions.some(permission =>
-          user.permissions.includes(permission)
+          userPermissions.includes(permission)
         );
       },
 
       /**
-       * Verifica si el usuario tiene todos los permisos dados
-       * @param {Array<string>} permissions - Lista de permisos
+       * Verifica si el usuario tiene roles específicos
+       * @param {Array<string>} roles - Lista de roles
        * @returns {boolean}
        */
-      hasAllPermissions: (permissions) => {
-        const user = get().user;
-        if (!user?.permissions) return false;
+      hasAnyRole: (roles) => {
+        const userProfile = get().userProfile;
+        const userRoles = userProfile?.roles || get().user?.roles || [];
+        
+        if (!userRoles || !Array.isArray(userRoles)) return false;
 
-        return permissions.every(permission =>
-          user.permissions.includes(permission)
-        );
+        return roles.some(role => userRoles.includes(role));
       },
 
       /**
-       * Obtiene información básica del usuario para mostrar en UI
-       * @returns {Object|null}
+       * Verifica si el usuario es admin
+       * @returns {boolean}
+       */
+      isAdmin: () => {
+        const userProfile = get().userProfile;
+        return userProfile?.hasAdminRole || get().hasRole(['ADMIN', 'ADMINISTRATOR']);
+      },
+
+      /**
+       * Verifica si el usuario es manager
+       * @returns {boolean}
+       */
+      isManager: () => {
+        const userProfile = get().userProfile;
+        return userProfile?.hasManagerRole || get().hasRole(['MANAGER', 'SUPERVISOR']);
+      },
+
+      /**
+       * Obtiene información de display del usuario
+       * @returns {Object} Información para mostrar
        */
       getUserDisplay: () => {
-        const user = get().user;
-        if (!user) return null;
-
-        return {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          fullName: user.full_name,
-          initials: (user.full_name || user.username || user.email)
-            .split(' ')
-            .map(name => name[0])
-            .join('')
-            .toUpperCase()
-            .substring(0, 2),
-          roles: user.roles || [],
-          permissions: user.permissions || []
-        };
-      },
-
-      /**
-       * Verifica si la sesión está próxima a expirar
-       * @param {number} bufferMinutes - Minutos de buffer antes de expiración
-       * @returns {boolean}
-       */
-      isSessionExpiringSoon: (bufferMinutes = 5) => {
-        const { accessToken } = get();
-        if (!accessToken) return false;
-
-        try {
-          // Decodificar el token JWT sin verificar la firma
-          const payload = JSON.parse(atob(accessToken.split('.')[1]));
-          const expirationTime = payload.exp * 1000; // Convertir a milliseconds
-          const currentTime = Date.now();
-          const bufferTime = bufferMinutes * 60 * 1000; // Convertir minutos a milliseconds
-
-          return (expirationTime - currentTime) <= bufferTime;
-        } catch (error) {
-          console.error('Error checking token expiration:', error);
-          return true; // Si hay error, asumir que expira pronto
+        const userProfile = get().userProfile;
+        const basicUser = get().user;
+        
+        if (userProfile) {
+          return {
+            id: userProfile.id,
+            username: userProfile.username,
+            displayName: userProfile.displayName,
+            fullName: userProfile.fullName,
+            initials: userProfile.initials,
+            email: userProfile.email,
+            isActive: userProfile.isActive,
+            roles: userProfile.roleNames || [],
+            lastLogin: userProfile.lastLoginAt
+          };
         }
+        
+        if (basicUser) {
+          return {
+            id: basicUser.id,
+            username: basicUser.username,
+            displayName: basicUser.full_name || `${basicUser.first_name} ${basicUser.last_name}`,
+            fullName: basicUser.full_name,
+            initials: `${basicUser.first_name?.charAt(0) || ''}${basicUser.last_name?.charAt(0) || ''}`,
+            email: basicUser.email,
+            isActive: basicUser.is_active,
+            roles: basicUser.roles || [],
+            lastLogin: basicUser.last_login_at
+          };
+        }
+        
+        return null;
       }
     }),
-
-    // ==========================================
-    // PERSIST CONFIGURATION
-    // ==========================================
     {
-      name: STORAGE_KEYS.AUTH_STATE,
+      name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-
-      // Solo persistir datos esenciales
       partialize: (state) => ({
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         sessionInfo: state.sessionInfo,
-        loginTimestamp: state.loginTimestamp
-      }),
-
-      // Version para migración si es necesario
-      version: 1,
-
-      // Función de migración si cambia la estructura
-      migrate: (persistedState, version) => {
-        if (version === 0) {
-          // Migrar de versión 0 a 1 si es necesario
-          return {
-            ...persistedState,
-            isInitialized: false
-          };
-        }
-        return persistedState;
-      }
+        loginTimestamp: state.loginTimestamp,
+        userProfile: state.userProfile,
+        profileLastFetch: state.profileLastFetch
+      })
     }
   )
 );
 
 // ==========================================
-// SELECTORS OPTIMIZADOS
+// SELECTORS OPTIMIZADOS (ACTUALIZADOS)
 // ==========================================
 
 export const authSelectors = {
-  // Auth status
+  // Basic auth
   isAuthenticated: (state) => state.isAuthenticated,
   isLoading: (state) => state.isLoading,
-  isInitialized: (state) => state.isInitialized,
-
-  // User data
   user: (state) => state.user,
+  userProfile: (state) => state.userProfile, // ✅ NUEVO
+  isProfileLoading: (state) => state.isProfileLoading, // ✅ NUEVO
+  
+  // Display info
   userDisplay: (state) => state.getUserDisplay(),
-
-  // Tokens
-  accessToken: (state) => state.accessToken,
-  refreshToken: (state) => state.refreshToken,
-  hasTokens: (state) => !!(state.accessToken && state.refreshToken),
+  
+  // Status
+  needsLogin: (state) => 
+    !state.isAuthenticated || 
+    !(state.accessToken && state.refreshToken),
 
   // Error
   lastError: (state) => state.lastError,
+  profileLoadError: (state) => state.profileLoadError, // ✅ NUEVO
 
   // Session
   sessionInfo: (state) => state.sessionInfo
 };
 
 // ==========================================
-// HOOKS HELPERS
+// HOOKS HELPERS (ACTUALIZADOS)
 // ==========================================
 
 /**
@@ -435,14 +525,28 @@ export const useUser = () => {
 };
 
 /**
+ * Hook específico para perfil completo del usuario
+ */
+export const useUserProfile = () => {
+  return useAuthStore(authSelectors.userProfile);
+};
+
+/**
  * Hook específico para display del usuario
  */
 export const useUserDisplay = () => {
   return useAuthStore(authSelectors.userDisplay);
 };
 
+/**
+ * Hook específico para estado de carga del perfil
+ */
+export const useProfileLoading = () => {
+  return useAuthStore(authSelectors.isProfileLoading);
+};
+
 // ==========================================
-// EXPORT POR DEFECTO
+// EXPORT POR DEFECTO 
 // ==========================================
 
 export default useAuthStore;
