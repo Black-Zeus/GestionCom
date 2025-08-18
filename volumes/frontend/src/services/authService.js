@@ -2,12 +2,18 @@
  * services/authService.js
  * Servicio de autenticación - Encapsula todas las llamadas de auth
  * Login, logout, refresh, validación de tokens, cambio de contraseñas
+ * 🔧 MEJORADO: Validaciones previas y mejor manejo de errores
  */
 
 import api from '@/services/axiosInterceptor';
 import { API_ENDPOINTS } from '@/constants';
-import { parseError, getFormattedError } from '@/utils/errors';
+import { parseError, getFormattedError } from '@/utils/errors'; // 🔧 USAR DICCIONARIO DE ERRORES
 import { shouldLog } from '@/utils/environment';
+import { 
+  hasValidTokens as interceptorHasValidTokens, 
+  hasAccessToken as interceptorHasAccessToken, 
+  hasRefreshToken as interceptorHasRefreshToken 
+} from '@/services/axiosInterceptor';
 
 // ==========================================
 // STORAGE KEYS
@@ -20,7 +26,7 @@ const STORAGE_KEYS = {
 };
 
 // ==========================================
-// AUTH SERVICE CLASS
+// AUTH SERVICE CLASS - MEJORADO
 // ==========================================
 
 class AuthService {
@@ -163,7 +169,7 @@ class AuthService {
         console.log('🔍 Validating token');
       }
 
-      const response = await api.post(API_ENDPOINTS.AUTH.VALIDATE, {
+      const response = await api.post(API_ENDPOINTS.AUTH.VALIDATE_TOKEN, {
         token: tokenToValidate
       });
 
@@ -188,11 +194,45 @@ class AuthService {
   }
 
   // ==========================================
-  // PASSWORD MANAGEMENT
+  // PASSWORD MANAGEMENT - 🔧 MEJORADO
   // ==========================================
 
   /**
-   * Cambiar contraseña del usuario actual
+   * 🔧 VALIDACIÓN PREVIA - Verifica que hay tokens válidos antes de operaciones críticas
+   * @returns {boolean} True si hay tokens válidos
+   * @throws {Error} Si no hay tokens válidos
+   */
+  _validateTokensBeforeCriticalOperation() {
+    if (!interceptorHasValidTokens()) {
+      const hasAccess = interceptorHasAccessToken();
+      const hasRefresh = interceptorHasRefreshToken();
+      
+      let errorMessage = 'No se puede realizar la operación: ';
+      
+      if (!hasAccess && !hasRefresh) {
+        errorMessage += 'No hay tokens de autenticación. Es necesario iniciar sesión.';
+      } else if (!hasAccess) {
+        errorMessage += 'Token de acceso no válido. Intenta cerrar sesión e iniciar sesión nuevamente.';
+      } else if (!hasRefresh) {
+        errorMessage += 'Token de actualización no válido. Es necesario iniciar sesión nuevamente.';
+      }
+
+      if (shouldLog()) {
+        console.error('❌ Token validation failed:', {
+          hasAccess,
+          hasRefresh,
+          message: errorMessage
+        });
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    return true;
+  }
+
+  /**
+   * Cambiar contraseña del usuario actual - 🔧 MEJORADO
    * @param {Object} passwordData - Datos de cambio de contraseña
    * @param {string} passwordData.current_password - Contraseña actual
    * @param {string} passwordData.new_password - Nueva contraseña
@@ -202,10 +242,35 @@ class AuthService {
   async changePassword(passwordData) {
     try {
       if (shouldLog()) {
-        console.log('🔑 Attempting password change');
+        console.log('🔑 Attempting password change...');
       }
 
-      const response = await api.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+      // 🔧 VALIDACIÓN PREVIA CRÍTICA
+      this._validateTokensBeforeCriticalOperation();
+
+      // Validación de datos requeridos
+      if (!passwordData.current_password) {
+        throw new Error('La contraseña actual es requerida');
+      }
+
+      if (!passwordData.new_password) {
+        throw new Error('La nueva contraseña es requerida');
+      }
+
+      if (!passwordData.confirm_password) {
+        throw new Error('La confirmación de contraseña es requerida');
+      }
+
+      if (passwordData.new_password !== passwordData.confirm_password) {
+        throw new Error('Las contraseñas no coinciden');
+      }
+
+      if (shouldLog()) {
+        console.log('✅ Pre-validation passed, sending request...');
+      }
+
+      // 🔧 USAR PUT según el backend (no POST)
+      const response = await api.put(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         current_password: passwordData.current_password,
         new_password: passwordData.new_password,
         confirm_password: passwordData.confirm_password
@@ -225,6 +290,16 @@ class AuthService {
 
       if (shouldLog()) {
         console.error('❌ Password change failed:', formattedError);
+        
+        // Log adicional para debugging
+        if (error.response?.status === 401) {
+          console.error('🔍 401 Error details:', {
+            hasValidTokens: interceptorHasValidTokens(),
+            hasAccessToken: interceptorHasAccessToken(),
+            hasRefreshToken: interceptorHasRefreshToken(),
+            errorData: error.response?.data
+          });
+        }
       }
 
       throw formattedError;
@@ -232,24 +307,53 @@ class AuthService {
   }
 
   /**
-   * Cambio de contraseña por administrador
+   * Cambio de contraseña por administrador - 🔧 MEJORADO
    * @param {Object} adminPasswordData - Datos del cambio admin
-   * @param {number} adminPasswordData.user_id - ID del usuario
+   * @param {number} adminPasswordData.target_user_id - ID del usuario objetivo
    * @param {string} adminPasswordData.new_password - Nueva contraseña
    * @param {string} adminPasswordData.confirm_password - Confirmación
+   * @param {string} adminPasswordData.reason - Razón del cambio (opcional)
    * @returns {Promise<Object>} Respuesta del cambio
    */
   async adminChangePassword(adminPasswordData) {
     try {
       if (shouldLog()) {
-        console.log('🔑 Admin attempting password change for user:', adminPasswordData.user_id);
+        console.log('🔑 Admin attempting password change for user:', adminPasswordData.target_user_id);
       }
 
-      const response = await api.post(API_ENDPOINTS.AUTH.ADMIN_CHANGE_PASSWORD, {
-        user_id: adminPasswordData.user_id,
+      // 🔧 VALIDACIÓN PREVIA CRÍTICA
+      this._validateTokensBeforeCriticalOperation();
+
+      // Validación de datos requeridos
+      if (!adminPasswordData.target_user_id) {
+        throw new Error('ID del usuario objetivo es requerido');
+      }
+
+      if (!adminPasswordData.new_password) {
+        throw new Error('La nueva contraseña es requerida');
+      }
+
+      if (!adminPasswordData.confirm_password) {
+        throw new Error('La confirmación de contraseña es requerida');
+      }
+
+      if (adminPasswordData.new_password !== adminPasswordData.confirm_password) {
+        throw new Error('Las contraseñas no coinciden');
+      }
+
+      const requestData = {
+        target_user_id: adminPasswordData.target_user_id,
         new_password: adminPasswordData.new_password,
         confirm_password: adminPasswordData.confirm_password
-      });
+      };
+
+      // Agregar razón si se proporciona
+      if (adminPasswordData.reason) {
+        requestData.reason = adminPasswordData.reason;
+      }
+
+      // 🔧 USAR PUT según el backend
+      const response = await api.put(API_ENDPOINTS.AUTH.CHANGE_PASSWORD_ADMIN, requestData);
 
       if (response.data?.success) {
         if (shouldLog()) {
@@ -272,7 +376,7 @@ class AuthService {
   }
 
   /**
-   * Solicitar reset de contraseña (forgot password)
+   * Solicitar reset de contraseña (forgot password) - 🔧 MEJORADO
    * @param {string} email - Email del usuario
    * @returns {Promise<Object>} Respuesta de la solicitud
    */
@@ -282,8 +386,19 @@ class AuthService {
         console.log('📧 Requesting password reset for:', email);
       }
 
+      // Validación de email
+      if (!email || !email.trim()) {
+        throw new Error('El email es requerido');
+      }
+
+      // Validación básica de formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('El formato del email no es válido');
+      }
+
       const response = await api.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, {
-        email: email
+        email: email.trim()
       });
 
       if (response.data?.success) {
@@ -307,7 +422,7 @@ class AuthService {
   }
 
   /**
-   * Resetear contraseña con token
+   * Resetear contraseña con token - 🔧 MEJORADO
    * @param {Object} resetData - Datos del reset
    * @param {string} resetData.token - Token de reset
    * @param {string} resetData.new_password - Nueva contraseña
@@ -318,6 +433,23 @@ class AuthService {
     try {
       if (shouldLog()) {
         console.log('🔄 Attempting password reset');
+      }
+
+      // Validación de datos requeridos
+      if (!resetData.token) {
+        throw new Error('Token de reset es requerido');
+      }
+
+      if (!resetData.new_password) {
+        throw new Error('La nueva contraseña es requerida');
+      }
+
+      if (!resetData.confirm_password) {
+        throw new Error('La confirmación de contraseña es requerida');
+      }
+
+      if (resetData.new_password !== resetData.confirm_password) {
+        throw new Error('Las contraseñas no coinciden');
       }
 
       const response = await api.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
@@ -347,7 +479,7 @@ class AuthService {
   }
 
   // ==========================================
-  // TOKEN UTILITIES
+  // TOKEN UTILITIES - 🔧 MEJORADO
   // ==========================================
 
   /**
@@ -355,10 +487,36 @@ class AuthService {
    * @returns {boolean} True si hay tokens
    */
   hasValidTokens() {
-    const accessToken = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    return interceptorHasValidTokens(); // Usar función del interceptor
+  }
 
-    return !!(accessToken && refreshToken);
+  /**
+   * 🔧 NUEVO - Verifica si hay token de acceso
+   * @returns {boolean} True si hay token de acceso
+   */
+  hasAccessToken() {
+    return interceptorHasAccessToken();
+  }
+
+  /**
+   * 🔧 NUEVO - Verifica si hay refresh token
+   * @returns {boolean} True si hay refresh token
+   */
+  hasRefreshToken() {
+    return interceptorHasRefreshToken();
+  }
+
+  /**
+   * 🔧 NUEVO - Obtiene estado detallado de tokens
+   * @returns {Object} Estado de tokens
+   */
+  getTokensStatus() {
+    return {
+      hasAccess: this.hasAccessToken(),
+      hasRefresh: this.hasRefreshToken(),
+      hasValid: this.hasValidTokens(),
+      timestamp: new Date().toISOString()
+    };
   }
 
   /**
@@ -463,7 +621,7 @@ class AuthService {
   }
 
   // ==========================================
-  // SESSION MANAGEMENT
+  // SESSION MANAGEMENT - 🔧 MEJORADO
   // ==========================================
 
   /**
@@ -475,6 +633,15 @@ class AuthService {
       const hasTokens = this.hasValidTokens();
       const userInfo = this.getUserFromToken();
       const isNotExpired = !this.isTokenExpiringSoon(0); // Sin buffer para verificación estricta
+
+      if (shouldLog()) {
+        console.log('🔍 Session validation:', {
+          hasTokens,
+          hasUserInfo: !!userInfo,
+          isNotExpired,
+          isValid: hasTokens && userInfo && isNotExpired
+        });
+      }
 
       return hasTokens && userInfo && isNotExpired;
 
@@ -495,15 +662,19 @@ class AuthService {
       const userInfo = this.getUserFromToken();
       if (!userInfo) return null;
 
+      const tokensStatus = this.getTokensStatus();
+
       return {
         isValid: this.isSessionValid(),
         user: userInfo,
         timeRemaining: this.getTokenTimeRemaining(),
         expiringSoon: this.isTokenExpiringSoon(),
         tokens: {
-          hasAccess: !!localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
-          hasRefresh: !!localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN)
-        }
+          hasAccess: tokensStatus.hasAccess,
+          hasRefresh: tokensStatus.hasRefresh,
+          hasValid: tokensStatus.hasValid
+        },
+        sessionCheckedAt: new Date().toISOString()
       };
 
     } catch (error) {
@@ -522,7 +693,7 @@ class AuthService {
 const authService = new AuthService();
 
 // ==========================================
-// CONVENIENCE METHODS (funciones directas)
+// CONVENIENCE METHODS (funciones directas) - 🔧 MEJORADAS
 // ==========================================
 
 /**
@@ -552,7 +723,7 @@ export const validateToken = (token) => authService.validateToken(token);
 export const refreshToken = () => authService.refreshToken();
 
 /**
- * Cambio de contraseña rápido - función directa
+ * Cambio de contraseña rápido - función directa - 🔧 MEJORADO
  * @param {Object} passwordData - Datos de la contraseña
  * @returns {Promise<Object>} Respuesta del cambio
  */
@@ -580,7 +751,7 @@ export const forgotPassword = (email) => authService.forgotPassword(email);
 export const resetPassword = (resetData) => authService.resetPassword(resetData);
 
 // ==========================================
-// UTILITY EXPORTS
+// UTILITY EXPORTS - 🔧 MEJORADAS
 // ==========================================
 
 /**
@@ -588,6 +759,24 @@ export const resetPassword = (resetData) => authService.resetPassword(resetData)
  * @returns {boolean} True si hay tokens
  */
 export const hasValidTokens = () => authService.hasValidTokens();
+
+/**
+ * 🔧 NUEVO - Verifica si hay token de acceso
+ * @returns {boolean} True si hay token de acceso
+ */
+export const hasAccessToken = () => authService.hasAccessToken();
+
+/**
+ * 🔧 NUEVO - Verifica si hay refresh token
+ * @returns {boolean} True si hay refresh token
+ */
+export const hasRefreshToken = () => authService.hasRefreshToken();
+
+/**
+ * 🔧 NUEVO - Obtiene estado detallado de tokens
+ * @returns {Object} Estado de tokens
+ */
+export const getTokensStatus = () => authService.getTokensStatus();
 
 /**
  * Obtiene información del usuario desde el token
