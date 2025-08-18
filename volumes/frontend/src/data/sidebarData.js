@@ -10,6 +10,59 @@ export const sidebarNavData = {
     data: {
         sections: [
             {
+                id: "administracion",
+                title: "Administración",
+                items: [
+                    {
+                        id: "administracion-general",
+                        text: "Administración",
+                        icon: "⚙️",
+                        path: null,
+                        badge: null,
+                        hasSubmenu: true,
+                        active: false,
+                        submenu: [
+                            {
+                                id: "usuarios",
+                                text: "Usuarios",
+                                icon: "👥",
+                                path: "/admin/users"
+                            },
+                            {
+                                id: "bodegas",
+                                text: "Bodegas",
+                                icon: "🏬",
+                                path: "/admin/warehouses"
+                            },
+                            {
+                                id: "caja",
+                                text: "Caja",
+                                icon: "💵",
+                                path: "/admin/cash"
+                            },
+                            {
+                                id: "roles",
+                                text: "Roles",
+                                icon: "🛡️",
+                                path: "/admin/roles"
+                            },
+                            {
+                                id: "permisos",
+                                text: "Permisos",
+                                icon: "🔑",
+                                path: "/admin/permissions"
+                            },
+                            {
+                                id: "menu",
+                                text: "Menú",
+                                icon: "📋",
+                                path: "/admin/menu"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 id: "principal",
                 title: "Principal",
                 items: [
