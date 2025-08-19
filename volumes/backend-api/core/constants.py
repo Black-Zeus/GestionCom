@@ -86,6 +86,15 @@ class ErrorCode(str, Enum):
     PERMISSION_NOT_FOUND = "PERM_002"       # Permiso no existe en el sistema
     PERMISSION_ROLE_REQUIRED = "PERM_003"   # Rol específico requerido
 
+    # ==========================================
+    # Business Logic Errors (BIZ_XXX)
+    # Errores de lógica de negocio y reglas empresariales
+    # ==========================================
+    BUSINESS_RULE_VIOLATION = "BIZ_001"     # Violación de regla de negocio
+    BUSINESS_OPERATION_NOT_ALLOWED = "BIZ_002"  # Operación no permitida por reglas
+    BUSINESS_STATE_INVALID = "BIZ_003"      # Estado inválido para la operación
+    BUSINESS_WORKFLOW_ERROR = "BIZ_004"     # Error en flujo de trabajo
+
 
 class ErrorType(str, Enum):
     """
@@ -94,16 +103,18 @@ class ErrorType(str, Enum):
     Permite agrupar errores por categoría para aplicar
     lógica específica de manejo en el frontend o logging
     """
-    AUTHENTICATION_ERROR = "AuthenticationError"    # Problemas de login/auth
-    VALIDATION_ERROR = "ValidationError"            # Datos de entrada inválidos
-    PERMISSION_ERROR = "PermissionError"            # Problemas de autorización
-    RATE_LIMIT_ERROR = "RateLimitError"            # Límites de velocidad
-    SYSTEM_ERROR = "SystemError"                    # Errores internos
-    DATABASE_ERROR = "DatabaseError"                # Errores de BD
-    CACHE_ERROR = "CacheError"                      # Errores de cache
-    RESOURCE_ERROR = "ResourceError"                # Errores de recursos CRUD
-    BUSINESS_ERROR = "BusinessError"                # Errores de lógica de negocio
-    CONFIGURATION_ERROR = "ConfigurationError"      # Errores de configuración
+    AUTHENTICATION_ERROR = "AuthenticationError"          # Problemas de login/autenticación
+    VALIDATION_ERROR = "ValidationError"                  # Datos de entrada inválidos
+    PERMISSION_ERROR = "PermissionError"                  # Problemas de autorización/permisos
+    RATE_LIMIT_ERROR = "RateLimitError"                   # Límite de peticiones alcanzado
+    SYSTEM_ERROR = "SystemError"                          # Errores internos no controlados
+    DATABASE_ERROR = "DatabaseError"                      # Errores en operaciones de base de datos
+    CACHE_ERROR = "CacheError"                            # Errores en capa de cache
+    RESOURCE_ERROR = "ResourceError"                      # Errores generales en recursos CRUD
+    RESOURCE_NOT_FOUND = "ResourceNotFound"               # Recurso no encontrado
+    BUSINESS_ERROR = "BusinessError"                      # Errores de lógica de negocio
+    BUSINESS_RULE_VIOLATION = "BusinessRuleViolation"     # Violación de regla de negocio
+    CONFIGURATION_ERROR = "ConfigurationError"            # Errores de configuración
 
 
 class HTTPStatus(int, Enum):
