@@ -1,6 +1,6 @@
 // ====================================
 // volumes/frontend/src/pages/admin/Users.jsx
-// Página principal de gestión de usuarios - Integración completa con API real
+// Página principal de gestión de usuarios - Versión completa corregida
 // ====================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -14,36 +14,8 @@ import {
 } from '@/services/usersAdminService';
 import { shouldLog } from '@/utils/environment';
 
-// Toast helpers inline corregidos
-const ToastMessage = ({ t, type = "info", message, title }) => {
-  const styles = {
-    error: { bg: "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-700 dark:text-red-200", icon: "❌" },
-    success: { bg: "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-700 dark:text-green-200", icon: "✅" },
-    info: { bg: "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-200", icon: "ℹ️" },
-    warning: { bg: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 text-yellow-700 dark:text-yellow-200", icon: "⚠️" }
-  };
-  const style = styles[type] || styles.info;
-  return (
-    <div className={`${t.visible ? "animate-toast-enter" : "animate-toast-leave"} max-w-md w-full ${style.bg} border shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
-      <div className="flex-1 w-0 p-4">
-        <div className="flex items-start">
-          <div className="flex-shrink-0 pt-0.5 text-lg">{style.icon}</div>
-          <div className="ml-3 flex-1">
-            {title && <p className="text-sm font-semibold">{title}</p>}
-            <p className="text-sm break-words">{message}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const showToast = (type, message, title = null, opts = {}) => {
-  return toast.custom((t) => <ToastMessage t={t} type={type} message={message} title={title} />, { duration: 4000, ...opts });
-};
-
-const showSuccessToast = (message, title = "Éxito", opts) => showToast("success", message, title, opts);
-const showErrorToast = (message, title = "Error", opts) => showToast("error", message, title, opts);
+// Importar toast helpers corregidos
+import { showSuccessToast, showErrorToast } from '@/components/common/toast/toastHelpers';
 
 // Componentes específicos de usuarios
 import UsersHeader from './users/UsersHeader';
@@ -61,317 +33,269 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estados de UI
-  const [currentView, setCurrentView] = useState('table');
+  // Estados de filtros
   const [filters, setFilters] = useState({
     search: '',
-    role: '',
-    status: '',
-    warehouse: ''
+    status: 'all',
+    role: 'all',
+    warehouse: 'all',
+    sortBy: 'recent',
+    viewMode: 'grid'
   });
 
-  // Estados de modales
+  // Estados de modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [passwordModalUser, setPasswordModalUser] = useState(null);
+
+  // Estados de vista
+  const [currentView, setCurrentView] = useState('grid');
 
   // ====================================
-  // CARGAR DATOS
+  // FUNCIONES DE CARGA DE DATOS
   // ====================================
-  const fetchUsers = useCallback(async (filterOptions = {}) => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      if (shouldLog()) {
-        console.log('🔄 Fetching users with filters:', filterOptions);
+      const response = await getUsers();
+
+      // El servicio devuelve directamente { users, stats, pagination, ... }
+      if (response?.users) {
+        setUsers(response.users || []);
+        setStats(response.stats || null);
+
+        if (shouldLog()) {
+          console.log('✅ Users loaded successfully:', {
+            count: response.users?.length || 0,
+            stats: response.stats
+          });
+        }
+      } else {
+        throw new Error('Invalid response format from getUsers');
       }
-
-      // Construir opciones para la API
-      const apiOptions = {
-        skip: 0,
-        limit: 100,
-        active_only: filterOptions.status !== 'inactive',
-        ...(filterOptions.search && { search: filterOptions.search }),
-        ...(filterOptions.role && { role_filter: filterOptions.role }),
-        include_inactive: filterOptions.status === 'inactive' || filterOptions.status === ''
-      };
-
-      const response = await getUsers(apiOptions);
-
-      setUsers(response.users);
-      setStats(response.stats);
-
-      if (shouldLog()) {
-        console.log(`✅ Users loaded: ${response.users.length} users`);
-      }
-
     } catch (err) {
-      const errorMessage = err.message || 'Error al cargar usuarios';
+      const errorMessage = err?.message || 'Error al cargar usuarios';
       setError(errorMessage);
+      showErrorToast(errorMessage);
 
       if (shouldLog()) {
-        console.error('❌ Error fetching users:', err);
+        console.error('❌ Error loading users:', err);
       }
-
-      ModalManager.error({
-        title: 'Error al cargar usuarios',
-        message: errorMessage,
-        autoClose: 5000
-      });
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Cargar usuarios al montar componente
+  // ====================================
+  // EFECTOS
+  // ====================================
   useEffect(() => {
-    fetchUsers(filters);
-  }, [fetchUsers]);
+    loadUsers();
+  }, [loadUsers]);
 
   // ====================================
-  // HANDLERS DE FILTROS
+  // MANEJADORES DE EVENTOS
   // ====================================
 
+  // Manejadores de filtros
+  const handleFiltersChange = useCallback((newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  }, []);
 
-  // ====================================
-  // HANDLERS DE USUARIOS
-  // ====================================
-  const handleAddUser = () => {
+  // Manejadores de vista
+  const handleViewChange = useCallback((view) => {
+    setCurrentView(view);
+    setFilters(prev => ({ ...prev, viewMode: view }));
+  }, []);
+
+  // Manejadores de modal de usuario
+  const handleAddUser = useCallback(() => {
     setEditingUser(null);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleEditUser = (user) => {
+  const handleEditUser = useCallback((user) => {
     setEditingUser(user);
     setIsModalOpen(true);
-  };
+  }, []);
 
-  const handleChangePassword = (user) => {
-    // 👇 Capturar el ID del modal
-    const modalId = ModalManager.custom({
-      title: `Cambiar Contraseña - ${user.fullName}`,
-      size: 'medium',
-      content: (
-        <ChangePasswordModal
-          user={user}
-          onSave={async (passwordData) => {
-            try {
-              if (shouldLog()) {
-                console.log(`🔒 Changing password for user ${user.id}`);
-              }
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setEditingUser(null);
+  }, []);
 
-              await changeUserPassword(user.id, passwordData);
+  // Manejadores de modal de contraseña
+  const handleChangePassword = useCallback((user) => {
+    setPasswordModalUser(user);
+  }, []);
 
-              // ✅ Cerrar modal con su ID específico
-              console.log('Cerrando Modal');
-              ModalManager.close(modalId);
+  const handleClosePasswordModal = useCallback(() => {
+    setPasswordModalUser(null);
+  }, []);
 
-              showSuccessToast(`Contraseña de ${user.fullName} actualizada correctamente`);
+  // ====================================
+  // OPERACIONES CRUD
+  // ====================================
 
-              if (shouldLog()) {
-                console.log('✅ Password changed successfully');
-              }
-
-            } catch (err) {
-              if (shouldLog()) {
-                console.error('❌ Error changing password:', err);
-              }
-            }
-          }}
-          onCancel={() => ModalManager.close(modalId)} // ✅ También aquí
-        />
-      )
-    });
-  };
-
-  const handleSaveUser = async (userData) => {
+  const handleSaveUser = useCallback(async (userData) => {
     try {
-      if (shouldLog()) {
-        console.log('💾 Saving user:', userData.username);
-      }
-
       let response;
-      let successMessage;
-
+      
       if (editingUser) {
+        // Actualizar usuario existente
         response = await updateUser(editingUser.id, userData);
-        successMessage = `Usuario ${userData.username} actualizado correctamente`;
+        if (response?.user) {
+          showSuccessToast('Usuario actualizado correctamente');
+          await loadUsers();
+          handleCloseModal();
+        } else {
+          throw new Error(response?.message || 'Error al actualizar usuario');
+        }
       } else {
+        // Crear nuevo usuario
         response = await createUser(userData);
-        successMessage = `Usuario ${userData.username} creado correctamente`;
+        if (response?.user) {
+          showSuccessToast('Usuario creado correctamente');
+          await loadUsers();
+          handleCloseModal();
+        } else {
+          throw new Error(response?.message || 'Error al crear usuario');
+        }
       }
-
-      // Actualizar lista de usuarios
-      await fetchUsers(filters);
-
-      // Cerrar modal inmediatamente
-      handleCloseModal();
-
-      // Usar tu sistema de toast corregido
-      showSuccessToast(successMessage);
-
-      if (shouldLog()) {
-        console.log('✅ User saved successfully');
-      }
-
     } catch (err) {
-      // En caso de error, el modal permanece abierto
+      const errorMessage = err?.message || 'Error al guardar usuario';
+      showErrorToast(errorMessage);
+
       if (shouldLog()) {
         console.error('❌ Error saving user:', err);
       }
-
-      // Usar tu sistema de toast corregido
-      const errorMessage = err.message || 'Error al guardar usuario';
-      showErrorToast(errorMessage);
     }
-  };
+  }, [editingUser, loadUsers, handleCloseModal]);
 
-  const handleToggleStatus = async (userId) => {
+  const handleToggleStatus = useCallback(async (userId, currentStatus) => {
     try {
-      const user = users.find(u => u.id === userId);
-      if (!user) return;
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      const response = await toggleUserStatus(userId, newStatus === 'active');
 
-      const newStatus = !user.isActive;
-      const action = newStatus ? 'activar' : 'desactivar';
-      const actionCapitalized = newStatus ? 'Activar' : 'Desactivar';
-
-      if (shouldLog()) {
-        console.log(`🔄 Toggling user ${userId} status to ${newStatus}`);
+      if (response?.user) {
+        const action = newStatus === 'active' ? 'activado' : 'desactivado';
+        showSuccessToast(`Usuario ${action} correctamente`);
+        await loadUsers();
+      } else {
+        throw new Error(response?.message || 'Error al cambiar estado del usuario');
       }
-
-      const confirmed = await ModalManager.confirm({
-        title: `${actionCapitalized} Usuario`,
-        message: `¿Está seguro que desea ${action} al usuario "${user.fullName}"?`,
-        buttons: {
-          confirm: actionCapitalized,
-          cancel: 'Cancelar'
-        },
-        variant: newStatus ? 'info' : 'warning',
-        onConfirm: async () => {
-          try {
-            await toggleUserStatus(userId, newStatus);
-
-            ModalManager.success({
-              title: 'Estado actualizado',
-              message: `Usuario ${user.fullName} ${newStatus ? 'activado' : 'desactivado'} correctamente`,
-              autoClose: 3000
-            });
-
-            // Actualizar lista
-            await fetchUsers(filters);
-
-          } catch (err) {
-            const errorMessage = err.message || 'Error al cambiar estado del usuario';
-
-            if (shouldLog()) {
-              console.error('❌ Error toggling user status:', err);
-            }
-
-            ModalManager.error({
-              title: 'Error al cambiar estado',
-              message: errorMessage,
-              autoClose: 5000
-            });
-          }
-        },
-        onCancel: () => {
-          console.log('Acción cancelada por el usuario');
-        }
-      });
-
     } catch (err) {
-      const errorMessage = err.message || 'Error al cambiar estado del usuario';
+      const errorMessage = err?.message || 'Error al cambiar estado del usuario';
+      showErrorToast(errorMessage);
 
       if (shouldLog()) {
-        console.error('❌ Error in handleToggleStatus:', err);
+        console.error('❌ Error toggling user status:', err);
       }
-
-      ModalManager.error({
-        title: 'Error al cambiar estado',
-        message: errorMessage,
-        autoClose: 5000
-      });
     }
-  };
+  }, [loadUsers]);
+
+  const handleSavePassword = useCallback(async (passwordData) => {
+    try {
+      if (!passwordModalUser) return;
+
+      const response = await changeUserPassword(passwordModalUser.id, passwordData);
+
+      if (response?.message || response?.user) {
+        showSuccessToast('Contraseña cambiada correctamente');
+        handleClosePasswordModal();
+      } else {
+        throw new Error(response?.message || 'Error al cambiar contraseña');
+      }
+    } catch (err) {
+      const errorMessage = err?.message || 'Error al cambiar contraseña';
+      showErrorToast(errorMessage);
+
+      if (shouldLog()) {
+        console.error('❌ Error changing password:', err);
+      }
+    }
+  }, [passwordModalUser, handleClosePasswordModal]);
 
   // ====================================
-  // HANDLERS DE MODAL
-  // ====================================
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-  };
-
-  // ====================================
-  // HANDLERS DE VISTA
-  // ====================================
-  const handleViewChange = (view) => {
-    setCurrentView(view);
-  };
-
-  const handleFiltersChange = useCallback((newFilters) => {
-    setFilters(newFilters);
-    fetchUsers(newFilters);
-  }, [fetchUsers]);
-
-  // ====================================
-  // FILTRADO LOCAL (para search instantáneo)
+  // FILTROS Y DATOS PROCESADOS
   // ====================================
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      // Filtro de búsqueda local instantáneo
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
-        const matchesSearch =
-          user.fullName?.toLowerCase().includes(searchTerm) ||
-          user.username?.toLowerCase().includes(searchTerm) ||
-          user.email?.toLowerCase().includes(searchTerm);
+    if (!users || users.length === 0) return [];
 
-        if (!matchesSearch) return false;
+    let filtered = [...users];
+
+    // Filtro por búsqueda
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      filtered = filtered.filter(user =>
+        user.fullName?.toLowerCase().includes(searchTerm) ||
+        user.username?.toLowerCase().includes(searchTerm) ||
+        user.email?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Filtro por estado
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(user => {
+        if (filters.status === 'active') return user.isActive;
+        if (filters.status === 'inactive') return !user.isActive;
+        return true;
+      });
+    }
+
+    // Filtro por rol
+    if (filters.role !== 'all') {
+      filtered = filtered.filter(user => {
+        if (!user.roles || user.roles.length === 0) return filters.role === 'none';
+        return user.roles.some(role => role.name === filters.role);
+      });
+    }
+
+    // Ordenamiento
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'name':
+          return (a.fullName || '').localeCompare(b.fullName || '');
+        case 'email':
+          return (a.email || '').localeCompare(b.email || '');
+        case 'recent':
+        default:
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
       }
-
-      // Otros filtros se manejan en el backend
-      return true;
     });
+
+    return filtered;
   }, [users, filters]);
 
-  // ====================================
-  // ESTADÍSTICAS DINÁMICAS
-  // ====================================
+  // Estadísticas dinámicas basadas en usuarios filtrados
   const dynamicStats = useMemo(() => {
-    if (!stats) return null;
+    if (!filteredUsers || !stats) return null;
 
-    // Si tenemos stats de la API, usarlas y complementar con cálculos locales
-    const total = filteredUsers.length;
-    const active = filteredUsers.filter(user => user.isActive).length;
-    const inactive = total - active;
+    const activeUsers = filteredUsers.filter(u => u.isActive).length;
+    const inactiveUsers = filteredUsers.filter(u => !u.isActive).length;
 
-    // Calcular usuarios conectados hoy usando isRecentlyActive
-    const connectedToday = filteredUsers.filter(user => user.isRecentlyActive).length;
-
-    // Calcular nuevos este mes
-    const today = new Date();
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-    const newThisMonth = filteredUsers.filter(user => {
-      if (!user.createdAt) return false;
-      const created = new Date(user.createdAt);
-      return created >= monthStart;
-    }).length;
-
-    // Distribución por roles usando rolesCodes
+    // Distribución por roles (basada en usuarios filtrados)
     const roleDistribution = filteredUsers.reduce((acc, user) => {
-      if (user.rolesCodes?.includes('ADMIN')) acc.admin++;
-      else if (['WAREHOUSE_MANAGER', 'SUPERVISOR'].some(role => user.rolesCodes?.includes(role))) acc.manager++;
-      else acc.regular++;
+      if (!user.roles || user.roles.length === 0) {
+        acc.regular += 1;
+      } else {
+        user.roles.forEach(role => {
+          if (role.name === 'admin') acc.admin += 1;
+          else if (role.name === 'manager') acc.manager += 1;
+          else acc.regular += 1;
+        });
+      }
       return acc;
     }, { admin: 0, manager: 0, regular: 0 });
 
     return {
-      totalUsers: total,
-      activeUsers: active,
-      inactiveUsers: inactive,
-      newUsersThisMonth: newThisMonth,
-      lastLoginToday: connectedToday,
+      totalUsers: filteredUsers.length,
+      activeUsers,
+      inactiveUsers,
+      newUsersThisMonth: stats.newUsersThisMonth || 0,
+      lastLoginToday: stats.lastLoginToday || 0,
       adminUsers: roleDistribution.admin,
       managerUsers: roleDistribution.manager,
       regularUsers: roleDistribution.regular
@@ -432,6 +356,16 @@ const Users = () => {
             onSave={handleSaveUser}
             user={editingUser}
             isEditing={!!editingUser}
+          />
+        )}
+
+        {/* Modal de cambio de contraseña */}
+        {passwordModalUser && (
+          <ChangePasswordModal
+            isOpen={!!passwordModalUser}
+            onClose={handleClosePasswordModal}
+            onSave={handleSavePassword}
+            user={passwordModalUser}
           />
         )}
 

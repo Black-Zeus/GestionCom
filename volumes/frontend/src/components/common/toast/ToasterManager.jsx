@@ -8,7 +8,7 @@ import { Toaster } from "react-hot-toast";
 export default function ToasterManager() {
     return (
         <Toaster
-            position="top-right"
+            position="booton-right"
             gutter={8}
             containerStyle={{ zIndex: 1100 }} // por encima de popovers/tooltips
             toastOptions={{

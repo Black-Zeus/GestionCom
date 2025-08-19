@@ -1,15 +1,28 @@
 // src/components/toast/toastHelpers.js
+// Versión básica que usa toasts built-in de react-hot-toast
 import toast from "react-hot-toast";
-import ToastMessage from "./ToastMessage";
 
-const showToast = (type, message, title = null, opts = {}) => {
-    return toast.custom(
-        (t) => <ToastMessage t={t} type={type} message={message} title={title} />,
-        { duration: 4000, ...opts }
-    );
+// Usar toasts básicos en lugar de componente personalizado
+export const showErrorToast = (message, title = "Error", opts = {}) => {
+    return toast.error(message, { duration: 4000, ...opts });
 };
 
-export const showErrorToast = (message, title = "Error", opts) => showToast("error", message, title, opts);
-export const showSuccessToast = (message, title = "Éxito", opts) => showToast("success", message, title, opts);
-export const showInfoToast = (message, title = "Información", opts) => showToast("info", message, title, opts);
-export const showWarningToast = (message, title = "Advertencia", opts) => showToast("warning", message, title, opts);
+export const showSuccessToast = (message, title = "Éxito", opts = {}) => {
+    return toast.success(message, { duration: 4000, ...opts });
+};
+
+export const showInfoToast = (message, title = "Información", opts = {}) => {
+    return toast(message, { 
+        duration: 4000, 
+        icon: 'ℹ️',
+        ...opts 
+    });
+};
+
+export const showWarningToast = (message, title = "Advertencia", opts = {}) => {
+    return toast(message, { 
+        duration: 4000, 
+        icon: '⚠️',
+        ...opts 
+    });
+};
