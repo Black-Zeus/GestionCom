@@ -44,8 +44,8 @@ class UsersAdminService {
             // Construir parámetros de query
             const params = new URLSearchParams({
                 skip: options.skip || 0,
-                limit: options.limit || 100,
-                active_only: options.active_only ?? true,
+                limit: options.limit || 1000,
+                active_only: options.active_only ?? false,
                 ...(options.search && { search: options.search }),
                 ...(options.role_filter && { role_filter: options.role_filter }),
                 ...(options.include_inactive && { include_inactive: options.include_inactive })
