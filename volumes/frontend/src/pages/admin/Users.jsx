@@ -23,6 +23,7 @@ import UsersFilters from './users/UsersFilters';
 import UsersTable from './users/UsersTable';
 import UserModal from './users/UserModal';
 import ChangePasswordModal from './users/ChangePasswordModal';
+import ToggleStatusModal from './users/ToggleStatusModal';
 
 const Users = () => {
   // ====================================
@@ -47,6 +48,9 @@ const Users = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [passwordModalUser, setPasswordModalUser] = useState(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [toggleStatusUser, setToggleStatusUser] = useState(null);
+  const [isToggleStatusModalOpen, setIsToggleStatusModalOpen] = useState(false);
 
   // Estados de vista
   const [currentView, setCurrentView] = useState('grid');
@@ -126,13 +130,29 @@ const Users = () => {
     setEditingUser(null);
   }, []);
 
-  // Manejadores de modal de contraseña
+  // Manejadores de modal de contraseña - CORREGIDOS
   const handleChangePassword = useCallback((user) => {
     setPasswordModalUser(user);
+    setIsPasswordModalOpen(true);
   }, []);
 
   const handleClosePasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(false);
     setPasswordModalUser(null);
+  }, []);
+
+  // Manejadores de modal de toggle status - NUEVO
+  const handleToggleStatusRequest = useCallback((userId) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setToggleStatusUser(user);
+      setIsToggleStatusModalOpen(true);
+    }
+  }, [users]);
+
+  const handleCloseToggleStatusModal = useCallback(() => {
+    setIsToggleStatusModalOpen(false);
+    setToggleStatusUser(null);
   }, []);
 
   // ====================================
@@ -174,15 +194,21 @@ const Users = () => {
     }
   }, [editingUser, loadUsers, handleCloseModal]);
 
-  const handleToggleStatus = useCallback(async (userId, currentStatus) => {
+  const handleToggleStatus = useCallback(async (userId, currentStatus, reason) => {
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      const response = await toggleUserStatus(userId, newStatus === 'active');
+      const response = await toggleUserStatus(userId, newStatus === 'active', reason);
 
       if (response?.user) {
         const action = newStatus === 'active' ? 'activado' : 'desactivado';
         showSuccessToast(`Usuario ${action} correctamente`);
         await loadUsers();
+        handleCloseToggleStatusModal(); // Cerrar el modal de confirmación
+        
+        // NUEVO: Si el modal de cambio de contraseña está abierto para este usuario, cerrarlo
+        if (passwordModalUser && passwordModalUser.id === userId) {
+          handleClosePasswordModal();
+        }
       } else {
         throw new Error(response?.message || 'Error al cambiar estado del usuario');
       }
@@ -194,7 +220,7 @@ const Users = () => {
         console.error('❌ Error toggling user status:', err);
       }
     }
-  }, [loadUsers]);
+  }, [loadUsers, handleCloseToggleStatusModal, passwordModalUser, handleClosePasswordModal]);
 
   const handleSavePassword = useCallback(async (passwordData) => {
     try {
@@ -205,6 +231,8 @@ const Users = () => {
       if (response?.message || response?.user) {
         showSuccessToast('Contraseña cambiada correctamente');
         handleClosePasswordModal();
+        // Opcional: recargar usuarios si es necesario
+        // await loadUsers();
       } else {
         throw new Error(response?.message || 'Error al cambiar contraseña');
       }
@@ -239,63 +267,84 @@ const Users = () => {
     // Filtro por estado
     if (filters.status !== 'all') {
       filtered = filtered.filter(user => {
-        if (filters.status === 'active') return user.isActive;
-        if (filters.status === 'inactive') return !user.isActive;
-        return true;
+        const userStatus = user.isActive ? 'active' : 'inactive';
+        return userStatus === filters.status;
       });
     }
 
     // Filtro por rol
     if (filters.role !== 'all') {
-      filtered = filtered.filter(user => {
-        if (!user.roles || user.roles.length === 0) return filters.role === 'none';
-        return user.roles.some(role => role.name === filters.role);
-      });
+      filtered = filtered.filter(user => 
+        user.roles?.some(role => 
+          role.toLowerCase().includes(filters.role.toLowerCase())
+        )
+      );
+    }
+
+    // Filtro por almacén
+    if (filters.warehouse !== 'all') {
+      filtered = filtered.filter(user => 
+        user.warehouses?.some(warehouse => 
+          warehouse.toLowerCase().includes(filters.warehouse.toLowerCase())
+        )
+      );
     }
 
     // Ordenamiento
-    filtered.sort((a, b) => {
-      switch (filters.sortBy) {
-        case 'name':
-          return (a.fullName || '').localeCompare(b.fullName || '');
-        case 'email':
-          return (a.email || '').localeCompare(b.email || '');
-        case 'recent':
-        default:
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      }
-    });
+    switch (filters.sortBy) {
+      case 'name':
+        filtered.sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+        break;
+      case 'email':
+        filtered.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+        break;
+      case 'status':
+        filtered.sort((a, b) => {
+          const statusA = a.isActive ? 'active' : 'inactive';
+          const statusB = b.isActive ? 'active' : 'inactive';
+          return statusA.localeCompare(statusB);
+        });
+        break;
+      case 'recent':
+      default:
+        filtered.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0);
+          const dateB = new Date(b.createdAt || 0);
+          return dateB - dateA;
+        });
+        break;
+    }
 
     return filtered;
   }, [users, filters]);
 
-  // Estadísticas dinámicas basadas en usuarios filtrados
+  // Calcular estadísticas dinámicas basadas en filtros
   const dynamicStats = useMemo(() => {
-    if (!filteredUsers || !stats) return null;
+    if (!filteredUsers.length) return stats;
 
-    const activeUsers = filteredUsers.filter(u => u.isActive).length;
-    const inactiveUsers = filteredUsers.filter(u => !u.isActive).length;
+    const activeUsers = filteredUsers.filter(user => user.isActive).length;
+    const inactiveUsers = filteredUsers.filter(user => !user.isActive).length;
 
-    // Distribución por roles (basada en usuarios filtrados)
+    // Distribución por roles
     const roleDistribution = filteredUsers.reduce((acc, user) => {
-      if (!user.roles || user.roles.length === 0) {
-        acc.regular += 1;
+      const userRoles = user.roles || [];
+      if (userRoles.some(role => role.toLowerCase().includes('admin'))) {
+        acc.admin++;
+      } else if (userRoles.some(role => role.toLowerCase().includes('manager'))) {
+        acc.manager++;
       } else {
-        user.roles.forEach(role => {
-          if (role.name === 'admin') acc.admin += 1;
-          else if (role.name === 'manager') acc.manager += 1;
-          else acc.regular += 1;
-        });
+        acc.regular++;
       }
       return acc;
     }, { admin: 0, manager: 0, regular: 0 });
 
     return {
+      ...stats,
       totalUsers: filteredUsers.length,
       activeUsers,
       inactiveUsers,
-      newUsersThisMonth: stats.newUsersThisMonth || 0,
-      lastLoginToday: stats.lastLoginToday || 0,
+      newUsersThisMonth: stats?.newUsersThisMonth || 0,
+      lastLoginToday: stats?.lastLoginToday || 0,
       adminUsers: roleDistribution.admin,
       managerUsers: roleDistribution.manager,
       regularUsers: roleDistribution.regular
@@ -341,7 +390,7 @@ const Users = () => {
               currentView={currentView}
               onEditUser={handleEditUser}
               onChangePassword={handleChangePassword}
-              onToggleStatus={handleToggleStatus}
+              onToggleStatus={handleToggleStatusRequest}
               loading={loading}
               error={error}
             />
@@ -359,13 +408,21 @@ const Users = () => {
           />
         )}
 
-        {/* Modal de cambio de contraseña */}
-        {passwordModalUser && (
-          <ChangePasswordModal
-            isOpen={!!passwordModalUser}
-            onClose={handleClosePasswordModal}
-            onSave={handleSavePassword}
-            user={passwordModalUser}
+        {/* Modal de cambio de contraseña - CORREGIDO */}
+        <ChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={handleClosePasswordModal}
+          onSave={handleSavePassword}
+          user={passwordModalUser}
+        />
+
+        {/* Modal de confirmación toggle status - NUEVO */}
+        {isToggleStatusModalOpen && (
+          <ToggleStatusModal
+            isOpen={isToggleStatusModalOpen}
+            onClose={handleCloseToggleStatusModal}
+            onConfirm={handleToggleStatus}
+            user={toggleStatusUser}
           />
         )}
 
