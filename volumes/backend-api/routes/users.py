@@ -452,7 +452,7 @@ async def update_user(
     user_data: UserUpdate,
     user_id: int = Path(..., description="ID del usuario"),
     request: Request = None,
-    user: dict = Depends(require_read_permission)  # Cualquier usuario autenticado puede intentar
+    user: dict = Depends(require_read_permission)  # Cambiado para permitir auto-edición
 ):
     """Actualizar un usuario existente"""
     
@@ -478,14 +478,15 @@ async def update_user(
                     request=request
                 )
             
-            # Verificar permisos
+            # Verificar permisos - CORREGIDO para incluir rol ADMIN
+            is_admin = "ADMIN" in user.get('roles', [])
             is_manager = (
                 'USER_MANAGER' in user.get('permissions', []) or
                 'USER_ADMIN' in user.get('permissions', [])
             )
             is_self_edit = user['user_id'] == user_id
             
-            if not is_manager and not is_self_edit:
+            if not is_admin and not is_manager and not is_self_edit:
                 return ResponseManager.error(
                     message="No tienes permisos para editar este usuario",
                     status_code=HTTPStatus.FORBIDDEN,
@@ -534,8 +535,8 @@ async def update_user(
                 target_user.email = user_data.email.lower()
                 updated_fields.append("email")
             
-            # Campos que solo manager puede editar
-            if is_manager:
+            # Campos que solo admin/manager puede editar - CORREGIDO
+            if is_admin or is_manager:
                 if user_data.is_active is not None:
                     # Evitar auto-desactivación
                     if user['user_id'] == user_id and user_data.is_active == False:
@@ -570,7 +571,8 @@ async def update_user(
             await session.commit()
             await session.refresh(target_user)
             
-            user_dict = user_to_dict(target_user, include_sensitive=is_manager)
+            # CORREGIDO: incluir is_admin en la validación para datos sensibles
+            user_dict = user_to_dict(target_user, include_sensitive=(is_admin or is_manager))
             
             logger.info(f"Usuario {user['username']} actualizó usuario {target_user.username}: {', '.join(updated_fields)}")
             
