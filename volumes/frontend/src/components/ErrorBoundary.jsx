@@ -443,7 +443,7 @@ class ErrorBoundary extends React.Component {
                           )}`
                         )
                       }
-                      className="hidden bg-warm-600 hover:bg-warm-700 text-white font-medium py-2 px-4 rounded-lg transition-natural hover-lift hover-warm focus-ring-warm flex items-center space-x-2 shadow-button hover:shadow-button-hover"
+                      className="invisible bg-warm-600 hover:bg-warm-700 text-white font-medium py-2 px-4 rounded-lg transition-natural hover-lift hover-warm focus-ring-warm flex items-center space-x-2 shadow-button hover:shadow-button-hover"
                     >
                       <span className="animate-gentle-pulse">📧</span>
                       <span>Reportar</span>
