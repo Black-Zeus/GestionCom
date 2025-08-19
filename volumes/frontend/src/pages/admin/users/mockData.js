@@ -281,13 +281,13 @@ export const mockFilterOptions = {
     { value: "ACCOUNTANT", label: "Contador" },
     { value: "VIEWER", label: "Consultor" }
   ],
-  
+
   status: [
     { value: "", label: "Todos los estados" },
     { value: "active", label: "Activos" },
     { value: "inactive", label: "Inactivos" }
   ],
-  
+
   warehouses: [
     { value: "", label: "Todas las bodegas" },
     { value: "TIENDA_CENTRO", label: "Tienda Centro" },
@@ -295,7 +295,7 @@ export const mockFilterOptions = {
     { value: "BODEGA_CENTRAL", label: "Bodega Central" },
     { value: "TIENDA_VALPO", label: "Tienda Valparaíso" }
   ],
-  
+
   departments: [
     { value: "", label: "Todos los departamentos" },
     { value: "Administración", label: "Administración" },
@@ -311,7 +311,7 @@ export const mockUserFormData = {
   roles: mockFilterOptions.roles.filter(role => role.value !== ""),
   warehouses: mockFilterOptions.warehouses.filter(warehouse => warehouse.value !== ""),
   departments: mockFilterOptions.departments.filter(dept => dept.value !== ""),
-  
+
   permissions: [
     { code: "USERS_MANAGE", name: "Gestionar Usuarios" },
     { code: "ROLES_MANAGE", name: "Gestionar Roles" },
