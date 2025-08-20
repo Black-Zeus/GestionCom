@@ -1,0 +1,206 @@
+{
+  "defaultFormats": ["xlsx", "csv", "json"],
+  "availableFormats": [
+    "xlsx",
+    "xlsx-branded",
+    "csv",
+    "json",
+    "pdf",
+    "pdf-branded"
+  ],
+  "labels": {
+    "es": {
+      "xlsx": "Excel Simple",
+      "xlsx-branded": "Excel Corporativo",
+      "csv": "CSV",
+      "json": "JSON",
+      "pdf": "PDF Simple",
+      "pdf-branded": "PDF Corporativo",
+      "export": "Exportar",
+      "exporting": "Exportando...",
+      "download": "Descargar",
+      "downloading": "Descargando...",
+      "success": "Exportado correctamente",
+      "error": "Error en exportación",
+      "loading": "Procesando...",
+      "retry": "Reintentar",
+      "cancel": "Cancelar"
+    },
+    "en": {
+      "xlsx": "Excel Simple",
+      "xlsx-branded": "Branded Excel",
+      "csv": "CSV",
+      "json": "JSON",
+      "pdf": "Simple PDF",
+      "pdf-branded": "Branded PDF",
+      "export": "Export",
+      "exporting": "Exporting...",
+      "download": "Download",
+      "downloading": "Downloading...",
+      "success": "Exported successfully",
+      "error": "Export error",
+      "loading": "Processing...",
+      "retry": "Retry",
+      "cancel": "Cancel"
+    }
+  },
+  "icons": {
+    "xlsx": "📊",
+    "xlsx-branded": "🏢📊",
+    "csv": "📄",
+    "json": "{ }",
+    "pdf": "📄",
+    "pdf-branded": "🏢📄",
+    "export": "⬇",
+    "download": "☁⬇",
+    "loading": "🔄",
+    "success": "✓",
+    "error": "✗",
+    "chevron": "▼"
+  },
+  "variants": {
+    "solid": {
+      "base": "btn-base btn-md bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 shadow-button hover:shadow-button-hover",
+      "disabled": "opacity-60 cursor-not-allowed",
+      "loading": "opacity-80"
+    },
+    "outline": {
+      "base": "btn-base btn-md bg-transparent text-primary-600 border border-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 active:bg-primary-100 dark:active:bg-primary-900/30",
+      "disabled": "opacity-60 cursor-not-allowed",
+      "loading": "opacity-80"
+    },
+    "ghost": {
+      "base": "btn-base btn-md bg-transparent text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800 active:bg-secondary-200 dark:active:bg-secondary-700",
+      "disabled": "opacity-60 cursor-not-allowed",
+      "loading": "opacity-80"
+    }
+  },
+  "dropdown": {
+    "menu": "absolute top-full left-0 min-w-64 bg-white dark:bg-secondary-800 border border-theme rounded-md shadow-dropdown z-dropdown mt-1 py-1",
+    "header": "px-3 py-2 text-xs font-medium text-secondary-500 dark:text-secondary-400 uppercase tracking-wider border-b border-theme",
+    "item": "w-full px-3 py-2 text-left text-sm text-secondary-700 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700 flex items-center gap-3 transition-colors duration-150",
+    "separator": "my-1 border-t border-theme"
+  },
+  "states": {
+    "loading": {
+      "color": "text-primary-600",
+      "bgColor": "bg-primary-50 dark:bg-primary-900/20",
+      "dotColor": "bg-primary-600"
+    },
+    "success": {
+      "color": "text-success-600",
+      "bgColor": "bg-success-50 dark:bg-success-900/20",
+      "dotColor": "bg-success-600"
+    },
+    "error": {
+      "color": "text-danger-600",
+      "bgColor": "bg-danger-50 dark:bg-danger-900/20",
+      "dotColor": "bg-danger-600"
+    }
+  },
+  "animations": {
+    "fadeIn": "animate-fade-in",
+    "scaleIn": "animate-scale-in",
+    "spinner": "animate-spin"
+  },
+  "csv": {
+    "defaultDelimiter": ",",
+    "defaultEncoding": "utf-8",
+    "includeBOM": true,
+    "quoteAll": false,
+    "escapeChar": "\"",
+    "lineEnding": "\r\n"
+  },
+  "excel": {
+    "defaultSheetName": "Datos",
+    "autoFitColumns": true,
+    "freezeTopRow": true,
+    "headerStyle": {
+      "font": { "bold": true },
+      "fill": {
+        "type": "pattern",
+        "pattern": "solid",
+        "fgColor": { "argb": "FFE5E7EB" }
+      },
+      "border": {
+        "top": { "style": "thin" },
+        "bottom": { "style": "thin" },
+        "left": { "style": "thin" },
+        "right": { "style": "thin" }
+      }
+    }
+  },
+  "pdf": {
+    "defaultPageSize": "A4",
+    "defaultOrientation": "portrait",
+    "defaultMargins": [40, 40, 40, 40],
+    "defaultFont": "Helvetica",
+    "styles": {
+      "header": {
+        "fontSize": 18,
+        "bold": true,
+        "margin": [0, 0, 0, 20]
+      },
+      "subheader": {
+        "fontSize": 14,
+        "bold": true,
+        "margin": [0, 20, 0, 8]
+      },
+      "tableHeader": {
+        "fontSize": 10,
+        "bold": true,
+        "fillColor": "#f3f4f6",
+        "color": "#374151"
+      },
+      "tableBody": {
+        "fontSize": 9,
+        "color": "#6b7280"
+      }
+    }
+  },
+  "branding": {
+    "default": {
+      "orgName": "Mi Empresa",
+      "createdBy": "Sistema de Reportes",
+      "footerText": "Documento confidencial - Uso interno",
+      "pageNumbers": true,
+      "watermark": false
+    },
+    "logo": {
+      "maxWidth": 150,
+      "maxHeight": 50,
+      "position": "left"
+    }
+  },
+  "download": {
+    "defaultTimeout": 30000,
+    "maxRetries": 3,
+    "retryDelay": 1000,
+    "chunkSize": 8192
+  },
+  "accessibility": {
+    "ariaLabels": {
+      "exportButton": "Exportar datos",
+      "downloadButton": "Descargar archivo",
+      "dropdownMenu": "Menú de opciones de exportación",
+      "closeMenu": "Cerrar menú",
+      "loadingState": "Procesando solicitud",
+      "successState": "Operación completada exitosamente",
+      "errorState": "Error en la operación"
+    },
+    "keyboardShortcuts": {
+      "openMenu": "Enter",
+      "closeMenu": "Escape",
+      "navigateUp": "ArrowUp",
+      "navigateDown": "ArrowDown",
+      "selectItem": "Enter"
+    }
+  },
+  "validation": {
+    "maxFileSize": 104857600,
+    "maxRows": 100000,
+    "allowedOrigins": [],
+    "sanitizeHeaders": true,
+    "validateData": true
+  }
+}
