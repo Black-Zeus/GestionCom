@@ -590,6 +590,81 @@ export const sidebarNavData = {
                         ]
                     }
                 ]
+            },
+
+            // 8. DEMOS - Demostraciones y pruebas del sistema
+            {
+                id: "demos",
+                title: "Demos",
+                items: [
+                    {
+                        id: "demos-export-download",
+                        text: "Export / Download",
+                        icon: "📁",
+                        path: null,
+                        badge: "ACTIVO",
+                        hasSubmenu: true,
+                        active: false,
+                        submenu: [
+                            {
+                                id: "demo-exporters-main",
+                                text: "Vista Principal",
+                                icon: "🎯",
+                                path: "/demos/exporters"
+                            },
+                            {
+                                id: "demo-export-button",
+                                text: "ExportButton",
+                                icon: "📊",
+                                path: "/demos/exporters/export"
+                            },
+                            {
+                                id: "demo-download-button",
+                                text: "DownloadButton",
+                                icon: "⬇️",
+                                path: "/demos/exporters/download"
+                            },
+                            {
+                                id: "demo-casos-avanzados",
+                                text: "Casos Avanzados",
+                                icon: "⚡",
+                                path: "/demos/exporters/advanced"
+                            },
+                            {
+                                id: "demo-rendimiento",
+                                text: "Pruebas de Rendimiento",
+                                icon: "🚀",
+                                path: "/demos/exporters/performance"
+                            }
+                        ]
+                    }
+                    // 🔽 AQUÍ PUEDES AGREGAR FÁCILMENTE NUEVOS BLOQUES DE DEMOS 🔽
+
+                    // Ejemplo de estructura para futuros demos:
+                    // {
+                    //     id: "demos-componentes-ui",
+                    //     text: "Componentes UI",
+                    //     icon: "🎨",
+                    //     path: null,
+                    //     badge: "PRÓXIMAMENTE",
+                    //     hasSubmenu: true,
+                    //     active: false,
+                    //     submenu: [
+                    //         {
+                    //             id: "demo-buttons",
+                    //             text: "Botones",
+                    //             icon: "🔘",
+                    //             path: "/demos/components/buttons"
+                    //         },
+                    //         {
+                    //             id: "demo-forms",
+                    //             text: "Formularios",
+                    //             icon: "📝",
+                    //             path: "/demos/components/forms"
+                    //         }
+                    //     ]
+                    // },
+                ]
             }
         ]
     }

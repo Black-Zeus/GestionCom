@@ -9,6 +9,7 @@ import { cashRoutes } from './cash.routes';
 import { inventoryRoutes } from './inventory.routes';
 import { reportsRoutes } from './reports.routes';
 import { configRoutes } from './config.routes';
+import { demoRoutes } from './demo.routes';
 import profileRoutes from "./profile";
 
 // Combinar todas las rutas en orden de prioridad
@@ -21,7 +22,8 @@ export const allRoutes = [
     ...cashRoutes,
     ...inventoryRoutes,
     ...reportsRoutes,
-    ...configRoutes
+    ...configRoutes,
+    ...demoRoutes
 ];
 
 // Export individual de módulos (para uso específico)
@@ -33,5 +35,6 @@ export { cashRoutes } from './cash.routes';
 export { inventoryRoutes } from './inventory.routes';
 export { reportsRoutes } from './reports.routes';
 export { configRoutes } from './config.routes';
+export { demoRoutes } from './demo.routes';
 
 export default allRoutes;

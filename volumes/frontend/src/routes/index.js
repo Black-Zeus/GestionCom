@@ -10,7 +10,7 @@ export { default as ProtectedRoute } from './guards/ProtectedRoute';
 export { default as PublicRoute } from './guards/PublicRoute';
 
 // Rutas y módulos
-export { allRoutes, authRoutes, dashboardRoutes } from './modules';
+export { allRoutes, authRoutes, dashboardRoutes, demoRoutes } from './modules';
 
 // Hook personalizado (para uso futuro)
 export { default as useAppRouter } from '../hooks/useAppRouter';
