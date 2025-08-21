@@ -1687,6 +1687,445 @@ export const generateAutoColumns = (data, options = {}) => {
     });
 };
 
+// ================================================
+// FASE 3: ESTILOS ESPECÍFICOS PARA FOOTNOTES
+// ================================================
+
+/**
+ * Estilos específicos para footnotes académicas
+ */
+export const academicFootnoteStyles = {
+    footnote: {
+        fontSize: 9,
+        lineHeight: 1.2,
+        margin: [0, 2, 0, 2],
+        color: '#000000',
+        alignment: 'justify'
+    },
+    footnoteRef: {
+        fontSize: 8,
+        sup: true,
+        color: '#000000',
+        link: false
+    },
+    footnoteSeparator: {
+        margin: [0, 10, 0, 5],
+        canvas: [
+            {
+                type: 'line',
+                x1: 0, y1: 0,
+                x2: 100, y2: 0,
+                lineWidth: 0.5,
+                lineColor: '#000000'
+            }
+        ]
+    }
+};
+
+/**
+ * Estilos específicos para footnotes corporativas
+ */
+export const corporateFootnoteStyles = {
+    footnote: {
+        fontSize: 9,
+        lineHeight: 1.3,
+        margin: [0, 3, 0, 3],
+        color: '#374151',
+        alignment: 'justify'
+    },
+    footnoteRef: {
+        fontSize: 8,
+        sup: true,
+        color: '#2563eb',
+        link: true
+    },
+    footnoteSeparator: {
+        margin: [0, 12, 0, 8],
+        canvas: [
+            {
+                type: 'line',
+                x1: 0, y1: 0,
+                x2: 120, y2: 0,
+                lineWidth: 1,
+                lineColor: '#2563eb'
+            }
+        ]
+    }
+};
+
+/**
+ * Estilos específicos para footnotes minimalistas
+ */
+export const minimalFootnoteStyles = {
+    footnote: {
+        fontSize: 8,
+        lineHeight: 1.2,
+        margin: [0, 1, 0, 1],
+        color: '#6b7280'
+    },
+    footnoteRef: {
+        fontSize: 7,
+        sup: true,
+        color: '#6b7280'
+    },
+    footnoteSeparator: null // Sin separador en estilo minimal
+};
+
+// ================================================
+// FASE 3: UTILIDADES DE FOOTNOTES
+// ================================================
+
+/**
+ * Obtiene estilos de footnotes según el preset
+ * @param {string} preset - Nombre del preset ('academic', 'corporate', 'minimal')
+ * @param {Object} overrides - Estilos que sobrescriben el preset
+ * @returns {Object} Estilos de footnotes
+ */
+export const getFootnoteStyles = (preset = 'academic', overrides = {}) => {
+    let baseStyles;
+
+    switch (preset) {
+        case 'corporate':
+            baseStyles = corporateFootnoteStyles;
+            break;
+        case 'minimal':
+            baseStyles = minimalFootnoteStyles;
+            break;
+        case 'academic':
+        default:
+            baseStyles = academicFootnoteStyles;
+            break;
+    }
+
+    return {
+        ...baseStyles,
+        ...overrides
+    };
+};
+
+/**
+ * Valida configuración de footnotes
+ * @param {Object} config - Configuración a validar
+ * @returns {Object} Resultado de validación
+ */
+export const validateFootnoteConfig = (config = {}) => {
+    const errors = [];
+    const warnings = [];
+
+    // Validar tipos de numeración
+    const validNumberingTypes = ['sequential', 'per-page', 'roman', 'letters', 'symbols'];
+    if (config.numbering && !validNumberingTypes.includes(config.numbering)) {
+        errors.push(`Tipo de numeración inválido: ${config.numbering}. Tipos válidos: ${validNumberingTypes.join(', ')}`);
+    }
+
+    // Validar posición
+    const validPositions = ['bottom', 'end-of-section', 'end-of-document'];
+    if (config.position && !validPositions.includes(config.position)) {
+        errors.push(`Posición inválida: ${config.position}. Posiciones válidas: ${validPositions.join(', ')}`);
+    }
+
+    // Validar límites
+    if (config.maxPerPage && (config.maxPerPage < 1 || config.maxPerPage > PDF_CONSTANTS.MAX_FOOTNOTES_PER_PAGE)) {
+        warnings.push(`maxPerPage fuera del rango recomendado (1-${PDF_CONSTANTS.MAX_FOOTNOTES_PER_PAGE}): ${config.maxPerPage}`);
+    }
+
+    // Validar estilos de fuente
+    if (config.textStyle?.fontSize) {
+        const fontSize = config.textStyle.fontSize;
+        if (fontSize < PDF_CONSTANTS.MIN_FOOTNOTE_FONT_SIZE || fontSize > PDF_CONSTANTS.MAX_FOOTNOTE_FONT_SIZE) {
+            warnings.push(`Tamaño de fuente fuera del rango recomendado (${PDF_CONSTANTS.MIN_FOOTNOTE_FONT_SIZE}-${PDF_CONSTANTS.MAX_FOOTNOTE_FONT_SIZE}): ${fontSize}`);
+        }
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings
+    };
+};
+
+/**
+ * Procesa contenido del builder incluyendo footnotes
+ * @param {Array} content - Contenido del builder
+ * @param {Object} options - Opciones de procesamiento
+ * @returns {Array} Contenido procesado con footnotes
+ */
+export const processBuilderContentWithFootnotes = (content, options = {}) => {
+    const {
+        footnoteManager = null,
+        includeFootnotes = true,
+        pageBreakHandling = true
+    } = options;
+
+    if (!footnoteManager || !includeFootnotes) {
+        return content;
+    }
+
+    const processedContent = [];
+    const pageFootnotes = new Map();
+    let currentPage = 1;
+
+    content.forEach(element => {
+        processedContent.push(element);
+
+        // Detectar footnotes
+        if (element.type === 'footnote') {
+            const footnoteId = element.config?.footnoteId;
+            const pageNumber = element.config?.pageNumber || currentPage;
+
+            if (!pageFootnotes.has(pageNumber)) {
+                pageFootnotes.set(pageNumber, []);
+            }
+            pageFootnotes.get(pageNumber).push(footnoteId);
+        }
+
+        // Manejar saltos de página
+        if (pageBreakHandling && element.type === 'pageBreak') {
+            // Agregar footnotes de la página anterior
+            if (pageFootnotes.has(currentPage)) {
+                const footnoteElements = footnoteManager.generatePageFootnotes(currentPage);
+                processedContent.push(...footnoteElements);
+            }
+            currentPage++;
+        }
+    });
+
+    // Agregar footnotes de la última página
+    if (pageFootnotes.has(currentPage)) {
+        const footnoteElements = footnoteManager.generatePageFootnotes(currentPage);
+        processedContent.push(...footnoteElements);
+    }
+
+    return processedContent;
+};
+
+/**
+ * Crea separador de footnotes
+ * @param {Object} config - Configuración del separador
+ * @returns {Object} Elemento separador para pdfmake
+ */
+export const createFootnoteSeparator = (config = {}) => {
+    const {
+        width = PDF_CONSTANTS.FOOTNOTE_SEPARATOR_WIDTH,
+        lineColor = '#cccccc',
+        lineWidth = 0.5,
+        margin = [0, 10, 0, 5],
+        alignment = 'left'
+    } = config;
+
+    return {
+        margin,
+        alignment,
+        canvas: [
+            {
+                type: 'line',
+                x1: 0, y1: 0,
+                x2: width, y2: 0,
+                lineWidth,
+                lineColor
+            }
+        ]
+    };
+};
+
+/**
+ * Optimiza footnotes para rendimiento
+ * @param {Array} footnotes - Array de footnotes
+ * @param {Object} options - Opciones de optimización
+ * @returns {Array} Footnotes optimizadas
+ */
+export const optimizeFootnotes = (footnotes, options = {}) => {
+    const {
+        maxTextLength = 500,
+        removeEmptyNotes = true,
+        consolidateDuplicates = false
+    } = options;
+
+    let optimized = [...footnotes];
+
+    // Remover notas vacías
+    if (removeEmptyNotes) {
+        optimized = optimized.filter(note =>
+            note && note.text && note.text.trim().length > 0
+        );
+    }
+
+    // Truncar texto largo
+    optimized = optimized.map(note => {
+        if (note.text && note.text.length > maxTextLength) {
+            return {
+                ...note,
+                text: note.text.substring(0, maxTextLength - 3) + '...',
+                truncated: true
+            };
+        }
+        return note;
+    });
+
+    // Consolidar duplicados (opcional)
+    if (consolidateDuplicates) {
+        const seen = new Map();
+        optimized = optimized.filter(note => {
+            const key = note.text.trim().toLowerCase();
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.set(key, true);
+            return true;
+        });
+    }
+
+    return optimized;
+};
+
+/**
+ * Genera referencias numeradas para footnotes
+ * @param {number} number - Número de referencia
+ * @param {string} type - Tipo de numeración
+ * @returns {string} Referencia formateada
+ */
+export const generateFootnoteReference = (number, type = 'sequential') => {
+    switch (type) {
+        case 'roman':
+            return toRomanNumeral(number).toLowerCase();
+        case 'letters':
+            return toLetter(number);
+        case 'symbols':
+            const symbols = ['*', '†', '‡', '§', '¶', '#'];
+            const symbolIndex = (number - 1) % symbols.length;
+            const repetitions = Math.floor((number - 1) / symbols.length) + 1;
+            return symbols[symbolIndex].repeat(repetitions);
+        case 'per-page':
+        case 'sequential':
+        default:
+            return number.toString();
+    }
+};
+
+/**
+ * Convierte número a numeral romano
+ * @param {number} num - Número a convertir
+ * @returns {string} Numeral romano
+ */
+export const toRomanNumeral = (num) => {
+    const values = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+    const literals = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+
+    let result = '';
+    for (let i = 0; i < values.length; i++) {
+        while (num >= values[i]) {
+            result += literals[i];
+            num -= values[i];
+        }
+    }
+    return result;
+};
+
+/**
+ * Convierte número a letra
+ * @param {number} num - Número a convertir
+ * @returns {string} Letra correspondiente
+ */
+export const toLetter = (num) => {
+    let result = '';
+    while (num > 0) {
+        num--;
+        result = String.fromCharCode(97 + (num % 26)) + result;
+        num = Math.floor(num / 26);
+    }
+    return result;
+};
+
+/**
+ * Calcula métricas de footnotes para optimización
+ * @param {Array} footnotes - Array de footnotes
+ * @returns {Object} Métricas calculadas
+ */
+export const calculateFootnoteMetrics = (footnotes) => {
+    if (!Array.isArray(footnotes) || footnotes.length === 0) {
+        return {
+            total: 0,
+            averageLength: 0,
+            longestNote: 0,
+            shortestNote: 0,
+            pagesWithFootnotes: 0,
+            averagePerPage: 0
+        };
+    }
+
+    const textLengths = footnotes.map(note => note.text ? note.text.length : 0);
+    const pages = new Set(footnotes.map(note => note.pageNumber || 1));
+
+    return {
+        total: footnotes.length,
+        averageLength: textLengths.reduce((a, b) => a + b, 0) / textLengths.length,
+        longestNote: Math.max(...textLengths),
+        shortestNote: Math.min(...textLengths),
+        pagesWithFootnotes: pages.size,
+        averagePerPage: footnotes.length / pages.size,
+        distribution: Array.from(pages).reduce((acc, page) => {
+            acc[page] = footnotes.filter(note => (note.pageNumber || 1) === page).length;
+            return acc;
+        }, {})
+    };
+};
+
+/**
+ * Combina estilos de footnotes con estilos base del builder
+ * @param {Object} baseBuilderStyles - Estilos base del builder
+ * @param {string} footnotePreset - Preset de footnotes
+ * @param {Object} customFootnoteStyles - Estilos personalizados
+ * @returns {Object} Estilos combinados
+ */
+export const combineFootnoteStyles = (baseBuilderStyles = {}, footnotePreset = 'academic', customFootnoteStyles = {}) => {
+    const footnoteStyles = getFootnoteStyles(footnotePreset, customFootnoteStyles);
+
+    return {
+        ...baseBuilderStyles,
+        ...footnoteStyles
+    };
+};
+
+/**
+ * Valida estructura de footnote para pdfmake
+ * @param {Object} footnoteElement - Elemento footnote
+ * @returns {Object} Resultado de validación
+ */
+export const validateFootnoteStructure = (footnoteElement) => {
+    const errors = [];
+    const warnings = [];
+
+    if (!footnoteElement) {
+        errors.push('Elemento footnote es null o undefined');
+        return { isValid: false, errors, warnings };
+    }
+
+    // Validar estructura básica
+    if (!footnoteElement.text) {
+        errors.push('Footnote debe tener texto');
+    }
+
+    if (!footnoteElement.referenceNumber && !footnoteElement.referenceText) {
+        errors.push('Footnote debe tener número o texto de referencia');
+    }
+
+    // Validar longitud del texto
+    if (footnoteElement.text && footnoteElement.text.length > 1000) {
+        warnings.push('Texto de footnote muy largo (>1000 caracteres)');
+    }
+
+    // Validar página
+    if (footnoteElement.pageNumber && footnoteElement.pageNumber < 1) {
+        errors.push('Número de página debe ser mayor a 0');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings
+    };
+};
+
 /**
  * Estadísticas del sistema PDF con métricas de Fase 3
  * @returns {Object} Estadísticas de uso
