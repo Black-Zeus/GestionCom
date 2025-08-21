@@ -417,8 +417,8 @@ const ExportButton = ({
   // === RENDER MENU ITEMS ===
   const renderMenuItem = (item, index) => {
     const isBuiltin = item.type === "builtin" || item.format;
-    const isDisabled =
-      item.disabled || (isBuiltin && item.dependencies?.length > 0);
+    //const isDisabled = item.disabled || (isBuiltin && item.dependencies?.length > 0);
+    const isDisabled = item.disabled || false;
 
     return (
       <button

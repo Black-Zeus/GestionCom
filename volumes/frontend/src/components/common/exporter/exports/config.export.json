@@ -116,7 +116,7 @@
     "autoFitColumns": true,
     "freezeTopRow": true,
     "headerStyle": {
-      "font": { "bold": true },
+      "font": { "bold": false },
       "fill": {
         "type": "pattern",
         "pattern": "solid",
@@ -134,21 +134,21 @@
     "defaultPageSize": "A4",
     "defaultOrientation": "portrait",
     "defaultMargins": [40, 40, 40, 40],
-    "defaultFont": "Helvetica",
+    "defaultFont": "Times",
     "styles": {
       "header": {
         "fontSize": 18,
-        "bold": true,
+        "bold": false,
         "margin": [0, 0, 0, 20]
       },
       "subheader": {
         "fontSize": 14,
-        "bold": true,
+        "bold": false,
         "margin": [0, 20, 0, 8]
       },
       "tableHeader": {
         "fontSize": 10,
-        "bold": true,
+        "bold": false,
         "fillColor": "#f3f4f6",
         "color": "#374151"
       },
