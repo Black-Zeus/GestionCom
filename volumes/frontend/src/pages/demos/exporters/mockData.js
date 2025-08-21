@@ -1,7 +1,4 @@
-/**
- * Datos de prueba para demos de exportadores
- * Incluye diferentes tipos de datos y estructuras para testing
- */
+// Datos de prueba simplificados para demos de exportación y descarga
 
 // Usuarios básicos
 export const basicUsers = [
@@ -57,7 +54,7 @@ export const basicUsers = [
     }
 ];
 
-// Definición de columnas para usuarios
+// Columnas para usuarios
 export const userColumns = [
     {
         key: "id",
@@ -66,11 +63,11 @@ export const userColumns = [
     },
     {
         key: "name",
-        header: "Nombre Completo"
+        header: "Nombre"
     },
     {
         key: "email",
-        header: "Correo Electrónico"
+        header: "Email"
     },
     {
         key: "department",
@@ -86,7 +83,7 @@ export const userColumns = [
     },
     {
         key: "startDate",
-        header: "Fecha de Inicio",
+        header: "Fecha Inicio",
         formatter: (value) => value instanceof Date ? value.toLocaleDateString('es-ES') : value
     },
     {
@@ -105,52 +102,31 @@ export const userColumns = [
 export const salesData = [
     {
         month: "Enero",
-        revenue: 125000,
+        revenue: 150000,
         expenses: 45000,
-        profit: 80000,
-        customers: 245,
-        products: 1520,
-        region: "Norte"
+        profit: 105000,
+        customers: 250,
+        products: 1200
     },
     {
         month: "Febrero",
-        revenue: 135000,
-        expenses: 48000,
-        profit: 87000,
-        customers: 267,
-        products: 1680,
-        region: "Norte"
+        revenue: 180000,
+        expenses: 52000,
+        profit: 128000,
+        customers: 300,
+        products: 1450
     },
     {
         month: "Marzo",
-        revenue: 142000,
-        expenses: 52000,
-        profit: 90000,
-        customers: 289,
-        products: 1750,
-        region: "Sur"
-    },
-    {
-        month: "Abril",
-        revenue: 158000,
-        expenses: 55000,
-        profit: 103000,
-        customers: 312,
-        products: 1890,
-        region: "Sur"
-    },
-    {
-        month: "Mayo",
-        revenue: 167000,
-        expenses: 58000,
-        profit: 109000,
-        customers: 334,
-        products: 1950,
-        region: "Este"
+        revenue: 165000,
+        expenses: 48000,
+        profit: 117000,
+        customers: 275,
+        products: 1350
     }
 ];
 
-// Columnas para datos de ventas
+// Columnas para ventas
 export const salesColumns = [
     { key: "month", header: "Mes" },
     {
@@ -178,87 +154,7 @@ export const salesColumns = [
         }).format(value)
     },
     { key: "customers", header: "Clientes" },
-    { key: "products", header: "Productos Vendidos" },
-    { key: "region", header: "Región" }
-];
-
-// Datos de inventario
-export const inventoryData = [
-    {
-        sku: "PROD001",
-        name: "Laptop HP EliteBook",
-        category: "Electrónicos",
-        stock: 45,
-        price: 899.99,
-        supplier: "HP Inc.",
-        lastUpdate: new Date("2024-12-15"),
-        status: "En Stock"
-    },
-    {
-        sku: "PROD002",
-        name: "Monitor Dell 24\"",
-        category: "Electrónicos",
-        stock: 23,
-        price: 299.99,
-        supplier: "Dell Technologies",
-        lastUpdate: new Date("2024-12-14"),
-        status: "Bajo Stock"
-    },
-    {
-        sku: "PROD003",
-        name: "Teclado Mecánico",
-        category: "Accesorios",
-        stock: 0,
-        price: 129.99,
-        supplier: "Logitech",
-        lastUpdate: new Date("2024-12-10"),
-        status: "Sin Stock"
-    },
-    {
-        sku: "PROD004",
-        name: "Mouse Inalámbrico",
-        category: "Accesorios",
-        stock: 78,
-        price: 49.99,
-        supplier: "Logitech",
-        lastUpdate: new Date("2024-12-16"),
-        status: "En Stock"
-    }
-];
-
-// Columnas para inventario
-export const inventoryColumns = [
-    { key: "sku", header: "SKU" },
-    { key: "name", header: "Nombre del Producto" },
-    { key: "category", header: "Categoría" },
-    {
-        key: "stock",
-        header: "Stock",
-        formatter: (value) => value === 0 ? "Sin stock" : value.toString()
-    },
-    {
-        key: "price",
-        header: "Precio",
-        formatter: (value) => new Intl.NumberFormat('es-ES', {
-            style: 'currency',
-            currency: 'EUR'
-        }).format(value)
-    },
-    { key: "supplier", header: "Proveedor" },
-    {
-        key: "lastUpdate",
-        header: "Última Actualización",
-        formatter: (value) => value instanceof Date ? value.toLocaleDateString('es-ES') : value
-    },
-    {
-        key: "status",
-        header: "Estado",
-        formatter: (value, row) => {
-            if (row.stock === 0) return "❌ Sin Stock";
-            if (row.stock < 30) return "⚠️ Bajo Stock";
-            return "✅ En Stock";
-        }
-    }
+    { key: "products", header: "Productos" }
 ];
 
 // Datos complejos con objetos anidados
@@ -268,156 +164,82 @@ export const complexData = [
         customer: {
             name: "Empresa ABC",
             contact: {
-                email: "contacto@empresaabc.com",
-                phone: "+34 900 123 456"
-            },
-            address: {
-                street: "Calle Principal 123",
-                city: "Madrid",
-                postal: "28001"
+                email: "contacto@abc.com",
+                phone: "+34912345678"
             }
         },
         orders: [
-            { id: "ORD001", amount: 1500, date: new Date("2024-12-01") },
-            { id: "ORD002", amount: 2300, date: new Date("2024-12-10") }
+            { id: 101, amount: 1500 },
+            { id: 102, amount: 2300 }
         ],
         metadata: {
-            source: "web",
-            campaign: "email_marketing",
-            tags: ["premium", "enterprise"]
+            created: new Date("2024-01-15"),
+            priority: "high"
         }
     },
     {
         id: 2,
         customer: {
-            name: "Tech Solutions Ltd",
+            name: "Empresa XYZ",
             contact: {
-                email: "info@techsolutions.com",
-                phone: "+34 900 654 321"
-            },
-            address: {
-                street: "Avenida Tecnológica 456",
-                city: "Barcelona",
-                postal: "08001"
+                email: "info@xyz.com",
+                phone: "+34987654321"
             }
         },
         orders: [
-            { id: "ORD003", amount: 890, date: new Date("2024-11-15") }
+            { id: 201, amount: 850 }
         ],
         metadata: {
-            source: "referral",
-            campaign: "partner_program",
-            tags: ["startup", "tech"]
+            created: new Date("2024-02-20"),
+            priority: "normal"
         }
     }
 ];
 
-// Columnas para datos complejos (aplanados)
+// Columnas para datos complejos (con dot notation)
 export const complexColumns = [
-    { key: "id", header: "ID Cliente" },
+    { key: "id", header: "ID" },
     { key: "customer.name", header: "Empresa" },
     { key: "customer.contact.email", header: "Email" },
     { key: "customer.contact.phone", header: "Teléfono" },
-    { key: "customer.address.city", header: "Ciudad" },
     {
         key: "orders",
-        header: "Órdenes",
-        formatter: (orders) => orders ? orders.length : 0
+        header: "Total Órdenes",
+        formatter: (orders) => orders?.length || 0
     },
     {
-        key: "metadata.tags",
-        header: "Tags",
-        formatter: (tags) => Array.isArray(tags) ? tags.join(", ") : ""
-    }
+        key: "metadata.created",
+        header: "Fecha",
+        formatter: (value) => value instanceof Date ? value.toLocaleDateString('es-ES') : value
+    },
+    { key: "metadata.priority", header: "Prioridad" }
 ];
 
-// Multiple datasets para demostrar exportación múltiple
+// Múltiples datasets para Excel con hojas
 export const multipleDatasets = [
     {
-        name: "Empleados",
+        name: "Usuarios",
         data: basicUsers,
         columns: userColumns
     },
     {
-        name: "Ventas 2024",
+        name: "Ventas",
         data: salesData,
         columns: salesColumns
-    },
-    {
-        name: "Inventario",
-        data: inventoryData,
-        columns: inventoryColumns
     }
 ];
 
 // Configuración de branding corporativo
 export const corporateBranding = {
-    orgName: "TechCorp Solutions",
-    createdBy: "Sistema de Reportes",
-    footerText: "Documento confidencial - Uso interno únicamente",
+    orgName: "Mi Empresa S.A.",
+    createdBy: "Sistema Demo",
+    footerText: "Documento generado automáticamente",
     primaryColor: "#2563eb",
-    secondaryColor: "#f1f5f9",
-    textColor: "#1e293b",
-    pageNumbers: true,
+    secondaryColor: "#1e40af",
+    textColor: "#1f2937",
     watermark: false,
-    logoPosition: "top-right"
-};
-
-// Templates predefinidos
-export const templates = {
-    employeeReport: {
-        title: "Reporte de Empleados",
-        subtitle: "Listado completo del personal",
-        data: basicUsers,
-        columns: userColumns,
-        branding: corporateBranding,
-        options: {
-            includeHeaders: true,
-            includeMetadata: true
-        }
-    },
-
-    salesReport: {
-        title: "Informe de Ventas Q4 2024",
-        subtitle: "Análisis de rendimiento comercial",
-        data: salesData,
-        columns: salesColumns,
-        branding: corporateBranding,
-        options: {
-            includeHeaders: true,
-            includeSummary: true
-        }
-    },
-
-    inventoryReport: {
-        title: "Estado del Inventario",
-        subtitle: "Control de stock actualizado",
-        data: inventoryData,
-        columns: inventoryColumns,
-        branding: corporateBranding,
-        options: {
-            includeHeaders: true,
-            compactMode: true
-        }
-    }
-};
-
-// Datos grandes para testing de rendimiento
-export const generateLargeDataset = (size = 1000) => {
-    const departments = ["IT", "Ventas", "Marketing", "Finanzas", "RRHH", "Operaciones"];
-    const names = ["Ana", "Carlos", "María", "Juan", "Laura", "Pedro", "Elena", "Miguel"];
-    const surnames = ["García", "López", "Rodríguez", "Martínez", "Fernández", "González"];
-
-    return Array.from({ length: size }, (_, index) => ({
-        id: index + 1,
-        name: `${names[index % names.length]} ${surnames[index % surnames.length]}`,
-        email: `user${index + 1}@empresa.com`,
-        department: departments[index % departments.length],
-        salary: Math.floor(Math.random() * 50000) + 40000,
-        startDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
-        active: Math.random() > 0.1,
-        performance: Math.round((Math.random() * 2 + 3) * 10) / 10
-    }));
+    pageNumbers: true,
+    logoPosition: "top-left"
 };
 
 // Datos con tipos especiales para testing
@@ -431,81 +253,94 @@ export const specialTypesData = [
         booleanTrue: true,
         booleanFalse: false,
         dateValue: new Date("2024-12-20"),
-        objectValue: { nested: "value", array: [1, 2, 3] },
-        arrayValue: ["item1", "item2", "item3"],
-        longText: "Este es un texto muy largo que debería ser truncado en algunos formatos de exportación para evitar problemas de formato y legibilidad",
-        specialChars: "Caracteres especiales: áéíóú ñ ¿¡ \"comillas\" 'apostrofes' & ampersand",
-        numberWithDecimals: 123.456789,
-        largeNumber: 1234567890,
-        negativeNumber: -456.78
+        objectValue: { nested: "value" },
+        arrayValue: ["item1", "item2"],
+        specialChars: "áéíóú ñ ¿¡ \"comillas\" 'apostrofes'",
+        numberWithDecimals: 123.456789
     }
 ];
 
-// URLs de prueba para DownloadButton
+// URLs de prueba para descargas
 export const downloadUrls = {
-    pdf: "/data1.pdf",
+    pdf: "/demos/exporters/data1.pdf",
     image: "https://picsum.photos/800/600",
     json: "https://jsonplaceholder.typicode.com/users",
-    smallFile: "data:text/plain;base64,SGVsbG8gV29ybGQh", // "Hello World!"
-    mediumFile: "https://httpbin.org/bytes/1024", // 1KB
-    largeFile: "https://httpbin.org/bytes/10240" // 10KB
+    csv: "data:text/csv;charset=utf-8,Nombre,Edad%0AJuan,25%0AMaria,30",
+    smallFile: "data:text/plain;base64,SGVsbG8gV29ybGQh",
+    mediumFile: "https://httpbin.org/bytes/1024",
+    largeFile: "https://httpbin.org/bytes/10240"
 };
 
-// Simulador de delay para demos
-export const simulateDelay = (ms = 2000) => {
-    return new Promise(resolve => setTimeout(resolve, ms));
+// Generador de datasets grandes
+export const generateLargeDataset = (size) => {
+    const names = ["Ana", "Carlos", "María", "Juan", "Laura", "Pedro", "Sofia", "Diego"];
+    const surnames = ["García", "López", "Rodríguez", "Martínez", "Fernández"];
+    const departments = ["IT", "Ventas", "Marketing", "Finanzas", "RRHH"];
+
+    return Array.from({ length: size }, (_, i) => ({
+        id: i + 1,
+        name: `${names[Math.floor(Math.random() * names.length)]} ${surnames[Math.floor(Math.random() * surnames.length)]}`,
+        email: `user${i + 1}@empresa.com`,
+        department: departments[Math.floor(Math.random() * departments.length)],
+        salary: Math.floor(Math.random() * 50000) + 40000,
+        startDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+        active: Math.random() > 0.2,
+        performance: Math.round((Math.random() * 2 + 3) * 10) / 10
+    }));
 };
 
-// Utilidades para generar datos aleatorios
-export const dataGenerators = {
-    randomUser: () => {
-        const names = ["Ana", "Carlos", "María", "Juan", "Laura"];
-        const surnames = ["García", "López", "Rodríguez", "Martínez"];
-        const departments = ["IT", "Ventas", "Marketing", "Finanzas"];
+
+// utils/generateMockData.js
+export const generateComplexMockData = (count = 30) => {
+    const empresas = [
+        "Empresa ABC S.A.",
+        "Tech Solutions Ltda.",
+        "Servicios Globales SPA",
+        "InnovaCorp",
+        "Construcciones del Sur",
+        "AgroChile Export",
+        "RetailMax S.A.",
+        "EnerGreen Ltda.",
+    ];
+
+    return Array.from({ length: count }, (_, i) => {
+        const empresa = empresas[i % empresas.length];
+        const id = i + 1;
 
         return {
-            id: Math.floor(Math.random() * 10000),
-            name: `${names[Math.floor(Math.random() * names.length)]} ${surnames[Math.floor(Math.random() * surnames.length)]}`,
-            email: `user${Math.floor(Math.random() * 1000)}@empresa.com`,
-            department: departments[Math.floor(Math.random() * departments.length)],
-            salary: Math.floor(Math.random() * 50000) + 40000,
-            startDate: new Date(2020 + Math.floor(Math.random() * 4), Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
-            active: Math.random() > 0.2,
-            performance: Math.round((Math.random() * 2 + 3) * 10) / 10
+            id,
+            customer: {
+                name: empresa,
+                contact: {
+                    email: `contacto${id}@${empresa.replace(/\s+/g, "").toLowerCase()}.cl`,
+                    phone: `+56-9-${Math.floor(10000000 + Math.random() * 89999999)}`,
+                    address: {
+                        street: `Calle ${id * 3} #${100 + id}`,
+                        city: i % 2 === 0 ? "Santiago" : "Valparaíso",
+                        country: "Chile",
+                    },
+                },
+            },
+            orders: Array.from({ length: Math.floor(Math.random() * 4) + 1 }, (_, j) => ({
+                id: id * 1000 + j,
+                amount: Math.round(Math.random() * 200000) + 50000,
+                status: ["completed", "pending", "processing", "shipped"][
+                    Math.floor(Math.random() * 4)
+                ],
+            })),
+            metadata: {
+                created: new Date(2023, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+                lastUpdate: new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1),
+                tags: ["premium", "corporate", "startup", "vip", "regular"].slice(
+                    0,
+                    Math.floor(Math.random() * 3) + 1
+                ),
+                scores: {
+                    quality: Math.round((7 + Math.random() * 3) * 10) / 10,
+                    delivery: Math.round((7 + Math.random() * 3) * 10) / 10,
+                    support: Math.round((7 + Math.random() * 3) * 10) / 10,
+                },
+            },
         };
-    },
-
-    randomSalesData: () => {
-        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio"];
-        const regions = ["Norte", "Sur", "Este", "Oeste"];
-
-        return {
-            month: months[Math.floor(Math.random() * months.length)],
-            revenue: Math.floor(Math.random() * 100000) + 50000,
-            expenses: Math.floor(Math.random() * 30000) + 20000,
-            profit: Math.floor(Math.random() * 70000) + 30000,
-            customers: Math.floor(Math.random() * 200) + 100,
-            products: Math.floor(Math.random() * 1000) + 500,
-            region: regions[Math.floor(Math.random() * regions.length)]
-        };
-    }
-};
-
-export default {
-    basicUsers,
-    userColumns,
-    salesData,
-    salesColumns,
-    inventoryData,
-    inventoryColumns,
-    complexData,
-    complexColumns,
-    multipleDatasets,
-    corporateBranding,
-    templates,
-    generateLargeDataset,
-    specialTypesData,
-    downloadUrls,
-    simulateDelay,
-    dataGenerators
+    });
 };
