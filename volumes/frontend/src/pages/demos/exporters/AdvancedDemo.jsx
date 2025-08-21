@@ -11,6 +11,7 @@ const AdvancedDemo = () => {
   const [status, setStatus] = useState("");
   const [realTimeData, setRealTimeData] = useState([]);
   const [errorSimulation, setErrorSimulation] = useState(false);
+  const [recordCount, setRecordCount] = useState(5); // Nuevo estado para controlar cantidad de registros
 
   // Estado para configuración interactiva de PDF
   const [pdfConfig, setPdfConfig] = useState({
@@ -20,7 +21,7 @@ const AdvancedDemo = () => {
     includePageNumbers: true,
     watermark: false,
     includeCover: false,
-    corporateStyle: false,
+    corporateStyle: true, // Cambiado a true para mostrar ambos botones
 
     // Formato del documento
     pageSize: "A4",
@@ -132,16 +133,32 @@ const AdvancedDemo = () => {
     handleStatus(`✅ Generados ${newData.length} registros nuevos`);
   };
 
-  // Datos complejos corregidos para la demo
-  const complexDataDemo = generateComplexMockData(30);
+  // Datos complejos generados dinámicamente según recordCount
+  const complexDataDemo = generateComplexMockData(recordCount);
 
-  // Columnas corregidas para coincidir con la estructura real
-  const complexColumnsDemo = [
+  // Columnas con formatters explícitos (alternativa a dot notation)
+  const complexColumnsExplicit = [
     { key: "id", header: "ID" },
-    { key: "customer.name", header: "Empresa" },
-    { key: "customer.contact.email", header: "Email" },
-    { key: "customer.contact.phone", header: "Teléfono" },
-    { key: "customer.contact.address.city", header: "Ciudad" },
+    {
+      key: "customer",
+      header: "Empresa",
+      formatter: (customer) => customer?.name || "-",
+    },
+    {
+      key: "customer",
+      header: "Email",
+      formatter: (customer) => customer?.contact?.email || "-",
+    },
+    {
+      key: "customer",
+      header: "Teléfono",
+      formatter: (customer) => customer?.contact?.phone || "-",
+    },
+    {
+      key: "customer",
+      header: "Ciudad",
+      formatter: (customer) => customer?.contact?.address?.city || "-",
+    },
     {
       key: "orders",
       header: "Total Órdenes",
@@ -159,25 +176,87 @@ const AdvancedDemo = () => {
       },
     },
     {
-      key: "metadata.tags",
+      key: "metadata",
       header: "Etiquetas",
-      formatter: (tags) => (Array.isArray(tags) ? tags.join(", ") : ""),
+      formatter: (metadata) => {
+        const tags = metadata?.tags;
+        return Array.isArray(tags) ? tags.join(", ") : "-";
+      },
     },
     {
-      key: "metadata.scores.quality",
+      key: "metadata",
       header: "Score Calidad",
-      formatter: (score) =>
-        typeof score === "number" ? score.toFixed(1) : "N/A",
+      formatter: (metadata) => {
+        const score = metadata?.scores?.quality;
+        return typeof score === "number" ? score.toFixed(1) : "N/A";
+      },
     },
     {
-      key: "metadata.created",
+      key: "metadata",
       header: "Fecha Creación",
-      formatter: (date) =>
-        date instanceof Date
+      formatter: (metadata) => {
+        const date = metadata?.created;
+        return date instanceof Date
           ? date.toLocaleDateString("es-CL")
-          : String(date || ""),
+          : String(date || "-");
+      },
     },
   ];
+
+  // DEBUG: Verificar que los datos se generan correctamente
+  console.log("🔍 DEBUG - complexDataDemo:", {
+    recordCount,
+    length: complexDataDemo.length,
+    firstItem: complexDataDemo[0],
+    lastItem: complexDataDemo[complexDataDemo.length - 1],
+  });
+
+  // DEBUG: Verificar mapeo de columnas
+  console.log("🔍 DEBUG - Column mapping test:", {
+    sampleData: complexDataDemo[0],
+    columnTests: {
+      id: complexDataDemo[0]?.id,
+      customerName: complexDataDemo[0]?.customer?.name,
+      email: complexDataDemo[0]?.customer?.contact?.email,
+      phone: complexDataDemo[0]?.customer?.contact?.phone,
+      city: complexDataDemo[0]?.customer?.contact?.address?.city,
+      ordersLength: complexDataDemo[0]?.orders?.length,
+    },
+  });
+
+  // DEBUG: Test de formatters
+  console.log("🔍 DEBUG - Formatter test:", {
+    firstRow: complexColumnsExplicit.map((col) => ({
+      header: col.header,
+      key: col.key,
+      value: col.formatter
+        ? col.formatter(complexDataDemo[0][col.key])
+        : complexDataDemo[0][col.key],
+    })),
+  });
+
+  // Pre-procesar datos para el exportador (aplanar objetos usando formatters)
+  const processedDataForExport = complexDataDemo.map((row) => {
+    const processedRow = {};
+    complexColumnsExplicit.forEach((col) => {
+      const value = col.formatter ? col.formatter(row[col.key]) : row[col.key];
+      processedRow[col.header] = value;
+    });
+    return processedRow;
+  });
+
+  // Columnas simples para datos pre-procesados
+  const simpleColumns = complexColumnsExplicit.map((col) => ({
+    key: col.header,
+    header: col.header,
+  }));
+
+  // DEBUG: Datos procesados
+  console.log("🔄 DEBUG - Processed data:", {
+    originalFirst: complexDataDemo[0],
+    processedFirst: processedDataForExport[0],
+    simpleColumns: simpleColumns,
+  });
 
   // Simular error
   const handleErrorExport = async () => {
@@ -634,14 +713,80 @@ const AdvancedDemo = () => {
               <h3 className="font-semibold mb-3 text-gray-800">
                 Exportar con Configuración
               </h3>
+
+              {/* Control de cantidad de registros */}
+              <div className="mb-4 p-3 bg-gray-50 rounded">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cantidad de registros para prueba
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="50"
+                    value={recordCount}
+                    onChange={(e) => setRecordCount(parseInt(e.target.value))}
+                    className="flex-1"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={recordCount}
+                    onChange={(e) =>
+                      setRecordCount(parseInt(e.target.value) || 1)
+                    }
+                    className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-center"
+                  />
+                  <span className="text-sm text-gray-600 min-w-[60px]">
+                    {recordCount} reg{recordCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Usa el slider o escribe un número para cambiar la cantidad de
+                  registros
+                </div>
+              </div>
+
               <div className="space-y-3">
                 {/* PDF Simple */}
                 <ExportButton
-                  data={complexDataDemo.slice(0, 3)}
-                  columns={complexColumnsDemo}
+                  data={processedDataForExport}
+                  columns={simpleColumns}
                   formats={["pdf"]}
                   filename="pdf_interactivo_simple"
-                  {...generateExportConfig()}
+                  title={pdfConfig.coverTitle}
+                  subtitle={pdfConfig.coverSubtitle}
+                  author={pdfConfig.coverAuthor}
+                  corporateStyle={pdfConfig.corporateStyle}
+                  pageSize={pdfConfig.pageSize}
+                  pageOrientation={pdfConfig.pageOrientation}
+                  pageMargins={
+                    pdfConfig.customMargins ? pdfConfig.pageMargins : undefined
+                  }
+                  includeHeader={pdfConfig.includeHeader}
+                  includeFooter={pdfConfig.includeFooter}
+                  includeCover={pdfConfig.includeCover}
+                  coverOptions={
+                    pdfConfig.includeCover
+                      ? {
+                          title: pdfConfig.coverTitle,
+                          subtitle: pdfConfig.coverSubtitle,
+                          description: pdfConfig.coverDescription,
+                          author: pdfConfig.coverAuthor,
+                        }
+                      : undefined
+                  }
+                  branding={{
+                    orgName: pdfConfig.orgName,
+                    footerText: pdfConfig.footerText,
+                    createdBy: pdfConfig.createdBy,
+                    primaryColor: pdfConfig.primaryColor,
+                    secondaryColor: pdfConfig.secondaryColor,
+                    watermark: pdfConfig.watermark,
+                    watermarkText: pdfConfig.watermarkText,
+                    watermarkOpacity: pdfConfig.watermarkOpacity,
+                  }}
                   onStart={() =>
                     handleStatus(
                       "Generando PDF con configuración personalizada..."
@@ -656,11 +801,44 @@ const AdvancedDemo = () => {
                 {/* PDF Corporativo */}
                 {pdfConfig.corporateStyle && (
                   <ExportButton
-                    data={complexDataDemo.slice(0, 3)}
-                    columns={complexColumnsDemo}
+                    data={processedDataForExport}
+                    columns={simpleColumns}
                     formats={["pdf-branded"]}
                     filename="pdf_interactivo_corporativo"
-                    {...generateExportConfig()}
+                    title={pdfConfig.coverTitle}
+                    subtitle={pdfConfig.coverSubtitle}
+                    author={pdfConfig.coverAuthor}
+                    corporateStyle={pdfConfig.corporateStyle}
+                    pageSize={pdfConfig.pageSize}
+                    pageOrientation={pdfConfig.pageOrientation}
+                    pageMargins={
+                      pdfConfig.customMargins
+                        ? pdfConfig.pageMargins
+                        : undefined
+                    }
+                    includeHeader={pdfConfig.includeHeader}
+                    includeFooter={pdfConfig.includeFooter}
+                    includeCover={pdfConfig.includeCover}
+                    coverOptions={
+                      pdfConfig.includeCover
+                        ? {
+                            title: pdfConfig.coverTitle,
+                            subtitle: pdfConfig.coverSubtitle,
+                            description: pdfConfig.coverDescription,
+                            author: pdfConfig.coverAuthor,
+                          }
+                        : undefined
+                    }
+                    branding={{
+                      orgName: pdfConfig.orgName,
+                      footerText: pdfConfig.footerText,
+                      createdBy: pdfConfig.createdBy,
+                      primaryColor: pdfConfig.primaryColor,
+                      secondaryColor: pdfConfig.secondaryColor,
+                      watermark: pdfConfig.watermark,
+                      watermarkText: pdfConfig.watermarkText,
+                      watermarkOpacity: pdfConfig.watermarkOpacity,
+                    }}
                     onStart={() =>
                       handleStatus(
                         "Generando PDF corporativo con configuración personalizada..."
@@ -744,18 +922,52 @@ const AdvancedDemo = () => {
         </p>
 
         <div className="bg-gray-50 rounded p-3 mb-3">
+          <div className="text-xs text-gray-600 mb-2">
+            Datos generados: {complexDataDemo.length} registros (configurado:{" "}
+            {recordCount})
+          </div>
+
+          {/* Test visual de formatters */}
+          <div className="mb-3 p-2 bg-white rounded border">
+            <div className="text-xs font-semibold text-gray-700 mb-1">
+              🧪 Test de Formatters (primer registro):
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              {complexColumnsExplicit.slice(0, 5).map((col, idx) => (
+                <div key={idx} className="flex">
+                  <span className="font-medium text-blue-600 w-20">
+                    {col.header}:
+                  </span>
+                  <span className="text-gray-800">
+                    {col.formatter
+                      ? col.formatter(complexDataDemo[0][col.key])
+                      : complexDataDemo[0][col.key]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <pre className="text-xs overflow-x-auto">
             {JSON.stringify(complexDataDemo[0], null, 2)}
           </pre>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <ExportButton
-            data={complexDataDemo}
-            columns={complexColumnsDemo}
+            data={processedDataForExport}
+            columns={simpleColumns}
             formats={["xlsx", "csv"]}
             filename="datos_complejos"
-            onStart={() => handleStatus("Exportando datos complejos...")}
+            onStart={() => {
+              console.log("🚀 EXPORT DEBUG - Datos pre-procesados enviados:", {
+                dataLength: processedDataForExport.length,
+                columnsLength: simpleColumns.length,
+                firstProcessedRow: processedDataForExport[0],
+                columnsUsed: simpleColumns,
+              });
+              handleStatus("Exportando datos pre-procesados...");
+            }}
             onSuccess={() => handleStatus("✅ Datos complejos exportados")}
             onError={(error) => handleStatus(`❌ Error: ${error}`)}
           />
@@ -768,6 +980,25 @@ const AdvancedDemo = () => {
             onSuccess={() => handleStatus("✅ Estructura completa exportada")}
             onError={(error) => handleStatus(`❌ Error: ${error}`)}
           />
+          <button
+            onClick={() => {
+              console.log("🔬 MANUAL TEST - Data processing:", {
+                totalRecords: complexDataDemo.length,
+                sampleProcessing: complexDataDemo.slice(0, 2).map((row) =>
+                  complexColumnsExplicit.reduce((acc, col) => {
+                    acc[col.header] = col.formatter
+                      ? col.formatter(row[col.key])
+                      : row[col.key];
+                    return acc;
+                  }, {})
+                ),
+              });
+              handleStatus("📋 Revisar consola para test manual");
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+          >
+            🔬 Test Manual
+          </button>
         </div>
       </section>
 
@@ -886,7 +1117,7 @@ const AdvancedDemo = () => {
 
         <ExportButton
           data={complexDataDemo.slice(0, 3)} // Solo pocos datos para testing
-          columns={complexColumnsDemo}
+          columns={complexColumnsExplicit}
           formats={["xlsx-branded", "pdf-branded"]}
           branding={{
             ...corporateBranding,

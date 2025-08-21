@@ -59,6 +59,19 @@ const ExportButton = ({
   "aria-label": ariaLabel = "Exportar datos",
   id = null,
 
+  // === PROPS PROBLEMÁTICAS EXTRAÍDAS ===
+  includeHeader,
+  includeFooter,
+  pageSize,
+  pageOrientation,
+  title,
+  subtitle,
+  author,
+  corporateStyle,
+  pageMargins,
+  includeCover,
+  coverOptions,
+
   ...props
 }) => {
   // === ESTADO LOCAL ===
@@ -95,61 +108,76 @@ const ExportButton = ({
   // === DERIVAR EXPORTADORES DISPONIBLES ===
   const availableExporters = useMemo(() => {
     return getAvailableExporters({
-      formats: formats.length > 0 ? formats : null,
-      excludeFormats: hiddenFormats,
+      formats: formats.length > 0 ? formats : config.defaultFormats,
+      hiddenFormats,
+      language,
     });
-  }, [formats, hiddenFormats]);
+  }, [formats, hiddenFormats, language]);
 
-  // === DERIVAR ITEMS DEL MENÚ ===
+  // === DERIVAR MENU ITEMS ===
   const menuItems = useMemo(() => {
-    if (items && Array.isArray(items)) return items;
+    if (items) {
+      return items.map((item, index) => ({
+        ...item,
+        key: item.key || item.format || index,
+      }));
+    }
 
     return availableExporters.map((exporter) => ({
       type: "builtin",
-      format: exporter.key,
-      label: formatLabels[exporter.key] || exporter.name,
-      icon: formatIcons[exporter.key] || exporter.icon,
+      key: exporter.format,
+      format: exporter.format,
+      label: formatLabels[exporter.format] || exporter.label,
       description: exporter.description,
+      icon: formatIcons[exporter.format] || exporter.icon,
+      disabled: exporter.disabled,
       dependencies: exporter.dependencies,
-      onClick: null,
     }));
   }, [items, availableExporters, formatLabels, formatIcons]);
 
-  // === MANEJO DE CLICKS EXTERNOS ===
+  // === CERRAR DROPDOWN CON CLICK FUERA ===
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (event) => {
       if (
-        isOpen &&
         buttonRef.current &&
-        menuRef.current &&
         !buttonRef.current.contains(event.target) &&
+        menuRef.current &&
         !menuRef.current.contains(event.target)
       ) {
         setIsOpen(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("touchstart", handleClickOutside);
-    }
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
 
-  // === MANEJO DE TECLADO ===
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (!isOpen) return;
+  // === NAVEGACIÓN POR TECLADO ===
+  const handleKeyDown = useCallback(
+    (event) => {
+      if (!isOpen) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          setIsOpen(true);
+        }
+        return;
+      }
 
       switch (event.key) {
-        case "Escape":
-          setIsOpen(false);
-          buttonRef.current?.focus();
-          break;
         case "ArrowDown":
           event.preventDefault();
           focusNextMenuItem();
@@ -158,26 +186,31 @@ const ExportButton = ({
           event.preventDefault();
           focusPreviousMenuItem();
           break;
-        case "Enter":
-        case " ":
-          if (event.target.getAttribute("role") === "menuitem") {
-            event.preventDefault();
-            event.target.click();
-          }
+        case "Home":
+          event.preventDefault();
+          focusFirstMenuItem();
+          break;
+        case "End":
+          event.preventDefault();
+          focusLastMenuItem();
           break;
       }
-    };
+    },
+    [isOpen]
+  );
 
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
+  const focusFirstMenuItem = () => {
+    const menuEls = menuRef.current?.querySelectorAll('[role="menuitem"]');
+    menuEls?.[0]?.focus();
+  };
+
+  const focusLastMenuItem = () => {
+    const menuEls = menuRef.current?.querySelectorAll('[role="menuitem"]');
+    if (menuEls?.length) {
+      menuEls[menuEls.length - 1]?.focus();
     }
+  };
 
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  // === FUNCIONES DE NAVEGACIÓN POR TECLADO ===
   const focusNextMenuItem = () => {
     const menuEls = menuRef.current?.querySelectorAll('[role="menuitem"]');
     if (!menuEls?.length) return;
@@ -212,6 +245,17 @@ const ExportButton = ({
           columns,
           branding,
           validateInput,
+          includeHeader,
+          includeFooter,
+          pageSize,
+          pageOrientation,
+          title,
+          subtitle,
+          author,
+          corporateStyle,
+          pageMargins,
+          includeCover,
+          coverOptions,
           ...customOptions,
         };
 
@@ -231,6 +275,17 @@ const ExportButton = ({
       filename,
       branding,
       validateInput,
+      includeHeader,
+      includeFooter,
+      pageSize,
+      pageOrientation,
+      title,
+      subtitle,
+      author,
+      corporateStyle,
+      pageMargins,
+      includeCover,
+      coverOptions,
       closeOnSelect,
       exportHook,
     ]
@@ -417,7 +472,6 @@ const ExportButton = ({
   // === RENDER MENU ITEMS ===
   const renderMenuItem = (item, index) => {
     const isBuiltin = item.type === "builtin" || item.format;
-    //const isDisabled = item.disabled || (isBuiltin && item.dependencies?.length > 0);
     const isDisabled = item.disabled || false;
 
     return (
@@ -511,6 +565,7 @@ const ExportButton = ({
         className={getButtonClasses()}
         disabled={disabled || exportHook.loading}
         onClick={toggleDropdown}
+        onKeyDown={handleKeyDown}
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
