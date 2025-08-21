@@ -92,7 +92,7 @@ export const exportReport = async (data, reportConfig, options = {}) => {
 
                 if (includeDate) {
                     headerContent.push({
-                        text: new Date().toLocaleDateString(PDF_CONSTANTS.LOCALE),
+                        text: new Date().toLocaleDateString('es-ES'),
                         alignment: 'right',
                         margin: [40, 20, 40, 0]
                     });
@@ -112,22 +112,21 @@ export const exportReport = async (data, reportConfig, options = {}) => {
                 if (footerText) {
                     footerContent.push({
                         text: footerText,
-                        alignment: 'center',
-                        style: 'footer',
-                        margin: [40, 0, 40, 20]
+                        alignment: 'left'
                     });
                 }
 
                 if (includePageNumbers) {
                     footerContent.push({
                         text: `Página ${currentPage} de ${pageCount}`,
-                        alignment: 'center',
-                        style: 'footer',
-                        margin: [40, 0, 40, 20]
+                        alignment: 'right'
                     });
                 }
 
-                return footerContent;
+                return {
+                    columns: footerContent,
+                    margin: [40, 10, 40, 10]
+                };
             };
         };
     }
@@ -135,10 +134,45 @@ export const exportReport = async (data, reportConfig, options = {}) => {
     return exportSimplePDF(data, documentOptions);
 };
 
-// Exportar objeto con todas las funciones para compatibilidad
-export default {
-    export: exportSimplePDF,
-    exportSimple: exportSimpleTable,
-    exportMultiple: exportMultipleSections,
-    exportReport
+// ================================================
+// NUEVA FUNCIONALIDAD - PDF BUILDER API
+// ================================================
+
+/**
+ * Crea una nueva instancia del PDF Builder para construcción fluida
+ * @param {Object} options - Opciones iniciales del builder
+ * @returns {PDFDocumentBuilder} Nueva instancia del builder
+ */
+export const createPDFBuilder = async (options = {}) => {
+    // Importación diferida del builder para optimizar bundle
+    const { PDFDocumentBuilder } = await import('./advance-pdf/pdf-builder.js');
+
+    return new PDFDocumentBuilder({
+        ...options,
+        corporateStyle: false // PDF simple no usa estilo corporativo
+    });
+};
+
+/**
+ * Función de conveniencia para crear builder con configuración simple
+ * @param {Object} config - Configuración inicial
+ * @returns {Promise<PDFDocumentBuilder>} Builder configurado
+ */
+export const createSimpleBuilder = async (config = {}) => {
+    const builder = await createPDFBuilder();
+
+    // Aplicar configuración básica si se proporciona
+    if (config.title || config.subtitle || config.author) {
+        builder.setMetadata({
+            title: config.title,
+            subtitle: config.subtitle,
+            author: config.author
+        });
+    }
+
+    if (config.branding) {
+        builder.setBranding(config.branding);
+    }
+
+    return builder;
 };

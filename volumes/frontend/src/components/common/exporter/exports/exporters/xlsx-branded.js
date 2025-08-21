@@ -1,701 +1,878 @@
 /**
- * Exportador Excel corporativo usando exceljs
- * Genera archivos Excel con branding, logos, múltiples hojas y formato avanzado
+ * Exportador PDF corporativo usando pdfmake
+ * Genera documentos PDF con branding corporativo completo
+ * ACTUALIZADO: Soporte completo para PDF Builder corporativo
  */
 
-import config from '../config.export.json';
+import { exportPDF, PDF_CONSTANTS, resizeImage } from './pdf-common.js';
 
 /**
- * Importa exceljs de forma diferida para optimizar bundle
- * @returns {Promise<Object>} Módulo ExcelJS
+ * Configuración por defecto para branding corporativo
  */
-const getExcelJS = async () => {
-    try {
-        const ExcelJS = await import('exceljs');
-        return ExcelJS.default || ExcelJS;
-    } catch (error) {
-        throw new Error('exceljs library is required for branded Excel export. Please install it: npm install exceljs');
+const DEFAULT_CORPORATE_BRANDING = {
+    orgName: 'Mi Empresa',
+    primaryColor: '#2563eb',
+    secondaryColor: '#f8fafc',
+    accentColor: '#1d4ed8',
+    textColor: '#1f2937',
+    logoUrl: null,
+    logoSize: { width: 150, height: 60 },
+    watermark: false,
+    watermarkText: 'CONFIDENCIAL',
+    watermarkOpacity: 0.1,
+    headerStyle: 'corporate',
+    footerStyle: 'corporate'
+};
+
+/**
+ * Estilos corporativos extendidos
+ */
+const CORPORATE_STYLES = {
+    // Estilos de portada corporativa
+    corporateCoverTitle: {
+        fontSize: 28,
+        bold: true,
+        alignment: 'center',
+        margin: [0, 80, 0, 30],
+        color: '#1f2937'
+    },
+    corporateCoverSubtitle: {
+        fontSize: 18,
+        alignment: 'center',
+        margin: [0, 0, 0, 50],
+        color: '#6b7280'
+    },
+    corporateCoverDescription: {
+        fontSize: 14,
+        alignment: 'center',
+        margin: [0, 0, 0, 60],
+        color: '#374151',
+        lineHeight: 1.4
+    },
+    corporateCoverInfo: {
+        fontSize: 12,
+        color: '#6b7280',
+        margin: [0, 3, 0, 3]
+    },
+
+    // Estilos de secciones corporativas
+    corporateSectionTitle: {
+        fontSize: 20,
+        bold: true,
+        margin: [0, 25, 0, 15],
+        color: '#2563eb'
+    },
+    corporateSubsectionTitle: {
+        fontSize: 16,
+        bold: true,
+        margin: [0, 20, 0, 12],
+        color: '#374151'
+    },
+
+    // Estilos de contenido corporativo
+    corporateBody: {
+        fontSize: 11,
+        lineHeight: 1.4,
+        margin: [0, 6, 0, 6],
+        alignment: 'justify',
+        color: '#374151'
+    },
+    corporateLead: {
+        fontSize: 13,
+        lineHeight: 1.5,
+        margin: [0, 10, 0, 10],
+        alignment: 'justify',
+        color: '#1f2937'
+    },
+    corporateCallout: {
+        fontSize: 11,
+        lineHeight: 1.4,
+        margin: [15, 10, 15, 10],
+        fillColor: '#f8fafc',
+        color: '#374151'
+    },
+
+    // Estilos de tablas corporativas
+    corporateTableHeader: {
+        bold: true,
+        fontSize: 10,
+        fillColor: '#2563eb',
+        color: '#ffffff',
+        alignment: 'center'
+    },
+    corporateTableCell: {
+        fontSize: 9,
+        margin: [3, 3, 3, 3],
+        color: '#374151'
+    },
+    corporateTableCaption: {
+        fontSize: 10,
+        italics: true,
+        color: '#6b7280',
+        alignment: 'center',
+        margin: [0, 8, 0, 15]
+    },
+
+    // Estilos de headers/footers corporativos
+    corporateHeader: {
+        fontSize: 9,
+        color: '#6b7280',
+        margin: [0, 10, 0, 10]
+    },
+    corporateFooter: {
+        fontSize: 8,
+        color: '#9ca3af',
+        alignment: 'center',
+        margin: [0, 10, 0, 10]
+    },
+
+    // Estilos de TOC corporativo
+    corporateTocTitle: {
+        fontSize: 18,
+        bold: true,
+        margin: [0, 0, 0, 25],
+        color: '#2563eb'
+    },
+    corporateTocLevel1: {
+        fontSize: 13,
+        bold: true,
+        margin: [0, 10, 0, 5],
+        color: '#1f2937'
+    },
+    corporateTocLevel2: {
+        fontSize: 12,
+        margin: [25, 8, 0, 4],
+        color: '#374151'
+    },
+    corporateTocLevel3: {
+        fontSize: 11,
+        margin: [45, 6, 0, 3],
+        color: '#6b7280'
     }
 };
 
 /**
- * Procesa logo para inserción en Excel
- * @param {string|File|Blob} logoSource - Fuente del logo
- * @param {Object} options - Opciones de procesamiento
- * @returns {Promise<Object>} Logo procesado para Excel
+ * Procesa logo para PDF corporativo
+ * @param {string|Object} logo - URL del logo o configuración del logo
+ * @param {Object} branding - Configuración de branding
+ * @returns {Promise<Object|null>} Configuración del logo procesado
  */
-const processLogoForExcel = async (logoSource, options = {}) => {
-    if (!logoSource) return null;
+const processLogoForPDF = async (logo, branding = {}) => {
+    if (!logo) {
+        return null;
+    }
 
     try {
-        const { processLogo } = await import('../../utils/image.js');
+        const logoConfig = typeof logo === 'string'
+            ? { src: logo, ...branding.logoSize }
+            : { ...branding.logoSize, ...logo };
 
-        const processedLogo = await processLogo(logoSource, {
-            maxWidth: 150,
-            maxHeight: 60,
-            format: 'png',
-            backgroundColor: '#ffffff',
-            ...options
-        });
+        // Si es una URL, intentar redimensionar
+        if (logoConfig.src && logoConfig.src.startsWith('http')) {
+            const resizedLogo = await resizeImage(logoConfig.src, {
+                width: logoConfig.width || 150,
+                height: logoConfig.height || 60,
+                maintainAspectRatio: true
+            });
 
-        // Convertir a buffer para ExcelJS
-        const arrayBuffer = await processedLogo.blob.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
+            return {
+                image: resizedLogo,
+                width: logoConfig.width || 150,
+                height: logoConfig.height || 60,
+                alignment: logoConfig.alignment || 'center'
+            };
+        }
 
+        // Retornar configuración directa
         return {
-            buffer,
-            extension: 'png',
-            width: processedLogo.width,
-            height: processedLogo.height,
-            base64: processedLogo.base64
+            image: logoConfig.src,
+            width: logoConfig.width || 150,
+            height: logoConfig.height || 60,
+            alignment: logoConfig.alignment || 'center'
         };
 
     } catch (error) {
-        console.warn('Failed to process logo:', error);
+        console.warn('Error procesando logo corporativo:', error);
         return null;
     }
 };
 
 /**
- * Aplica estilos corporativos a una hoja
- * @param {Object} worksheet - Hoja de ExcelJS
+ * Crea header corporativo personalizado
  * @param {Object} branding - Configuración de branding
- * @param {Object} options - Opciones de estilo
+ * @param {Object} logo - Configuración del logo
+ * @param {Object} docOptions - Opciones del documento
+ * @returns {Function} Función de header para pdfmake
  */
-const applyBrandedStyles = (worksheet, branding = {}, options = {}) => {
-    const {
-        headerRowIndex = 1,
-        dataStartRow = 2,
-        primaryColor = '#2563eb',
-        secondaryColor = '#f3f4f6',
-        textColor = '#374151',
-        logoPosition = 'top-left'
-    } = options;
+const createCorporateHeader = (branding, logo, docOptions) => {
+    return function (currentPage, pageCount, pageSize) {
+        // No mostrar header en primera página por defecto
+        if (currentPage === 1 && docOptions.includeHeader !== true) {
+            return null;
+        }
 
-    // Configurar colores corporativos
-    const brandColors = {
-        primary: branding.primaryColor || primaryColor,
-        secondary: branding.secondaryColor || secondaryColor,
-        text: branding.textColor || textColor,
-        background: '#ffffff'
+        const headerContent = [];
+        const primaryColor = branding.primaryColor || DEFAULT_CORPORATE_BRANDING.primaryColor;
+
+        // Logo en header si está disponible y es compacto
+        if (logo && docOptions.logoInHeader) {
+            headerContent.push({
+                image: logo.image,
+                width: 40,
+                height: 20,
+                alignment: 'left'
+            });
+        }
+
+        // Nombre de organización
+        if (branding.orgName) {
+            headerContent.push({
+                text: branding.orgName,
+                style: 'corporateHeader',
+                bold: true,
+                color: primaryColor,
+                alignment: 'center'
+            });
+        }
+
+        // Título del documento
+        if (docOptions.title) {
+            headerContent.push({
+                text: docOptions.title,
+                style: 'corporateHeader',
+                alignment: 'right'
+            });
+        }
+
+        return headerContent.length > 0 ? {
+            columns: headerContent,
+            margin: [60, 20, 60, 10],
+            borderBottom: [false, false, false, { width: 1, color: primaryColor }]
+        } : null;
     };
-
-    // Aplicar estilos a la fila de encabezados
-    if (headerRowIndex > 0) {
-        const headerRow = worksheet.getRow(headerRowIndex);
-
-        headerRow.eachCell((cell, colNumber) => {
-            cell.style = {
-                font: {
-                    bold: true,
-                    color: { argb: 'FFFFFFFF' },
-                    size: 11
-                },
-                fill: {
-                    type: 'pattern',
-                    pattern: 'solid',
-                    fgColor: { argb: brandColors.primary.replace('#', 'FF') }
-                },
-                border: {
-                    top: { style: 'thin', color: { argb: 'FF000000' } },
-                    left: { style: 'thin', color: { argb: 'FF000000' } },
-                    bottom: { style: 'thin', color: { argb: 'FF000000' } },
-                    right: { style: 'thin', color: { argb: 'FF000000' } }
-                },
-                alignment: {
-                    horizontal: 'center',
-                    vertical: 'middle'
-                }
-            };
-        });
-
-        headerRow.height = 25;
-    }
-
-    // Aplicar estilos alternos a las filas de datos
-    const lastRow = worksheet.lastRow;
-    if (lastRow) {
-        for (let rowIndex = dataStartRow; rowIndex <= lastRow.number; rowIndex++) {
-            const row = worksheet.getRow(rowIndex);
-            const isEvenRow = (rowIndex - dataStartRow) % 2 === 0;
-
-            row.eachCell((cell, colNumber) => {
-                cell.style = {
-                    font: {
-                        color: { argb: brandColors.text.replace('#', 'FF') },
-                        size: 10
-                    },
-                    fill: {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: {
-                            argb: isEvenRow ? 'FFFFFFFF' : brandColors.secondary.replace('#', 'FF')
-                        }
-                    },
-                    border: {
-                        top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-                        left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-                        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
-                        right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
-                    },
-                    alignment: {
-                        vertical: 'middle'
-                    }
-                };
-            });
-
-            row.height = 20;
-        }
-    }
-
-    // Auto-ajustar ancho de columnas
-    worksheet.columns.forEach((column, index) => {
-        let maxLength = 10;
-
-        worksheet.eachRow((row, rowNumber) => {
-            const cell = row.getCell(index + 1);
-            if (cell.value) {
-                const cellLength = cell.value.toString().length;
-                maxLength = Math.max(maxLength, cellLength);
-            }
-        });
-
-        column.width = Math.min(Math.max(maxLength + 2, 12), 40);
-    });
 };
 
 /**
- * Agrega logo a la hoja
- * @param {Object} workbook - Workbook de ExcelJS
- * @param {Object} worksheet - Hoja de ExcelJS
- * @param {Object} logo - Logo procesado
- * @param {Object} options - Opciones de posicionamiento
- */
-const addLogoToWorksheet = async (workbook, worksheet, logo, options = {}) => {
-    if (!logo || !logo.buffer) return;
-
-    const {
-        position = 'top-right',
-        offsetRows = 1,
-        offsetCols = 1,
-        marginTop = 10,
-        marginRight = 10
-    } = options;
-
-    try {
-        // Agregar imagen al workbook
-        const imageId = workbook.addImage({
-            buffer: logo.buffer,
-            extension: logo.extension
-        });
-
-        // Calcular posición según configuración
-        let tl = { row: offsetRows, col: worksheet.columnCount - offsetCols };
-
-        switch (position) {
-            case 'top-left':
-                tl = { row: offsetRows, col: offsetCols };
-                break;
-            case 'top-center':
-                tl = { row: offsetRows, col: Math.floor(worksheet.columnCount / 2) };
-                break;
-            case 'top-right':
-            default:
-                tl = { row: offsetRows, col: worksheet.columnCount - offsetCols };
-                break;
-        }
-
-        // Agregar imagen a la hoja
-        worksheet.addImage(imageId, {
-            tl: { row: tl.row - 1, col: tl.col - 1 }, // ExcelJS usa base 0
-            ext: { width: logo.width, height: logo.height },
-            editAs: 'oneCell'
-        });
-
-        // Ajustar altura de filas para acomodar el logo
-        const logoRows = Math.ceil(logo.height / 20); // Aproximado
-        for (let i = 0; i < logoRows; i++) {
-            const row = worksheet.getRow(tl.row + i);
-            row.height = Math.max(row.height || 15, 25);
-        }
-
-    } catch (error) {
-        console.warn('Failed to add logo to worksheet:', error);
-    }
-};
-
-/**
- * Agrega metadata corporativa al workbook
- * @param {Object} workbook - Workbook de ExcelJS
+ * Crea footer corporativo personalizado
  * @param {Object} branding - Configuración de branding
+ * @param {Object} docOptions - Opciones del documento
+ * @returns {Function} Función de footer para pdfmake
  */
-const addCorporateMetadata = (workbook, branding = {}) => {
-    const {
-        orgName = config.branding.default.orgName,
-        createdBy = config.branding.default.createdBy,
-        description = ''
-    } = branding;
-
-    workbook.creator = orgName;
-    workbook.lastModifiedBy = createdBy;
-    workbook.created = new Date();
-    workbook.modified = new Date();
-    workbook.company = orgName;
-
-    if (description) {
-        workbook.description = description;
-    }
-};
-
-/**
- * Crea una hoja corporativa con datos
- * @param {Object} workbook - Workbook de ExcelJS
- * @param {Array} data - Datos de la hoja
- * @param {Array} columns - Definición de columnas
- * @param {Object} sheetOptions - Opciones de la hoja
- * @returns {Promise<Object>} Worksheet creada
- */
-const createBrandedWorksheet = async (workbook, data, columns, sheetOptions = {}) => {
-    const {
-        sheetName = 'Sheet1',
-        title = '',
-        subtitle = '',
-        includeHeaders = true,
-        branding = {},
-        logo = null,
-        headerRowOffset = 0,
-        ...styleOptions
-    } = sheetOptions;
-
-    // Crear worksheet
-    const worksheet = workbook.addWorksheet(sheetName);
-
-    let currentRow = 1;
-
-    // Agregar título si se proporciona
-    if (title) {
-        const titleRow = worksheet.getRow(currentRow);
-        titleRow.getCell(1).value = title;
-        titleRow.getCell(1).style = {
-            font: { bold: true, size: 16, color: { argb: 'FF374151' } },
-            alignment: { horizontal: 'left', vertical: 'middle' }
-        };
-        titleRow.height = 30;
-
-        // Mergear celdas para el título
-        if (columns.length > 1) {
-            worksheet.mergeCells(currentRow, 1, currentRow, columns.length);
+const createCorporateFooter = (branding, docOptions) => {
+    return function (currentPage, pageCount) {
+        // No mostrar footer en primera página por defecto
+        if (currentPage === 1 && docOptions.includeFooter !== true) {
+            return null;
         }
 
-        currentRow += 2; // Espacio después del título
-    }
+        const footerContent = [];
+        const primaryColor = branding.primaryColor || DEFAULT_CORPORATE_BRANDING.primaryColor;
 
-    // Agregar subtítulo si se proporciona
-    if (subtitle) {
-        const subtitleRow = worksheet.getRow(currentRow);
-        subtitleRow.getCell(1).value = subtitle;
-        subtitleRow.getCell(1).style = {
-            font: { bold: true, size: 12, color: { argb: 'FF6B7280' } },
-            alignment: { horizontal: 'left', vertical: 'middle' }
-        };
-        subtitleRow.height = 25;
-
-        if (columns.length > 1) {
-            worksheet.mergeCells(currentRow, 1, currentRow, columns.length);
+        // Información corporativa izquierda
+        const leftInfo = [];
+        if (branding.orgName) {
+            leftInfo.push(branding.orgName);
+        }
+        if (branding.confidentialText || docOptions.confidential) {
+            leftInfo.push(branding.confidentialText || 'Documento Confidencial');
         }
 
-        currentRow += 2;
-    }
-
-    const headerRowIndex = currentRow;
-    const dataStartRow = headerRowIndex + (includeHeaders ? 1 : 0);
-
-    // Agregar cabeceras si se solicita
-    if (includeHeaders && columns && columns.length > 0) {
-        const headerRow = worksheet.getRow(headerRowIndex);
-
-        columns.forEach((col, index) => {
-            const headerText = typeof col === 'string'
-                ? col
-                : (col.header || col.title || col.label || col.key || col.field || '');
-
-            headerRow.getCell(index + 1).value = headerText;
-        });
-
-        currentRow++;
-    }
-
-    // Agregar datos
-    if (data && Array.isArray(data)) {
-        data.forEach(row => {
-            if (!row || typeof row !== 'object') return;
-
-            const dataRow = worksheet.getRow(currentRow);
-
-            columns.forEach((col, index) => {
-                let value;
-
-                if (typeof col === 'string') {
-                    value = row[col];
-                } else if (typeof col === 'object') {
-                    const key = col.key || col.field || col.dataIndex;
-                    value = row[key];
-
-                    // Aplicar formatter si existe
-                    if (col.formatter && typeof col.formatter === 'function') {
-                        try {
-                            value = col.formatter(value, row);
-                        } catch (error) {
-                            console.warn(`Error formatting column ${key}:`, error);
-                        }
-                    }
-                }
-
-                // Convertir valor para Excel
-                dataRow.getCell(index + 1).value = convertValueForExcel(value);
+        if (leftInfo.length > 0) {
+            footerContent.push({
+                text: leftInfo.join(' • '),
+                style: 'corporateFooter',
+                alignment: 'left'
             });
+        }
 
-            currentRow++;
+        // Fecha en centro
+        footerContent.push({
+            text: new Date().toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }),
+            style: 'corporateFooter',
+            alignment: 'center'
         });
-    }
 
-    // Aplicar estilos corporativos
-    applyBrandedStyles(worksheet, branding, {
-        headerRowIndex: includeHeaders ? headerRowIndex : 0,
-        dataStartRow,
-        ...styleOptions
-    });
-
-    // Agregar logo si se proporciona
-    if (logo) {
-        await addLogoToWorksheet(workbook, worksheet, logo, {
-            position: branding.logoPosition || 'top-right',
-            offsetRows: 1,
-            offsetCols: 1
+        // Numeración derecha
+        footerContent.push({
+            text: `Página ${currentPage} de ${pageCount}`,
+            style: 'corporateFooter',
+            alignment: 'right'
         });
-    }
 
-    // Congelar panel en la fila de headers
-    if (includeHeaders) {
-        worksheet.views = [
-            { state: 'frozen', ySplit: headerRowIndex }
-        ];
-    }
-
-    return worksheet;
+        return {
+            columns: footerContent,
+            margin: [60, 10, 60, 20],
+            borderTop: [false, { width: 1, color: primaryColor }, false, false]
+        };
+    };
 };
 
 /**
- * Convierte un valor para Excel manteniendo tipos
- * @param {*} value - Valor a convertir
- * @returns {*} Valor convertido
- */
-const convertValueForExcel = (value) => {
-    if (value === null || value === undefined) {
-        return '';
-    }
-
-    if (value instanceof Date) {
-        return value;
-    }
-
-    if (typeof value === 'boolean') {
-        return value;
-    }
-
-    if (typeof value === 'number') {
-        if (isNaN(value) || !isFinite(value)) {
-            return '';
-        }
-        return value;
-    }
-
-    if (typeof value === 'object') {
-        try {
-            return JSON.stringify(value);
-        } catch (error) {
-            return '[Object]';
-        }
-    }
-
-    return String(value);
-};
-
-/**
- * Valida los datos y opciones de branding
- * @param {*} input - Datos a validar
+ * Crea watermark corporativo
  * @param {Object} branding - Configuración de branding
- * @returns {Object} Resultado de validación
+ * @returns {Promise<Object|null>} Configuración del watermark
  */
-const validateBrandedData = (input, branding = {}) => {
-    const errors = [];
-    const warnings = [];
-
-    // Validaciones básicas de datos (reutilizar del simple)
-    if (!input) {
-        errors.push('Input data is required');
-        return { isValid: false, errors, warnings };
+const createCorporateWatermark = async (branding) => {
+    if (!branding.watermark) {
+        return null;
     }
 
-    // Validaciones específicas de branding
-    if (branding.primaryColor && !/^#[0-9A-Fa-f]{6}$/.test(branding.primaryColor)) {
-        warnings.push('Invalid primaryColor format, should be hex color (e.g., #2563eb)');
-    }
-
-    if (branding.logoUrl && typeof branding.logoUrl !== 'string') {
-        warnings.push('logoUrl should be a string');
-    }
-
-    if (branding.orgName && branding.orgName.length > 255) {
-        warnings.push('orgName is very long, may be truncated in Excel metadata');
-    }
-
-    // Validar datasets si existen
-    if (input.datasets && Array.isArray(input.datasets)) {
-        input.datasets.forEach((dataset, index) => {
-            if (!dataset.data || !Array.isArray(dataset.data)) {
-                errors.push(`Dataset at index ${index} must have a 'data' array`);
-            }
-
-            if (dataset.name && dataset.name.length > 31) {
-                warnings.push(`Dataset ${index} name exceeds Excel sheet name limit (31 chars)`);
-            }
-        });
-    }
+    const watermarkText = branding.watermarkText ||
+        branding.orgName ||
+        DEFAULT_CORPORATE_BRANDING.watermarkText;
 
     return {
-        isValid: errors.length === 0,
-        errors,
-        warnings
+        text: watermarkText,
+        color: branding.primaryColor || DEFAULT_CORPORATE_BRANDING.primaryColor,
+        opacity: branding.watermarkOpacity || DEFAULT_CORPORATE_BRANDING.watermarkOpacity,
+        bold: true,
+        italics: false,
+        fontSize: 60,
+        angle: 45
     };
 };
 
 /**
- * Función principal de exportación Excel corporativo
+ * Crea portada corporativa completa
+ * @param {Object} coverOptions - Opciones de la portada
+ * @param {Object} branding - Configuración de branding
+ * @param {Object} logo - Configuración del logo
+ * @param {string} date - Fecha del documento
+ * @returns {Array} Contenido de la portada
+ */
+const createCorporateCover = (coverOptions, branding, logo, date) => {
+    const {
+        title = '',
+        subtitle = '',
+        description = '',
+        author = '',
+        department = '',
+        version = '',
+        classification = 'Interno'
+    } = coverOptions;
+
+    const primaryColor = branding.primaryColor || DEFAULT_CORPORATE_BRANDING.primaryColor;
+    const coverContent = [];
+
+    // Header corporativo con logo
+    if (logo || branding.orgName) {
+        const headerElements = [];
+
+        if (logo) {
+            headerElements.push({
+                image: logo.image,
+                width: logo.width || 200,
+                alignment: 'left',
+                margin: [0, 0, 20, 0]
+            });
+        }
+
+        if (branding.orgName) {
+            headerElements.push({
+                text: branding.orgName,
+                fontSize: 18,
+                bold: true,
+                color: primaryColor,
+                alignment: logo ? 'right' : 'center',
+                margin: [0, 10, 0, 0]
+            });
+        }
+
+        coverContent.push({
+            columns: headerElements,
+            margin: [0, 40, 0, 60]
+        });
+    }
+
+    // Línea separadora
+    coverContent.push({
+        canvas: [{
+            type: 'line',
+            x1: 0, y1: 0,
+            x2: 515, y2: 0,
+            lineWidth: 2,
+            lineColor: primaryColor
+        }],
+        margin: [0, 0, 0, 40]
+    });
+
+    // Título principal
+    if (title) {
+        coverContent.push({
+            text: title,
+            style: 'corporateCoverTitle',
+            fontSize: 28,
+            bold: true,
+            color: '#1f2937',
+            alignment: 'center',
+            margin: [0, 60, 0, 30]
+        });
+    }
+
+    // Subtítulo
+    if (subtitle) {
+        coverContent.push({
+            text: subtitle,
+            style: 'corporateCoverSubtitle',
+            fontSize: 18,
+            color: '#6b7280',
+            alignment: 'center',
+            margin: [0, 0, 0, 50]
+        });
+    }
+
+    // Descripción
+    if (description) {
+        coverContent.push({
+            text: description,
+            style: 'corporateCoverDescription',
+            fontSize: 14,
+            color: '#374151',
+            alignment: 'center',
+            margin: [0, 0, 0, 80]
+        });
+    }
+
+    // Información del documento en recuadro
+    const docInfo = [];
+
+    if (author) docInfo.push([{ text: 'Autor:', bold: true }, author]);
+    if (department) docInfo.push([{ text: 'Departamento:', bold: true }, department]);
+    if (version) docInfo.push([{ text: 'Versión:', bold: true }, version]);
+    if (classification) docInfo.push([{ text: 'Clasificación:', bold: true }, classification]);
+    docInfo.push([{ text: 'Fecha:', bold: true }, date]);
+
+    if (docInfo.length > 0) {
+        coverContent.push({
+            table: {
+                widths: ['30%', '70%'],
+                body: docInfo
+            },
+            layout: {
+                fillColor: '#f8fafc',
+                hLineWidth: function (i, node) { return 0; },
+                vLineWidth: function (i, node) { return 0; }
+            },
+            margin: [100, 80, 100, 40]
+        });
+    }
+
+    // Footer corporativo con línea
+    coverContent.push({
+        canvas: [{
+            type: 'line',
+            x1: 0, y1: 0,
+            x2: 515, y2: 0,
+            lineWidth: 1,
+            lineColor: primaryColor
+        }],
+        margin: [0, 60, 0, 20]
+    });
+
+    if (branding.orgName) {
+        coverContent.push({
+            text: `© ${new Date().getFullYear()} ${branding.orgName}. Todos los derechos reservados.`,
+            fontSize: 9,
+            color: '#9ca3af',
+            alignment: 'center',
+            margin: [0, 10, 0, 0]
+        });
+    }
+
+    // Salto de página después de la portada
+    coverContent.push({ text: '', pageBreak: 'after' });
+
+    return coverContent;
+};
+
+/**
+ * Función principal de exportación PDF corporativo
  * @param {Array|Object} input - Datos o configuración de datasets
  * @param {Object} exportOptions - Opciones de exportación
  * @param {AbortSignal} signal - Señal para cancelar operación
- * @returns {Promise<Blob>} Blob con el archivo Excel corporativo
+ * @returns {Promise<Blob>} Blob con el archivo PDF corporativo
  */
-export const exportBrandedXLSX = async (input, exportOptions = {}, signal = null) => {
-    try {
-        // Verificar cancelación
-        if (signal?.aborted) {
-            throw new Error('Branded Excel export was cancelled');
+export const exportBrandedPDF = async (input, exportOptions = {}, signal = null) => {
+    const {
+        branding = {},
+        includeCover = false,
+        coverOptions = {},
+        includeHeader = true,
+        includeFooter = true,
+        pageMargins = [60, 100, 60, 80], // Márgenes más amplios para corporativo
+        ...otherOptions
+    } = exportOptions;
+
+    // Combinar branding con valores por defecto
+    const finalBranding = { ...DEFAULT_CORPORATE_BRANDING, ...branding };
+
+    return exportPDF(input, {
+        ...otherOptions,
+        branding: finalBranding,
+        includeCover,
+        coverOptions,
+        corporateStyle: true,
+        pageMargins,
+        processLogo: processLogoForPDF,
+        createCover: createCorporateCover,
+        createHeader: includeHeader ? createCorporateHeader : null,
+        createFooter: includeFooter ? createCorporateFooter : null,
+        createWatermark: createCorporateWatermark,
+        customStyles: {
+            ...CORPORATE_STYLES,
+            ...otherOptions.customStyles
         }
-
-        const {
-            columns = [],
-            filename = 'export.xlsx',
-            branding = {},
-            validateInput = true,
-            ...sheetOptions
-        } = exportOptions;
-
-        // Validar entrada si se solicita
-        if (validateInput) {
-            const validation = validateBrandedData(input, branding);
-            if (!validation.isValid) {
-                throw new Error(`Branded Excel validation failed: ${validation.errors.join(', ')}`);
-            }
-
-            if (validation.warnings.length > 0) {
-                console.warn('Branded Excel export warnings:', validation.warnings);
-            }
-        }
-
-        // Cargar ExcelJS
-        const ExcelJS = await getExcelJS();
-
-        // Verificar cancelación después de cargar dependencia
-        if (signal?.aborted) {
-            throw new Error('Branded Excel export was cancelled');
-        }
-
-        // Crear workbook
-        const workbook = new ExcelJS.Workbook();
-
-        // Agregar metadata corporativa
-        addCorporateMetadata(workbook, branding);
-
-        // Procesar logo si se proporciona
-        let logo = null;
-        if (branding.headerLogoUrl || branding.logoUrl) {
-            try {
-                logo = await processLogoForExcel(branding.headerLogoUrl || branding.logoUrl, {
-                    maxWidth: branding.logoMaxWidth || 150,
-                    maxHeight: branding.logoMaxHeight || 60
-                });
-            } catch (error) {
-                console.warn('Failed to process logo, continuing without it:', error);
-            }
-        }
-
-        // Verificar cancelación después de procesar logo
-        if (signal?.aborted) {
-            throw new Error('Branded Excel export was cancelled');
-        }
-
-        // Determinar si son múltiples hojas o una sola
-        if (input.datasets && Array.isArray(input.datasets)) {
-            // Múltiples hojas corporativas
-            for (let i = 0; i < input.datasets.length; i++) {
-                const dataset = input.datasets[i];
-                const {
-                    name = `Sheet${i + 1}`,
-                    data = [],
-                    columns: datasetColumns = [],
-                    options: datasetSheetOptions = {}
-                } = dataset;
-
-                // Verificar cancelación durante procesamiento
-                if (signal?.aborted) {
-                    throw new Error('Branded Excel export was cancelled');
-                }
-
-                const finalColumns = datasetColumns.length > 0 ? datasetColumns : columns;
-
-                await createBrandedWorksheet(workbook, data, finalColumns, {
-                    sheetName: name.substring(0, 31), // Límite de Excel
-                    branding,
-                    logo,
-                    ...sheetOptions,
-                    ...datasetSheetOptions
-                });
-            }
-
-            // Si no hay datasets, crear hoja vacía corporativa
-            if (input.datasets.length === 0) {
-                await createBrandedWorksheet(workbook, [], [], {
-                    sheetName: 'Sheet1',
-                    branding,
-                    logo,
-                    title: 'Sin datos',
-                    ...sheetOptions
-                });
-            }
-
-        } else {
-            // Hoja única corporativa
-            const data = Array.isArray(input) ? input : (input.data || []);
-            const finalColumns = columns.length > 0 ? columns : (input.columns || []);
-
-            await createBrandedWorksheet(workbook, data, finalColumns, {
-                sheetName: 'Datos',
-                branding,
-                logo,
-                ...sheetOptions
-            });
-        }
-
-        // Verificar cancelación antes de generar archivo
-        if (signal?.aborted) {
-            throw new Error('Branded Excel export was cancelled');
-        }
-
-        // Generar archivo
-        const buffer = await workbook.xlsx.writeBuffer();
-
-        // Crear blob
-        const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        const blob = new Blob([buffer], { type: mimeType });
-
-        // Agregar propiedades adicionales para compatibilidad
-        Object.defineProperties(blob, {
-            suggestedFilename: {
-                value: filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`,
-                writable: false,
-                enumerable: false
-            },
-            exportFormat: {
-                value: 'xlsx-branded',
-                writable: false,
-                enumerable: false
-            },
-            exportOptions: {
-                value: { ...exportOptions },
-                writable: false,
-                enumerable: false
-            },
-            hasBranding: {
-                value: true,
-                writable: false,
-                enumerable: false
-            },
-            sheetsCount: {
-                value: workbook.worksheets.length,
-                writable: false,
-                enumerable: false
-            }
-        });
-
-        return blob;
-
-    } catch (error) {
-        throw new Error(`Branded Excel export failed: ${error.message}`);
-    }
+    }, signal);
 };
 
 /**
- * Función auxiliar para exportar con template corporativo
- * @param {Array} data - Datos a exportar
- * @param {Object} template - Configuración del template corporativo
- * @param {Object} options - Opciones adicionales
- * @returns {Promise<Blob>} Blob con el Excel corporativo
+ * Función auxiliar para exportar tabla corporativa
+ * @param {Array} data - Array de objetos
+ * @param {Array} columns - Definición de columnas
+ * @param {Object} options - Opciones de exportación
+ * @returns {Promise<Blob>} Blob con el PDF corporativo
  */
-export const exportCorporateTemplate = async (data, template, options = {}) => {
+export const exportCorporateTable = async (data, columns, options = {}) => {
+    return exportBrandedPDF(data, {
+        ...options,
+        columns,
+        title: options.title || 'Reporte Corporativo',
+        includeCover: options.includeCover !== false,
+        branding: {
+            ...DEFAULT_CORPORATE_BRANDING,
+            ...options.branding
+        }
+    });
+};
+
+/**
+ * Función auxiliar para exportar reporte corporativo completo
+ * @param {Object} reportData - Datos del reporte
+ * @param {Object} options - Opciones de configuración
+ * @returns {Promise<Blob>} Blob con el reporte corporativo
+ */
+export const exportCorporateReport = async (reportData, options = {}) => {
     const {
-        title = '',
-        subtitle = '',
-        columns = [],
-        branding = {},
+        title = 'Reporte Corporativo',
         sections = [],
-        coverSheet = false
-    } = template;
+        appendices = [],
+        branding = {},
+        ...otherOptions
+    } = options;
 
-    if (coverSheet) {
-        // Crear hoja de portada + hojas de datos
-        const datasets = [
-            {
-                name: 'Portada',
-                data: [
-                    { info: title },
-                    { info: subtitle },
-                    { info: '' },
-                    { info: `Generado: ${new Date().toLocaleDateString()}` },
-                    { info: `Organización: ${branding.orgName || 'N/A'}` }
-                ],
-                columns: [{ key: 'info', header: 'Información' }],
-                options: {
-                    title: title,
-                    subtitle: 'Reporte Corporativo',
-                    includeHeaders: false
-                }
-            },
-            ...(sections.length > 0 ? sections : [
-                { name: 'Datos', data, columns }
-            ])
-        ];
+    // Estructurar datasets para el reporte
+    const datasets = [
+        ...sections.map(section => ({
+            name: section.name || section.title,
+            data: section.data,
+            columns: section.columns,
+            options: section.options
+        })),
+        ...appendices.map(appendix => ({
+            name: `Anexo: ${appendix.name || appendix.title}`,
+            data: appendix.data,
+            columns: appendix.columns,
+            options: { ...appendix.options, pageBreakBefore: true }
+        }))
+    ];
 
-        return exportBrandedXLSX({ datasets }, { ...options, branding });
-    } else {
-        // Solo hoja de datos con formato corporativo
-        return exportBrandedXLSX(data, {
-            ...options,
-            columns,
-            branding,
+    return exportBrandedPDF({ datasets }, {
+        title,
+        includeCover: true,
+        coverOptions: {
             title,
-            subtitle
+            subtitle: options.subtitle || 'Análisis y Resultados',
+            description: options.description,
+            author: options.author,
+            department: options.department,
+            classification: options.classification || 'Confidencial'
+        },
+        branding: {
+            ...DEFAULT_CORPORATE_BRANDING,
+            ...branding
+        },
+        ...otherOptions
+    });
+};
+
+// ================================================
+// PDF BUILDER CORPORATIVO - FASE 2
+// ================================================
+
+/**
+ * Crea una nueva instancia del PDF Builder corporativo
+ * @param {Object} options - Opciones iniciales del builder
+ * @returns {Promise<PDFDocumentBuilder>} Nueva instancia del builder corporativo
+ */
+export const createCorporatePDFBuilder = async (options = {}) => {
+    // Importación diferida del builder
+    const { PDFDocumentBuilder } = await import('./advance-pdf/pdf-builder.js');
+
+    // Configuración corporativa por defecto
+    const corporateOptions = {
+        ...options,
+        corporateStyle: true,
+        pageMargins: [60, 100, 60, 80] // Márgenes corporativos
+    };
+
+    const builder = new PDFDocumentBuilder(corporateOptions);
+
+    // Configurar branding corporativo por defecto
+    builder.setBranding({
+        ...DEFAULT_CORPORATE_BRANDING,
+        ...options.branding
+    });
+
+    // Configurar estilos corporativos
+    builder.setCustomStyles({
+        ...CORPORATE_STYLES,
+        ...options.customStyles
+    });
+
+    return builder;
+};
+
+/**
+ * Función de conveniencia para crear builder corporativo con configuración completa
+ * @param {Object} config - Configuración corporativa
+ * @returns {Promise<PDFDocumentBuilder>} Builder corporativo configurado
+ */
+export const createBrandedBuilder = async (config = {}) => {
+    const {
+        organization = {},
+        document = {},
+        styles = {},
+        ...otherConfig
+    } = config;
+
+    const builder = await createCorporatePDFBuilder({
+        branding: {
+            orgName: organization.name || 'Mi Empresa',
+            primaryColor: organization.primaryColor || '#2563eb',
+            logoUrl: organization.logoUrl,
+            watermark: organization.watermark !== false,
+            ...organization
+        },
+        customStyles: styles,
+        ...otherConfig
+    });
+
+    // Configurar metadatos del documento si se proporcionan
+    if (document.title || document.author || document.subject) {
+        builder.setMetadata({
+            title: document.title,
+            subtitle: document.subtitle,
+            author: document.author,
+            subject: document.subject || document.description
         });
+    }
+
+    return builder;
+};
+
+/**
+ * Template para reporte ejecutivo corporativo
+ * @param {Object} reportConfig - Configuración del reporte
+ * @returns {Promise<PDFDocumentBuilder>} Builder configurado para reporte ejecutivo
+ */
+export const createExecutiveReportBuilder = async (reportConfig = {}) => {
+    const {
+        title = 'Reporte Ejecutivo',
+        period = '',
+        department = '',
+        author = '',
+        branding = {},
+        ...otherConfig
+    } = reportConfig;
+
+    const builder = await createCorporatePDFBuilder({
+        branding: {
+            ...DEFAULT_CORPORATE_BRANDING,
+            ...branding
+        },
+        ...otherConfig
+    });
+
+    // Configurar metadatos
+    builder.setMetadata({
+        title: `${title}${period ? ` - ${period}` : ''}`,
+        subtitle: department ? `Departamento de ${department}` : '',
+        author,
+        subject: 'Reporte Ejecutivo Corporativo'
+    });
+
+    // Configurar header y footer ejecutivos
+    builder.addHeader({
+        content: `{orgName} • ${title}`,
+        includeDate: true,
+        firstPage: false,
+        style: 'corporateHeader'
+    });
+
+    builder.addFooter({
+        leftText: 'CONFIDENCIAL',
+        centerText: department,
+        rightText: 'Página {pageNumber} de {totalPages}',
+        firstPage: false,
+        style: 'corporateFooter'
+    });
+
+    // Configurar TOC ejecutivo
+    builder.generateTOC({
+        title: 'Índice Ejecutivo',
+        maxLevel: 2,
+        includePageNumbers: true,
+        pageBreakAfter: true,
+        position: 'start'
+    });
+
+    return builder;
+};
+
+/**
+ * Template para manual corporativo
+ * @param {Object} manualConfig - Configuración del manual
+ * @returns {Promise<PDFDocumentBuilder>} Builder configurado para manual
+ */
+export const createCorporateManualBuilder = async (manualConfig = {}) => {
+    const {
+        title = 'Manual Corporativo',
+        version = '1.0',
+        department = '',
+        branding = {},
+        ...otherConfig
+    } = manualConfig;
+
+    const builder = await createCorporatePDFBuilder({
+        branding: {
+            ...DEFAULT_CORPORATE_BRANDING,
+            ...branding,
+            watermark: true,
+            watermarkText: 'MANUAL INTERNO'
+        },
+        ...otherConfig
+    });
+
+    // Metadatos del manual
+    builder.setMetadata({
+        title: `${title} v${version}`,
+        subtitle: department ? `${department}` : '',
+        author: 'Departamento de Recursos Humanos',
+        subject: 'Manual Corporativo'
+    });
+
+    // Header/Footer para manual
+    builder.addHeader({
+        content: `{orgName} • Manual • v${version}`,
+        alignment: 'space-between',
+        firstPage: false
+    });
+
+    builder.addFooter({
+        leftText: `© {orgName}`,
+        rightText: 'Página {pageNumber} de {totalPages}',
+        firstPage: false
+    });
+
+    // TOC detallado para manual
+    builder.generateTOC({
+        title: 'Índice de Contenidos',
+        maxLevel: 4,
+        includePageNumbers: true,
+        dotLeader: true,
+        pageBreakAfter: true,
+        position: 'start'
+    });
+
+    return builder;
+};
+
+/**
+ * Utilidades corporativas para builder
+ */
+export const CorporateBuilderUtils = {
+    /**
+     * Crea sección de resumen ejecutivo estándar
+     */
+    addExecutiveSummary: (builder, content) => {
+        return builder
+            .addSection({
+                title: 'Resumen Ejecutivo',
+                level: 1,
+                pageBreakBefore: false
+            })
+            .addParagraph(content, { style: 'corporateLead' })
+            .addSpacer(20);
+    },
+
+    /**
+     * Crea sección de conclusiones estándar
+     */
+    addConclusions: (builder, conclusions) => {
+        builder.addSection({
+            title: 'Conclusiones y Recomendaciones',
+            level: 1,
+            pageBreakBefore: true
+        });
+
+        if (Array.isArray(conclusions)) {
+            conclusions.forEach((conclusion, index) => {
+                builder.addParagraph(
+                    `${index + 1}. ${conclusion}`,
+                    { style: 'corporateBody' }
+                );
+            });
+        } else {
+            builder.addParagraph(conclusions, { style: 'corporateBody' });
+        }
+
+        return builder;
+    },
+
+    /**
+     * Crea página de aprobaciones estándar
+     */
+    addApprovalPage: (builder, approvers = []) => {
+        builder
+            .pageBreak()
+            .addSection({ title: 'Aprobaciones', level: 1 });
+
+        const approvalTable = {
+            headers: ['Cargo', 'Nombre', 'Firma', 'Fecha'],
+            data: approvers.map(approver => [
+                approver.position || '',
+                approver.name || '',
+                '', // Espacio para firma
+                approver.date || '___________'
+            ])
+        };
+
+        return builder.addTable(approvalTable);
     }
 };
 
-// Exportar objeto con todas las funciones para compatibilidad
+// Exports principales
+export {
+    createCorporatePDFBuilder,
+    createBrandedBuilder,
+    createExecutiveReportBuilder,
+    createCorporateManualBuilder,
+    CorporateBuilderUtils,
+    DEFAULT_CORPORATE_BRANDING,
+    CORPORATE_STYLES
+};
+
 export default {
-    export: exportBrandedXLSX,
-    exportCorporate: exportCorporateTemplate,
-    validateBrandedData,
-    processLogoForExcel,
-    createBrandedWorksheet,
-    addCorporateMetadata
+    exportBrandedPDF,
+    exportCorporateTable,
+    exportCorporateReport,
+    createCorporatePDFBuilder,
+    createBrandedBuilder,
+    createExecutiveReportBuilder,
+    createCorporateManualBuilder,
+    CorporateBuilderUtils
 };

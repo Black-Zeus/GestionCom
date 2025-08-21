@@ -75,6 +75,37 @@ const exporterDefinitions = {
         loader: () => import('./exporters/pdf-branded.js'),
         dependencies: ['pdfmake'],
         formats: ['pdf-branded']
+    },
+
+    // ================================================
+    // NUEVO - PDF BUILDER API
+    // ================================================
+    'pdf-builder': {
+        name: 'PDF Builder',
+        description: 'Constructor fluido de documentos PDF',
+        icon: '🔧📄',
+        loader: () => import('./exporters/pdf-simple.js'), // Reutiliza pdf-simple
+        dependencies: ['pdfmake'],
+        formats: ['pdf-builder'],
+        builderMode: true, // Indica que es un constructor, no exportador directo
+        supportedMethods: [
+            'createPDFBuilder',
+            'createSimpleBuilder'
+        ]
+    },
+
+    'pdf-builder-branded': {
+        name: 'PDF Builder Corporativo',
+        description: 'Constructor fluido con branding corporativo',
+        icon: '🏢🔧📄',
+        loader: () => import('./exporters/pdf-branded.js'), // Reutiliza pdf-branded
+        dependencies: ['pdfmake'],
+        formats: ['pdf-builder-branded'],
+        builderMode: true,
+        supportedMethods: [
+            'createCorporatePDFBuilder',
+            'createBrandedBuilder'
+        ]
     }
 };
 
@@ -85,316 +116,274 @@ const registerDefaultExporters = () => {
     Object.entries(exporterDefinitions).forEach(([key, definition]) => {
         exporterRegistry.set(key, definition);
     });
+    console.log(`✅ Registrados ${exporterRegistry.size} exportadores`);
 };
 
 /**
  * Registra un exportador personalizado
- * @param {string} key - Identificador único del exportador
+ * @param {string} key - Clave única del exportador
  * @param {Object} definition - Definición del exportador
  */
 export const registerExporter = (key, definition) => {
-    const required = ['name', 'loader'];
-    const missing = required.filter(prop => !definition[prop]);
+    if (!key || !definition) {
+        throw new Error('Key y definition son requeridos');
+    }
 
-    if (missing.length > 0) {
-        throw new Error(`Exporter definition missing required properties: ${missing.join(', ')}`);
+    if (!definition.loader || typeof definition.loader !== 'function') {
+        throw new Error('Definition debe tener un loader function');
     }
 
     exporterRegistry.set(key, {
-        description: '',
-        icon: '📄',
-        dependencies: [],
-        formats: [key],
-        ...definition
+        name: definition.name || key,
+        description: definition.description || '',
+        icon: definition.icon || '📄',
+        loader: definition.loader,
+        dependencies: definition.dependencies || [],
+        formats: definition.formats || [key],
+        builderMode: definition.builderMode || false,
+        supportedMethods: definition.supportedMethods || []
     });
-};
 
-/**
- * Obtiene la definición de un exportador
- * @param {string} format - Formato del exportador
- * @returns {Object|null} Definición del exportador
- */
-export const getExporterDefinition = (format) => {
-    // Buscar por clave directa
-    if (exporterRegistry.has(format)) {
-        return exporterRegistry.get(format);
-    }
-
-    // Buscar por formato soportado
-    for (const [key, definition] of exporterRegistry.entries()) {
-        if (definition.formats && definition.formats.includes(format)) {
-            return definition;
-        }
-    }
-
-    return null;
+    console.log(`✅ Exportador registrado: ${key}`);
 };
 
 /**
  * Carga un exportador de forma diferida
- * @param {string} format - Formato del exportador
- * @param {AbortSignal} signal - Señal para cancelar carga
- * @returns {Promise<Object>} Exportador cargado
+ * @param {string} format - Formato a exportar
+ * @returns {Promise<Object>} Módulo del exportador cargado
  */
-export const getExporter = async (format, signal = null) => {
-    // Verificar cancelación
-    if (signal?.aborted) {
-        throw new Error('Exporter loading was cancelled');
-    }
-
-    // Buscar en cache
+export const loadExporter = async (format) => {
+    // Verificar si ya está cargado
     if (loadedExporters.has(format)) {
         return loadedExporters.get(format);
     }
 
-    // Obtener definición
-    const definition = getExporterDefinition(format);
-    if (!definition) {
-        throw new Error(`Exporter for format '${format}' not found`);
+    // Buscar exportador que soporte este formato
+    let exporterKey = null;
+    let exporterDefinition = null;
+
+    for (const [key, definition] of exporterRegistry.entries()) {
+        if (definition.formats.includes(format)) {
+            exporterKey = key;
+            exporterDefinition = definition;
+            break;
+        }
+    }
+
+    if (!exporterDefinition) {
+        throw new Error(`No se encontró exportador para el formato: ${format}`);
     }
 
     try {
-        // Verificar dependencias antes de cargar
-        await validateDependencies(definition.dependencies);
+        console.log(`🔄 Cargando exportador: ${exporterKey}`);
 
-        // Verificar cancelación antes de cargar módulo
-        if (signal?.aborted) {
-            throw new Error('Exporter loading was cancelled');
-        }
+        // Cargar módulo
+        const module = await exporterDefinition.loader();
 
-        // Cargar módulo de forma diferida
-        const exporterModule = await definition.loader();
+        // Guardar en cache
+        loadedExporters.set(format, {
+            module,
+            definition: exporterDefinition,
+            loadedAt: Date.now()
+        });
 
-        // Obtener función de exportación principal
-        const exporter = exporterModule.default || exporterModule;
-
-        if (!exporter || typeof exporter.export !== 'function') {
-            throw new Error(`Invalid exporter module for format '${format}': missing export function`);
-        }
-
-        // Cachear exportador cargado
-        loadedExporters.set(format, exporter);
-
-        return exporter;
+        console.log(`✅ Exportador cargado: ${exporterKey}`);
+        return loadedExporters.get(format);
 
     } catch (error) {
-        // No cachear errores para permitir reintentos
-        throw new Error(`Failed to load exporter for '${format}': ${error.message}`);
+        console.error(`❌ Error cargando exportador ${exporterKey}:`, error);
+        throw new Error(`Failed to load exporter for format: ${format}`);
     }
 };
 
 /**
- * PARCHE TEMPORAL: Función de validación simplificada
- * Reemplaza la función validateDependencies en exports/index.js
+ * Exporta datos usando el formato especificado
+ * @param {string} format - Formato de exportación
+ * @param {any} data - Datos a exportar
+ * @param {Object} options - Opciones de exportación
+ * @param {AbortSignal} signal - Señal de cancelación
+ * @returns {Promise<Blob>} Resultado de la exportación
  */
+export const exportData = async (format, data, options = {}, signal = null) => {
+    const exporter = await loadExporter(format);
+    const { module, definition } = exporter;
 
-/**
- * Valida que las dependencias estén disponibles - VERSIÓN SIMPLIFICADA
- * @param {Array} dependencies - Lista de dependencias requeridas
- * @returns {Promise<void>}
- */
-const validateDependencies = async (dependencies = []) => {
-    if (!dependencies.length) return;
-
-    console.log('🔧 [TEMP] Skipping dependency validation for:', dependencies);
-
-    // OPCIONAL: Solo para debug, intenta validar sin fallar
-    for (const dep of dependencies) {
-        try {
-            /* @vite-ignore */
-            await import(dep);
-            console.log(`✅ [TEMP] ${dep} disponible`);
-        } catch (error) {
-            console.warn(`⚠️ [TEMP] ${dep} no disponible via import() dinámico, pero puede estar en bundle`);
-            // NO lanza error, solo advierte
-        }
+    // Verificar si es modo builder
+    if (definition.builderMode) {
+        throw new Error(`El formato ${format} es un builder. Use createBuilder() en su lugar.`);
     }
 
-    // SIEMPRE retorna éxito para permitir que los formatos funcionen
-    return;
+    // Determinar función de exportación
+    let exportFunction = null;
+
+    if (format.includes('branded')) {
+        exportFunction = module.exportBrandedPDF || module.exportBranded || module.export;
+    } else if (format.includes('pdf')) {
+        exportFunction = module.exportSimplePDF || module.exportPDF || module.export;
+    } else {
+        exportFunction = module.export || module.default;
+    }
+
+    if (!exportFunction || typeof exportFunction !== 'function') {
+        throw new Error(`Función de exportación no encontrada para ${format}`);
+    }
+
+    // Ejecutar exportación
+    return exportFunction(data, options, signal);
 };
 
 /**
- * Obtiene la lista de exportadores disponibles
- * @param {Object} options - Opciones de filtrado
- * @returns {Array} Lista de exportadores disponibles
+ * Crea un builder para construcción fluida de documentos
+ * @param {string} format - Formato del builder ('pdf-builder', 'pdf-builder-branded')
+ * @param {Object} options - Opciones iniciales
+ * @returns {Promise<Object>} Instancia del builder
  */
-export const getAvailableExporters = (options = {}) => {
-    const {
-        includeCustom = true,
-        formats = null,
-        excludeFormats = []
-    } = options;
+export const createBuilder = async (format, options = {}) => {
+    const exporter = await loadExporter(format);
+    const { module, definition } = exporter;
 
-    const exporters = [];
+    // Verificar que es modo builder
+    if (!definition.builderMode) {
+        throw new Error(`El formato ${format} no es un builder`);
+    }
 
+    // Determinar función de creación del builder
+    let builderFunction = null;
+
+    if (format.includes('branded')) {
+        builderFunction = module.createCorporatePDFBuilder || module.createBrandedBuilder;
+    } else {
+        builderFunction = module.createPDFBuilder || module.createSimpleBuilder;
+    }
+
+    if (!builderFunction || typeof builderFunction !== 'function') {
+        throw new Error(`Función de builder no encontrada para ${format}`);
+    }
+
+    // Crear y retornar builder
+    return builderFunction(options);
+};
+
+/**
+ * Obtiene información de un exportador
+ * @param {string} format - Formato a consultar
+ * @returns {Object} Información del exportador
+ */
+export const getExporterInfo = (format) => {
     for (const [key, definition] of exporterRegistry.entries()) {
-        // Filtrar por formatos específicos
-        if (formats && !formats.some(f => definition.formats.includes(f))) {
-            continue;
+        if (definition.formats.includes(format)) {
+            return {
+                key,
+                ...definition,
+                isLoaded: loadedExporters.has(format)
+            };
         }
-
-        // Excluir formatos específicos
-        if (excludeFormats.some(f => definition.formats.includes(f))) {
-            continue;
-        }
-
-        exporters.push({
-            key,
-            name: definition.name,
-            description: definition.description,
-            icon: definition.icon,
-            formats: definition.formats,
-            dependencies: definition.dependencies
-        });
     }
-
-    return exporters.sort((a, b) => a.name.localeCompare(b.name));
+    return null;
 };
 
 /**
- * Verifica si un formato está soportado
- * @param {string} format - Formato a verificar
- * @returns {boolean} True si está soportado
+ * Lista todos los formatos disponibles
+ * @returns {Array} Lista de formatos soportados
  */
-export const isFormatSupported = (format) => {
-    return getExporterDefinition(format) !== null;
+export const getAvailableFormats = () => {
+    const formats = [];
+    for (const definition of exporterRegistry.values()) {
+        formats.push(...definition.formats);
+    }
+    return [...new Set(formats)];
 };
 
 /**
- * Obtiene las etiquetas configuradas para los formatos
- * @param {string} language - Idioma (es, en)
- * @returns {Object} Mapa de etiquetas por formato
+ * Lista todos los builders disponibles
+ * @returns {Array} Lista de builders soportados
  */
-export const getFormatLabels = (language = 'es') => {
-    const labels = config.labels[language] || config.labels.es;
-    return { ...labels };
+export const getAvailableBuilders = () => {
+    const builders = [];
+    for (const [key, definition] of exporterRegistry.entries()) {
+        if (definition.builderMode) {
+            builders.push({
+                key,
+                formats: definition.formats,
+                methods: definition.supportedMethods,
+                ...definition
+            });
+        }
+    }
+    return builders;
 };
 
 /**
- * Obtiene los iconos configurados para los formatos
- * @returns {Object} Mapa de iconos por formato
+ * Obtiene estadísticas del sistema de exportación
+ * @returns {Object} Estadísticas
  */
-export const getFormatIcons = () => {
-    return { ...config.icons };
+export const getExportStats = () => {
+    return {
+        totalExporters: exporterRegistry.size,
+        loadedExporters: loadedExporters.size,
+        availableFormats: getAvailableFormats().length,
+        availableBuilders: getAvailableBuilders().length,
+        loadedFormats: Array.from(loadedExporters.keys()),
+        builderFormats: getAvailableBuilders().map(b => b.formats).flat()
+    };
 };
 
 /**
  * Limpia el cache de exportadores cargados
  */
 export const clearExporterCache = () => {
+    const count = loadedExporters.size;
     loadedExporters.clear();
+    console.log(`🧹 Cache limpiado: ${count} exportadores descargados`);
 };
 
 /**
- * Obtiene estadísticas del registro de exportadores
- * @returns {Object} Estadísticas del registro
+ * Verifica si un formato está soportado
+ * @param {string} format - Formato a verificar
+ * @returns {boolean}
  */
-export const getRegistryStats = () => {
-    const total = exporterRegistry.size;
-    const loaded = loadedExporters.size;
-    const withDependencies = Array.from(exporterRegistry.values())
-        .filter(def => def.dependencies && def.dependencies.length > 0).length;
-
-    return {
-        total,
-        loaded,
-        cached: loaded,
-        withDependencies,
-        loadRate: total > 0 ? (loaded / total * 100).toFixed(1) + '%' : '0%'
-    };
+export const isFormatSupported = (format) => {
+    return getAvailableFormats().includes(format);
 };
 
 /**
- * Función de utilidad para exportar datos usando cualquier formato
- * @param {string} format - Formato de exportación
- * @param {*} data - Datos a exportar
- * @param {Object} options - Opciones de exportación
- * @param {AbortSignal} signal - Señal para cancelar operación
- * @returns {Promise<Blob>} Resultado de la exportación
+ * Verifica si un formato es un builder
+ * @param {string} format - Formato a verificar
+ * @returns {boolean}
  */
-export const exportData = async (format, data, options = {}, signal = null) => {
-    // Obtener exportador
-    const exporter = await getExporter(format, signal);
-
-    // Ejecutar exportación
-    return await exporter.export(data, options, signal);
+export const isBuilderFormat = (format) => {
+    const info = getExporterInfo(format);
+    return info ? info.builderMode : false;
 };
 
-/**
- * Función de utilidad para exportar múltiples formatos de forma concurrente
- * @param {Array} requests - Array de {format, data, options}
- * @param {Object} globalOptions - Opciones globales
- * @returns {Promise<Array>} Array de resultados
- */
-export const exportMultipleFormats = async (requests, globalOptions = {}) => {
-    const {
-        concurrent = false,
-        onProgress = null,
-        signal = null
-    } = globalOptions;
-
-    if (concurrent) {
-        // Exportación concurrente
-        const promises = requests.map(async (request, index) => {
-            try {
-                const result = await exportData(request.format, request.data, {
-                    ...globalOptions,
-                    ...request.options
-                }, signal);
-
-                const response = { index, success: true, format: request.format, result };
-                if (onProgress) onProgress(response, index + 1, requests.length);
-                return response;
-            } catch (error) {
-                const response = { index, success: false, format: request.format, error: error.message };
-                if (onProgress) onProgress(response, index + 1, requests.length);
-                return response;
-            }
-        });
-
-        return await Promise.all(promises);
-    } else {
-        // Exportación secuencial
-        const results = [];
-
-        for (let i = 0; i < requests.length; i++) {
-            const request = requests[i];
-
-            try {
-                const result = await exportData(request.format, request.data, {
-                    ...globalOptions,
-                    ...request.options
-                }, signal);
-
-                const response = { index: i, success: true, format: request.format, result };
-                results.push(response);
-                if (onProgress) onProgress(response, i + 1, requests.length);
-            } catch (error) {
-                const response = { index: i, success: false, format: request.format, error: error.message };
-                results.push(response);
-                if (onProgress) onProgress(response, i + 1, requests.length);
-            }
-        }
-
-        return results;
-    }
-};
-
-// Registrar exportadores por defecto al importar el módulo
+// Inicializar sistema
 registerDefaultExporters();
 
-// Exportar objeto con todas las funciones para compatibilidad
-export default {
+// Exports principales
+export {
     registerExporter,
-    getExporter,
-    getExporterDefinition,
-    getAvailableExporters,
-    isFormatSupported,
-    getFormatLabels,
-    getFormatIcons,
-    clearExporterCache,
-    getRegistryStats,
+    loadExporter,
     exportData,
-    exportMultipleFormats
+    createBuilder,
+    getExporterInfo,
+    getAvailableFormats,
+    getAvailableBuilders,
+    getExportStats,
+    clearExporterCache,
+    isFormatSupported,
+    isBuilderFormat
+};
+
+export default {
+    register: registerExporter,
+    load: loadExporter,
+    export: exportData,
+    createBuilder,
+    info: getExporterInfo,
+    formats: getAvailableFormats,
+    builders: getAvailableBuilders,
+    stats: getExportStats,
+    clear: clearExporterCache,
+    supports: isFormatSupported,
+    isBuilder: isBuilderFormat
 };
