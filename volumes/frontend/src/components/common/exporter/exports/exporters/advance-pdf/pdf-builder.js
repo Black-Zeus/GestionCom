@@ -1,13 +1,16 @@
 /**
  * PDF Builder API - Clase principal para construcción fluida de documentos PDF
  * Implementa patrón Builder con sintaxis chainable
- * ACTUALIZADO: Soporte completo para Fase 2 (multi-columna, TOC, saltos de página)
+ * ACTUALIZADO: Soporte completo para Fase 3 (footnotes/notas al pie)
+ * VERSIÓN COMPLETA: Mantiene TODOS los métodos originales + nuevas funcionalidades
  */
 
 import { exportPDF, baseStyles, baseDocumentConfig } from '../pdf-common.js';
-import { createElement, validateElementConfig } from './pdf-elements.js';
+import { createElement, validateElementConfig, createFootnoteElementForBuilder, FootnoteElementUtils } from './pdf-elements.js';
 import { LayoutManager, createColumnsElement, createColumnResetElement, LAYOUT_TYPES } from './pdf-layout.js';
 import { TOCManager, createTOCElement, extractSectionsFromContent, TOC_STYLES, CORPORATE_TOC_STYLES } from './pdf-toc.js';
+// FASE 3: Importar sistema de footnotes
+import { FootnoteManager, FOOTNOTE_NUMBERING, FOOTNOTE_PRESETS } from './pdf-footnotes.js';
 
 /**
  * Clase principal del PDF Builder
@@ -32,13 +35,19 @@ export class PDFDocumentBuilder {
         this.footerConfig = null;
         this.validated = false;
 
-        // FASE 2: Nuevas propiedades
+        // FASE 2: Propiedades existentes
         this.layoutManager = new LayoutManager();
         this.tocManager = new TOCManager();
         this.pageCounter = 1;
         this.tocPosition = null; // 'start', 'end', 'custom'
         this.tocConfig = null;
         this.currentSectionId = null;
+
+        // FASE 3: Nuevas propiedades para footnotes
+        this.footnoteManager = new FootnoteManager(options.footnoteConfig || {});
+        this.pendingFootnotes = new Map(); // Referencias en el texto que necesitan procesamiento
+        this.footnoteReferences = new Map(); // Map de referencia -> nota completa
+        this.lastFootnoteRef = null;
     }
 
     /**
@@ -90,6 +99,9 @@ export class PDFDocumentBuilder {
             this.pageCounter++;
         }
 
+        // FASE 3: Actualizar página en footnote manager
+        this.footnoteManager.setCurrentPage(this.pageCounter);
+
         return this;
     }
 
@@ -131,9 +143,11 @@ export class PDFDocumentBuilder {
         // Manejar saltos de página
         if (sectionOptions.pageBreakBefore) {
             this.pageCounter++;
+            this.footnoteManager.setCurrentPage(this.pageCounter);
         }
         if (sectionOptions.pageBreakAfter) {
             this.pageCounter++;
+            this.footnoteManager.setCurrentPage(this.pageCounter);
         }
 
         return this;
@@ -316,185 +330,360 @@ export class PDFDocumentBuilder {
      */
     resetColumns(options = {}) {
         // Resetear layout manager
-        this.layoutManager.resetToSingle();
+        this.layoutManager.resetLayout();
 
         // Crear elemento de reset
         const resetElement = createColumnResetElement(options);
 
-        if (Array.isArray(resetElement)) {
-            this.content.push(...resetElement);
-        } else {
-            this.content.push({
-                type: 'columnReset',
-                config: options,
-                content: resetElement,
-                timestamp: Date.now()
-            });
-        }
+        // Agregar al contenido
+        this.content.push({
+            type: 'columnReset',
+            config: options,
+            content: resetElement,
+            timestamp: Date.now()
+        });
 
         return this;
-    }
-
-    /**
-     * Genera tabla de contenidos automática
-     * @param {Object} tocOptions - Opciones del TOC
-     * @returns {PDFDocumentBuilder}
-     */
-    generateTOC(tocOptions = {}) {
-        // Configurar TOC
-        this.tocConfig = {
-            title: 'Índice de Contenidos',
-            maxLevel: 3,
-            includePageNumbers: true,
-            pageBreakAfter: true,
-            position: 'start', // 'start', 'end', 'custom'
-            ...tocOptions
-        };
-
-        // Configurar posición
-        this.tocPosition = this.tocConfig.position;
-
-        // Si es posición custom, agregar inmediatamente
-        if (this.tocPosition === 'custom') {
-            this._insertTOC();
-        }
-
-        return this;
-    }
-
-    /**
-     * Inserta TOC en la posición actual
-     * @private
-     */
-    _insertTOC() {
-        if (!this.tocConfig) {
-            throw new Error('PDFBuilder: TOC no configurado');
-        }
-
-        // Extraer secciones existentes
-        const sections = extractSectionsFromContent(this.content);
-
-        // Crear elemento TOC
-        const tocElement = createTOCElement(this.tocConfig, sections);
-        this.content.push(tocElement);
-
-        // Incrementar contador de páginas
-        this.pageCounter++;
-
-        return tocElement;
     }
 
     /**
      * Agrega un salto de página explícito
-     * @param {Object} options - Opciones del salto
+     * @param {Object} options - Opciones del salto de página
      * @returns {PDFDocumentBuilder}
      */
     pageBreak(options = {}) {
         const pageBreakElement = createElement('pageBreak', options);
         this.content.push(pageBreakElement);
-
-        // Incrementar contador
         this.pageCounter++;
 
-        return this;
-    }
-
-    /**
-     * Configura paginación personalizada
-     * @param {Object} paginationOptions - Opciones de paginación
-     * @returns {PDFDocumentBuilder}
-     */
-    addPagination(paginationOptions = {}) {
-        const {
-            format = 'Página {current} de {total}',
-            startFrom = 1,
-            position = 'bottom-center',
-            showOnFirst = false,
-            style = 'normal'
-        } = paginationOptions;
-
-        // Configurar footer con paginación si no existe
-        if (!this.footerConfig) {
-            this.footerConfig = {};
-        }
-
-        this.footerConfig.pagination = {
-            format,
-            startFrom,
-            position,
-            showOnFirst,
-            style
-        };
+        // FASE 3: Actualizar página en footnote manager
+        this.footnoteManager.setCurrentPage(this.pageCounter);
 
         return this;
     }
 
     /**
-     * Agrega espaciador vertical
-     * @param {number} height - Altura del espaciador
+     * Agrega espacio vertical
+     * @param {number} height - Altura del espacio en puntos
+     * @param {Object} options - Opciones adicionales
      * @returns {PDFDocumentBuilder}
      */
-    addSpacer(height = 20) {
-        const spacerElement = createElement('spacer', { height });
+    addSpacer(height = 20, options = {}) {
+        const spacerElement = createElement('spacer', { height, ...options });
         this.content.push(spacerElement);
         return this;
     }
 
     /**
-     * Obtiene información del layout actual
-     * @returns {Object} Información del layout
-     */
-    getLayoutInfo() {
-        return this.layoutManager.getLayoutInfo();
-    }
-
-    /**
-     * Obtiene estadísticas del TOC
-     * @returns {Object} Estadísticas del TOC
-     */
-    getTOCStats() {
-        return this.tocManager.getStats();
-    }
-
-    /**
-     * Obtiene el número de página actual
-     * @returns {number} Página actual
-     */
-    getCurrentPage() {
-        return this.pageCounter;
-    }
-
-    /**
-     * Establece el número de página actual
-     * @param {number} pageNumber - Número de página
+     * Configura la numeración de páginas
+     * @param {Object} paginationConfig - Configuración de paginación
      * @returns {PDFDocumentBuilder}
      */
-    setCurrentPage(pageNumber) {
-        if (pageNumber < 1) {
-            throw new Error('PDFBuilder: Número de página debe ser mayor a 0');
-        }
-        this.pageCounter = pageNumber;
-        this.tocManager.setCurrentPage(pageNumber);
+    addPagination(paginationConfig = {}) {
+        this.documentConfig.pagination = {
+            ...this.documentConfig.pagination,
+            ...paginationConfig
+        };
         return this;
     }
 
     /**
-     * Valida la configuración antes de construir
+     * Genera tabla de contenidos automática
+     * @param {Object} tocConfig - Configuración del TOC
+     * @returns {PDFDocumentBuilder}
+     */
+    generateTOC(tocConfig = {}) {
+        this.tocConfig = {
+            title: 'Índice de Contenidos',
+            maxLevel: 3,
+            includePageNumbers: true,
+            pageBreakAfter: true,
+            pageBreakBefore: false,
+            styles: TOC_STYLES,
+            ...tocConfig
+        };
+        this.tocPosition = 'start';
+        return this;
+    }
+
+    /**
+     * Configura TOC corporativo
+     * @param {Object} tocConfig - Configuración del TOC corporativo
+     * @returns {PDFDocumentBuilder}
+     */
+    generateCorporateTOC(tocConfig = {}) {
+        return this.generateTOC({
+            ...tocConfig,
+            styles: CORPORATE_TOC_STYLES
+        });
+    }
+
+    // ================================================
+    // FASE 3: MÉTODOS DE FOOTNOTES
+    // ================================================
+
+    /**
+     * Agrega una nota al pie
+     * @param {string} text - Texto de la nota
+     * @param {Object} options - Opciones de configuración
+     * @returns {PDFDocumentBuilder}
+     */
+    addFootnote(text, options = {}) {
+        if (!text || typeof text !== 'string') {
+            throw new Error('PDFBuilder: La nota al pie debe tener texto válido');
+        }
+
+        // Actualizar página actual en el footnote manager
+        this.footnoteManager.setCurrentPage(this.pageCounter);
+
+        // Agregar la nota al manager
+        const footnoteRef = this.footnoteManager.addFootnote(text, options);
+
+        // Crear elemento footnote para el builder
+        const footnoteElement = createFootnoteElementForBuilder(text, {
+            ...options,
+            footnoteId: footnoteRef.id,
+            referenceNumber: footnoteRef.referenceNumber,
+            referenceText: footnoteRef.referenceText,
+            pageNumber: footnoteRef.pageNumber
+        });
+
+        this.content.push(footnoteElement);
+
+        // Guardar referencia para uso posterior
+        this.footnoteReferences.set(footnoteRef.id, footnoteRef);
+        this.lastFootnoteRef = footnoteRef;
+
+        return this;
+    }
+
+    /**
+     * Agrega un párrafo con una nota al pie automática
+     * @param {string} text - Texto del párrafo
+     * @param {string} footnoteText - Texto de la nota
+     * @param {Object} paragraphOptions - Opciones del párrafo
+     * @param {Object} footnoteOptions - Opciones de la nota
+     * @returns {PDFDocumentBuilder}
+     */
+    addParagraphWithFootnote(text, footnoteText, paragraphOptions = {}, footnoteOptions = {}) {
+        // Agregar párrafo
+        this.addParagraph(text, paragraphOptions);
+
+        // Agregar footnote
+        this.addFootnote(footnoteText, footnoteOptions);
+
+        return this;
+    }
+
+    /**
+     * Obtiene la referencia de la última nota creada
+     * @returns {Object|null} Referencia de la última nota o null
+     */
+    getLastFootnoteReference() {
+        return this.lastFootnoteRef;
+    }
+
+    /**
+     * Obtiene todas las referencias de notas al pie
+     * @returns {Map} Map con todas las referencias
+     */
+    getAllFootnoteReferences() {
+        return new Map(this.footnoteReferences);
+    }
+
+    /**
+     * Configura opciones globales de footnotes
+     * @param {Object} config - Configuración global de footnotes
+     * @returns {PDFDocumentBuilder}
+     */
+    setFootnoteConfig(config = {}) {
+        // Aplicar preset si se especifica
+        if (config.preset && FOOTNOTE_PRESETS[config.preset]) {
+            const presetConfig = { ...FOOTNOTE_PRESETS[config.preset], ...config };
+            this.footnoteManager.config = { ...this.footnoteManager.config, ...presetConfig };
+        } else {
+            this.footnoteManager.config = { ...this.footnoteManager.config, ...config };
+        }
+
+        return this;
+    }
+
+    /**
+     * Aplica un preset de footnotes (academic, corporate, minimal)
+     * @param {string} presetName - Nombre del preset
+     * @param {Object} overrides - Configuraciones que sobrescriben el preset
+     * @returns {PDFDocumentBuilder}
+     */
+    useFootnotePreset(presetName, overrides = {}) {
+        if (!FOOTNOTE_PRESETS[presetName]) {
+            throw new Error(`PDFBuilder: Preset de footnote no válido: ${presetName}`);
+        }
+
+        return this.setFootnoteConfig({
+            preset: presetName,
+            ...overrides
+        });
+    }
+
+    // ================================================
+    // MÉTODOS DE UTILIDAD Y CONFIGURACIÓN AVANZADA
+    // ================================================
+
+    /**
+     * Agrega múltiples elementos de una vez
+     * @param {Array} elements - Array de elementos a agregar
+     * @returns {PDFDocumentBuilder}
+     */
+    addElements(elements) {
+        if (!Array.isArray(elements)) {
+            throw new Error('PDFBuilder: Se esperaba un array de elementos');
+        }
+
+        elements.forEach(element => {
+            if (element && element.type) {
+                this.content.push(element);
+            }
+        });
+
+        return this;
+    }
+
+    /**
+     * Inserta contenido en una posición específica
+     * @param {number} index - Índice donde insertar
+     * @param {Object} element - Elemento a insertar
+     * @returns {PDFDocumentBuilder}
+     */
+    insertAt(index, element) {
+        if (index < 0 || index > this.content.length) {
+            throw new Error('PDFBuilder: Índice fuera de rango');
+        }
+
+        this.content.splice(index, 0, element);
+        return this;
+    }
+
+    /**
+     * Remueve un elemento por índice
+     * @param {number} index - Índice del elemento a remover
+     * @returns {PDFDocumentBuilder}
+     */
+    removeAt(index) {
+        if (index < 0 || index >= this.content.length) {
+            throw new Error('PDFBuilder: Índice fuera de rango');
+        }
+
+        this.content.splice(index, 1);
+        return this;
+    }
+
+    /**
+     * Limpia todo el contenido
+     * @returns {PDFDocumentBuilder}
+     */
+    clear() {
+        this.content = [];
+        this.pageCounter = 1;
+        this.currentSectionId = null;
+        this.tocManager.reset();
+        this.layoutManager.resetLayout();
+        // FASE 3: Limpiar footnotes
+        this.footnoteManager.reset();
+        this.footnoteReferences.clear();
+        this.lastFootnoteRef = null;
+        return this;
+    }
+
+    /**
+     * Clona el builder actual
+     * @returns {PDFDocumentBuilder} Nueva instancia clonada
+     */
+    clone() {
+        const cloned = new PDFDocumentBuilder(this.documentConfig);
+        cloned.content = [...this.content];
+        cloned.metadata = { ...this.metadata };
+        cloned.branding = { ...this.branding };
+        cloned.customStyles = { ...this.customStyles };
+        cloned.headerConfig = this.headerConfig ? { ...this.headerConfig } : null;
+        cloned.footerConfig = this.footerConfig ? { ...this.footerConfig } : null;
+        cloned.pageCounter = this.pageCounter;
+        cloned.tocConfig = this.tocConfig ? { ...this.tocConfig } : null;
+
+        // FASE 3: Clonar footnotes
+        cloned.footnoteReferences = new Map(this.footnoteReferences);
+        cloned.lastFootnoteRef = this.lastFootnoteRef;
+
+        return cloned;
+    }
+
+    // ================================================
+    // MÉTODOS DE ANÁLISIS Y ESTADÍSTICAS
+    // ================================================
+
+    /**
+     * Obtiene información detallada del contenido
+     * @returns {Object} Información del contenido
+     */
+    getContentInfo() {
+        const info = {
+            totalElements: this.content.length,
+            elementTypes: {},
+            hasImages: false,
+            hasTables: false,
+            hasColumns: false,
+            hasTOC: this.tocConfig !== null,
+            hasFootnotes: this.footnoteReferences.size > 0,
+            estimatedPages: this.pageCounter
+        };
+
+        this.content.forEach(element => {
+            const type = element.type;
+            info.elementTypes[type] = (info.elementTypes[type] || 0) + 1;
+
+            if (type === 'image') info.hasImages = true;
+            if (type === 'table') info.hasTables = true;
+            if (type === 'columns') info.hasColumns = true;
+        });
+
+        return info;
+    }
+
+    /**
+     * Valida el documento antes de construir
+     * @param {Object} options - Opciones de validación
      * @returns {Object} Resultado de validación
      */
-    validate() {
+    validate(options = {}) {
         const errors = [];
         const warnings = [];
 
-        // Validar que hay contenido
+        // Validar contenido mínimo
         if (this.content.length === 0) {
-            errors.push('El documento debe tener al menos un elemento de contenido');
+            errors.push('El documento no tiene contenido');
+        } else {
+            // Verificar si hay al menos un elemento de contenido
+            const hasContentElement = this.content.some(el =>
+                ['paragraph', 'text', 'table', 'list', 'image'].includes(el.type)
+            );
+
+            if (!hasContentElement) {
+                warnings.push('El documento no parece tener elementos de contenido');
+            }
         }
 
         // Validar elementos del contenido
         this.content.forEach((element, index) => {
             try {
                 validateElementConfig(element);
+
+                // FASE 3: Validaciones específicas para footnotes
+                if (FootnoteElementUtils.isFootnoteElement(element)) {
+                    const footnoteValidation = FootnoteElementUtils.validateFootnoteElement(element);
+                    if (!footnoteValidation.isValid) {
+                        errors.push(...footnoteValidation.errors.map(err => `Elemento ${index}: ${err}`));
+                    }
+                    warnings.push(...footnoteValidation.warnings.map(warn => `Elemento ${index}: ${warn}`));
+                }
             } catch (error) {
                 errors.push(`Elemento ${index + 1}: ${error.message}`);
             }
@@ -512,6 +701,13 @@ export class PDFDocumentBuilder {
             warnings.push(...tocValidation.warnings);
         }
 
+        // FASE 3: Validar configuración de footnotes
+        const footnoteValidation = this.footnoteManager.validateConfiguration();
+        if (!footnoteValidation.isValid) {
+            errors.push(...footnoteValidation.errors.map(err => `Footnotes: ${err}`));
+        }
+        warnings.push(...footnoteValidation.warnings.map(warn => `Footnotes: ${warn}`));
+
         // Validar layout
         const layoutInfo = this.layoutManager.getLayoutInfo();
         if (layoutInfo.type !== LAYOUT_TYPES.SINGLE && !layoutInfo.hasContent) {
@@ -526,9 +722,133 @@ export class PDFDocumentBuilder {
             warnings,
             layoutInfo,
             tocStats: this.tocManager.getStats(),
-            pageCount: this.pageCounter
+            footnoteStats: footnoteValidation.stats,
+            pageCount: this.pageCounter,
+            contentInfo: this.getContentInfo()
         };
     }
+
+    /**
+     * Obtiene estadísticas del documento
+     * @returns {Object} Estadísticas del builder
+     */
+    getStats() {
+        return {
+            elements: this.content.length,
+            pages: this.pageCounter,
+            metadata: this.metadata,
+            hasHeader: this.headerConfig !== null,
+            hasFooter: this.footerConfig !== null,
+            hasTOC: this.tocConfig !== null,
+            layoutInfo: this.layoutManager.getLayoutInfo(),
+            tocInfo: this.tocManager.getStats(),
+            // FASE 3: Estadísticas de footnotes
+            footnoteInfo: this.footnoteManager.getStats(),
+            footnoteReferences: this.footnoteReferences.size,
+            contentInfo: this.getContentInfo(),
+            lastModified: Date.now()
+        };
+    }
+
+    // ================================================
+    // MÉTODOS PRIVADOS PARA PROCESAMIENTO
+    // ================================================
+
+    /**
+     * Procesa el TOC si está configurado
+     * @private
+     */
+    _processTOC() {
+        if (!this.tocConfig || this.tocPosition !== 'start') {
+            return;
+        }
+
+        // Extraer secciones del contenido
+        const sections = extractSectionsFromContent(this.content);
+
+        // Configurar TOC manager
+        this.tocManager.setSections(sections);
+
+        // Crear elemento TOC
+        const tocElement = createTOCElement(this.tocConfig, sections);
+
+        // Insertar al inicio
+        this.content.unshift(tocElement);
+    }
+
+    /**
+     * Prepara los datos para exportación
+     * @private
+     */
+    _prepareExportData() {
+        // FASE 3: Procesar footnotes si están habilitadas
+        let finalContent = [...this.content];
+
+        if (this.footnoteManager.getStats().totalFootnotes > 0) {
+            finalContent = this._processFootnotesInContent(finalContent);
+        }
+
+        return {
+            isBuilderGenerated: true,
+            builderContent: finalContent,
+            tocManager: this.tocManager,
+            layoutManager: this.layoutManager,
+            // FASE 3: Agregar footnote manager
+            footnoteManager: this.footnoteManager,
+            metadata: this.metadata,
+            branding: this.branding,
+            customStyles: this.customStyles,
+            headerConfig: this.headerConfig,
+            footerConfig: this.footerConfig,
+            ...this.documentConfig
+        };
+    }
+
+    /**
+     * FASE 3: Procesa las footnotes en el contenido del builder
+     * @private
+     */
+    _processFootnotesInContent(content) {
+        const processedContent = [];
+        const pageFootnotes = new Map();
+
+        content.forEach(element => {
+            processedContent.push(element);
+
+            // Si es una footnote, almacenar para procesamiento por página
+            if (FootnoteElementUtils.isFootnoteElement(element)) {
+                const footnoteId = element.config?.footnoteId;
+                const pageNumber = element.config?.pageNumber || this.pageCounter;
+
+                if (!pageFootnotes.has(pageNumber)) {
+                    pageFootnotes.set(pageNumber, []);
+                }
+                pageFootnotes.get(pageNumber).push(footnoteId);
+            }
+
+            // Si es un salto de página, agregar footnotes de la página anterior
+            if (element.type === 'pageBreak') {
+                const currentPage = this.pageCounter - 1;
+                if (pageFootnotes.has(currentPage)) {
+                    const footnoteElements = this.footnoteManager.generatePageFootnotes(currentPage);
+                    processedContent.push(...footnoteElements);
+                }
+            }
+        });
+
+        // Agregar footnotes de la última página
+        const lastPage = this.pageCounter;
+        if (pageFootnotes.has(lastPage)) {
+            const footnoteElements = this.footnoteManager.generatePageFootnotes(lastPage);
+            processedContent.push(...footnoteElements);
+        }
+
+        return processedContent;
+    }
+
+    // ================================================
+    // MÉTODO DE CONSTRUCCIÓN PRINCIPAL
+    // ================================================
 
     /**
      * Construye el documento PDF final
@@ -540,7 +860,9 @@ export class PDFDocumentBuilder {
             filename = 'documento',
             format = 'pdf-simple',
             validate = true,
-            signal = null
+            includeFootnotes = true,
+            signal = null,
+            ...otherOptions
         } = buildOptions;
 
         // Validar si se solicita
@@ -563,323 +885,423 @@ export class PDFDocumentBuilder {
             subtitle: this.metadata.subtitle,
             author: this.metadata.author,
             subject: this.metadata.subject,
-            branding: this.branding,
+            filename,
+            validate,
             corporateStyle: format.includes('branded'),
-            customStyles: this._buildFinalStyles(),
-            ...this.documentConfig,
-            ...buildOptions
+            signal,
+            // FASE 3: Opciones para footnotes
+            includeFootnotes,
+            ...otherOptions
         };
 
-        // Configurar header y footer si están definidos
-        if (this.headerConfig) {
-            exportOptions.createHeader = this._createHeaderFunction();
-        }
+        // Generar PDF usando la función exportPDF
+        const blob = await exportPDF(exportData, [], exportOptions);
 
-        if (this.footerConfig) {
-            exportOptions.createFooter = this._createFooterFunction();
-        }
+        // Marcar como construido
+        this.validated = true;
 
-        // Generar PDF usando la función común
-        return exportPDF(exportData, exportOptions, signal);
-    }
-
-    /**
-     * Procesa el TOC según su posición configurada
-     * @private
-     */
-    _processTOC() {
-        if (!this.tocConfig) {
-            return;
-        }
-
-        // Extraer secciones del contenido
-        const sections = extractSectionsFromContent(this.content);
-
-        // Actualizar TOC manager con secciones
-        this.tocManager.clear();
-        sections.forEach(section => {
-            this.tocManager.addSection(section);
-        });
-
-        // Insertar TOC según posición
-        switch (this.tocPosition) {
-            case 'start':
-                this._insertTOCAtStart();
-                break;
-            case 'end':
-                this._insertTOCAtEnd();
-                break;
-            case 'custom':
-                // Ya insertado en generateTOC
-                break;
-        }
-    }
-
-    /**
-     * Inserta TOC al inicio del documento
-     * @private
-     */
-    _insertTOCAtStart() {
-        const tocElement = createTOCElement(this.tocConfig, this.tocManager.getSections());
-        this.content.unshift(tocElement);
-    }
-
-    /**
-     * Inserta TOC al final del documento
-     * @private
-     */
-    _insertTOCAtEnd() {
-        const tocElement = createTOCElement(this.tocConfig, this.tocManager.getSections());
-        this.content.push(tocElement);
-    }
-
-    /**
-     * Construye estilos finales combinando base + builder + custom
-     * @private
-     */
-    _buildFinalStyles() {
-        const corporateMode = this.branding && Object.keys(this.branding).length > 0;
-
-        return {
-            ...baseStyles,
-            ...(corporateMode ? CORPORATE_TOC_STYLES : TOC_STYLES),
-            ...this.customStyles
-        };
-    }
-
-    /**
-     * Prepara los datos para la función exportPDF
-     * @private
-     * @returns {Object} Datos formateados para exportPDF
-     */
-    _prepareExportData() {
-        const processedContent = this.content.map(element => {
-            switch (element.type) {
-                case 'table':
-                    return {
-                        type: 'table',
-                        headers: element.config.headers,
-                        data: element.config.data,
-                        options: element.config
-                    };
-                case 'columns':
-                case 'columnReset':
-                case 'toc':
-                    // Elementos especiales del builder
-                    return element;
-                default:
-                    return element;
-            }
-        });
-
-        return {
-            builderContent: processedContent,
-            isBuilderGenerated: true,
-            metadata: this.metadata,
-            layoutInfo: this.layoutManager.getLayoutInfo(),
-            tocStats: this.tocManager.getStats(),
-            pageCount: this.pageCounter
-        };
-    }
-
-    /**
-     * Crea función de header personalizada
-     * @private
-     * @returns {Function}
-     */
-    _createHeaderFunction() {
-        const headerConfig = this.headerConfig;
-
-        return function (branding, logo, docOptions) {
-            return function (currentPage, pageCount, pageSize) {
-                // Excluir primera página si se especifica
-                if (headerConfig.firstPage === false && currentPage === 1) {
-                    return null;
-                }
-
-                const headerContent = [];
-
-                if (headerConfig.content) {
-                    headerContent.push({
-                        text: headerConfig.content
-                            .replace('{page}', currentPage)
-                            .replace('{total}', pageCount)
-                            .replace('{orgName}', branding?.orgName || '')
-                            .replace('{title}', docOptions?.title || ''),
-                        style: headerConfig.style || 'header',
-                        alignment: headerConfig.alignment || 'center'
-                    });
-                }
-
-                // Agregar fecha si se solicita
-                if (headerConfig.includeDate) {
-                    headerContent.push({
-                        text: new Date().toLocaleDateString('es-ES'),
-                        style: headerConfig.style || 'header',
-                        alignment: 'right',
-                        fontSize: 8
-                    });
-                }
-
-                // Agregar logo si se solicita
-                if (headerConfig.includeLogo && branding?.logoUrl) {
-                    headerContent.unshift({
-                        image: branding.logoUrl,
-                        width: 50,
-                        alignment: 'left'
-                    });
-                }
-
-                return headerContent.length > 0 ? {
-                    columns: headerContent,
-                    margin: [40, 20, 40, 10]
-                } : null;
-            };
-        };
-    }
-
-    /**
-     * Crea función de footer personalizada
-     * @private
-     * @returns {Function}
-     */
-    _createFooterFunction() {
-        const footerConfig = this.footerConfig;
-
-        return function (branding, docOptions) {
-            return function (currentPage, pageCount) {
-                // Excluir primera página si se especifica
-                if (footerConfig.firstPage === false && currentPage === 1) {
-                    return null;
-                }
-
-                const footerContent = [];
-
-                if (footerConfig.leftText) {
-                    footerContent.push({
-                        text: footerConfig.leftText,
-                        alignment: 'left',
-                        style: footerConfig.style || 'footer'
-                    });
-                }
-
-                if (footerConfig.centerText) {
-                    footerContent.push({
-                        text: footerConfig.centerText,
-                        alignment: 'center',
-                        style: footerConfig.style || 'footer'
-                    });
-                }
-
-                if (footerConfig.rightText) {
-                    let rightText = footerConfig.rightText
-                        .replace('{pageNumber}', currentPage)
-                        .replace('{totalPages}', pageCount)
-                        .replace('{current}', currentPage)
-                        .replace('{total}', pageCount);
-
-                    footerContent.push({
-                        text: rightText,
-                        alignment: 'right',
-                        style: footerConfig.style || 'footer'
-                    });
-                }
-
-                // Manejar configuración de paginación
-                if (footerConfig.pagination && !footerConfig.rightText) {
-                    const { format, startFrom, showOnFirst } = footerConfig.pagination;
-
-                    if (showOnFirst || currentPage > 1) {
-                        const pageNumber = currentPage + startFrom - 1;
-                        const paginationText = format
-                            .replace('{current}', pageNumber)
-                            .replace('{total}', pageCount + startFrom - 1);
-
-                        footerContent.push({
-                            text: paginationText,
-                            alignment: 'center',
-                            style: footerConfig.style || 'footer'
-                        });
-                    }
-                }
-
-                return footerContent.length > 0 ? {
-                    columns: footerContent,
-                    style: footerConfig.style || 'footer',
-                    margin: [40, 10, 40, 20]
-                } : null;
-            };
-        };
-    }
-
-    /**
-     * Obtiene estadísticas del documento
-     * @returns {Object} Estadísticas del builder
-     */
-    getStats() {
-        return {
-            elementCount: this.content.length,
-            hasTitle: !!this.metadata.title,
-            hasHeader: !!this.headerConfig,
-            hasFooter: !!this.footerConfig,
-            hasBranding: Object.keys(this.branding).length > 0,
-            validated: this.validated,
-            elements: this.content.map(el => el.type),
-            layoutInfo: this.layoutManager.getLayoutInfo(),
-            tocStats: this.tocManager.getStats(),
-            currentPage: this.pageCounter,
-            features: {
-                multiColumn: this.layoutManager.getLayoutInfo().type !== LAYOUT_TYPES.SINGLE,
-                tableOfContents: !!this.tocConfig,
-                customStyles: Object.keys(this.customStyles).length > 0,
-                branding: Object.keys(this.branding).length > 0
-            }
-        };
-    }
-
-    /**
-     * Limpia el contenido del builder
-     * @returns {PDFDocumentBuilder}
-     */
-    clear() {
-        this.content = [];
-        this.validated = false;
-        this.layoutManager.clearContent();
-        this.layoutManager.clearHistory();
-        this.tocManager.clear();
-        this.pageCounter = 1;
-        this.tocPosition = null;
-        this.tocConfig = null;
-        this.currentSectionId = null;
-        return this;
-    }
-
-    /**
-     * Clona el builder actual
-     * @returns {PDFDocumentBuilder} Nueva instancia clonada
-     */
-    clone() {
-        const cloned = new PDFDocumentBuilder(this.documentConfig);
-        cloned.content = [...this.content];
-        cloned.metadata = { ...this.metadata };
-        cloned.branding = { ...this.branding };
-        cloned.customStyles = { ...this.customStyles };
-        cloned.headerConfig = this.headerConfig ? { ...this.headerConfig } : null;
-        cloned.footerConfig = this.footerConfig ? { ...this.footerConfig } : null;
-        cloned.pageCounter = this.pageCounter;
-        cloned.tocConfig = this.tocConfig ? { ...this.tocConfig } : null;
-        cloned.tocPosition = this.tocPosition;
-        return cloned;
+        return blob;
     }
 }
 
+// ================================================
+// FUNCIONES DE CONVENIENCIA Y BUILDERS ESPECIALIZADOS
+// ================================================
+
 /**
- * Función factory para crear una nueva instancia del builder
+ * Crea un builder con configuración académica
  * @param {Object} options - Opciones iniciales
- * @returns {PDFDocumentBuilder}
+ * @returns {PDFDocumentBuilder} Builder configurado para uso académico
  */
-export const createPDFBuilder = (options = {}) => {
-    return new PDFDocumentBuilder(options);
+export const createAcademicPDFBuilder = (options = {}) => {
+    const builder = new PDFDocumentBuilder({
+        pageMargins: [40, 60, 40, 60],
+        fontSize: 11,
+        lineHeight: 1.4,
+        ...options
+    });
+
+    return builder
+        .useFootnotePreset('academic')
+        .setFootnoteConfig({
+            numbering: FOOTNOTE_NUMBERING.SEQUENTIAL,
+            position: 'bottom',
+            separator: true
+        })
+        .setCustomStyles({
+            body: {
+                fontSize: 11,
+                lineHeight: 1.4,
+                alignment: 'justify'
+            },
+            footnote: {
+                fontSize: 9,
+                lineHeight: 1.2,
+                color: '#333333'
+            },
+            footnoteRef: {
+                fontSize: 8,
+                sup: true,
+                color: '#000000'
+            }
+        });
 };
 
-export default PDFDocumentBuilder;
+/**
+ * Crea un builder con configuración corporativa
+ * @param {Object} options - Opciones iniciales
+ * @returns {PDFDocumentBuilder} Builder configurado para uso corporativo
+ */
+export const createCorporatePDFBuilder = (options = {}) => {
+    const builder = new PDFDocumentBuilder({
+        pageMargins: [60, 100, 60, 80],
+        corporateStyle: true,
+        ...options
+    });
+
+    return builder
+        .useFootnotePreset('corporate')
+        .setFootnoteConfig({
+            numbering: FOOTNOTE_NUMBERING.PER_PAGE,
+            position: 'bottom',
+            separator: true,
+            referenceStyle: {
+                fontSize: 8,
+                sup: true,
+                color: '#2563eb'
+            }
+        })
+        .setCustomStyles({
+            footnote: {
+                fontSize: 9,
+                lineHeight: 1.3,
+                color: '#374151'
+            },
+            footnoteRef: {
+                fontSize: 8,
+                sup: true,
+                color: '#2563eb',
+                link: true
+            }
+        });
+};
+
+/**
+ * Crea un builder con configuración minimalista
+ * @param {Object} options - Opciones iniciales
+ * @returns {PDFDocumentBuilder} Builder configurado para uso minimalista
+ */
+export const createMinimalPDFBuilder = (options = {}) => {
+    const builder = new PDFDocumentBuilder({
+        pageMargins: [30, 40, 30, 40],
+        fontSize: 10,
+        ...options
+    });
+
+    return builder
+        .useFootnotePreset('minimal')
+        .setFootnoteConfig({
+            numbering: FOOTNOTE_NUMBERING.SYMBOLS,
+            maxPerPage: 5,
+            separator: false
+        })
+        .setCustomStyles({
+            footnote: {
+                fontSize: 8,
+                lineHeight: 1.2,
+                color: '#6b7280'
+            },
+            footnoteRef: {
+                fontSize: 8,
+                sup: true,
+                color: '#6b7280'
+            }
+        });
+};
+
+/**
+ * Crea un builder con configuración de reporte ejecutivo
+ * @param {Object} options - Opciones iniciales
+ * @returns {PDFDocumentBuilder} Builder configurado para reportes ejecutivos
+ */
+export const createExecutiveReportBuilder = (options = {}) => {
+    const builder = new PDFDocumentBuilder({
+        pageMargins: [50, 80, 50, 60],
+        corporateStyle: true,
+        ...options
+    });
+
+    return builder
+        .useFootnotePreset('corporate')
+        .setFootnoteConfig({
+            numbering: FOOTNOTE_NUMBERING.SEQUENTIAL,
+            position: 'bottom',
+            separator: true
+        })
+        .addHeader({
+            content: "{title}",
+            includeDate: true,
+            firstPage: false,
+            alignment: 'space-between'
+        })
+        .addFooter({
+            leftText: "Confidencial",
+            rightText: "Página {pageNumber} de {totalPages}",
+            firstPage: false
+        });
+};
+
+/**
+ * Crea un builder con configuración de manual técnico
+ * @param {Object} options - Opciones iniciales
+ * @returns {PDFDocumentBuilder} Builder configurado para manuales técnicos
+ */
+export const createTechnicalManualBuilder = (options = {}) => {
+    const builder = new PDFDocumentBuilder({
+        pageMargins: [40, 70, 40, 50],
+        fontSize: 10,
+        ...options
+    });
+
+    return builder
+        .useFootnotePreset('academic')
+        .setFootnoteConfig({
+            numbering: FOOTNOTE_NUMBERING.SEQUENTIAL,
+            position: 'bottom',
+            separator: true,
+            maxPerPage: 8
+        })
+        .generateTOC({
+            title: 'Tabla de Contenidos',
+            maxLevel: 4,
+            includePageNumbers: true,
+            pageBreakAfter: true
+        })
+        .setCustomStyles({
+            codeBlock: {
+                fontSize: 9,
+                font: 'Courier',
+                background: '#f5f5f5',
+                margin: [10, 5, 10, 5]
+            },
+            warning: {
+                fontSize: 10,
+                color: '#d97706',
+                bold: true,
+                margin: [10, 5, 10, 5]
+            }
+        });
+};
+
+// ================================================
+// MÉTODOS DE UTILIDAD PARA BUILDERS
+// ================================================
+
+/**
+ * Combina múltiples builders en uno solo
+ * @param {Array<PDFDocumentBuilder>} builders - Array de builders a combinar
+ * @param {Object} options - Opciones de combinación
+ * @returns {PDFDocumentBuilder} Builder combinado
+ */
+export const combineBuilders = (builders, options = {}) => {
+    if (!Array.isArray(builders) || builders.length === 0) {
+        throw new Error('Se requiere un array de builders válido');
+    }
+
+    const {
+        addPageBreaks = true,
+        mergeMetadata = true,
+        mergeStyles = true
+    } = options;
+
+    const combinedBuilder = new PDFDocumentBuilder();
+
+    builders.forEach((builder, index) => {
+        // Agregar salto de página entre builders (excepto el primero)
+        if (addPageBreaks && index > 0) {
+            combinedBuilder.pageBreak();
+        }
+
+        // Combinar contenido
+        combinedBuilder.addElements(builder.content);
+
+        // Combinar metadatos del primer builder
+        if (mergeMetadata && index === 0) {
+            combinedBuilder.setMetadata(builder.metadata);
+            combinedBuilder.setBranding(builder.branding);
+        }
+
+        // Combinar estilos
+        if (mergeStyles) {
+            combinedBuilder.setCustomStyles({
+                ...combinedBuilder.customStyles,
+                ...builder.customStyles
+            });
+        }
+
+        // Combinar configuraciones de footnotes
+        if (builder.footnoteReferences.size > 0) {
+            builder.footnoteReferences.forEach((ref, id) => {
+                combinedBuilder.footnoteReferences.set(id, ref);
+            });
+        }
+    });
+
+    return combinedBuilder;
+};
+
+/**
+ * Crea un builder a partir de una plantilla JSON
+ * @param {Object} template - Plantilla en formato JSON
+ * @returns {PDFDocumentBuilder} Builder configurado según la plantilla
+ */
+export const createBuilderFromTemplate = (template) => {
+    const {
+        metadata = {},
+        branding = {},
+        customStyles = {},
+        footnoteConfig = {},
+        header = null,
+        footer = null,
+        toc = null,
+        content = [],
+        options = {}
+    } = template;
+
+    const builder = new PDFDocumentBuilder(options);
+
+    // Configurar metadatos
+    if (Object.keys(metadata).length > 0) {
+        builder.setMetadata(metadata);
+    }
+
+    // Configurar branding
+    if (Object.keys(branding).length > 0) {
+        builder.setBranding(branding);
+    }
+
+    // Configurar estilos
+    if (Object.keys(customStyles).length > 0) {
+        builder.setCustomStyles(customStyles);
+    }
+
+    // Configurar footnotes
+    if (Object.keys(footnoteConfig).length > 0) {
+        builder.setFootnoteConfig(footnoteConfig);
+    }
+
+    // Configurar header
+    if (header) {
+        builder.addHeader(header);
+    }
+
+    // Configurar footer
+    if (footer) {
+        builder.addFooter(footer);
+    }
+
+    // Configurar TOC
+    if (toc) {
+        builder.generateTOC(toc);
+    }
+
+    // Agregar contenido
+    content.forEach(element => {
+        const { type, config = {} } = element;
+
+        switch (type) {
+            case 'cover':
+                builder.addCover(config);
+                break;
+            case 'section':
+                builder.addSection(config);
+                break;
+            case 'paragraph':
+                builder.addParagraph(config.text, config);
+                break;
+            case 'image':
+                builder.addImage(config.src, config);
+                break;
+            case 'table':
+                builder.addTable(config);
+                break;
+            case 'list':
+                builder.addList(config.items, config);
+                break;
+            case 'footnote':
+                builder.addFootnote(config.text, config);
+                break;
+            case 'pageBreak':
+                builder.pageBreak();
+                break;
+            case 'spacer':
+                builder.addSpacer(config.height, config);
+                break;
+            default:
+                console.warn(`Tipo de elemento no reconocido en plantilla: ${type}`);
+        }
+    });
+
+    return builder;
+};
+
+/**
+ * Valida una plantilla JSON antes de crear el builder
+ * @param {Object} template - Plantilla a validar
+ * @returns {Object} Resultado de validación
+ */
+export const validateTemplate = (template) => {
+    const errors = [];
+    const warnings = [];
+
+    if (!template || typeof template !== 'object') {
+        errors.push('La plantilla debe ser un objeto válido');
+        return { isValid: false, errors, warnings };
+    }
+
+    // Validar estructura básica
+    const { content = [] } = template;
+
+    if (!Array.isArray(content)) {
+        errors.push('El contenido debe ser un array');
+    } else if (content.length === 0) {
+        warnings.push('La plantilla no tiene contenido');
+    }
+
+    // Validar elementos de contenido
+    content.forEach((element, index) => {
+        if (!element.type) {
+            errors.push(`Elemento ${index}: debe tener un tipo definido`);
+        }
+
+        if (element.type === 'footnote' && !element.config?.text) {
+            errors.push(`Elemento ${index}: las footnotes deben tener texto`);
+        }
+
+        if (element.type === 'section' && !element.config?.title) {
+            errors.push(`Elemento ${index}: las secciones deben tener título`);
+        }
+    });
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings
+    };
+};
+
+// ================================================
+// EXPORTACIONES
+// ================================================
+
+export default {
+    PDFDocumentBuilder,
+    createAcademicPDFBuilder,
+    createCorporatePDFBuilder,
+    createMinimalPDFBuilder,
+    createExecutiveReportBuilder,
+    createTechnicalManualBuilder,
+    combineBuilders,
+    createBuilderFromTemplate,
+    validateTemplate
+};

@@ -1,9 +1,11 @@
 /**
  * PDF Elements Factory - Creación y validación de elementos para documentos PDF
  * Contiene la lógica para crear y validar todos los tipos de elementos
+ * ACTUALIZADO: Soporte para Fase 3 (footnotes/notas al pie)
  */
 
 import { baseStyles } from '../pdf-common.js';
+import { FootnoteManager, createFootnoteElement, FOOTNOTE_NUMBERING } from './pdf-footnotes.js';
 
 /**
  * Tipos de elementos soportados
@@ -17,7 +19,9 @@ export const ELEMENT_TYPES = {
     TABLE: 'table',
     LIST: 'list',
     PAGE_BREAK: 'pageBreak',
-    SPACER: 'spacer'
+    SPACER: 'spacer',
+    // FASE 3: Nuevo tipo de elemento
+    FOOTNOTE: 'footnote'
 };
 
 /**
@@ -84,6 +88,16 @@ const DEFAULT_CONFIGS = {
     [ELEMENT_TYPES.PAGE_BREAK]: {},
     [ELEMENT_TYPES.SPACER]: {
         height: 20
+    },
+    // FASE 3: Configuración por defecto para footnotes
+    [ELEMENT_TYPES.FOOTNOTE]: {
+        text: '',
+        numbering: FOOTNOTE_NUMBERING.SEQUENTIAL,
+        position: 'bottom',
+        autoReference: true,        // Genera referencia automáticamente
+        linkToNote: true,          // Hace la referencia clickeable
+        style: 'footnote',         // Estilo del texto de la nota
+        referenceStyle: 'footnoteRef' // Estilo de la referencia
     }
 };
 
@@ -135,45 +149,36 @@ const VALIDATORS = {
 
     [ELEMENT_TYPES.LIST]: (config) => {
         if (!Array.isArray(config.items) || config.items.length === 0) {
-            throw new Error('La lista debe tener items válidos');
+            throw new Error('La lista debe tener elementos válidos');
         }
     },
 
-    [ELEMENT_TYPES.PAGE_BREAK]: () => {
-        // Page break no necesita validación específica
-    },
-
-    [ELEMENT_TYPES.SPACER]: (config) => {
-        if (config.height < 0) {
-            throw new Error('La altura del spacer debe ser positiva');
+    // FASE 3: Validador para footnotes
+    [ELEMENT_TYPES.FOOTNOTE]: (config) => {
+        if (!config.text || typeof config.text !== 'string') {
+            throw new Error('La nota al pie debe tener texto válido');
+        }
+        if (config.text.length > 500) {
+            console.warn('FootnoteValidator: La nota es muy larga (>500 caracteres)');
+        }
+        if (!Object.values(FOOTNOTE_NUMBERING).includes(config.numbering)) {
+            throw new Error(`Tipo de numeración inválido: ${config.numbering}`);
         }
     }
 };
 
 /**
- * Procesadores que convierten la configuración a formato pdfmake
+ * Procesadores que convierten configuración en elementos para pdfmake
  */
 const PROCESSORS = {
     [ELEMENT_TYPES.COVER]: (config) => {
         const coverContent = [];
-
-        // Logo si está disponible
-        if (config.logo) {
-            coverContent.push({
-                image: config.logo.src,
-                width: config.logo.width || 150,
-                alignment: config.logo.alignment || 'center',
-                margin: [0, 0, 0, 40]
-            });
-        }
 
         // Título principal
         if (config.title) {
             coverContent.push({
                 text: config.title,
                 style: 'coverTitle',
-                fontSize: 24,
-                bold: true,
                 alignment: config.alignment,
                 margin: [0, 60, 0, 20]
             });
@@ -184,9 +189,8 @@ const PROCESSORS = {
             coverContent.push({
                 text: config.subtitle,
                 style: 'coverSubtitle',
-                fontSize: 16,
                 alignment: config.alignment,
-                margin: [0, 0, 0, 40]
+                margin: [0, 0, 0, 20]
             });
         }
 
@@ -195,9 +199,8 @@ const PROCESSORS = {
             coverContent.push({
                 text: config.description,
                 style: 'coverDescription',
-                fontSize: 12,
                 alignment: config.alignment,
-                margin: [0, 0, 0, 60]
+                margin: [0, 0, 0, 40]
             });
         }
 
@@ -388,12 +391,12 @@ const PROCESSORS = {
         if (config.alternateRowColors) {
             table.layout = {
                 fillColor: function (rowIndex) {
-                    return (rowIndex % 2 === 0) ? '#f9fafb' : null;
+                    return (rowIndex % 2 === 0) ? null : '#f8f9fa';
                 }
             };
         }
 
-        // Caption si existe
+        // Caption de tabla
         if (config.caption) {
             return {
                 stack: [
@@ -402,7 +405,7 @@ const PROCESSORS = {
                         text: config.caption,
                         style: 'caption',
                         alignment: 'center',
-                        margin: [0, 5, 0, 0]
+                        margin: [0, 5, 0, 15]
                     }
                 ]
             };
@@ -414,7 +417,6 @@ const PROCESSORS = {
     [ELEMENT_TYPES.LIST]: (config) => {
         const listItems = config.items.map((item, index) => {
             let marker = '';
-
             switch (config.type) {
                 case 'numbered':
                     marker = `${index + 1}. `;
@@ -451,6 +453,23 @@ const PROCESSORS = {
         return {
             text: '',
             margin: [0, config.height, 0, 0]
+        };
+    },
+
+    // FASE 3: Procesador para footnotes
+    [ELEMENT_TYPES.FOOTNOTE]: (config) => {
+        // El procesamiento real de footnotes se hace en el FootnoteManager
+        // Aquí solo creamos la estructura base del elemento
+        return {
+            footnoteElement: true,
+            text: config.text,
+            numbering: config.numbering,
+            position: config.position,
+            autoReference: config.autoReference,
+            linkToNote: config.linkToNote,
+            style: config.style,
+            referenceStyle: config.referenceStyle,
+            timestamp: Date.now()
         };
     }
 };
@@ -533,10 +552,104 @@ export const getSupportedTypes = () => {
     return Object.values(ELEMENT_TYPES);
 };
 
+/**
+ * FASE 3: Factory específico para crear elementos de footnote
+ * @param {string} text - Texto de la nota
+ * @param {Object} options - Opciones de configuración
+ * @returns {Object} Elemento footnote configurado
+ */
+export const createFootnoteElementForBuilder = (text, options = {}) => {
+    return createElement(ELEMENT_TYPES.FOOTNOTE, {
+        text,
+        ...options
+    });
+};
+
+/**
+ * FASE 3: Utilidades para trabajar con footnotes en el contexto del builder
+ */
+export const FootnoteElementUtils = {
+    /**
+     * Verifica si un elemento es una footnote
+     * @param {Object} element - Elemento a verificar
+     * @returns {boolean} Es footnote
+     */
+    isFootnoteElement(element) {
+        return element && element.type === ELEMENT_TYPES.FOOTNOTE;
+    },
+
+    /**
+     * Extrae el texto de una footnote
+     * @param {Object} element - Elemento footnote
+     * @returns {string} Texto de la nota
+     */
+    getFootnoteText(element) {
+        if (!this.isFootnoteElement(element)) {
+            throw new Error('El elemento no es una footnote válida');
+        }
+        return element.config?.text || element.content?.text || '';
+    },
+
+    /**
+     * Obtiene la configuración de numeración de una footnote
+     * @param {Object} element - Elemento footnote
+     * @returns {string} Tipo de numeración
+     */
+    getNumberingType(element) {
+        if (!this.isFootnoteElement(element)) {
+            throw new Error('El elemento no es una footnote válida');
+        }
+        return element.config?.numbering || FOOTNOTE_NUMBERING.SEQUENTIAL;
+    },
+
+    /**
+     * Valida que una footnote tenga la estructura correcta
+     * @param {Object} element - Elemento a validar
+     * @returns {Object} Resultado de validación
+     */
+    validateFootnoteElement(element) {
+        const errors = [];
+        const warnings = [];
+
+        if (!element) {
+            errors.push('Elemento footnote es null o undefined');
+            return { isValid: false, errors, warnings };
+        }
+
+        if (!this.isFootnoteElement(element)) {
+            errors.push('El elemento no es del tipo footnote');
+            return { isValid: false, errors, warnings };
+        }
+
+        const text = this.getFootnoteText(element);
+        if (!text || text.trim().length === 0) {
+            errors.push('La footnote debe tener texto válido');
+        }
+
+        if (text.length > 500) {
+            warnings.push('El texto de la footnote es muy largo (>500 caracteres)');
+        }
+
+        const numbering = this.getNumberingType(element);
+        if (!Object.values(FOOTNOTE_NUMBERING).includes(numbering)) {
+            errors.push(`Tipo de numeración inválido: ${numbering}`);
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+};
+
 export default {
     createElement,
     validateElementConfig,
     getDefaultConfig,
     getSupportedTypes,
-    ELEMENT_TYPES
+    ELEMENT_TYPES,
+    // FASE 3: Nuevas exportaciones
+    createFootnoteElementForBuilder,
+    FootnoteElementUtils
 };

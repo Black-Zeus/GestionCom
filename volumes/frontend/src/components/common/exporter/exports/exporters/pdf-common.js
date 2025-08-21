@@ -21,7 +21,13 @@ export const PDF_CONSTANTS = {
     DEFAULT_PAGE_MARGINS: [40, 60, 40, 60],
     CORPORATE_PAGE_MARGINS: [60, 100, 60, 80],
     MIN_COLUMN_WIDTH: 50,
-    MAX_SECTION_DEPTH: 6
+    MAX_SECTION_DEPTH: 6,
+    // FASE 3: Nuevas constantes para footnotes
+    MAX_FOOTNOTES_PER_PAGE: 10,
+    MIN_FOOTNOTE_FONT_SIZE: 7,
+    MAX_FOOTNOTE_FONT_SIZE: 11,
+    FOOTNOTE_SEPARATOR_WIDTH: 100,
+    FOOTNOTE_REFERENCE_OFFSET: 2
 };
 
 /**
@@ -59,6 +65,18 @@ export const baseStyles = {
         fontSize: 10,
         color: '#6b7280',
         italics: true
+    },
+    // FASE 3: Estilos para footnotes
+    footnoteText: {
+        fontSize: 9,
+        lineHeight: 1.2,
+        margin: [0, 2, 0, 2],
+        color: '#374151'
+    },
+    footnoteReference: {
+        fontSize: 8,
+        sup: true,
+        color: '#2563eb'
     }
 };
 
@@ -253,6 +271,19 @@ export const builderStyles = {
         fontSize: 10,
         alignment: 'right',
         color: '#6b7280'
+    },
+
+    // FASE 3: Estilos de footnotes para builder
+    footnote: {
+        fontSize: 9,
+        lineHeight: 1.2,
+        margin: [0, 2, 0, 2],
+        color: '#374151'
+    },
+    footnoteRef: {
+        fontSize: 8,
+        sup: true,
+        color: '#1f2937'
     }
 };
 
@@ -314,6 +345,19 @@ export const corporateBuilderStyles = {
         fontSize: 11,
         margin: [45, 6, 0, 3],
         color: '#6b7280'
+    },
+    // FASE 3: Estilos corporativos para footnotes
+    footnote: {
+        fontSize: 9,
+        lineHeight: 1.3,
+        margin: [0, 3, 0, 3],
+        color: '#374151'
+    },
+    footnoteRef: {
+        fontSize: 8,
+        sup: true,
+        color: '#2563eb',
+        link: true
     }
 };
 
@@ -1644,7 +1688,7 @@ export const generateAutoColumns = (data, options = {}) => {
 };
 
 /**
- * Estadísticas del sistema PDF con métricas de Fase 2
+ * Estadísticas del sistema PDF con métricas de Fase 3
  * @returns {Object} Estadísticas de uso
  */
 export const getPDFStats = () => {
@@ -1652,8 +1696,8 @@ export const getPDFStats = () => {
         constants: PDF_CONSTANTS,
         fonts: PDF_FONTS,
         supportedFormats: ['pdf', 'pdf-branded', 'pdf-builder', 'pdf-builder-branded'],
-        builderElements: ['cover', 'section', 'paragraph', 'text', 'image', 'table', 'list', 'pageBreak', 'columns', 'toc'],
-        version: '2.0.0', // Actualizado para Fase 2
+        builderElements: ['cover', 'section', 'paragraph', 'text', 'image', 'table', 'list', 'pageBreak', 'columns', 'toc', 'footnote'],
+        version: '3.0.0', // Actualizado para Fase 3
         features: {
             builder: true,
             corporate: true,
@@ -1662,20 +1706,45 @@ export const getPDFStats = () => {
             headers: true,
             footers: true,
             watermarks: true,
-            // FASE 2: Nuevas características
+            // FASE 2: Características existentes
             multiColumn: true,
             tableOfContents: true,
             pageBreaks: true,
             pagination: true,
             layoutManager: true,
             validation: true,
-            optimization: true
+            optimization: true,
+            // FASE 3: Nueva característica
+            footnotes: true,
+            footnoteNumbering: true,
+            footnoteReferences: true,
+            footnoteValidation: true,
+            footnotePresets: true
         },
         limits: {
             maxColumns: PDF_CONSTANTS.MAX_COLUMNS_PER_PAGE,
             maxTocLevels: PDF_CONSTANTS.MAX_TOC_LEVELS,
             maxSectionDepth: PDF_CONSTANTS.MAX_SECTION_DEPTH,
-            recommendedRows: PDF_CONSTANTS.MAX_RECOMMENDED_ROWS
+            recommendedRows: PDF_CONSTANTS.MAX_RECOMMENDED_ROWS,
+            // FASE 3: Nuevos límites para footnotes
+            maxFootnotesPerPage: PDF_CONSTANTS.MAX_FOOTNOTES_PER_PAGE,
+            minFootnoteFontSize: PDF_CONSTANTS.MIN_FOOTNOTE_FONT_SIZE,
+            maxFootnoteFontSize: PDF_CONSTANTS.MAX_FOOTNOTE_FONT_SIZE,
+            footnoteReferenceLengthLimit: 500
+        },
+        // FASE 3: Nuevas métricas específicas de footnotes
+        footnoteSupport: {
+            numberingTypes: ['sequential', 'per-page', 'roman', 'letters', 'symbols'],
+            positions: ['bottom', 'end-of-section', 'end-of-document'],
+            presets: ['academic', 'corporate', 'minimal'],
+            features: {
+                autoNumbering: true,
+                clickableReferences: true,
+                customStyles: true,
+                pageBreakHandling: true,
+                validationRules: true,
+                separatorLines: true
+            }
         }
     };
 };
