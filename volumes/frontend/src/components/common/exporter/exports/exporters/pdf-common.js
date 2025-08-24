@@ -920,13 +920,56 @@ export const createDefaultFooter = (options = {}) => {
  * @param {string|Object} column - Definición de columna
  * @returns {string} Header de la columna
  */
-export const extractColumnHeader = (column) => {
+export const extractColumnHeader_old = (column) => {
     if (typeof column === 'string') {
         return column;
     }
 
     if (column && typeof column === 'object') {
         return column.header || column.title || column.label || column.name || column.key || String(column);
+    }
+
+    return String(column);
+};
+
+/**
+ * Extrae el header de una columna sea string u objeto
+ * @param {string|Object} column - Definición de columna
+ * @returns {string} Header de la columna
+ */
+export const extractColumnHeader = (column) => {
+    if (typeof column === 'string') {
+        return column;
+    }
+
+    if (column && typeof column === 'object') {
+        // NUEVO: Soporte completo para estructura extendida
+        return column.header || 
+               column.title || 
+               column.label || 
+               column.name || 
+               column.key || 
+               column.field ||
+               column.dataIndex ||
+               column.accessor ||
+               String(column);
+    }
+
+    return String(column);
+};
+
+/**
+ * Extrae la clave de acceso a datos de una columna
+ * @param {string|Object} column - Definición de columna
+ * @returns {string} Clave de acceso
+ */
+export const extractColumnKey_old = (column) => {
+    if (typeof column === 'string') {
+        return column;
+    }
+
+    if (column && typeof column === 'object') {
+        return column.key || column.field || column.dataIndex || column.accessor || column.name || column.header;
     }
 
     return String(column);
@@ -943,7 +986,15 @@ export const extractColumnKey = (column) => {
     }
 
     if (column && typeof column === 'object') {
-        return column.key || column.field || column.dataIndex || column.accessor || column.name || column.header;
+        // NUEVO: Prioridad optimizada para nueva estructura
+        return column.key || 
+               column.field || 
+               column.dataIndex || 
+               column.accessor || 
+               column.name || 
+               column.header ||
+               column.title ||
+               String(column);
     }
 
     return String(column);
@@ -955,7 +1006,7 @@ export const extractColumnKey = (column) => {
  * @param {Object} options - Opciones de formato
  * @returns {string} Valor formateado
  */
-export const formatCellValue = (value, options = {}) => {
+export const formatCellValue_old = (value, options = {}) => {
     const {
         maxLength = PDF_CONSTANTS.DEFAULT_MAX_CELL_LENGTH,
         dateFormat = PDF_CONSTANTS.DATE_FORMAT,
@@ -1001,6 +1052,113 @@ export const formatCellValue = (value, options = {}) => {
 };
 
 /**
+ * Formatea un valor de celda según su tipo y opciones
+ * @param {any} value - Valor a formatear
+ * @param {Object} options - Opciones de formato
+ * @returns {string|Object} Valor formateado o objeto imagen
+ */
+export const formatCellValue = (value, options = {}) => {
+    const {
+        column = null,
+        maxLength = PDF_CONSTANTS.DEFAULT_MAX_CELL_LENGTH,
+        dateFormat = PDF_CONSTANTS.DATE_FORMAT,
+        numberFormat = null,
+        nullValue = '-',
+        truncateIndicator = '...'
+    } = options;
+
+    // NUEVO: Manejo de tipo imagen
+    if (column && column.type === 'image') {
+        // Si no hay valor, usar defaultValue
+        if (!value || value === '' || value === null || value === undefined) {
+            value = column.defaultValue || null;
+        }
+        
+        // Si tenemos una imagen válida
+        if (value && (typeof value === 'string' && value.trim() !== '')) {
+            const imageConfig = {
+                image: value,
+                fit: [
+                    column.format?.width || 30,
+                    column.format?.height || 30
+                ],
+                alignment: column.format?.alignment || 'center'
+            };
+            
+            // Configurar dimensiones específicas si se proporcionan
+            if (column.format?.width) imageConfig.width = column.format.width;
+            if (column.format?.height) imageConfig.height = column.format.height;
+            
+            return imageConfig;
+        }
+        
+        // Fallback para imagen sin valor válido
+        return { text: nullValue, alignment: 'center' };
+    }
+
+    // Manejar valores null/undefined para tipos no-imagen
+    if (value === null || value === undefined || value === '') {
+        return column?.defaultValue || nullValue;
+    }
+
+    let formattedValue = String(value);
+
+    // Formatear fechas
+    if (value instanceof Date || (column && column.type === 'date')) {
+        try {
+            const dateValue = value instanceof Date ? value : new Date(value);
+            if (column?.format?.pattern && column.format.locale) {
+                formattedValue = dateValue.toLocaleDateString(column.format.locale);
+            } else {
+                formattedValue = dateValue.toLocaleDateString(PDF_CONSTANTS.LOCALE, {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
+        } catch (error) {
+            formattedValue = String(value);
+        }
+    }
+    // Formatear moneda
+    else if (column && column.type === 'currency') {
+        try {
+            const numValue = typeof value === 'number' ? value : parseFloat(value);
+            const locale = column.format?.locale || PDF_CONSTANTS.LOCALE;
+            const currency = column.format?.currency || 'USD';
+            const decimals = column.format?.decimals ?? 2;
+            
+            formattedValue = numValue.toLocaleString(locale, {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        } catch (error) {
+            formattedValue = String(value);
+        }
+    }
+    // Formatear números si se especifica formato
+    else if (typeof value === 'number' && numberFormat) {
+        try {
+            formattedValue = value.toLocaleString(PDF_CONSTANTS.LOCALE, numberFormat);
+        } catch (error) {
+            formattedValue = String(value);
+        }
+    }
+
+    // Aplicar maxLength de columna si está definido
+    const finalMaxLength = column?.maxLength || maxLength;
+    
+    // Truncar si excede la longitud máxima
+    if (formattedValue.length > finalMaxLength) {
+        formattedValue = formattedValue.substring(0, finalMaxLength - truncateIndicator.length) + truncateIndicator;
+    }
+
+    return formattedValue;
+};
+
+/**
  * Genera anchos de columnas automáticos
  * @param {Array} columns - Definición de columnas
  * @param {boolean} compactMode - Si usar modo compacto
@@ -1036,7 +1194,7 @@ export const generateColumnWidths = (columns, compactMode = false) => {
  * @param {Object} options - Opciones de conversión
  * @returns {Object} Definición de tabla para pdfmake
  */
-export const convertDataToTable = (data, columns, options = {}) => {
+export const convertDataToTable_old = (data, columns, options = {}) => {
     const {
         includeHeaders = true,
         maxCellLength = PDF_CONSTANTS.DEFAULT_MAX_CELL_LENGTH,
@@ -1106,6 +1264,166 @@ export const convertDataToTable = (data, columns, options = {}) => {
             });
         } else {
             // Usar todas las propiedades del objeto como columnas
+            Object.values(row).forEach(value => {
+                const formattedValue = formatCellValue(value, {
+                    maxLength: corporateStyle ? PDF_CONSTANTS.CORPORATE_MAX_CELL_LENGTH : maxCellLength,
+                    dateFormat,
+                    numberFormat
+                });
+
+                tableRow.push({
+                    text: formattedValue,
+                    fontSize: compactMode ? 7 : 8,
+                    margin: [2, 2, 2, 2]
+                });
+            });
+        }
+
+        tableBody.push(tableRow);
+    });
+
+    // Configurar layout de tabla
+    const layout = corporateStyle ? {
+        hLineWidth: function (i, node) {
+            return (i === 0 || i === node.table.body.length) ? 2 : 0.5;
+        },
+        vLineWidth: function (i, node) {
+            return 0.5;
+        },
+        hLineColor: function (i, node) {
+            return (i === 0 || i === node.table.body.length) ? primaryColor : '#e5e7eb';
+        },
+        vLineColor: function (i, node) {
+            return '#e5e7eb';
+        },
+        paddingLeft: function (i, node) { return 8; },
+        paddingRight: function (i, node) { return 8; },
+        paddingTop: function (i, node) { return 6; },
+        paddingBottom: function (i, node) { return 6; }
+    } : {
+        fillColor: function (rowIndex, node, columnIndex) {
+            // Alternar colores de fila para mejor legibilidad
+            return (rowIndex % 2 === 0) ? '#f9fafb' : null;
+        },
+        hLineWidth: function (i, node) {
+            return (i === 0 || i === node.table.body.length) ? 2 : 1;
+        },
+        vLineWidth: function (i, node) {
+            return (i === 0 || i === node.table.widths.length) ? 2 : 1;
+        },
+        hLineColor: function (i, node) {
+            return (i === 0 || i === node.table.body.length) ? '#374151' : '#e5e7eb';
+        },
+        vLineColor: function (i, node) {
+            return (i === 0 || i === node.table.widths.length) ? '#374151' : '#e5e7eb';
+        }
+    };
+
+    return {
+        table: {
+            headerRows: includeHeaders ? 1 : 0,
+            widths: generateColumnWidths(columns, compactMode),
+            body: tableBody
+        },
+        layout
+    };
+};
+
+/**
+ * Convierte datos a formato de tabla para pdfmake - FUNCIÓN CENTRAL UNIFICADA
+ * @param {Array} data - Array de objetos
+ * @param {Array} columns - Definición de columnas
+ * @param {Object} options - Opciones de conversión
+ * @returns {Object} Definición de tabla para pdfmake
+ */
+export const convertDataToTable = (data, columns, options = {}) => {
+    const {
+        includeHeaders = true,
+        maxCellLength = PDF_CONSTANTS.DEFAULT_MAX_CELL_LENGTH,
+        dateFormat = PDF_CONSTANTS.DATE_FORMAT,
+        numberFormat = null,
+        corporateStyle = false,
+        branding = {},
+        alternateRowColors = true,
+        compactMode = false
+    } = options;
+
+    if (!Array.isArray(data) || data.length === 0) {
+        return createEmptyTable(columns, corporateStyle);
+    }
+
+    const tableBody = [];
+    const primaryColor = branding.primaryColor || (corporateStyle ? '#2563eb' : '#374151');
+    const secondaryColor = branding.secondaryColor || '#f8fafc';
+
+    // Generar cabeceras
+    if (includeHeaders && columns && columns.length > 0) {
+        const headers = columns.map(col => {
+            const headerText = extractColumnHeader(col);
+
+            if (corporateStyle) {
+                return {
+                    text: headerText,
+                    style: 'corporateTableHeader',
+                    fillColor: primaryColor,
+                    color: '#ffffff',
+                    bold: true,
+                    fontSize: compactMode ? 8 : 9
+                };
+            } else {
+                return {
+                    text: headerText,
+                    style: 'tableHeader',
+                    bold: true,
+                    fontSize: compactMode ? 8 : 9
+                };
+            }
+        });
+
+        tableBody.push(headers);
+    }
+
+    // Generar filas de datos
+    data.forEach((row, rowIndex) => {
+        const tableRow = [];
+
+        if (columns && columns.length > 0) {
+            // Usar columnas definidas
+            columns.forEach(col => {
+                const key = extractColumnKey(col);
+                const cellValue = row[key];
+                const formattedValue = formatCellValue(cellValue, {
+                    column: col, // NUEVO: Pasar columna completa
+                    maxLength: corporateStyle ? PDF_CONSTANTS.CORPORATE_MAX_CELL_LENGTH : maxCellLength,
+                    dateFormat,
+                    numberFormat
+                });
+
+                // NUEVO: Soporte para objetos imagen
+                if (typeof formattedValue === 'object' && formattedValue.image) {
+                    // Es una imagen
+                    tableRow.push({
+                        ...formattedValue,
+                        margin: [2, 2, 2, 2]
+                    });
+                } else if (typeof formattedValue === 'object' && formattedValue.text !== undefined) {
+                    // Es un objeto texto (como fallback de imagen)
+                    tableRow.push({
+                        ...formattedValue,
+                        fontSize: compactMode ? 7 : 8,
+                        margin: [2, 2, 2, 2]
+                    });
+                } else {
+                    // Es texto normal
+                    tableRow.push({
+                        text: formattedValue,
+                        fontSize: compactMode ? 7 : 8,
+                        margin: [2, 2, 2, 2]
+                    });
+                }
+            });
+        } else {
+            // Usar todas las propiedades del objeto como columnas (fallback legacy)
             Object.values(row).forEach(value => {
                 const formattedValue = formatCellValue(value, {
                     maxLength: corporateStyle ? PDF_CONSTANTS.CORPORATE_MAX_CELL_LENGTH : maxCellLength,

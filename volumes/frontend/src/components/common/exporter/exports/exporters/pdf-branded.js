@@ -370,7 +370,7 @@ export const exportExecutiveReport = async (sections, reportConfig, options = {}
  * @param {Object} options - Opciones de exportación
  * @returns {Promise<Blob>} Blob con el PDF corporativo
  */
-export const exportCorporateTable = async (data, columns, branding, options = {}) => {
+export const exportCorporateTable_old = async (data, columns, branding, options = {}) => {
     return exportBrandedPDF(data, {
         ...options,
         columns,
@@ -378,6 +378,176 @@ export const exportCorporateTable = async (data, columns, branding, options = {}
         title: options.title || 'Tabla Corporativa'
     });
 };
+
+/**
+ * Función auxiliar para tabla corporativa con nueva estructura
+ * MODIFICADO: Soporte para nueva estructura de tabla con tipos de columna extendidos
+ * @param {Object} tableConfig - Configuración completa de tabla
+ * @param {Object} branding - Configuración de branding
+ * @param {Object} options - Opciones de exportación
+ * @returns {Promise<Blob>} Blob con el PDF corporativo
+ */
+export const exportCorporateTable = async (tableConfig, branding = {}, options = {}) => {
+    // ============================================
+    // VALIDACIÓN BÁSICA DE ESTRUCTURA (OPCIONAL)
+    // ============================================
+    
+    // Determinar si es estructura antigua o nueva
+    const isNewStructure = tableConfig && 
+                          typeof tableConfig === 'object' && 
+                          (tableConfig.head || tableConfig.content);
+
+    let finalData, finalColumns, tableOptions = {};
+
+    if (isNewStructure) {
+        // =========================================
+        // NUEVA ESTRUCTURA CON SOPORTE EXTENDIDO
+        // =========================================
+        
+        // Extraer componentes de la nueva estructura
+        const { head = {}, content = {}, pagination = {} } = tableConfig;
+        const { columns = [], options: headOptions = {} } = head;
+        const { data = [] } = content;
+        
+        // Validación básica de estructura nueva (opcional)
+        if (!Array.isArray(columns) || columns.length === 0) {
+            console.warn('pdf-branded: Nueva estructura requiere columnas definidas');
+        }
+        
+        if (!Array.isArray(data)) {
+            console.warn('pdf-branded: content.data debe ser un array');
+        }
+        
+        // Procesar columnas con nueva estructura
+        finalColumns = columns.map(col => {
+            // Validar que cada columna tenga la estructura mínima
+            const processedCol = {
+                key: col.key || col.field || `col_${Date.now()}`,
+                header: col.header || col.title || col.key || 'Sin título',
+                type: col.type || 'text',
+                maxLength: col.maxLength || 50,
+                defaultValue: col.defaultValue || '',
+                format: col.format || {}
+            };
+            
+            // Validación específica para columnas de imagen
+            if (processedCol.type === 'image') {
+                processedCol.format = {
+                    width: col.format?.width || 30,
+                    height: col.format?.height || 30,
+                    ...col.format
+                };
+            }
+            
+            return processedCol;
+        });
+        
+        finalData = data;
+        
+        // Extraer opciones de tabla de la nueva estructura
+        tableOptions = {
+            includeHeaders: headOptions.includeHeaders !== false,
+            alternateRowColors: headOptions.alternateRowColors !== false,
+            paginationEnabled: pagination.enabled || false,
+            pageSize: pagination.pageSize || 25,
+            ...headOptions
+        };
+        
+    } else {
+        // =========================================  
+        // ESTRUCTURA ANTIGUA - RETROCOMPATIBILIDAD
+        // =========================================
+        
+        // Mantener compatibilidad con estructura anterior
+        // tableConfig es realmente 'data' en estructura antigua
+        finalData = Array.isArray(tableConfig) ? tableConfig : [];
+        finalColumns = branding; // En estructura antigua, 'branding' era 'columns'
+        branding = options.branding || {}; // Branding viene en options
+        
+        tableOptions = {
+            includeHeaders: true,
+            alternateRowColors: false
+        };
+    }
+    
+    // ============================================
+    // LLAMAR A exportBrandedPDF CON ESTRUCTURA PROCESADA
+    // ============================================
+    
+    return exportBrandedPDF(finalData, {
+        ...options,
+        columns: finalColumns,
+        branding,
+        title: options.title || 'Tabla Corporativa',
+        corporateStyle: true,
+        
+        // Pasar opciones de tabla al procesador
+        tableOptions,
+        
+        // Configuraciones adicionales para nueva estructura
+        supportExtendedTypes: isNewStructure,
+        columnDefinitions: isNewStructure ? finalColumns : undefined
+    });
+};
+
+/**
+ * Función de validación básica para nueva estructura (OPCIONAL)
+ * @param {Object} tableConfig - Configuración de tabla a validar
+ * @returns {Object} Resultado de validación con errores/warnings
+ */
+export const validateTableStructure = (tableConfig) => {
+    const validation = {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        structure: 'unknown'
+    };
+    
+    if (!tableConfig || typeof tableConfig !== 'object') {
+        validation.isValid = false;
+        validation.errors.push('Configuración de tabla requerida');
+        return validation;
+    }
+    
+    // Detectar tipo de estructura
+    if (tableConfig.head || tableConfig.content) {
+        validation.structure = 'new';
+        
+        // Validar estructura nueva
+        const { head = {}, content = {} } = tableConfig;
+        
+        if (!head.columns || !Array.isArray(head.columns)) {
+            validation.warnings.push('head.columns no definido o no es array');
+        }
+        
+        if (!content.data || !Array.isArray(content.data)) {
+            validation.warnings.push('content.data no definido o no es array');
+        }
+        
+        // Validar columnas con tipos
+        if (head.columns) {
+            head.columns.forEach((col, index) => {
+                if (!col.key && !col.field) {
+                    validation.warnings.push(`Columna ${index}: falta 'key' o 'field'`);
+                }
+                
+                if (col.type === 'image' && (!col.format || !col.format.width)) {
+                    validation.warnings.push(`Columna ${col.key}: imagen sin formato de dimensiones`);
+                }
+            });
+        }
+        
+    } else if (Array.isArray(tableConfig)) {
+        validation.structure = 'legacy';
+        validation.warnings.push('Usando estructura legacy - considera migrar a nueva estructura');
+    } else {
+        validation.structure = 'unknown';
+        validation.warnings.push('Estructura no reconocida');
+    }
+    
+    return validation;
+};
+
 
 // Exportar objeto con todas las funciones para compatibilidad
 export default {
