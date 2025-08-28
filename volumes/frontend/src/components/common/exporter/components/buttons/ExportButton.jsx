@@ -3,6 +3,15 @@
 
 import { useState } from "react";
 import { useQuickExport } from "../../useExport.js";
+// (Opcional) descomenta si usas PropTypes
+// import PropTypes from "prop-types";
+
+/* Helpers de normalización y seguridad */
+const normalizeFormat = (fmt) =>
+  typeof fmt === "string" ? fmt.trim().toLowerCase() : "";
+
+const toUpperSafe = (fmt) =>
+  typeof fmt === "string" ? fmt.toUpperCase() : String(fmt ?? "").toUpperCase();
 
 /**
  * Componente de botón para exportar en un formato específico
@@ -44,34 +53,35 @@ export const ExportButton = ({
   const [showConfirm, setShowConfirm] = useState(false);
   const [estimatedSize, setEstimatedSize] = useState(null);
 
-  // Hook de exportación rápida
+  // Normalizar formato y validar soporte básico
+  const fmt = normalizeFormat(format);
+  const fmtLabel = toUpperSafe(fmt || "formato");
+  const formatProvided = Boolean(fmt);
+
+  // Hook de exportación rápida (usar formato normalizado)
   const {
     export: exportData,
     isExporting,
     lastResult,
     progress,
     canExport,
-  } = useQuickExport(format, {
+  } = useQuickExport(fmt, {
     onExportStart: (exportInfo) => {
       onExportStart?.(exportInfo);
     },
     onExportComplete: (result) => {
       onExportComplete?.(result);
-      if (estimateSize) {
-        setEstimatedSize(null);
-      }
+      if (estimateSize) setEstimatedSize(null);
     },
     onExportError: (error, errorResult) => {
       onExportError?.(error, errorResult);
-      if (estimateSize) {
-        setEstimatedSize(null);
-      }
+      if (estimateSize) setEstimatedSize(null);
     },
   });
 
-  // Determinar estado de loading
+  // Determinar estado de loading / disabled
   const isLoading = loading !== undefined ? loading : isExporting;
-  const isDisabled = disabled || !canExport || isLoading;
+  const isDisabled = disabled || !canExport || isLoading || !formatProvided;
 
   /**
    * Maneja el click del botón
@@ -80,10 +90,9 @@ export const ExportButton = ({
     if (isDisabled || !data) return;
 
     try {
-      // Estimar tamaño si está habilitado
+      // Estimar tamaño si está habilitado (placeholder)
       if (estimateSize && !estimatedSize) {
-        // Aquí podrías implementar estimación de tamaño
-        // Por simplicidad, lo omitimos por ahora
+        // Implementar si se requiere
       }
 
       // Mostrar confirmación si está habilitada
@@ -95,6 +104,7 @@ export const ExportButton = ({
       // Ejecutar exportación
       await executeExport();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Error en exportación:", error);
     }
   };
@@ -106,7 +116,7 @@ export const ExportButton = ({
     try {
       await exportData(data, config);
       setShowConfirm(false);
-    } catch (error) {
+    } catch {
       // Error ya manejado por el hook
       setShowConfirm(false);
     }
@@ -115,19 +125,15 @@ export const ExportButton = ({
   /**
    * Cancela la confirmación
    */
-  const cancelExport = () => {
-    setShowConfirm(false);
-  };
+  const cancelExport = () => setShowConfirm(false);
 
   /**
    * Genera el contenido del botón
    */
   const getButtonContent = () => {
-    if (children) {
-      return children;
-    }
+    if (children) return children;
 
-    const formatName = format.toUpperCase();
+    const formatName = fmtLabel;
 
     if (isLoading) {
       return (
@@ -149,6 +155,7 @@ export const ExportButton = ({
   const getButtonClasses = () => {
     const baseClasses = [
       // Clases base del botón
+      "export-button", // para estilos de accesibilidad inyectados abajo
       "btn-base",
       "relative",
       "overflow-hidden",
@@ -168,14 +175,14 @@ export const ExportButton = ({
         baseClasses.push("btn-md");
     }
 
-    // Variante y colores
+    // Estado hover / cursor
     if (isLoading) {
       baseClasses.push("cursor-wait");
     } else if (!isDisabled) {
       baseClasses.push("hover-lift");
     }
 
-    // Estados de éxito/error
+    // Estados de éxito/error de la última exportación
     if (lastResult?.success === true) {
       baseClasses.push("bg-success-500", "hover:bg-success-600", "text-white");
     } else if (lastResult?.success === false) {
@@ -212,8 +219,8 @@ export const ExportButton = ({
           break;
         case "primary":
         default:
-          // Colores específicos por formato
-          switch (format) {
+          // Colores específicos por formato (usar formato normalizado)
+          switch (fmt) {
             case "csv":
               baseClasses.push(
                 "bg-success-600",
@@ -267,6 +274,10 @@ export const ExportButton = ({
   const getTooltipText = () => {
     if (!showTooltip) return undefined;
 
+    if (!formatProvided) {
+      return "Debe indicar un formato de exportación (csv, json, excel, pdf, txt).";
+    }
+
     if (isDisabled && !canExport) {
       return "Sistema de exportación no disponible";
     }
@@ -276,9 +287,7 @@ export const ExportButton = ({
     }
 
     if (isLoading) {
-      return (
-        progress?.message || `Exportando en formato ${format.toUpperCase()}...`
-      );
+      return progress?.message || `Exportando en formato ${fmtLabel}...`;
     }
 
     if (lastResult?.success === false) {
@@ -291,7 +300,7 @@ export const ExportButton = ({
       ).toLocaleString()})`;
     }
 
-    return `Exportar datos en formato ${format.toUpperCase()}`;
+    return `Exportar datos en formato ${fmtLabel}`;
   };
 
   // Renderizar modal de confirmación si está habilitado
@@ -309,8 +318,7 @@ export const ExportButton = ({
 
           <div className="mb-6">
             <p className="text-secondary-700 dark:text-secondary-300 mb-3">
-              ¿Está seguro que desea exportar los datos en formato{" "}
-              {format.toUpperCase()}?
+              ¿Está seguro que desea exportar los datos en formato {fmtLabel}?
             </p>
 
             {estimatedSize && (
@@ -387,16 +395,20 @@ export const ExportButton = ({
  * @returns {string} Tamaño formateado
  */
 const formatFileSize = (bytes) => {
+  if (!bytes && bytes !== 0) return "";
   if (bytes === 0) return "0 Bytes";
 
   const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.floor(Math.log(bytes) / Math.log(k))
+  );
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
-// Propiedades por defecto
+// Propiedades por defecto (fallbacks)
 ExportButton.defaultProps = {
   variant: "primary",
   size: "medium",
@@ -409,6 +421,27 @@ ExportButton.defaultProps = {
   className: "",
   style: {},
 };
+
+// (Opcional) Tipado de props con PropTypes
+// ExportButton.propTypes = {
+//   format: PropTypes.oneOf(["csv", "json", "excel", "pdf", "txt"]).isRequired,
+//   data: PropTypes.object,
+//   config: PropTypes.object,
+//   children: PropTypes.node,
+//   variant: PropTypes.oneOf(["primary", "secondary", "outline"]),
+//   size: PropTypes.oneOf(["small", "medium", "large"]),
+//   disabled: PropTypes.bool,
+//   loading: PropTypes.bool,
+//   showProgress: PropTypes.bool,
+//   showTooltip: PropTypes.bool,
+//   confirmBeforeExport: PropTypes.bool,
+//   estimateSize: PropTypes.bool,
+//   onExportStart: PropTypes.func,
+//   onExportComplete: PropTypes.func,
+//   onExportError: PropTypes.func,
+//   className: PropTypes.string,
+//   style: PropTypes.object,
+// };
 
 // Inyectar estilos adicionales si no están en Tailwind (opcional)
 if (
@@ -423,14 +456,14 @@ if (
       outline: 2px solid theme('colors.primary.500');
       outline-offset: 2px;
     }
-    
+
     /* Animación suave para el hover-lift */
     @media (prefers-reduced-motion: no-preference) {
       .hover-lift {
         transform: translateZ(0);
       }
     }
-    
+
     /* Mejoras específicas para dark mode */
     @media (prefers-color-scheme: dark) {
       .export-button:focus-visible {

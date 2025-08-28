@@ -602,7 +602,7 @@ export const sidebarNavData = {
                         text: "Export / Download",
                         icon: "📁",
                         path: null,
-                        badge: "ACTIVO",
+                        badge: "V2.0",
                         hasSubmenu: true,
                         active: false,
                         submenu: [
@@ -619,51 +619,25 @@ export const sidebarNavData = {
                                 path: "/demos/exporters/export"
                             },
                             {
-                                id: "demo-download-button",
-                                text: "DownloadButton",
+                                id: "demo-download-manager",
+                                text: "DownloadManager",
                                 icon: "⬇️",
                                 path: "/demos/exporters/download"
                             },
                             {
                                 id: "demo-casos-avanzados",
-                                text: "Casos Avanzados",
+                                text: "Configuración Avanzada",
                                 icon: "⚡",
                                 path: "/demos/exporters/advanced"
                             },
                             {
-                                id: "demo-rendimiento",
-                                text: "Pruebas de Rendimiento",
+                                id: "demo-performance",
+                                text: "Performance & Benchmarks",
                                 icon: "🚀",
                                 path: "/demos/exporters/performance"
                             }
                         ]
                     }
-                    // 🔽 AQUÍ PUEDES AGREGAR FÁCILMENTE NUEVOS BLOQUES DE DEMOS 🔽
-
-                    // Ejemplo de estructura para futuros demos:
-                    // {
-                    //     id: "demos-componentes-ui",
-                    //     text: "Componentes UI",
-                    //     icon: "🎨",
-                    //     path: null,
-                    //     badge: "PRÓXIMAMENTE",
-                    //     hasSubmenu: true,
-                    //     active: false,
-                    //     submenu: [
-                    //         {
-                    //             id: "demo-buttons",
-                    //             text: "Botones",
-                    //             icon: "🔘",
-                    //             path: "/demos/components/buttons"
-                    //         },
-                    //         {
-                    //             id: "demo-forms",
-                    //             text: "Formularios",
-                    //             icon: "📝",
-                    //             path: "/demos/components/forms"
-                    //         }
-                    //     ]
-                    // },
                 ]
             }
         ]

@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useExport } from "../../useExport.js";
-import { ExportProgress } from "../utils/ExportProgress.jsx";
+import { ExportProgress } from "../../utils/ExportProgress.jsx";
 
 /**
  * Componente dropdown para exportación múltiple

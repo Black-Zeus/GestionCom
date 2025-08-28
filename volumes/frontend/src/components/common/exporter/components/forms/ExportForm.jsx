@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useConfigurableExport } from "../../useExport.js";
-import { ExportProgress } from "../utils/ExportProgress.jsx";
+import { ExportProgress } from "../../utils/ExportProgress.jsx";
 
 // Importar formularios específicos
 import { ExportFormJSON } from "./ExportFormJSON.jsx";
