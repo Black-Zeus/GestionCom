@@ -2,7 +2,7 @@
 // Formulario de configuración específico para exportación TXT
 
 import { useState, useCallback } from "react";
-import { ExportProgress } from "../utils/ExportProgress.jsx";
+import { ExportProgress } from "../../utils/ExportProgress.jsx";
 
 /**
  * Formulario de configuración para exportación TXT

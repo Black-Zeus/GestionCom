@@ -5,7 +5,6 @@ import { DataProcessor, DataTransformer } from '../utils/data-processor.js';
 import { validateExportData } from '../utils/validation.js';
 import { downloadFile } from '../utils/download.js';
 import { getExportConfig } from '../config/index.js';
-import { dataUtils } from '../utils/data-processor.js';
 
 /**
  * Exportador CSV
