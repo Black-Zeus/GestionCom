@@ -48,10 +48,17 @@ banner_menu_ambiente(){
     fi
   fi
 
+  # Detectar rama de Git (si aplica)
+  local git_branch="No es repositorio Git"
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    git_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+  fi
+
   echo "Archivo de configuración: $COMPOSE_FILE"
   echo "Stack: $STACK"
   echo "Entorno: $ENV"
   echo "IP Actual: $current_ip"
+  echo "Rama Git: $git_branch"
 }
 #############################################################
 ###                      Menus
@@ -732,30 +739,34 @@ drop_persistence() {
         fi
       done
 
-      # Eliminar node_modules de frontend
-      echo -n "Eliminando node_modules de frontend..."
-      if [ -d "frontend/node_modules" ]; then
-        rm -rf "frontend/node_modules" 2>/dev/null
+      # Eliminar carpetas node_modules en todo el proyecto
+      echo -n "Eliminando carpetas node_modules..."
+      found=$(find . -type d -name "node_modules")
+
+      if [ -n "$found" ]; then
+        find . -type d -name "node_modules" -exec rm -rf {} + 2>/dev/null
         if [ $? -eq 0 ]; then
           echo -e " ${GREEN}[OK]${NC}"
         else
           echo -e " ${RED}[Error al eliminar]${NC}"
         fi
       else
-        echo -e " ${RED}[No existe]${NC}"
+        echo -e " ${RED}[No se encontraron]${NC}"
       fi
 
-      # Eliminar package-lock.json de frontend
-      echo -n "Eliminando package-lock.json de frontend..."
-      if [ -f "frontend/package-lock.json" ]; then
-        rm -f "frontend/package-lock.json" 2>/dev/null
+      # Eliminar archivos package-lock.json en todo el proyecto
+      echo -n "Eliminando archivos package-lock.json..."
+      found=$(find . -type f -name "package-lock.json")
+
+      if [ -n "$found" ]; then
+        find . -type f -name "package-lock.json" -exec rm -f {} + 2>/dev/null
         if [ $? -eq 0 ]; then
           echo -e " ${GREEN}[OK]${NC}"
         else
           echo -e " ${RED}[Error al eliminar]${NC}"
         fi
       else
-        echo -e " ${RED}[No existe]${NC}"
+        echo -e " ${RED}[No se encontraron]${NC}"
       fi
 
 
