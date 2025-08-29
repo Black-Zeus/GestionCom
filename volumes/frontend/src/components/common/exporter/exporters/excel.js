@@ -48,14 +48,17 @@ export const excel = {
             const useExcelJS = fullConfig.useExcelJS !== false;
 
             let excelBuffer;
-            if (useExcelJS) {
-                excelBuffer = await this.exportWithExcelJS(validation.data.data, fullConfig);
+            if (useExcelJS && await this.isExcelJSAvailable()) {
+                excelBuffer = await this.exportWithExcelJS(validation.data, fullConfig);
             } else {
-                excelBuffer = await this.exportWithXLSX(validation.data.data, fullConfig);
+                excelBuffer = await this.exportWithXLSX(validation.data, fullConfig);
+                if (useExcelJS) {
+                    result.warnings.push('ExcelJS no disponible, usando XLSX como alternativa');
+                }
             }
 
             // Preparar información del archivo
-            const filename = fullConfig.filename || 'export';
+            const filename = `${fullConfig.filename || 'export'}.xlsx`;
             result.filename = filename;
             result.content = excelBuffer;
             result.size = excelBuffer.byteLength || excelBuffer.length;
@@ -65,10 +68,9 @@ export const excel = {
                 const downloadSuccess = await downloadFile(
                     excelBuffer,
                     filename,
-                    'xlsx',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     {
-                        includeTimestamp: fullConfig.timestamp,
-                        useFileSaver: true
+                        includeTimestamp: fullConfig.timestamp
                     }
                 );
 
@@ -189,7 +191,7 @@ export const excel = {
             return;
         }
 
-        const visibleColumns = columns.filter(col => col.visible);
+        const visibleColumns = columns.filter(col => col.visible !== false);
 
         // Configurar columnas
         worksheet.columns = visibleColumns.map(col => ({
@@ -226,7 +228,7 @@ export const excel = {
         // Configurar zoom
         if (config.zoom) {
             worksheet.views = [{
-                ...worksheet.views[0],
+                ...worksheet.views?.[0],
                 zoomScale: config.zoom
             }];
         }
@@ -246,7 +248,7 @@ export const excel = {
             return XLSX.utils.aoa_to_sheet([]);
         }
 
-        const visibleColumns = columns.filter(col => col.visible);
+        const visibleColumns = columns.filter(col => col.visible !== false);
 
         // Preparar datos para XLSX
         const headers = visibleColumns.map(col => col.header);
@@ -604,7 +606,6 @@ export const excel = {
      */
     generatePreview(data, config = {}, maxRows = 10) {
         try {
-            const processor = new DataProcessor(data, config).process();
             const sheets = DataTransformer.toExcelSheets(data, config);
 
             let preview = '';
@@ -615,7 +616,7 @@ export const excel = {
                 preview += `HOJA: ${sheet.name}\n`;
                 preview += '='.repeat(20) + '\n';
 
-                const visibleColumns = sheet.columns.filter(col => col.visible);
+                const visibleColumns = sheet.columns.filter(col => col.visible !== false);
                 const headers = visibleColumns.map(col => col.header).join('\t');
                 preview += headers + '\n';
                 preview += '-'.repeat(headers.length) + '\n';
@@ -670,7 +671,7 @@ export const excel = {
 
     /**
      * Verifica si ExcelJS está disponible
-     * @returns {boolean} Disponibilidad
+     * @returns {Promise<boolean>} Disponibilidad
      */
     async isExcelJSAvailable() {
         try {

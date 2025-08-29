@@ -637,6 +637,23 @@ export const sidebarNavData = {
                                 path: "/demos/exporters/performance"
                             }
                         ]
+                    },
+                    {
+                        id: "demos-modal",
+                        text: "Modal Manger",
+                        icon: "📁",
+                        path: null,
+                        badge: "V1.0",
+                        hasSubmenu: true,
+                        active: false,
+                        submenu: [
+                            {
+                                id: "modal",
+                                text: "Vista Principal",
+                                icon: "🎯",
+                                path: "/demos/modal"
+                            }
+                        ]
                     }
                 ]
             }

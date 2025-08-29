@@ -11,6 +11,7 @@ const AdvancedDemo = lazy(() => import("@/pages/demos/exporters/AdvancedDemo"));
 const PerformanceDemo = lazy(() =>
   import("@/pages/demos/exporters/PerformanceDemo")
 );
+const ModalDemo = lazy(() => import("@/pages/demos/modal/ModalDemo"));
 
 export const demoRoutes = [
   {
@@ -72,6 +73,19 @@ export const demoRoutes = [
       module: "performance-demo",
       features: ["benchmarks", "memoria", "escalabilidad", "metricas"],
       parent: "/demos/exporters",
+    },
+  },
+  {
+    path: "/demos/modal",
+    component: ModalDemo,
+    title: "Demo Modales - Gestor Modales",
+    description: "Modales administrados internos",
+    requiresAuth: false,
+    requiredRoles: [],
+    meta: {
+      module: "modal",
+      features: ["modal"],
+      parent: "/demos",
     },
   },
 ];

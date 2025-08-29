@@ -31,19 +31,25 @@ export const jsonDefaults = {
  * Configuraciones por defecto para Excel
  */
 export const excelDefaults = {
+    useExcelJS: true, // Usar ExcelJS en lugar de xlsx para más funcionalidades
     autoFitColumns: true,
     freezeHeader: true,
+    autoFilter: true,
+    showBorders: true,
     includeMetadata: true,
     sheetName: 'Datos',
-    useExcelJS: true, // Usar ExcelJS en lugar de xlsx para más funcionalidades
+    zoom: 100,
     headerStyle: {
         bold: true,
         backgroundColor: 'F2F2F2',
-        textColor: '333333'
+        textColor: '333333',
+        fontSize: 11,
+        height: 20,
     },
     cellStyle: {
+        fontSize: 10,
         textColor: '000000',
-        backgroundColor: 'FFFFFF'
+        backgroundColor: 'FFFFFF',
     },
     autoDownload: true,
     filename: 'export'
@@ -71,7 +77,7 @@ export const pdfDefaults = {
         enabled: false,
         text: '',
         logo: null,
-        height: 30
+        height: 30,
     },
 
     // Configuración de pie de página
@@ -79,7 +85,7 @@ export const pdfDefaults = {
         enabled: true,
         text: '',
         pageNumbers: true,
-        height: 30
+        height: 30,
     },
 
     // Configuración de branding
@@ -87,58 +93,27 @@ export const pdfDefaults = {
         orgName: '',
         primaryColor: '#333333',
         secondaryColor: '#666666',
-        logo: null
+        logo: null,
     },
 
-    // Estilos de texto
+    // Estilos de contenido
     styles: {
-        header1: {
-            fontSize: 20,
-            bold: true,
-            margin: [0, 0, 0, 10]
-        },
-        header2: {
-            fontSize: 16,
-            bold: true,
-            margin: [0, 10, 0, 5]
-        },
-        header3: {
-            fontSize: 14,
-            bold: true,
-            margin: [0, 8, 0, 4]
-        },
-        normal: {
-            fontSize: 10,
-            margin: [0, 0, 0, 5]
-        },
-        tableHeader: {
-            fontSize: 10,
-            bold: true,
-            fillColor: '#F2F2F2',
-            margin: [5, 5, 5, 5]
-        },
-        tableCell: {
-            fontSize: 9,
-            margin: [5, 3, 5, 3]
-        }
+        fontSize: 10,
+        headerSize: 14,
+        titleSize: 20,
+        lineHeight: 1.4,
     },
 
-    // Configuración de tablas
-    table: {
-        headerRows: 1,
-        widths: 'auto',
-        layout: 'lightHorizontalLines'
-    },
-
+    // Configuraciones generales
+    filename: 'export',
+    timestamp: true,
     autoDownload: true,
-    filename: 'export'
 };
 
 /**
  * Configuraciones por defecto para TXT
  */
 export const txtDefaults = {
-    delimiter: '\t',
     encoding: 'utf-8',
     includeHeader: true,
     lineBreak: '\n',
@@ -290,7 +265,93 @@ export const presetConfigs = {
                 tableCell: { fontSize: 10 }
             }
         }
-    }
+    },
+
+    // NUEVAS CONFIGURACIONES AGREGADAS:
+
+    // Configuración para reporte ejecutivo (usado en AdvancedDemo)
+    reporteEjecutivo: {
+        pdf: {
+            pageSize: "A4",
+            pageOrientation: "portrait",
+            pageMargins: [60, 80, 60, 80],
+            header: {
+                enabled: true,
+                text: "REPORTE EJECUTIVO",
+                height: 40,
+            },
+            footer: {
+                enabled: true,
+                text: "Confidencial - Solo uso interno",
+                pageNumbers: true,
+                height: 30,
+            },
+            cover: {
+                enabled: true,
+                title: "Reporte Ejecutivo",
+                subtitle: "Análisis de datos completo",
+                backgroundColor: "#FFFFFF",
+            },
+            branding: {
+                orgName: "Empresa Demo S.A.",
+                primaryColor: "#1e40af",
+                secondaryColor: "#3b82f6",
+            },
+            styles: {
+                fontSize: 11,
+                headerSize: 16,
+                titleSize: 20,
+                lineHeight: 1.4,
+            },
+            filename: "reporte_ejecutivo",
+            timestamp: true,
+            autoDownload: true,
+        },
+    },
+
+    // Configuración para hoja de datos (usado en AdvancedDemo)
+    hojaDatos: {
+        excel: {
+            useExcelJS: true,
+            autoFitColumns: true,
+            freezeHeader: true,
+            autoFilter: true,
+            showBorders: true,
+            includeMetadata: true,
+            sheetName: "Datos Completos",
+            zoom: 90,
+            headerStyle: {
+                bold: true,
+                backgroundColor: "366092",
+                textColor: "FFFFFF",
+                fontSize: 12,
+                height: 25,
+            },
+            cellStyle: {
+                fontSize: 10,
+                textColor: "000000",
+                backgroundColor: "FFFFFF",
+            },
+            filename: "datos_completos",
+            timestamp: true,
+            autoDownload: true,
+        },
+    },
+
+    // Configuración para CSV europeo (usado en AdvancedDemo)
+    csvEuropeo: {
+        csv: {
+            delimiter: ";",
+            includeHeader: true,
+            encoding: "utf-8-bom",
+            quoteStrings: true,
+            escapeQuotes: true,
+            lineBreak: "\n",
+            filename: "datos_europeo",
+            timestamp: true,
+            autoDownload: true,
+        },
+    },
 };
 
 /**

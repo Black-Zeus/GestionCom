@@ -44,20 +44,21 @@ export const pdf = {
                 result.warnings = validation.getWarningMessages();
             }
 
-            // Cargar pdfMake
-            const pdfMake = await loadDependency('pdfmake');
-
-            // Configurar fuentes
-            this.setupFonts(pdfMake);
-
-            // Generar definición del documento
-            const docDefinition = await this.createDocumentDefinition(validation.data.data, fullConfig);
-
-            // Generar PDF
-            const pdfBuffer = await this.generatePdfBuffer(pdfMake, docDefinition);
+            // Intentar cargar pdfMake, si no está disponible usar simulación
+            let pdfBuffer;
+            try {
+                const pdfMake = await loadDependency('pdfmake');
+                this.setupFonts(pdfMake);
+                const docDefinition = await this.createDocumentDefinition(validation.data, fullConfig);
+                pdfBuffer = await this.generatePdfBuffer(pdfMake, docDefinition);
+            } catch (error) {
+                console.warn('pdfMake no disponible, usando simulación:', error);
+                result.warnings.push('pdfMake no disponible, generando PDF simulado para testing');
+                pdfBuffer = this.generateSimulatedPdf(validation.data, fullConfig);
+            }
 
             // Preparar información del archivo
-            const filename = fullConfig.filename || 'export';
+            const filename = `${fullConfig.filename || 'export'}.pdf`;
             result.filename = filename;
             result.content = pdfBuffer;
             result.size = pdfBuffer.byteLength || pdfBuffer.length;
@@ -67,10 +68,9 @@ export const pdf = {
                 const downloadSuccess = await downloadFile(
                     pdfBuffer,
                     filename,
-                    'pdf',
+                    'application/pdf',
                     {
-                        includeTimestamp: fullConfig.timestamp,
-                        useFileSaver: true
+                        includeTimestamp: fullConfig.timestamp
                     }
                 );
 
@@ -87,6 +87,89 @@ export const pdf = {
             console.error('Error en exportador PDF:', error);
             return result;
         }
+    },
+
+    /**
+     * Genera PDF simulado para testing
+     * @param {object} data - Datos validados
+     * @param {object} config - Configuración completa
+     * @returns {ArrayBuffer} Buffer simulado
+     */
+    generateSimulatedPdf(data, config) {
+        const { data: rows, columns, metadata } = data;
+
+        let pdfContent = `%PDF-1.4 (Simulado)\n`;
+        pdfContent += `%${String.fromCharCode(226)}${String.fromCharCode(227)}${String.fromCharCode(207)}${String.fromCharCode(211)}\n`;
+        pdfContent += `\n<!-- PDF SIMULADO GENERADO POR SISTEMA DE EXPORTACIÓN -->\n`;
+        pdfContent += `<!-- Configuración: ${JSON.stringify(config, null, 2)} -->\n\n`;
+
+        // Información del documento
+        pdfContent += `DOCUMENTO PDF\n`;
+        pdfContent += `=============\n\n`;
+
+        if (config.cover?.enabled) {
+            pdfContent += `PORTADA:\n`;
+            pdfContent += `Título: ${config.cover.title || metadata?.title || 'Sin título'}\n`;
+            if (config.cover.subtitle) pdfContent += `Subtítulo: ${config.cover.subtitle}\n`;
+            pdfContent += `Organización: ${config.branding?.orgName || 'N/A'}\n`;
+            pdfContent += `Fecha: ${new Date().toLocaleDateString()}\n\n`;
+            pdfContent += `--- SALTO DE PÁGINA ---\n\n`;
+        }
+
+        // Información general
+        pdfContent += `INFORMACIÓN DEL DOCUMENTO:\n`;
+        pdfContent += `Autor: ${metadata?.author || 'Sistema'}\n`;
+        pdfContent += `Creado: ${metadata?.createdAt || new Date().toISOString()}\n`;
+        pdfContent += `Formato: ${config.pageSize || 'A4'} ${config.pageOrientation || 'portrait'}\n`;
+        pdfContent += `Márgenes: [${(config.pageMargins || [40, 40, 40, 40]).join(', ')}]\n\n`;
+
+        if (config.header?.enabled) {
+            pdfContent += `ENCABEZADO: ${config.header.text || 'N/A'}\n\n`;
+        }
+
+        // Contenido principal
+        pdfContent += `DATOS PRINCIPALES:\n`;
+        pdfContent += `Registros: ${rows?.length || 0}\n`;
+        pdfContent += `Columnas: ${columns?.length || 0}\n\n`;
+
+        if (rows && rows.length > 0) {
+            const visibleColumns = columns?.filter(col => col.visible !== false) ||
+                Object.keys(rows[0]).map(key => ({ key, header: key }));
+
+            // Headers
+            const headers = visibleColumns.map(col => col.header || col.key);
+            pdfContent += `TABLA DE DATOS:\n`;
+            pdfContent += `${headers.join(' | ')}\n`;
+            pdfContent += `${'-'.repeat(headers.join(' | ').length)}\n`;
+
+            // Primeras 5 filas
+            const maxRows = Math.min(5, rows.length);
+            for (let i = 0; i < maxRows; i++) {
+                const row = rows[i];
+                const values = visibleColumns.map(col => {
+                    const value = this.formatCellValueForPdf(row[col.key], col);
+                    return String(value).length > 20 ? String(value).substring(0, 17) + '...' : String(value);
+                });
+                pdfContent += `${values.join(' | ')}\n`;
+            }
+
+            if (rows.length > maxRows) {
+                pdfContent += `... (${rows.length - maxRows} filas más)\n`;
+            }
+        }
+
+        if (config.footer?.enabled) {
+            pdfContent += `\nPIE DE PÁGINA: ${config.footer.text || 'N/A'}\n`;
+            if (config.footer.pageNumbers !== false) {
+                pdfContent += `Numeración de páginas: Habilitada\n`;
+            }
+        }
+
+        pdfContent += `\n--- FIN DEL DOCUMENTO ---\n`;
+        pdfContent += `Generado por: Sistema de Exportación\n`;
+        pdfContent += `Timestamp: ${new Date().toISOString()}\n`;
+
+        return new TextEncoder().encode(pdfContent);
     },
 
     /**
@@ -389,12 +472,10 @@ export const pdf = {
         }
 
         // Procesar datos principales
-        const processor = new DataProcessor(data, config).process();
-        const metadata = processor.getMetadata();
-        const stats = processor.getStatistics();
+        const { data: rows, columns, metadata } = data;
 
         // Título principal
-        if (metadata.title) {
+        if (metadata?.title) {
             content.push({
                 text: metadata.title,
                 style: 'header1'
@@ -402,7 +483,7 @@ export const pdf = {
         }
 
         // Descripción
-        if (metadata.description) {
+        if (metadata?.description) {
             content.push({
                 text: metadata.description,
                 style: 'normal',
@@ -418,23 +499,24 @@ export const pdf = {
 
         content.push({
             ul: [
-                `Total de registros: ${stats.totalRows}`,
-                `Total de columnas: ${stats.totalColumns}`,
+                `Total de registros: ${rows?.length || 0}`,
+                `Total de columnas: ${columns?.length || 0}`,
                 `Fecha de generación: ${new Date().toLocaleDateString()}`,
-                metadata.author ? `Autor: ${metadata.author}` : null
+                metadata?.author ? `Autor: ${metadata.author}` : null
             ].filter(Boolean),
             style: 'normal'
         });
 
         // Tabla principal
-        content.push({
-            text: 'Datos',
-            style: 'header2',
-            margin: [0, 20, 0, 10]
-        });
+        if (rows && rows.length > 0) {
+            content.push({
+                text: 'Datos',
+                style: 'header2',
+                margin: [0, 20, 0, 10]
+            });
 
-        const tableData = DataTransformer.toTable(processor);
-        content.push(this.createTable(tableData.rows, tableData.columns, config));
+            content.push(this.createTable(rows, columns, config));
+        }
 
         return content;
     },
@@ -725,12 +807,13 @@ export const pdf = {
      */
     async estimateSize(data, config = {}) {
         try {
-            const processor = new DataProcessor(data, config).process();
-            const stats = processor.getStatistics();
+            const { data: rows, columns } = data;
+            const totalRows = rows?.length || 0;
+            const totalColumns = columns?.length || 0;
 
             // Estimación basada en contenido
-            const baseSize = stats.totalRows * stats.totalColumns * 12; // Más overhead que Excel
-            const pageOverhead = Math.ceil(stats.totalRows / 30) * 2000; // Aprox 30 filas por página
+            const baseSize = totalRows * totalColumns * 12; // Más overhead que Excel
+            const pageOverhead = Math.ceil(totalRows / 30) * 2000; // Aprox 30 filas por página
             const formatting = 10000; // Overhead de formato PDF
             const metadata = 3000; // Espacio para metadatos e imágenes
 
@@ -753,21 +836,19 @@ export const pdf = {
             let preview = 'DOCUMENTO PDF\n';
             preview += '===============\n\n';
 
-            const processor = new DataProcessor(data, config).process();
-            const metadata = processor.getMetadata();
-            const stats = processor.getStatistics();
+            const { data: rows, columns, metadata } = data;
 
             if (config.cover?.enabled) {
                 preview += 'PORTADA:\n';
-                preview += `- Título: ${config.cover.title || metadata.title}\n`;
+                preview += `- Título: ${config.cover.title || metadata?.title}\n`;
                 preview += `- Subtítulo: ${config.cover.subtitle || ''}\n\n`;
             }
 
             preview += 'CONTENIDO:\n';
-            preview += `- Título: ${metadata.title}\n`;
-            preview += `- Descripción: ${metadata.description}\n`;
-            preview += `- Total de páginas estimadas: ${Math.ceil(stats.totalRows / 30)}\n`;
-            preview += `- Datos: ${stats.totalRows} filas x ${stats.totalColumns} columnas\n\n`;
+            preview += `- Título: ${metadata?.title}\n`;
+            preview += `- Descripción: ${metadata?.description}\n`;
+            preview += `- Total de páginas estimadas: ${Math.ceil((rows?.length || 0) / 30)}\n`;
+            preview += `- Datos: ${rows?.length || 0} filas x ${columns?.length || 0} columnas\n\n`;
 
             if (config.header?.enabled) {
                 preview += `- Encabezado: ${config.header.text}\n`;

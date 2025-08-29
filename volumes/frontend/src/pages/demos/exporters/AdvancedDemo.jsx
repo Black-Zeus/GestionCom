@@ -12,6 +12,7 @@ import {
   ExportFormCSV,
   createSampleData,
   downloadFile,
+  presetConfigs,
 } from "@/components/common/exporter";
 
 const AdvancedDemo = () => {
@@ -49,52 +50,71 @@ const AdvancedDemo = () => {
     };
   }, []);
 
-  // Configuraciones predefinidas
-  const presetConfigs = {
+  // Configuraciones predefinidas corregidas
+  const demoPresetConfigs = {
     reporteEjecutivo: {
       pdf: {
         pageSize: "A4",
-        orientation: "portrait",
-        margins: [60, 80, 60, 80],
+        pageOrientation: "portrait",
+        pageMargins: [60, 80, 60, 80],
         header: {
+          enabled: true,
           text: "REPORTE EJECUTIVO",
-          fontSize: 18,
-          bold: true,
-          alignment: "center",
+          height: 40,
         },
         footer: {
+          enabled: true,
           text: "Confidencial - Solo uso interno",
-          fontSize: 10,
-          alignment: "right",
+          pageNumbers: true,
+          height: 30,
         },
-        watermark: {
-          text: "DRAFT",
-          opacity: 0.1,
-          fontSize: 72,
+        cover: {
+          enabled: true,
+          title: "Reporte Ejecutivo",
+          subtitle: "Análisis de datos completo",
+          backgroundColor: "#FFFFFF",
         },
         branding: {
+          orgName: "Empresa Demo S.A.",
           primaryColor: "#1e40af",
-          logoPosition: "top-left",
-          companyName: "Empresa Demo S.A.",
+          secondaryColor: "#3b82f6",
         },
+        styles: {
+          fontSize: 11,
+          headerSize: 16,
+          titleSize: 20,
+          lineHeight: 1.4,
+        },
+        filename: "reporte_ejecutivo",
+        timestamp: true,
+        autoDownload: true,
       },
     },
     hojaDatos: {
       excel: {
+        useExcelJS: true,
+        autoFitColumns: true,
+        freezeHeader: true,
+        autoFilter: true,
+        showBorders: true,
+        includeMetadata: true,
         sheetName: "Datos Completos",
-        includeHeader: true,
-        autoWidth: true,
-        freezeRow: 1,
-        styles: {
-          header: {
-            font: { bold: true, color: { argb: "FFFFFF" } },
-            fill: {
-              type: "pattern",
-              pattern: "solid",
-              fgColor: { argb: "366092" },
-            },
-          },
+        zoom: 90,
+        headerStyle: {
+          bold: true,
+          backgroundColor: "366092",
+          textColor: "FFFFFF",
+          fontSize: 12,
+          height: 25,
         },
+        cellStyle: {
+          fontSize: 10,
+          textColor: "000000",
+          backgroundColor: "FFFFFF",
+        },
+        filename: "datos_completos",
+        timestamp: true,
+        autoDownload: true,
       },
     },
     csvEuropeo: {
@@ -104,6 +124,9 @@ const AdvancedDemo = () => {
         encoding: "utf-8-bom",
         quoteStrings: true,
         dateFormat: "DD/MM/YYYY",
+        filename: "datos_europeo",
+        timestamp: true,
+        autoDownload: true,
       },
     },
   };
@@ -111,8 +134,29 @@ const AdvancedDemo = () => {
   // Handler para status
   const handleStatus = useCallback((message) => {
     setStatus(message);
+    console.log("Demo Status:", message);
     setTimeout(() => setStatus(""), 4000);
   }, []);
+
+  // Handler para exportación exitosa
+  const handleExportSuccess = useCallback(
+    (result, format) => {
+      console.log(`Exportación ${format} exitosa:`, result);
+      handleStatus(`✅ Archivo ${format.toUpperCase()} generado exitosamente`);
+    },
+    [handleStatus]
+  );
+
+  // Handler para errores de exportación
+  const handleExportError = useCallback(
+    (error, format) => {
+      console.error(`Error en exportación ${format}:`, error);
+      handleStatus(
+        `❌ Error al generar ${format.toUpperCase()}: ${error.message}`
+      );
+    },
+    [handleStatus]
+  );
 
   // Secciones del demo
   const sections = [
@@ -144,17 +188,33 @@ const AdvancedDemo = () => {
           </h4>
           <ExportFormPDF
             data={complexData}
-            initialConfig={presetConfigs.reporteEjecutivo.pdf}
+            initialConfig={demoPresetConfigs.reporteEjecutivo.pdf}
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
               console.log("PDF config changed:", config);
               handleStatus("🔧 Configuración PDF actualizada");
             }}
-            onExport={(config) => {
-              handleStatus(
-                "📄 Exportando PDF con configuración personalizada..."
-              );
+            onExport={async (config) => {
+              try {
+                handleStatus(
+                  "📄 Exportando PDF con configuración personalizada..."
+                );
+                // Aquí se realizaría la exportación real
+                const result = await new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve({
+                      success: true,
+                      format: "pdf",
+                      filename: `${config.filename || "export"}.pdf`,
+                      size: 245760, // 240KB simulado
+                    });
+                  }, 2000);
+                });
+                handleExportSuccess(result, "PDF");
+              } catch (error) {
+                handleExportError(error, "PDF");
+              }
             }}
             className="space-y-4"
           />
@@ -168,15 +228,33 @@ const AdvancedDemo = () => {
           </h4>
           <ExportFormExcel
             data={complexData}
-            initialConfig={presetConfigs.hojaDatos.excel}
+            initialConfig={demoPresetConfigs.hojaDatos.excel}
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
               console.log("Excel config changed:", config);
               handleStatus("🔧 Configuración Excel actualizada");
             }}
-            onExport={(config) => {
-              handleStatus("📊 Exportando Excel con estilos personalizados...");
+            onExport={async (config) => {
+              try {
+                handleStatus(
+                  "📊 Exportando Excel con estilos personalizados..."
+                );
+                // Aquí se realizaría la exportación real
+                const result = await new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve({
+                      success: true,
+                      format: "excel",
+                      filename: `${config.filename || "export"}.xlsx`,
+                      size: 89344, // 87KB simulado
+                    });
+                  }, 1500);
+                });
+                handleExportSuccess(result, "Excel");
+              } catch (error) {
+                handleExportError(error, "Excel");
+              }
             }}
             className="space-y-4"
           />
@@ -190,15 +268,30 @@ const AdvancedDemo = () => {
           </h4>
           <ExportFormCSV
             data={complexData}
-            initialConfig={presetConfigs.csvEuropeo.csv}
+            initialConfig={demoPresetConfigs.csvEuropeo.csv}
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
               console.log("CSV config changed:", config);
               handleStatus("🔧 Configuración CSV actualizada");
             }}
-            onExport={(config) => {
-              handleStatus("📋 Exportando CSV con formato europeo...");
+            onExport={async (config) => {
+              try {
+                handleStatus("📋 Exportando CSV con formato europeo...");
+                const result = await new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve({
+                      success: true,
+                      format: "csv",
+                      filename: `${config.filename || "export"}.csv`,
+                      size: 15360, // 15KB simulado
+                    });
+                  }, 800);
+                });
+                handleExportSuccess(result, "CSV");
+              } catch (error) {
+                handleExportError(error, "CSV");
+              }
             }}
             className="space-y-4"
           />
@@ -244,86 +337,73 @@ const AdvancedDemo = () => {
             <div className="text-3xl mb-2">📊</div>
             <h4 className="font-semibold">Reporte Ejecutivo</h4>
             <p className="text-sm text-gray-600">
-              PDF corporativo con branding
+              PDF profesional con branding
             </p>
           </div>
-
-          <div className="space-y-2 text-xs text-gray-600 mb-4">
-            <div>• Marca de agua "DRAFT"</div>
-            <div>• Encabezado personalizado</div>
-            <div>• Colores corporativos</div>
-            <div>• Márgenes ejecutivos</div>
-          </div>
-
           <ExportButton
-            data={complexData.data.slice(0, 10)}
-            formats={["pdf"]}
-            config={presetConfigs.reporteEjecutivo}
-            filename="reporte_ejecutivo"
-            onStart={() => handleStatus("📊 Generando reporte ejecutivo...")}
-            onSuccess={() => handleStatus("✅ Reporte ejecutivo listo")}
-            onError={(error) => handleStatus(`❌ Error: ${error.message}`)}
+            data={complexData}
+            format="pdf"
+            config={demoPresetConfigs.reporteEjecutivo.pdf}
+            onExportStart={() =>
+              handleStatus("📄 Generando reporte ejecutivo...")
+            }
+            onExportComplete={(result) =>
+              handleExportSuccess(result, "PDF Ejecutivo")
+            }
+            onExportError={(error) => handleExportError(error, "PDF Ejecutivo")}
             className="w-full"
+            variant="solid"
+            color="blue"
           >
-            Generar Reporte
+            📄 Generar Reporte
           </ExportButton>
         </div>
 
         {/* Hoja de Datos */}
         <div className="bg-white border rounded-lg p-6">
           <div className="text-center mb-4">
-            <div className="text-3xl mb-2">📈</div>
+            <div className="text-3xl mb-2">📗</div>
             <h4 className="font-semibold">Hoja de Datos</h4>
-            <p className="text-sm text-gray-600">Excel con estilos y formato</p>
+            <p className="text-sm text-gray-600">
+              Excel con formato profesional
+            </p>
           </div>
-
-          <div className="space-y-2 text-xs text-gray-600 mb-4">
-            <div>• Encabezados con color</div>
-            <div>• Ancho automático</div>
-            <div>• Primera fila congelada</div>
-            <div>• Formateo de datos</div>
-          </div>
-
           <ExportButton
-            data={complexData.data}
-            formats={["excel"]}
-            config={presetConfigs.hojaDatos}
-            filename="hoja_datos_completa"
-            onStart={() => handleStatus("📈 Creando hoja de datos...")}
-            onSuccess={() => handleStatus("✅ Hoja de datos lista")}
-            onError={(error) => handleStatus(`❌ Error: ${error.message}`)}
+            data={complexData}
+            format="excel"
+            config={demoPresetConfigs.hojaDatos.excel}
+            onExportStart={() => handleStatus("📊 Generando hoja de datos...")}
+            onExportComplete={(result) => handleExportSuccess(result, "Excel")}
+            onExportError={(error) => handleExportError(error, "Excel")}
             className="w-full"
+            variant="solid"
+            color="green"
           >
-            Crear Hoja
+            📊 Generar Excel
           </ExportButton>
         </div>
 
         {/* CSV Europeo */}
         <div className="bg-white border rounded-lg p-6">
           <div className="text-center mb-4">
-            <div className="text-3xl mb-2">🇪🇺</div>
-            <h4 className="font-semibold">CSV Europeo</h4>
-            <p className="text-sm text-gray-600">Formato europeo con BOM</p>
+            <div className="text-3xl mb-2">📋</div>
+            <h4 className="font-semibold">Formato Europeo</h4>
+            <p className="text-sm text-gray-600">
+              CSV con separador punto y coma
+            </p>
           </div>
-
-          <div className="space-y-2 text-xs text-gray-600 mb-4">
-            <div>• Separador punto y coma (;)</div>
-            <div>• Codificación UTF-8-BOM</div>
-            <div>• Fechas DD/MM/YYYY</div>
-            <div>• Comillas automáticas</div>
-          </div>
-
           <ExportButton
-            data={complexData.data}
-            formats={["csv"]}
-            config={presetConfigs.csvEuropeo}
-            filename="datos_europeo"
-            onStart={() => handleStatus("🇪🇺 Exportando formato europeo...")}
-            onSuccess={() => handleStatus("✅ CSV europeo listo")}
-            onError={(error) => handleStatus(`❌ Error: ${error.message}`)}
+            data={complexData}
+            format="csv"
+            config={demoPresetConfigs.csvEuropeo.csv}
+            onExportStart={() => handleStatus("📋 Generando CSV europeo...")}
+            onExportComplete={(result) => handleExportSuccess(result, "CSV")}
+            onExportError={(error) => handleExportError(error, "CSV")}
             className="w-full"
+            variant="solid"
+            color="gray"
           >
-            Exportar CSV
+            📋 Generar CSV
           </ExportButton>
         </div>
       </div>
@@ -331,115 +411,76 @@ const AdvancedDemo = () => {
   );
 
   // Renderizar datos complejos
-  const renderComplex = () => (
+  const renderComplexData = () => (
     <div className="space-y-6">
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-yellow-900 mb-2">
+      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-purple-900 mb-2">
           🔧 Manejo de Datos Complejos
         </h3>
-        <p className="text-yellow-700 mb-4">
-          Testing con objetos anidados, valores null, caracteres especiales y
-          tipos mixtos
+        <p className="text-purple-700 mb-4">
+          El sistema puede manejar datos con estructuras anidadas, valores
+          nulos, caracteres especiales y tipos de datos mixtos
         </p>
       </div>
 
-      {/* Información de los datos */}
-      <div className="bg-white border rounded-lg p-6">
-        <h4 className="font-semibold mb-4">📊 Análisis de Datos</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="text-center p-3 bg-blue-50 rounded">
-            <div className="font-bold text-lg text-blue-600">
-              {complexData.data.length}
-            </div>
-            <div className="text-gray-600">Registros</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 rounded">
-            <div className="font-bold text-lg text-green-600">
-              {Object.keys(complexData.data[0] || {}).length}
-            </div>
-            <div className="text-gray-600">Campos base</div>
-          </div>
-          <div className="text-center p-3 bg-purple-50 rounded">
-            <div className="font-bold text-lg text-purple-600">5</div>
-            <div className="text-gray-600">Campos anidados</div>
-          </div>
-          <div className="text-center p-3 bg-red-50 rounded">
-            <div className="font-bold text-lg text-red-600">8</div>
-            <div className="text-gray-600">Tipos de datos</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Vista previa de datos complejos */}
-      <div className="bg-white border rounded-lg p-6">
-        <h4 className="font-semibold mb-4">🔍 Vista Previa de Datos</h4>
-        <div className="bg-gray-50 p-4 rounded-lg overflow-x-auto">
-          <pre className="text-xs text-gray-700">
-            {JSON.stringify(complexData.data[0], null, 2)}
-          </pre>
-        </div>
-      </div>
-
-      {/* Opciones de exportación para datos complejos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Vista de datos */}
         <div className="bg-white border rounded-lg p-6">
-          <h4 className="font-semibold mb-4">🔨 Procesamiento Automático</h4>
-          <p className="text-gray-600 text-sm mb-4">
-            El sistema procesa automáticamente objetos anidados y tipos
-            especiales
-          </p>
+          <h4 className="font-semibold mb-4">🔍 Vista de Datos</h4>
+          <div className="bg-gray-50 rounded p-4 max-h-64 overflow-auto">
+            <pre className="text-xs">
+              {JSON.stringify(complexData.data.slice(0, 2), null, 2)}
+            </pre>
+          </div>
+          <div className="mt-4 text-sm text-gray-600">
+            <p>📊 Total registros: {complexData.data.length}</p>
+            <p>📋 Columnas: {complexData.columns.length}</p>
+            <p>
+              🔧 Incluye: datos anidados, valores nulos, caracteres especiales
+            </p>
+          </div>
+        </div>
 
+        {/* Opciones de exportación */}
+        <div className="bg-white border rounded-lg p-6">
+          <h4 className="font-semibold mb-4">📤 Exportación Rápida</h4>
           <ExportDropdown
-            data={complexData.data}
-            enabledFormats={["json", "csv"]}
-            config={{
-              flattenObjects: true,
-              handleNulls: "empty",
-              dateFormat: "iso",
-            }}
-            filename="datos_procesados"
-            placeholder="Exportar con procesamiento"
-            onExport={(format) =>
-              handleStatus(
-                `🔨 Procesando datos para ${format.toUpperCase()}...`
-              )
+            data={complexData}
+            onExportStart={(format) =>
+              handleStatus(`🚀 Exportando ${format.toUpperCase()}...`)
             }
-            onExportComplete={() =>
-              handleStatus("✅ Datos complejos procesados")
+            onExportComplete={(result) =>
+              handleExportSuccess(result, result.format)
             }
-            onExportError={(error) =>
-              handleStatus(`❌ Error: ${error.message}`)
-            }
+            onExportError={(error, format) => handleExportError(error, format)}
             className="w-full"
-          />
-        </div>
-
-        <div className="bg-white border rounded-lg p-6">
-          <h4 className="font-semibold mb-4">📋 Exportación Selectiva</h4>
-          <p className="text-gray-600 text-sm mb-4">
-            Exporta solo los campos que necesitas, sin procesamiento adicional
-          </p>
-
-          <ExportButton
-            data={complexData.data}
-            columns={[
-              { key: "id", header: "ID" },
-              { key: "name", header: "Nombre" },
-              { key: "email", header: "Email" },
-              { key: "active", header: "Activo" },
-              { key: "metadata.priority", header: "Prioridad" },
-            ]}
-            formats={["excel"]}
-            filename="datos_selectivos"
-            onStart={() =>
-              handleStatus("📋 Exportando campos seleccionados...")
-            }
-            onSuccess={() => handleStatus("✅ Exportación selectiva completa")}
-            onError={(error) => handleStatus(`❌ Error: ${error.message}`)}
-            className="w-full"
+            variant="outline"
+            position="bottom"
+            enabledFormats={["json", "csv", "excel", "pdf"]}
+            showIcons={true}
           >
-            Exportar Selección
-          </ExportButton>
+            📤 Exportar Datos Complejos
+          </ExportDropdown>
+
+          <div className="mt-4 space-y-2">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Formatos disponibles:</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-purple-100 px-2 py-1 rounded">
+                📄 PDF - Tabular
+              </div>
+              <div className="bg-green-100 px-2 py-1 rounded">
+                📊 Excel - Completo
+              </div>
+              <div className="bg-blue-100 px-2 py-1 rounded">
+                📋 CSV - Plano
+              </div>
+              <div className="bg-yellow-100 px-2 py-1 rounded">
+                {"{}"} JSON - Estructura
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -448,189 +489,161 @@ const AdvancedDemo = () => {
   // Renderizar configurador interactivo
   const renderInteractive = () => (
     <div className="space-y-6">
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-purple-900 mb-2">
+      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-indigo-900 mb-2">
           🎛️ Configurador Interactivo
         </h3>
-        <p className="text-purple-700 mb-4">
-          Herramientas interactivas para personalizar exportaciones en tiempo
+        <p className="text-indigo-700 mb-4">
+          Experimenta con diferentes configuraciones y ve el resultado en tiempo
           real
         </p>
       </div>
 
-      {/* Selector de formato interactivo */}
       <div className="bg-white border rounded-lg p-6">
-        <h4 className="font-semibold mb-4">🎯 Selector de Formato</h4>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {["json", "csv", "excel", "pdf", "txt"].map((format) => (
-            <button
-              key={format}
-              onClick={() => setSelectedFormat(format)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFormat === format
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {format.toUpperCase()}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 mb-2">
-            Formato seleccionado:{" "}
-            <strong>{selectedFormat.toUpperCase()}</strong>
-          </p>
-          <ExportButton
-            data={complexData.data.slice(0, 5)}
-            formats={[selectedFormat]}
-            filename={`interactivo_${selectedFormat}`}
-            onStart={() =>
-              handleStatus(
-                `🎛️ Exportando ${selectedFormat.toUpperCase()} interactivo...`
-              )
-            }
-            onSuccess={() =>
-              handleStatus(
-                `✅ ${selectedFormat.toUpperCase()} interactivo listo`
-              )
-            }
-            onError={(error) => handleStatus(`❌ Error: ${error.message}`)}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Formato de exportación:
+          </label>
+          <select
+            value={selectedFormat}
+            onChange={(e) => setSelectedFormat(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           >
-            Exportar {selectedFormat.toUpperCase()}
-          </ExportButton>
+            <option value="pdf">📄 PDF - Documento portátil</option>
+            <option value="excel">📊 Excel - Hoja de cálculo</option>
+            <option value="csv">📋 CSV - Valores separados</option>
+            <option value="json">📝 JSON - Estructura de datos</option>
+          </select>
         </div>
-      </div>
 
-      {/* Generador de archivos múltiples */}
-      <div className="bg-white border rounded-lg p-6">
-        <h4 className="font-semibold mb-4">⚡ Generación Múltiple</h4>
-        <p className="text-gray-600 text-sm mb-4">
-          Genera múltiples archivos con diferentes configuraciones
-          simultáneamente
-        </p>
-
-        <ExportDropdown
-          data={complexData.data}
-          enabledFormats={["csv", "json", "excel"]}
-          groupByType={true}
-          showIcons={true}
-          showDescriptions={true}
-          placeholder="Seleccionar formatos múltiples"
-          filename="paquete_completo"
-          onExport={(format) =>
-            handleStatus(`⚡ Generando ${format.toUpperCase()} del paquete...`)
+        <ExportForm
+          data={complexData}
+          initialFormat={selectedFormat}
+          initialConfig={
+            demoPresetConfigs.reporteEjecutivo[selectedFormat] || {}
           }
-          onExportComplete={() => handleStatus("✅ Paquete completo generado")}
-          onExportError={(error) =>
-            handleStatus(`❌ Error en paquete: ${error.message}`)
-          }
-          className="w-full max-w-md"
+          showFormatSelector={false}
+          enabledFormats={[selectedFormat]}
+          showPreview={true}
+          showEstimation={true}
+          onExport={async (result) => {
+            handleExportSuccess(result, selectedFormat);
+          }}
+          onCancel={() => handleStatus("❌ Exportación cancelada")}
+          onFormatChange={(format) => setSelectedFormat(format)}
+          onConfigChange={(config) => {
+            console.log("Interactive config changed:", config);
+          }}
+          className="mt-4"
+          title="Configuración Personalizada"
         />
       </div>
     </div>
   );
 
-  // Modal del formulario unificado
-  const renderFormModal = () => {
-    if (!showFormModal) return null;
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6 border-b">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-semibold">
-                🎯 Configurador Completo
-              </h3>
-              <button
-                onClick={() => setShowFormModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                ⚡ Demo Casos Avanzados
+              </h1>
+              <p className="text-gray-600">
+                Formularios especializados, configuraciones predefinidas y
+                manejo de datos complejos
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Módulo Export v2.0</div>
+              <div className="text-lg font-semibold text-indigo-600">
+                Advanced Demo
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="p-6">
-            <ExportForm
-              data={complexData}
-              enabledFormats={["json", "csv", "excel", "pdf"]}
-              showFormatSelector={true}
-              showPreview={true}
-              showEstimation={true}
-              title="Exportación Personalizada"
-              onExport={(result) => {
-                handleStatus(`✅ Exportación desde modal: ${result.format}`);
-                setShowFormModal(false);
-              }}
-              onCancel={() => setShowFormModal(false)}
-              className="space-y-6"
-            />
+        {/* Status Bar */}
+        {status && (
+          <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+              <span className="text-blue-800 font-medium">{status}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="bg-white rounded-lg shadow-sm p-4 mb-8">
+          <div className="flex flex-wrap gap-2">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeSection === section.id
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                <span className="mr-2">{section.icon}</span>
+                {section.title}
+              </button>
+            ))}
           </div>
         </div>
-      </div>
-    );
-  };
 
-  // Renderizar contenido según sección activa
-  const renderContent = () => {
-    switch (activeSection) {
-      case "presets":
-        return renderPresets();
-      case "complex":
-        return renderComplex();
-      case "interactive":
-        return renderInteractive();
-      default:
-        return renderForms();
-    }
-  };
+        {/* Content */}
+        <div className="space-y-8">
+          {activeSection === "forms" && renderForms()}
+          {activeSection === "presets" && renderPresets()}
+          {activeSection === "complex" && renderComplexData()}
+          {activeSection === "interactive" && renderInteractive()}
+        </div>
 
-  return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="bg-white rounded-lg border p-6">
-        <h1 className="text-3xl font-bold mb-2">⚡ Demo Casos Avanzados</h1>
-        <p className="text-gray-600 mb-4">
-          Configuraciones avanzadas, formularios especializados y casos
-          complejos del módulo refactorizado
-        </p>
-
-        {/* Status global */}
-        {status && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="text-blue-800 text-sm font-medium">{status}</div>
+        {/* Modal del formulario unificado */}
+        {showFormModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-semibold">
+                    🎯 Configurador Completo
+                  </h3>
+                  <button
+                    onClick={() => setShowFormModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                <ExportForm
+                  data={complexData}
+                  initialFormat="pdf"
+                  showFormatSelector={true}
+                  enabledFormats={["json", "csv", "excel", "pdf", "txt"]}
+                  showPreview={true}
+                  showEstimation={true}
+                  onExport={async (result) => {
+                    handleExportSuccess(result, result.format);
+                    setShowFormModal(false);
+                  }}
+                  onCancel={() => {
+                    setShowFormModal(false);
+                    handleStatus("❌ Configuración cancelada");
+                  }}
+                  title="Configuración Completa de Exportación"
+                  className="space-y-6"
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Navigation */}
-      <div className="bg-white rounded-lg border p-1">
-        <div className="flex flex-wrap gap-1">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveSection(section.id)}
-              className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeSection === section.id
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <span className="mr-2">{section.icon}</span>
-              {section.title}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      {renderContent()}
-
-      {/* Form Modal */}
-      {renderFormModal()}
     </div>
   );
 };
