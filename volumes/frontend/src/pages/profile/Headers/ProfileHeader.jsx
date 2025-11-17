@@ -124,7 +124,6 @@ const ProfileHeader = () => {
   return (
     <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-800 dark:to-purple-800 rounded-lg shadow-lg p-8 text-white mb-8">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between space-y-6 lg:space-y-0">
-        
         {/* Información principal del usuario */}
         <div className="flex items-center space-x-6">
           {/* Avatar */}
@@ -167,7 +166,6 @@ const ProfileHeader = () => {
 
         {/* Panel de estadísticas y datos adicionales alineado a la derecha */}
         <div className="flex justify-end w-full gap-6 pr-4">
-          
           {/* Contadores en grid 2x2 */}
           <div className="grid grid-cols-2 gap-4 text-center">
             {/* Roles */}
@@ -275,7 +273,9 @@ const ProfileHeader = () => {
           <div className="grid grid-cols-1 gap-4 w-[220px]">
             {/* Último acceso */}
             <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-              <span className="text-blue-200 dark:text-purple-200 text-xl">🕒</span>
+              <span className="text-blue-200 dark:text-purple-200 text-xl">
+                🕒
+              </span>
               <div>
                 <div className="text-blue-100 dark:text-purple-100 text-sm">
                   Último acceso:
@@ -289,7 +289,9 @@ const ProfileHeader = () => {
             {/* Teléfono */}
             {personal.phone && (
               <div className="flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <span className="text-blue-200 dark:text-purple-200 text-xl">📱</span>
+                <span className="text-blue-200 dark:text-purple-200 text-xl">
+                  📱
+                </span>
                 <div>
                   <div className="text-blue-100 dark:text-purple-100 text-sm">
                     Teléfono:
@@ -299,7 +301,6 @@ const ProfileHeader = () => {
               </div>
             )}
           </div>
-
         </div>
       </div>
 
@@ -313,8 +314,10 @@ const ProfileHeader = () => {
                 Acción requerida
               </div>
               <div className="text-yellow-200 text-sm mt-1">
-                {account.needs_password_change && "Tu contraseña debe ser actualizada. "}
-                {!account.has_recent_login && "No has accedido recientemente al sistema."}
+                {account.needs_password_change &&
+                  "Tu contraseña debe ser actualizada. "}
+                {!account.has_recent_login &&
+                  "No has accedido recientemente al sistema."}
               </div>
             </div>
           </div>

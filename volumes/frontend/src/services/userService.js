@@ -182,13 +182,13 @@ class UserService {
       // Si hay respuesta del backend, usar su mensaje directamente
       if (error.response?.data) {
         const backendData = error.response.data;
-        
+
         let message = backendData.message || 'Error del servidor';
-        
+
         // 🔧 NUEVO: Si hay detalles como array, mostrarlos como lista
         if (backendData.error?.details) {
           const details = backendData.error.details;
-          
+
           // Si es un string que parece array de Python, parsearlo
           if (typeof details === 'string' && details.startsWith('[') && details.endsWith(']')) {
             try {
@@ -210,7 +210,7 @@ class UserService {
             message += '\n\nDetalles: ' + details;
           }
         }
-        
+
         errorToThrow = {
           code: backendData.error?.code || 'BACKEND_ERROR',
           message: message,

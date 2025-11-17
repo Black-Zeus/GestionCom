@@ -1,32 +1,44 @@
 import { cn } from '@/utils/cn';
-import { sidebarNavData } from '@/data/sidebarData';
+import useSidebarStore from '@/store/sidebarStore'; // Import directo
 import SidebarNavSection from './SidebarNavSection';
 
 /**
  * Componente de Navegación Principal del Sidebar
- * Renderiza todas las secciones de navegación con scroll interno
+ * Usa el store directamente para evitar bucles infinitos
  */
 function SidebarNav({ isCollapsed, isDarkMode, className }) {
-  const { sections } = sidebarNavData.data;
+  // Usar store directamente con selector simple
+  const sections = useSidebarStore((state) => state.sidebarData?.data?.sections || []);
+  const isLoading = useSidebarStore((state) => state.isLoadingSidebarData);
+  const error = useSidebarStore((state) => state.sidebarDataError);
+
+  // Mostrar loading si está cargando
+  if (isLoading) {
+    return (
+      <nav className={cn("flex-1 py-4", className)}>
+        <div className="px-6 text-white/60 text-sm">
+          Cargando menú...
+        </div>
+      </nav>
+    );
+  }
+
+  // Mostrar error si hay error
+  if (error) {
+    return (
+      <nav className={cn("flex-1 py-4", className)}>
+        <div className="px-6 text-red-400 text-sm">
+          Error cargando menú: {error}
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className={cn(
-      // Flex para ocupar espacio disponible
-      "flex-1",
-      
-      // Padding vertical
-      "py-4",
-      
-      // Scroll interno suave y elegante - usando clase CSS específica
-      "sidebar-nav",
-      "overflow-y-auto overflow-x-hidden",
-      
-      // Altura mínima para flex
-      "min-h-0",
-      
+      "flex-1 py-4 sidebar-nav overflow-y-auto overflow-x-hidden min-h-0",
       className
     )}>
-      
       {sections.map((section) => (
         <SidebarNavSection
           key={section.id}

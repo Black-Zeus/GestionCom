@@ -84,7 +84,15 @@ export default defineConfig({
             return 'vendor-http';
           }
 
-          // Iconos (si usas lucide-react como veo en tu modal)
+          // EXPORTERS - Librerías de exportación
+          if (id.includes('node_modules/xlsx') ||
+            id.includes('node_modules/exceljs') ||
+            id.includes('node_modules/pdfmake') ||
+            id.includes('node_modules/file-saver')) {
+            return 'vendor-exporters';
+          }
+
+          // Iconos (lucide-react que veo en tu modal)
           if (id.includes('node_modules/lucide-react') ||
             id.includes('node_modules/@heroicons') ||
             id.includes('node_modules/@tabler/icons')) {
@@ -236,7 +244,7 @@ export default defineConfig({
   },
 
   // ====================================
-  // OPTIMIZACIÓN DE DEPENDENCIAS
+  // OPTIMIZACIÓN DE DEPENDENCIAS - INCLUYE EXPORTERS
   // ====================================
 
   optimizeDeps: {
@@ -246,7 +254,12 @@ export default defineConfig({
       'react-router-dom',
       'axios',
       'zustand', // Veo que usas Zustand en tu authStore
-      'lucide-react' // Veo que usas Lucide en tu modal system
+      'lucide-react', // Veo que usas Lucide en tu modal system
+      // AGREGAR DEPENDENCIAS DEL EXPORTER
+      'xlsx',
+      'exceljs',
+      'pdfmake',
+      'file-saver'
     ],
 
     esbuildOptions: {
@@ -266,7 +279,8 @@ export default defineConfig({
     target: 'es2020',
     jsx: 'automatic',
     jsxDev: process.env.NODE_ENV === 'development',
-    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
+    drop: process.env.NODE_ENV === 'production' ?
+      ['console', 'debugger'] : [],
     sourcemap: true,
     keepNames: process.env.NODE_ENV === 'development'
   },

@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { shouldLog } from '@/utils/environment';
+import { sidebarNavData } from '@/data/sidebarData'; // Import estático
 
 const useSidebarStore = create(
   persist(
@@ -17,7 +18,13 @@ const useSidebarStore = create(
 
       // Navigation states
       activeSection: 'Dashboard',
+      activePath: null,
       openSubmenus: [], // Array de IDs de submenús abiertos
+
+      // Data states (vendrá de API, inicializado con mock)
+      sidebarData: sidebarNavData, // Inicializar con datos mock
+      isLoadingSidebarData: false,
+      sidebarDataError: null,
 
       // ==========================================
       // ACCIONES - LAYOUT
@@ -29,11 +36,9 @@ const useSidebarStore = create(
       toggleCollapsed: () => {
         set((state) => {
           const newCollapsed = !state.isCollapsed;
-
           if (shouldLog()) {
             //console.log(`🔄 Sidebar ${newCollapsed ? 'collapsed' : 'expanded'}`);
           }
-
           return { isCollapsed: newCollapsed };
         });
       },
@@ -51,12 +56,10 @@ const useSidebarStore = create(
       toggleMobileOpen: () => {
         set((state) => {
           const newOpen = !state.isMobileOpen;
-
           // Controlar scroll del body
           if (typeof window !== 'undefined') {
             document.body.style.overflow = newOpen ? 'hidden' : '';
           }
-
           return { isMobileOpen: newOpen };
         });
       },
@@ -81,8 +84,6 @@ const useSidebarStore = create(
       toggleTheme: () => {
         set((state) => {
           const newDarkMode = !state.isDarkMode;
-
-          // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
           if (typeof window !== 'undefined') {
             if (newDarkMode) {
               document.body.classList.add('dark');
@@ -90,11 +91,9 @@ const useSidebarStore = create(
               document.body.classList.remove('dark');
             }
           }
-
           if (shouldLog()) {
-            //console.log(`🌙 Theme: ${newDarkMode ? 'Dark' : 'Light'}`);
+            //console.log(`🌙 Theme: ${newDarkMode ? 'dark' : 'light'}`);
           }
-
           return { isDarkMode: newDarkMode };
         });
       },
@@ -102,12 +101,10 @@ const useSidebarStore = create(
       /**
        * Set theme directly
        */
-      setTheme: (darkMode) => {
-        set({ isDarkMode: darkMode });
-
-        // Aplicar clase al DOM
+      setTheme: (isDark) => {
+        set({ isDarkMode: isDark });
         if (typeof window !== 'undefined') {
-          if (darkMode) {
+          if (isDark) {
             document.body.classList.add('dark');
           } else {
             document.body.classList.remove('dark');
@@ -116,25 +113,46 @@ const useSidebarStore = create(
       },
 
       // ==========================================
-      // ACCIONES - NAVEGACIÓN
+      // ACCIONES - NAVEGACIÓN DINÁMICA
       // ==========================================
 
       /**
-       * Set active navigation section
+       * Set active section
        */
       setActiveSection: (section) => {
         set({ activeSection: section });
+        if (shouldLog()) {
+          //console.log(`📍 Active section: ${section}`);
+        }
       },
 
       /**
-       * Toggle submenu open/close
+       * Set active path
+       */
+      setActivePath: (path) => {
+        set({ activePath: path });
+      },
+
+      /**
+       * Toggle submenu open/close - Solo permite 1 submenu abierto a la vez
        */
       toggleSubmenu: (submenuId) => {
-        set((state) => ({
-          openSubmenus: state.openSubmenus.includes(submenuId)
-            ? state.openSubmenus.filter(id => id !== submenuId)
-            : [...state.openSubmenus, submenuId]
-        }));
+        set((state) => {
+          const isCurrentlyOpen = state.openSubmenus.includes(submenuId);
+          
+          if (isCurrentlyOpen) {
+            // Si está abierto, lo cerramos (array vacío)
+            return { openSubmenus: [] };
+          } else {
+            // Si está cerrado, cerramos todos los demás y abrimos solo este
+            return { openSubmenus: [submenuId] };
+          }
+        });
+        
+        if (shouldLog()) {
+          const state = get();
+          console.log(`🔄 Submenu toggled: ${submenuId}, Open submenus: ${state.openSubmenus}`);
+        }
       },
 
       /**
@@ -154,15 +172,16 @@ const useSidebarStore = create(
       /**
        * Navigate to section and close mobile if needed
        */
-      navigateTo: (section, closeMobileAfter = true) => {
+      navigateTo: (section, path = null, closeMobileAfter = true) => {
         set((state) => {
-          const updates = { activeSection: section };
+          const updates = { 
+            activeSection: section,
+            activePath: path 
+          };
 
           // Cerrar mobile sidebar si está abierto
           if (closeMobileAfter && state.isMobileOpen) {
             updates.isMobileOpen = false;
-
-            // Restaurar scroll del body
             if (typeof window !== 'undefined') {
               document.body.style.overflow = '';
             }
@@ -170,6 +189,129 @@ const useSidebarStore = create(
 
           return updates;
         });
+      },
+
+      /**
+       * Sync with current route - DINÁMICO basado en sidebarData
+       */
+      syncWithRoute: (pathname) => {
+        const state = get();
+        const { sidebarData } = state;
+        
+        if (!sidebarData?.data?.sections) {
+          // Si no hay data todavía, solo actualizar path
+          set({ activePath: pathname });
+          return;
+        }
+
+        let foundActiveSection = null;
+        let foundSubmenuParent = null;
+        let requiredOpenSubmenus = [];
+
+        // Buscar en todas las secciones y items
+        for (const section of sidebarData.data.sections) {
+          for (const item of section.items) {
+            // Verificar item principal
+            if (item.path && this._pathMatches(pathname, item.path)) {
+              foundActiveSection = item.text;
+              break;
+            }
+
+            // Verificar subitems si tiene submenu
+            if (item.hasSubmenu && item.submenu) {
+              for (const subitem of item.submenu) {
+                if (subitem.path && this._pathMatches(pathname, subitem.path)) {
+                  foundActiveSection = subitem.text;
+                  foundSubmenuParent = item.id;
+                  requiredOpenSubmenus = [item.id]; // Solo un submenu abierto
+                  break;
+                }
+              }
+            }
+
+            if (foundActiveSection) break;
+          }
+          if (foundActiveSection) break;
+        }
+
+        // Fallback si no se encuentra coincidencia exacta
+        if (!foundActiveSection) {
+          foundActiveSection = pathname === '/' || pathname === '/dashboard' ? 'Dashboard' : 'Dashboard';
+        }
+
+        // Actualizar estado solo si hay cambios
+        const currentOpenSubmenus = state.openSubmenus;
+        if (foundActiveSection !== state.activeSection || 
+            pathname !== state.activePath ||
+            JSON.stringify(requiredOpenSubmenus) !== JSON.stringify(currentOpenSubmenus)) {
+          
+          set({
+            activeSection: foundActiveSection,
+            activePath: pathname,
+            openSubmenus: requiredOpenSubmenus // Solo el submenu necesario
+          });
+
+          if (shouldLog()) {
+            console.log(`🔄 Synced sidebar: ${pathname} -> ${foundActiveSection}`);
+          }
+        }
+      },
+
+      /**
+       * Helper para verificar coincidencia de paths
+       */
+      _pathMatches: (currentPath, itemPath) => {
+        if (currentPath === itemPath) return true;
+        if (itemPath === '/' && currentPath === '/dashboard') return true;
+        if (itemPath === '/dashboard' && currentPath === '/') return true;
+        return currentPath.startsWith(itemPath + '/');
+      },
+
+      // ==========================================
+      // ACCIONES - DATA MANAGEMENT
+      // ==========================================
+
+      /**
+       * Set sidebar data (desde API o mock)
+       */
+      setSidebarData: (data) => {
+        set({ 
+          sidebarData: data,
+          isLoadingSidebarData: false,
+          sidebarDataError: null 
+        });
+      },
+
+      /**
+       * Set loading state
+       */
+      setSidebarDataLoading: (loading) => {
+        set({ isLoadingSidebarData: loading });
+      },
+
+      /**
+       * Set error state
+       */
+      setSidebarDataError: (error) => {
+        set({ 
+          sidebarDataError: error,
+          isLoadingSidebarData: false 
+        });
+      },
+
+      /**
+       * Load sidebar data (para llamar desde API service)
+       */
+      loadSidebarData: async (apiFunction) => {
+        set({ isLoadingSidebarData: true, sidebarDataError: null });
+        
+        try {
+          const data = await apiFunction();
+          get().setSidebarData(data);
+        } catch (error) {
+          get().setSidebarDataError(error.message || 'Error loading sidebar data');
+          console.error('Error loading sidebar data:', error);
+        }
       },
 
       // ==========================================
@@ -181,8 +323,7 @@ const useSidebarStore = create(
        */
       initialize: () => {
         const state = get();
-
-        // ✅ CORRECCIÓN CRÍTICA: Aplicar clase 'dark' según tailwind.config.js
+        
         if (typeof window !== 'undefined') {
           if (state.isDarkMode) {
             document.body.classList.add('dark');
@@ -192,7 +333,7 @@ const useSidebarStore = create(
         }
 
         if (shouldLog()) {
-          //console.log('🏗️ Sidebar initialized');
+          console.log('🏗️ Sidebar initialized with data:', !!state.sidebarData);
         }
       },
 
@@ -205,10 +346,11 @@ const useSidebarStore = create(
           isMobileOpen: false,
           isDarkMode: false,
           activeSection: 'Dashboard',
+          activePath: null,
           openSubmenus: []
+          // NO resetear sidebarData - eso se maneja por separado
         });
 
-        // Reset DOM classes
         if (typeof window !== 'undefined') {
           document.body.classList.remove('dark');
           document.body.style.overflow = '';
@@ -234,16 +376,25 @@ const useSidebarStore = create(
           main: `main ${state.isCollapsed ? 'expanded' : ''}`,
           overlay: `overlay ${state.isMobileOpen ? 'active' : ''}`
         };
-      }
+      },
+
+      /**
+       * Get sections data (computed value simple)
+       */
+      getSections: () => {
+        const state = get();
+        return state.sidebarData?.data?.sections || [];
+      },
     }),
     {
       name: 'sidebar-store',
       storage: createJSONStorage(() => localStorage),
-      // Solo persistir datos importantes
+      // Solo persistir configuraciones de UI, NO datos de API
       partialize: (state) => ({
         isCollapsed: state.isCollapsed,
         isDarkMode: state.isDarkMode,
-        activeSection: state.activeSection
+        activeSection: state.activeSection,
+        activePath: state.activePath
       }),
       // Callback después de cargar desde localStorage
       onRehydrateStorage: () => (state) => {
@@ -267,7 +418,14 @@ export const sidebarSelectors = {
 
   // Navigation
   activeSection: (state) => state.activeSection,
+  activePath: (state) => state.activePath,
   openSubmenus: (state) => state.openSubmenus,
+
+  // Data
+  sidebarData: (state) => state.sidebarData,
+  isLoadingSidebarData: (state) => state.isLoadingSidebarData,
+  sidebarDataError: (state) => state.sidebarDataError,
+  sections: (state) => state.getSections(),
 
   // Computed
   layoutClasses: (state) => state.getLayoutClasses(),
@@ -291,10 +449,20 @@ export const useSidebar = (selector = null) => {
 };
 
 /**
- * Hook específico para layout classes
+ * Hook específico para data del sidebar - SIMPLIFICADO
  */
-export const useSidebarLayout = () => {
-  return useSidebarStore(sidebarSelectors.layoutClasses);
+export const useSidebarData = () => {
+  return useSidebarStore((state) => {
+    const sections = state.sidebarData?.data?.sections || [];
+    return {
+      sidebarData: state.sidebarData,
+      sections: sections,
+      isLoading: state.isLoadingSidebarData,
+      error: state.sidebarDataError,
+      setSidebarData: state.setSidebarData,
+      loadSidebarData: state.loadSidebarData
+    };
+  });
 };
 
 /**
@@ -303,11 +471,14 @@ export const useSidebarLayout = () => {
 export const useSidebarNavigation = () => {
   return useSidebarStore((state) => ({
     activeSection: state.activeSection,
+    activePath: state.activePath,
     setActiveSection: state.setActiveSection,
+    setActivePath: state.setActivePath,
     navigateTo: state.navigateTo,
     openSubmenus: state.openSubmenus,
     toggleSubmenu: state.toggleSubmenu,
-    isSubmenuOpen: state.isSubmenuOpen
+    isSubmenuOpen: state.isSubmenuOpen,
+    syncWithRoute: state.syncWithRoute
   }));
 };
 
