@@ -1,101 +1,70 @@
-// ====================================
-// volumes/frontend/src/pages/admin/users/UsersFilters.jsx
-// Componente de filtros y búsqueda para usuarios
-// ====================================
-
 import React from "react";
-import { mockFilterOptions } from "./mockData";
+import { Icon } from "@components/ui/icon/iconManager";
 
-const UsersFilters = ({ filters, onFiltersChange }) => {
-  const handleFilterChange = (key, value) => {
-    console.log("filters", filters, "onFiltersChange", onFiltersChange);
-    const newFilters = { ...filters, [key]: value };
-    onFiltersChange(newFilters);
+const UsersFilters = ({ filters, onFilterChange, onClearFilters }) => {
+  const handleSearchChange = (e) => {
+    onFilterChange({ ...filters, search: e.target.value });
   };
 
-  const handleClearFilters = () => {
-    const clearedFilters = {
-      search: "",
-      role: "",
-      status: "",
-    };
-    onFiltersChange(clearedFilters);
+  const handleRoleChange = (e) => {
+    onFilterChange({ ...filters, role: e.target.value });
   };
 
-  const hasActiveFilters = Object.values(filters).some((value) => value !== "");
+  const handleStatusChange = (e) => {
+    onFilterChange({ ...filters, status: e.target.value });
+  };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      {/* Título de filtros */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-          Filtros y Búsqueda
-        </h3>
-        {hasActiveFilters && (
-          <button
-            onClick={handleClearFilters}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
-          >
-            🗑️ Limpiar filtros
-          </button>
-        )}
+    <div className="flex gap-4 mb-6 flex-wrap">
+      {/* Búsqueda */}
+      <div className="flex-1 min-w-[250px] relative">
+        <Icon
+          name="search"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+        />
+        <input
+          type="text"
+          value={filters.search}
+          onChange={handleSearchChange}
+          placeholder="Buscar por nombre, usuario o email..."
+          className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all"
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Búsqueda general */}
-        <div className="lg:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Buscar usuario
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400 text-sm">🔍</span>
-            </div>
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-              placeholder="Nombre, usuario o email..."
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm placeholder-gray-500 dark:placeholder-gray-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
-            />
-          </div>
-        </div>
+      {/* Filtros */}
+      <div className="flex gap-3 flex-wrap">
+        <select
+          value={filters.role}
+          onChange={handleRoleChange}
+          className="px-4 py-3 border-2 border-gray-200 rounded-lg text-sm bg-white cursor-pointer focus:outline-none focus:border-blue-600 transition-all"
+        >
+          <option value="">Todos los roles</option>
+          <option value="ADMIN">Administrador</option>
+          <option value="WAREHOUSE_MANAGER">Jefe de Bodega</option>
+          <option value="SUPERVISOR">Supervisor</option>
+          <option value="SALES_PERSON">Vendedor</option>
+          <option value="CASHIER">Cajero</option>
+          <option value="ACCOUNTANT">Contador</option>
+          <option value="VIEWER">Consultor</option>
+        </select>
 
-        {/* Filtro por rol */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Rol
-          </label>
-          <select
-            value={filters.role}
-            onChange={(e) => handleFilterChange("role", e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
-          >
-            {mockFilterOptions.roles.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={filters.status}
+          onChange={handleStatusChange}
+          className="px-4 py-3 border-2 border-gray-200 rounded-lg text-sm bg-white cursor-pointer focus:outline-none focus:border-blue-600 transition-all"
+        >
+          <option value="">Todos los estados</option>
+          <option value="active">Activos</option>
+          <option value="inactive">Inactivos</option>
+        </select>
 
-        {/* Filtro por estado */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Estado
-          </label>
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange("status", e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
-          >
-            {mockFilterOptions.status.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <button
+          onClick={onClearFilters}
+          className="px-6 py-3 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-all hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <Icon name="close" className="text-sm" />
+          Limpiar
+        </button>
       </div>
     </div>
   );
