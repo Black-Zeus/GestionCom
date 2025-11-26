@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Bodegas - Admin</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-content">
+          <h1><i class="fas fa-warehouse"></i> Gestión de Bodegas</h1>
+          <p class="subtitle">
+            Administra tus bodegas, zonas y asignación de usuarios
+          </p>
+        </div>
+        <button class="btn btn-primary" id="btnNewWarehouse">
+          <i class="fas fa-plus"></i> Nueva Bodega
+        </button>
+      </div>
+
+      <!-- Filtros y búsqueda -->
+      <div class="filters-section">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Buscar por código, nombre o ciudad..."
+          />
+        </div>
+
+        <div class="filters-group">
+          <select id="filterType" class="filter-select">
+            <option value="">Todos los tipos</option>
+            <option value="WAREHOUSE">Bodega</option>
+            <option value="STORE">Tienda</option>
+            <option value="OUTLET">Outlet</option>
+          </select>
+
+          <select id="filterStatus" class="filter-select">
+            <option value="">Todos los estados</option>
+            <option value="1">Activos</option>
+            <option value="0">Inactivos</option>
+          </select>
+
+          <button class="btn btn-secondary" id="btnClearFilters">
+            <i class="fas fa-times"></i> Limpiar
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabla de bodegas -->
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Responsable</th>
+              <th>Ciudad</th>
+              <th>Usuarios</th>
+              <th>Zonas</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="warehousesTableBody">
+            <!-- Los datos se cargarán dinámicamente -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination">
+        <button class="btn btn-pagination" id="btnPrevPage" disabled>
+          <i class="fas fa-chevron-left"></i> Anterior
+        </button>
+        <span class="pagination-info">
+          Página <span id="currentPage">1</span> de
+          <span id="totalPages">1</span>
+        </span>
+        <button class="btn btn-pagination" id="btnNextPage">
+          Siguiente <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal: Crear/Editar Bodega -->
+    <div class="modal" id="modalWarehouse">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h2 id="modalWarehouseTitle">
+            <i class="fas fa-warehouse"></i> Nueva Bodega
+          </h2>
+          <button class="btn-close" id="btnCloseWarehouse">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form id="formWarehouse">
+            <input type="hidden" id="warehouseId" />
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="warehouseCode">Código de Bodega *</label>
+                <input
+                  type="text"
+                  id="warehouseCode"
+                  required
+                  maxlength="20"
+                  placeholder="Ej: BOD-001"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="warehouseName">Nombre *</label>
+                <input
+                  type="text"
+                  id="warehouseName"
+                  required
+                  maxlength="150"
+                  placeholder="Nombre de la bodega"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="warehouseType">Tipo *</label>
+                <select id="warehouseType" required>
+                  <option value="">Seleccionar tipo</option>
+                  <option value="WAREHOUSE">Bodega</option>
+                  <option value="STORE">Tienda</option>
+                  <option value="OUTLET">Outlet</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="responsibleUser">Usuario Responsable *</label>
+                <select id="responsibleUser" required>
+                  <option value="">Seleccionar usuario</option>
+                  <!-- Se llenará dinámicamente -->
+                </select>
+              </div>
+
+              <div class="form-group full-width">
+                <label for="warehouseAddress">Dirección</label>
+                <textarea
+                  id="warehouseAddress"
+                  rows="2"
+                  placeholder="Dirección completa"
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="warehouseCity">Ciudad</label>
+                <input
+                  type="text"
+                  id="warehouseCity"
+                  maxlength="100"
+                  placeholder="Ciudad"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="warehouseCountry">País</label>
+                <input
+                  type="text"
+                  id="warehouseCountry"
+                  maxlength="100"
+                  placeholder="País"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="warehousePhone">Teléfono</label>
+                <input
+                  type="tel"
+                  id="warehousePhone"
+                  maxlength="20"
+                  placeholder="+56 9 1234 5678"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="warehouseEmail">Email</label>
+                <input
+                  type="email"
+                  id="warehouseEmail"
+                  maxlength="255"
+                  placeholder="contacto@bodega.com"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="warehouseIsActive" checked />
+                  <span>Bodega Activa</span>
+                </label>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelWarehouse">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button class="btn btn-primary" id="btnSaveWarehouse">
+            <i class="fas fa-save"></i> Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Gestión de Zonas -->
+    <div class="modal" id="modalZones">
+      <div class="modal-content modal-large">
+        <div class="modal-header">
+          <h2><i class="fas fa-layer-group"></i> Zonas de Bodega</h2>
+          <button class="btn-close" id="btnCloseZones">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="zones-header">
+            <h3 id="zonesWarehouseName">Bodega: -</h3>
+            <button class="btn btn-primary btn-sm" id="btnAddZone">
+              <i class="fas fa-plus"></i> Agregar Zona
+            </button>
+          </div>
+
+          <div class="zones-list" id="zonesList">
+            <!-- Las zonas se cargarán dinámicamente -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCloseZonesModal">
+            <i class="fas fa-times"></i> Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Asignar Usuarios -->
+    <div class="modal" id="modalUsers">
+      <div class="modal-content modal-medium">
+        <div class="modal-header">
+          <h2><i class="fas fa-users"></i> Asignar Usuarios</h2>
+          <button class="btn-close" id="btnCloseUsers">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="users-header">
+            <h3 id="usersWarehouseName">Bodega: -</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="selectUser">Seleccionar Usuario</label>
+            <select id="selectUser">
+              <option value="">Buscar usuario...</option>
+              <!-- Se llenará dinámicamente -->
+            </select>
+          </div>
+
+          <button class="btn btn-primary btn-block" id="btnAddUser">
+            <i class="fas fa-user-plus"></i> Agregar Usuario
+          </button>
+
+          <div class="users-list" id="assignedUsersList">
+            <!-- Los usuarios asignados se mostrarán aquí -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCloseUsersModal">
+            <i class="fas fa-times"></i> Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Confirmación de Eliminación -->
+    <div class="modal" id="modalConfirm">
+      <div class="modal-content modal-small">
+        <div class="modal-header">
+          <h2>
+            <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+          </h2>
+          <button class="btn-close" id="btnCloseConfirm">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <p id="confirmMessage">
+            ¿Está seguro que desea eliminar esta bodega?
+          </p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="btnCancelConfirm">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button class="btn btn-danger" id="btnConfirmDelete">
+            <i class="fas fa-trash"></i> Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
