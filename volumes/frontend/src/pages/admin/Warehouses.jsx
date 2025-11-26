@@ -1,12 +1,8 @@
-import React from 'react';
+import React from "react";
+import WarehouseManagement from "./warehouse/WarehouseManagement";
 
 const Warehouses = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Warehouses</h1>
-            <p>Soy Warehouses</p>
-        </div>
-    );
+  return <WarehouseManagement />;
 };
 
 export default Warehouses;
