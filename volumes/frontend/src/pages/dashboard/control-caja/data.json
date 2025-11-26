@@ -1,0 +1,81 @@
+{
+  "estadoCajas": [
+    {
+      "title": "Cajas Abiertas",
+      "value": "5",
+      "subtitle": "De 8 disponibles"
+    },
+    {
+      "title": "Efectivo Total",
+      "value": "$385K"
+    },
+    {
+      "title": "Pendientes Cuadre",
+      "value": "2",
+      "subtitle": "",
+      "status": "warning"
+    },
+    {
+      "title": "Diferencias Detectadas",
+      "value": "$2,500",
+      "subtitle": "Sobrantes netos"
+    }
+  ],
+  "sesiones": [
+    {
+      "cajero": "Caja 1 - Juan Pérez - Apertura: 08:00",
+      "estado": "$125,400 - ✅ OK"
+    },
+    {
+      "cajero": "Caja 2 - María García - Apertura: 08:00",
+      "estado": "$98,700 - ✅ OK"
+    },
+    {
+      "cajero": "Caja 3 - Carlos López - Apertura: 14:00",
+      "estado": "$45,200 - ⚠️ Revisar"
+    }
+  ],
+  "movimientos": [
+    {
+      "descripcion": "📥 Venta #1234 - Caja 1 - Efectivo: +$15,600",
+      "hora": "14:45"
+    },
+    {
+      "descripcion": "📤 Cambio cliente - Caja 2 - Efectivo: -$4,400",
+      "hora": "14:42"
+    },
+    {
+      "descripcion": "💰 Retiro bancario - Caja 3 - Efectivo: -$50,000",
+      "hora": "14:30"
+    }
+  ],
+  "cajaChica": [
+    {
+      "title": "Fondos Caja Chica",
+      "value": "$45,000",
+      "subtitle": "3 fondos activos"
+    },
+    {
+      "title": "Gastos del Día",
+      "value": "$8,500",
+      "subtitle": "12 comprobantes"
+    },
+    {
+      "title": "Reposiciones Pendientes",
+      "value": "2",
+      "subtitle": "Requieren autorización"
+    }
+  ],
+  "conciliacion": [
+    {
+      "title": "Tarjetas Procesadas",
+      "value": "$245,800",
+      "subtitle": "✅ Conciliado con banco"
+    },
+    {
+      "title": "Transferencias",
+      "value": "$87,300",
+      "subtitle": "⏳ Pendiente confirmación"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "metrics": [
+    {
+      "title": "Ventas del Día",
+      "value": "$1,247,500",
+      "subtitle": "↗️ +12% vs ayer"
+    },
+    {
+      "title": "Facturas Pendientes",
+      "value": "47",
+      "subtitle": "🔔 3 críticas"
+    },
+    {
+      "title": "Stock Bajo",
+      "value": "23",
+      "subtitle": "⚠️ Requiere atención"
+    },
+    {
+      "title": "Caja Activa",
+      "value": "$850,200",
+      "subtitle": "✅ 5 cajas abiertas"
+    }
+  ],
+  "alerts": [
+    {
+      "status": "danger",
+      "message": "Cliente ABC superó límite de crédito",
+      "time": "Hace 5 min"
+    },
+    {
+      "status": "warning",
+      "message": "Producto XYZ con stock crítico (2 unidades)",
+      "time": "Hace 15 min"
+    },
+    {
+      "status": "warning",
+      "message": "Factura #1234 vence hoy",
+      "time": "Hace 1 hora"
+    }
+  ]
+}

@@ -1,0 +1,836 @@
+/* ====================================
+   RESET Y CONFIGURACIÓN BASE
+==================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #007bff;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #17a2b8;
+    --light-gray: #f8f9fa;
+    --medium-gray: #e9ecef;
+    --dark-gray: #6c757d;
+    --text-primary: #2c3e50;
+    --text-secondary: #6c757d;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --border-radius: 12px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    color: var(--text-primary);
+}
+
+/* ====================================
+   LAYOUT PRINCIPAL
+==================================== */
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header {
+    background: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.header h1 {
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.header p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* ====================================
+   SECCIONES DEL DASHBOARD
+==================================== */
+.dashboard-section {
+    margin-bottom: 40px;
+}
+
+.section-title {
+    background: white;
+    padding: 20px 30px;
+    margin-bottom: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    border-left: 5px solid var(--primary-color);
+}
+
+.section-title h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ====================================
+   BENTO GRID SYSTEM
+==================================== */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 20px;
+    grid-auto-rows: 140px;
+}
+
+/* Tamaños de Cards Bento */
+.bento-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    overflow: hidden;
+    position: relative;
+}
+
+.bento-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+/* Small: 3 columnas x 2 filas */
+.bento-card.small {
+    grid-column: span 3;
+    grid-row: span 2;
+}
+
+/* Medium: 4 columnas x 3 filas */
+.bento-card.medium {
+    grid-column: span 4;
+    grid-row: span 3;
+}
+
+/* Large: 6 columnas x 3 filas */
+.bento-card.large {
+    grid-column: span 6;
+    grid-row: span 3;
+}
+
+/* Wide: 8 columnas x 2 filas */
+.bento-card.wide {
+    grid-column: span 8;
+    grid-row: span 2;
+}
+
+/* Tall: 4 columnas x 4 filas */
+.bento-card.tall {
+    grid-column: span 4;
+    grid-row: span 4;
+}
+
+/* ====================================
+   CARD HEADERS Y TÍTULOS
+==================================== */
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.card-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.card-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.card-trend {
+    font-size: 0.875rem;
+    color: var(--success-color);
+    margin-bottom: 12px;
+}
+
+.card-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.stat-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stat-value.success {
+    color: var(--success-color);
+}
+
+/* ====================================
+   METRIC CARDS
+==================================== */
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.card-title {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.metric {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+}
+
+.metric-card small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.metric-card.highlight {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.metric-card.highlight .card-title,
+.metric-card.highlight .metric,
+.metric-card.highlight small {
+    color: white;
+}
+
+/* ====================================
+   CHART CONTAINERS
+==================================== */
+canvas {
+    max-height: 100%;
+    width: 100% !important;
+    height: auto !important;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 0.8rem;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.abc-legend {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.875rem;
+}
+
+.abc-legend .legend-item {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.abc-legend .legend-item:last-child {
+    border-bottom: none;
+}
+
+/* ====================================
+   TABLE CARDS
+==================================== */
+.table-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.compact-table {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+}
+
+.table-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: var(--light-gray);
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.table-row:hover {
+    background: var(--medium-gray);
+}
+
+.product-name {
+    flex: 1;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.stock-value {
+    font-weight: 600;
+    color: var(--danger-color);
+    font-size: 0.875rem;
+}
+
+/* ====================================
+   STATUS INDICATORS
+==================================== */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-indicator.status-good,
+.status-indicator.status-success {
+    background-color: var(--success-color);
+}
+
+.status-indicator.status-warning {
+    background-color: var(--warning-color);
+}
+
+.status-indicator.status-danger {
+    background-color: var(--danger-color);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.status-badge.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ====================================
+   ALERT CARDS
+==================================== */
+.alert-card .card-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.badge {
+    background: var(--danger-color);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.alert-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid;
+    transition: var(--transition);
+}
+
+.alert-item:hover {
+    transform: translateX(4px);
+}
+
+.alert-item.danger {
+    background: #fff5f5;
+    border-left-color: var(--danger-color);
+}
+
+.alert-item.warning {
+    background: #fffbf0;
+    border-left-color: var(--warning-color);
+}
+
+.alert-item.info {
+    background: #f0f9ff;
+    border-left-color: var(--info-color);
+}
+
+.alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.alert-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ====================================
+   RANKING CARDS
+==================================== */
+.ranking-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.rank {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.ranking-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ranking-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ranking-bar {
+    height: 6px;
+    background: var(--light-gray);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), #0056b3);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.ranking-value {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+/* ====================================
+   MOVEMENTS TABLE
+==================================== */
+.movements-table {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.movement-row {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px;
+    background: var(--light-gray);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: var(--transition);
+}
+
+.movement-row:hover {
+    background: var(--medium-gray);
+}
+
+.movement-icon {
+    font-size: 1.25rem;
+}
+
+.movement-type {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.movement-product {
+    color: var(--text-secondary);
+}
+
+.movement-location {
+    color: var(--text-secondary);
+}
+
+.movement-qty {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.movement-time {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+/* ====================================
+   KPI CARDS
+==================================== */
+.kpi-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.kpi-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.kpi-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.kpi-bar {
+    height: 8px;
+    background: var(--light-gray);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.kpi-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.kpi-fill.success {
+    background: linear-gradient(90deg, var(--success-color), #1e7e34);
+}
+
+.kpi-fill.warning {
+    background: linear-gradient(90deg, var(--warning-color), #e0a800);
+}
+
+.kpi-fill.danger {
+    background: linear-gradient(90deg, var(--danger-color), #bd2130);
+}
+
+/* ====================================
+   RESPONSIVE DESIGN
+==================================== */
+@media (max-width: 1400px) {
+    .bento-grid {
+        grid-template-columns: repeat(8, 1fr);
+    }
+    
+    .bento-card.large {
+        grid-column: span 4;
+    }
+    
+    .bento-card.wide {
+        grid-column: span 6;
+    }
+}
+
+@media (max-width: 1024px) {
+    .bento-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 15px;
+        grid-auto-rows: 120px;
+    }
+    
+    .bento-card.small {
+        grid-column: span 2;
+    }
+    
+    .bento-card.medium {
+        grid-column: span 3;
+    }
+    
+    .bento-card.large {
+        grid-column: span 3;
+    }
+    
+    .bento-card.wide {
+        grid-column: span 6;
+    }
+    
+    .bento-card.tall {
+        grid-column: span 3;
+        grid-row: span 3;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .dashboard-section {
+        margin-bottom: 30px;
+    }
+    
+    .section-title {
+        padding: 15px 20px;
+        margin-bottom: 15px;
+    }
+    
+    .section-title h2 {
+        font-size: 1rem;
+    }
+    
+    .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        grid-auto-rows: 100px;
+    }
+    
+    .bento-card {
+        padding: 16px;
+    }
+    
+    .bento-card.small,
+    .bento-card.medium,
+    .bento-card.large,
+    .bento-card.wide {
+        grid-column: span 2;
+        grid-row: span 2;
+    }
+    
+    .bento-card.tall {
+        grid-column: span 2;
+        grid-row: span 3;
+    }
+    
+    .card-icon {
+        font-size: 2rem;
+    }
+    
+    .metric {
+        font-size: 1.5rem;
+    }
+    
+    .movement-row {
+        grid-template-columns: auto 1fr auto;
+        font-size: 0.75rem;
+    }
+    
+    .movement-type,
+    .movement-location {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .bento-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        grid-auto-rows: auto;
+    }
+    
+    .bento-card {
+        padding: 12px;
+    }
+    
+    .bento-card.small,
+    .bento-card.medium,
+    .bento-card.large,
+    .bento-card.wide,
+    .bento-card.tall {
+        grid-column: span 1;
+        grid-row: auto;
+        min-height: 140px;
+    }
+    
+    .card-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ====================================
+   ANIMACIONES
+==================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bento-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.badge {
+    animation: pulse 2s infinite;
+}
+
+/* ====================================
+   SCROLLBAR PERSONALIZADO
+==================================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--light-gray);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--medium-gray);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--dark-gray);
+}
+
+/* ====================================
+   UTILIDADES
+==================================== */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.hidden { display: none; }
+.loading { opacity: 0.6; pointer-events: none; }

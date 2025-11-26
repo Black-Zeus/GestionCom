@@ -1,0 +1,86 @@
+{
+  "criticas": [
+    {
+      "status": "danger",
+      "mensaje": "Stock crítico: Teclado Mecánico (3 unidades)",
+      "accion": "🛒 Reordenar ahora"
+    },
+    {
+      "status": "danger",
+      "mensaje": "Cliente ABC excedió límite crédito",
+      "accion": "🚫 Bloquear ventas"
+    },
+    {
+      "status": "danger",
+      "mensaje": "Factura #1234 rechazada por SII",
+      "accion": "🔄 Corregir y reenviar"
+    }
+  ],
+  "advertencias": [
+    {
+      "status": "warning",
+      "mensaje": "12 productos vencen en 15 días",
+      "accion": "📅 Programar promoción"
+    },
+    {
+      "status": "warning",
+      "mensaje": "Factura #5678 vence mañana ($85K)",
+      "accion": "📞 Contactar cliente"
+    },
+    {
+      "status": "warning",
+      "mensaje": "Caja 3 requiere cuadre",
+      "accion": "🧮 Revisar diferencias"
+    }
+  ],
+  "tareas": [
+    {
+      "descripcion": "📋 Inventario físico bodega norte - Programado: 20/07",
+      "plazo": "⏰ En 6 días"
+    },
+    {
+      "descripcion": "💰 Cierre mensual de caja - Programado: 31/07",
+      "plazo": "⏰ En 17 días"
+    },
+    {
+      "descripcion": "📊 Reporte gerencial - Programado: 15/07",
+      "plazo": "⏰ Mañana"
+    }
+  ],
+  "aprobaciones": [
+    {
+      "descripcion": "💳 Excepción crédito - Cliente XYZ (+$100K)",
+      "accion": "👤 Autorizar gerencia"
+    },
+    {
+      "descripcion": "🔄 Devolución Laptop Dell ($850K)",
+      "accion": "👤 Autorizar supervisor"
+    },
+    {
+      "descripcion": "💵 Gasto caja chica extraordinario ($25K)",
+      "accion": "👤 Autorizar administración"
+    }
+  ],
+  "configuracion": [
+    {
+      "title": "Email Activo",
+      "value": "✅ SI",
+      "subtitle": "Alertas críticas por correo"
+    },
+    {
+      "title": "SMS Activo",
+      "value": "⚠️ NO",
+      "subtitle": "Configurar número"
+    },
+    {
+      "title": "Push Notifications",
+      "value": "✅ SI",
+      "subtitle": "En navegador"
+    },
+    {
+      "title": "Frecuencia Check",
+      "value": "5 min",
+      "subtitle": "Actualización automática"
+    }
+  ]
+}

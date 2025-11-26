@@ -1,0 +1,80 @@
+{
+  "seriesFolios": [
+    {
+      "title": "Facturas Disponibles",
+      "value": "2,847",
+      "subtitle": "Folios restantes"
+    },
+    {
+      "title": "Boletas Disponibles",
+      "value": "4,156",
+      "subtitle": "Folios restantes"
+    },
+    {
+      "title": "Guías de Despacho",
+      "value": "1,234",
+      "subtitle": "Folios restantes"
+    },
+    {
+      "title": "Notas de Crédito",
+      "value": "456",
+      "subtitle": "Folios restantes"
+    }
+  ],
+  "emitidos": [
+    {
+      "title": "Facturas Electrónicas",
+      "value": "89",
+      "subtitle": "✅ Todas enviadas al SII"
+    },
+    {
+      "title": "Boletas Electrónicas",
+      "value": "158",
+      "subtitle": "✅ Todas enviadas al SII"
+    },
+    {
+      "title": "Guías de Despacho",
+      "value": "34",
+      "subtitle": "⏳ 2 pendientes envío"
+    }
+  ],
+  "monitoreo": [
+    {
+      "status": "good",
+      "descripcion": "Conexión SII - Operativa",
+      "detalle": "Última sincronización: 14:45"
+    },
+    {
+      "status": "good",
+      "descripcion": "Certificado Digital - Válido",
+      "detalle": "Vence: 15/12/2025"
+    },
+    {
+      "status": "warning",
+      "descripcion": "Modo Contingencia - Inactivo",
+      "detalle": "Sistema operando normalmente"
+    }
+  ],
+  "pendientes": [
+    {
+      "descripcion": "Factura #001234 - Error en envío SII",
+      "accion": "🔄 Reenviar"
+    },
+    {
+      "descripcion": "Guía #567890 - Pendiente firma electrónica",
+      "accion": "✍️ Firmar"
+    }
+  ],
+  "trazabilidad": [
+    {
+      "title": "Documentos Aceptados",
+      "value": "245",
+      "subtitle": "✅ SII confirmó recepción"
+    },
+    {
+      "title": "Documentos Rechazados",
+      "value": "2",
+      "subtitle": "❌ Requieren corrección"
+    }
+  ]
+}

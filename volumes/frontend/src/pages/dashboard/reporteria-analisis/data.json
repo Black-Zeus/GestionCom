@@ -1,0 +1,108 @@
+{
+  "ventas": [
+    {
+      "title": "Ventas del Mes",
+      "value": "$15.8M",
+      "subtitle": "↗️ +8% vs mes anterior"
+    },
+    {
+      "title": "Margen Promedio",
+      "value": "22.5%",
+      "subtitle": "↗️ +1.2% vs promedio"
+    },
+    {
+      "title": "Ticket Promedio",
+      "value": "$87,500",
+      "subtitle": "↘️ -3% vs mes anterior"
+    },
+    {
+      "title": "Transacciones",
+      "value": "3,247",
+      "subtitle": "↗️ +12% vs mes anterior"
+    }
+  ],
+  "inventario": [
+    {
+      "title": "Rotación Promedio",
+      "value": "4.2x",
+      "subtitle": "Veces por año"
+    },
+    {
+      "title": "Días de Stock",
+      "value": "87 días",
+      "subtitle": "Inventario actual"
+    },
+    {
+      "title": "Stock Sin Movimiento",
+      "value": "$485K",
+      "subtitle": "Más de 90 días"
+    }
+  ],
+  "vendedores": [
+    {
+      "descripcion": "1. Juan Pérez - $1.2M vendido - 45 clientes",
+      "meta": "✅ Meta: 120%"
+    },
+    {
+      "descripcion": "2. María García - $980K vendido - 38 clientes",
+      "meta": "✅ Meta: 105%"
+    },
+    {
+      "descripcion": "3. Carlos López - $850K vendido - 42 clientes",
+      "meta": "⚠️ Meta: 95%"
+    }
+  ],
+  "topProductos": [
+    "1. Laptop Gaming XYZ - 147 unidades",
+    "2. Mouse Logitech - 234 unidades",
+    "3. Monitor Samsung - 89 unidades",
+    "4. Teclado Mecánico - 156 unidades",
+    "5. Smartphone iPhone - 67 unidades"
+  ],
+  "rezagados": [
+    "1. Impresora Matriz - 2 unidades",
+    "2. Scanner Antiguo - 1 unidad",
+    "3. Cable Serial - 3 unidades",
+    "4. Fax Machine - 0 unidades",
+    "5. Disquetes 3.5\" - 1 unidad"
+  ],
+  "financiero": [
+    {
+      "title": "ROI Inventario",
+      "value": "18.5%",
+      "subtitle": "Retorno sobre inversión"
+    },
+    {
+      "title": "Días Promedio Cobro",
+      "value": "35 días",
+      "subtitle": "⚠️ Meta: 30 días"
+    },
+    {
+      "title": "Efectividad Cobranza",
+      "value": "94.2%",
+      "subtitle": "✅ Meta: 90%"
+    },
+    {
+      "title": "Costo de Ventas",
+      "value": "77.5%",
+      "subtitle": "Del total de ingresos"
+    }
+  ],
+  "exportacion": [
+    {
+      "title": "Reportes Programados",
+      "value": "12",
+      "subtitle": "Envío automático"
+    },
+    {
+      "title": "Último Backup",
+      "value": "Hoy 02:00",
+      "subtitle": "✅ Exitoso"
+    },
+    {
+      "title": "Formatos Disponibles",
+      "value": "Excel, PDF",
+      "subtitle": "CSV, XML"
+    }
+  ]
+}
