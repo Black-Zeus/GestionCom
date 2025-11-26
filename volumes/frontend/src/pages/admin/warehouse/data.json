@@ -1,0 +1,171 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Juan Pérez",
+      "email": "juan.perez@empresa.cl"
+    },
+    {
+      "id": 2,
+      "name": "María González",
+      "email": "maria.gonzalez@empresa.cl"
+    },
+    {
+      "id": 3,
+      "name": "Carlos Rodríguez",
+      "email": "carlos.rodriguez@empresa.cl"
+    },
+    {
+      "id": 4,
+      "name": "Ana Martínez",
+      "email": "ana.martinez@empresa.cl"
+    },
+    {
+      "id": 5,
+      "name": "Pedro Silva",
+      "email": "pedro.silva@empresa.cl"
+    }
+  ],
+  "warehouses": [
+    {
+      "id": 1,
+      "warehouse_code": "BOD-001",
+      "warehouse_name": "Bodega Central Santiago",
+      "warehouse_type": "WAREHOUSE",
+      "responsible_user_id": 1,
+      "responsible_name": "Juan Pérez",
+      "address": "Av. Libertador Bernardo O'Higgins 1234",
+      "city": "Santiago",
+      "country": "Chile",
+      "phone": "+56 9 1234 5678",
+      "email": "bodega.central@empresa.cl",
+      "is_active": 1,
+      "users_count": 3,
+      "zones_count": 3,
+      "assigned_users": [1, 2, 3],
+      "zones": [
+        {
+          "id": 1,
+          "zone_code": "Z-A",
+          "zone_name": "Zona A - Productos Frescos",
+          "zone_description": "Refrigerados y perecibles",
+          "is_location_tracking_enabled": 1,
+          "is_active": 1
+        },
+        {
+          "id": 2,
+          "zone_code": "Z-B",
+          "zone_name": "Zona B - Abarrotes",
+          "zone_description": "Productos no perecibles",
+          "is_location_tracking_enabled": 0,
+          "is_active": 1
+        },
+        {
+          "id": 3,
+          "zone_code": "Z-C",
+          "zone_name": "Zona C - Electrónica",
+          "zone_description": "Productos electrónicos",
+          "is_location_tracking_enabled": 1,
+          "is_active": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "warehouse_code": "TDA-001",
+      "warehouse_name": "Tienda Mall Plaza",
+      "warehouse_type": "STORE",
+      "responsible_user_id": 2,
+      "responsible_name": "María González",
+      "address": "Mall Plaza Vespucio, Local 234",
+      "city": "Santiago",
+      "country": "Chile",
+      "phone": "+56 9 8765 4321",
+      "email": "tienda.plaza@empresa.cl",
+      "is_active": 1,
+      "users_count": 2,
+      "zones_count": 2,
+      "assigned_users": [2, 4],
+      "zones": [
+        {
+          "id": 4,
+          "zone_code": "SALA",
+          "zone_name": "Sala de Ventas",
+          "zone_description": "Área principal de ventas",
+          "is_location_tracking_enabled": 0,
+          "is_active": 1
+        },
+        {
+          "id": 5,
+          "zone_code": "TRAS",
+          "zone_name": "Trastienda",
+          "zone_description": "Almacenamiento interno",
+          "is_location_tracking_enabled": 1,
+          "is_active": 1
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "warehouse_code": "OUT-001",
+      "warehouse_name": "Outlet La Dehesa",
+      "warehouse_type": "OUTLET",
+      "responsible_user_id": 3,
+      "responsible_name": "Carlos Rodríguez",
+      "address": "Av. La Dehesa 1950",
+      "city": "Santiago",
+      "country": "Chile",
+      "phone": "+56 9 5555 6666",
+      "email": "outlet.dehesa@empresa.cl",
+      "is_active": 1,
+      "users_count": 2,
+      "zones_count": 1,
+      "assigned_users": [3, 5],
+      "zones": [
+        {
+          "id": 6,
+          "zone_code": "PRINC",
+          "zone_name": "Zona Principal",
+          "zone_description": "Área de ventas y stock",
+          "is_location_tracking_enabled": 0,
+          "is_active": 1
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "warehouse_code": "BOD-002",
+      "warehouse_name": "Bodega Valparaíso",
+      "warehouse_type": "WAREHOUSE",
+      "responsible_user_id": 4,
+      "responsible_name": "Ana Martínez",
+      "address": "Calle Errázuriz 567",
+      "city": "Valparaíso",
+      "country": "Chile",
+      "phone": "+56 9 7777 8888",
+      "email": "bodega.valpo@empresa.cl",
+      "is_active": 0,
+      "users_count": 1,
+      "zones_count": 2,
+      "assigned_users": [4],
+      "zones": [
+        {
+          "id": 7,
+          "zone_code": "Z-1",
+          "zone_name": "Zona 1",
+          "zone_description": "Primera zona",
+          "is_location_tracking_enabled": 1,
+          "is_active": 1
+        },
+        {
+          "id": 8,
+          "zone_code": "Z-2",
+          "zone_name": "Zona 2",
+          "zone_description": "Segunda zona",
+          "is_location_tracking_enabled": 0,
+          "is_active": 0
+        }
+      ]
+    }
+  ]
+}
