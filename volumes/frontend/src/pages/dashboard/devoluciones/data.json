@@ -1,0 +1,59 @@
+{
+  "resumen": [
+    {
+      "title": "Devoluciones del Día",
+      "value": "12"
+    },
+    {
+      "title": "Valor Total",
+      "value": "$68,500"
+    },
+    {
+      "title": "Productos Retornados",
+      "value": "8",
+      "subtitle": "Al inventario"
+    },
+    {
+      "title": "Reembolsos Pendientes",
+      "value": "4",
+      "subtitle": "Por procesar"
+    }
+  ],
+  "motivos": [
+    {
+      "title": "Producto Defectuoso",
+      "value": "5",
+      "subtitle": "42% del total"
+    },
+    {
+      "title": "Cambio de Opinión",
+      "value": "4",
+      "subtitle": "33% del total"
+    },
+    {
+      "title": "Error en Pedido",
+      "value": "3",
+      "subtitle": "25% del total"
+    }
+  ],
+  "proceso": [
+    {
+      "descripcion": "DEV-001 - Laptop Dell - Cliente: Juan Pérez - Defecto",
+      "estado": "$850K - ⏳ Evaluación técnica"
+    },
+    {
+      "descripcion": "DEV-002 - Mouse Logitech - Cliente: Empresa ABC - Error envío",
+      "estado": "$25K - ✅ Autorizada"
+    }
+  ],
+  "notasCredito": [
+    {
+      "descripcion": "NC-001234 - Cliente: María García - $45K",
+      "estado": "✅ Aplicada"
+    },
+    {
+      "descripcion": "NC-001235 - Cliente: Comercial XYZ - $120K",
+      "estado": "⏳ Pendiente aplicación"
+    }
+  ]
+}

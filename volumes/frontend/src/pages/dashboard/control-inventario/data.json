@@ -1,0 +1,77 @@
+{
+  "estadoGeneral": [
+    {
+      "title": "Valor Total Inventario",
+      "value": "$15.2M"
+    },
+    {
+      "title": "Productos en Stock",
+      "value": "1,156"
+    },
+    {
+      "title": "Stock Crítico",
+      "value": "23",
+      "subtitle": "",
+      "status": "danger"
+    },
+    {
+      "title": "Próximos a Vencer",
+      "value": "12",
+      "subtitle": "",
+      "status": "warning"
+    }
+  ],
+  "movimientos": [
+    {
+      "descripcion": "📤 Venta - Laptop Dell (Bodega Centro) -1 und",
+      "hora": "14:32"
+    },
+    {
+      "descripcion": "📥 Entrada - Monitor LG (Bodega Norte) +15 und",
+      "hora": "14:28"
+    },
+    {
+      "descripcion": "🔄 Transferencia - Mouse Logitech (Norte → Centro) 10 und",
+      "hora": "14:15"
+    }
+  ],
+  "reabastecimiento": [
+    {
+      "descripcion": "Teclado Mecánico - Stock: 3 / Mín: 10 / Sugerido: 25",
+      "accion": "🛒 Ordenar"
+    },
+    {
+      "descripcion": "Cable HDMI - Stock: 1 / Mín: 15 / Sugerido: 50",
+      "accion": "🛒 Ordenar"
+    }
+  ],
+  "lotes": [
+    {
+      "title": "Lotes Activos",
+      "value": "156",
+      "subtitle": "Productos con control de lotes"
+    },
+    {
+      "title": "Vencen en 30 días",
+      "value": "8",
+      "subtitle": "Requieren atención"
+    }
+  ],
+  "analisisABC": [
+    {
+      "title": "Productos Clase A",
+      "value": "124",
+      "subtitle": "Alta rotación - 80% ventas"
+    },
+    {
+      "title": "Productos Clase B",
+      "value": "248",
+      "subtitle": "Rotación media - 15% ventas"
+    },
+    {
+      "title": "Productos Clase C",
+      "value": "875",
+      "subtitle": "Baja rotación - 5% ventas"
+    }
+  ]
+}

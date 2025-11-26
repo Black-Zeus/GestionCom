@@ -1,0 +1,48 @@
+{
+  "catalogo": [
+    {
+      "title": "Total Productos",
+      "value": "1,247"
+    },
+    {
+      "title": "Productos Activos",
+      "value": "1,201"
+    },
+    {
+      "title": "Sin Movimiento",
+      "value": "86"
+    }
+  ],
+  "variantes": [
+    {
+      "producto": "Camiseta Deportiva - 12 variantes (tallas/colores)",
+      "accion": "Gestionar →"
+    },
+    {
+      "producto": "Zapatillas Running - 8 variantes (tallas)",
+      "accion": "Gestionar →"
+    }
+  ],
+  "codigosPrecios": [
+    {
+      "title": "Productos sin Código",
+      "value": "15",
+      "subtitle": "Requieren código de barras"
+    },
+    {
+      "title": "Listas de Precios",
+      "value": "5",
+      "subtitle": "Mayorista, Minorista, VIP..."
+    }
+  ],
+  "rentabilidad": [
+    {
+      "nombre": "Laptop Gaming XYZ - Margen: 25%",
+      "valor": "$450,000"
+    },
+    {
+      "nombre": "Smartphone ABC - Margen: 18%",
+      "valor": "$320,000"
+    }
+  ]
+}

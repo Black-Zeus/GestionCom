@@ -1,0 +1,62 @@
+{
+  "resumen": [
+    {
+      "title": "Total Clientes",
+      "value": "2,847"
+    },
+    {
+      "title": "Clientes Activos",
+      "value": "1,956",
+      "subtitle": "Compras últimos 90 días"
+    },
+    {
+      "title": "Nuevos este Mes",
+      "value": "47"
+    },
+    {
+      "title": "VIP/Corporativos",
+      "value": "156"
+    }
+  ],
+  "segmentacion": [
+    {
+      "title": "Clientes Premium",
+      "value": "89",
+      "subtitle": "Compras > $500K anuales"
+    },
+    {
+      "title": "Clientes Regulares",
+      "value": "567",
+      "subtitle": "Compras $50K - $500K"
+    },
+    {
+      "title": "Clientes Ocasionales",
+      "value": "1,300",
+      "subtitle": "Compras < $50K"
+    }
+  ],
+  "creditoAlertas": [
+    {
+      "status": "danger",
+      "mensaje": "Empresa XYZ - Excedió límite ($450K/$400K)",
+      "accion": "Ver detalles →"
+    },
+    {
+      "status": "warning",
+      "mensaje": "Comercial ABC - 85% del límite usado",
+      "accion": "Ver detalles →"
+    }
+  ],
+  "comportamiento": [
+    {
+      "title": "Frecuencia Promedio",
+      "value": "12 días",
+      "subtitle": "Entre compras"
+    },
+    {
+      "title": "Ticket Promedio",
+      "value": "$87,500",
+      "subtitle": "Por transacción"
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+/* CuentasPorCobrar.css */
+.section {
+  background: white;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.section-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: bold;
+  font-size: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.section-header:hover {
+  background: #e9ecef;
+}
+
+.toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: 14px;
+}
+
+.toggle-icon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.section-content {
+  padding: 20px;
+  max-height: 2500px;
+  overflow: hidden;
+  opacity: 1;
+  transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
+.section-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.subsection {
+  margin-bottom: 20px;
+  border-left: 3px solid #007bff;
+  padding-left: 15px;
+}
+
+.subsection:first-child {
+  margin-top: 0;
+}
+
+.subsection-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.grid {
+  display: grid;
+  gap: 15px;
+}
+
+.grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #495057;
+}
+
+.metric {
+  font-size: 24px;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.card small {
+  color: #6c757d;
+  font-size: 12px;
+  display: block;
+  margin-top: 5px;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+
+.status-danger {
+  background-color: #dc3545;
+}
+
+.status-warning {
+  background-color: #ffc107;
+}
+
+.status-good {
+  background-color: #28a745;
+}
+
+.table-mockup {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table-header {
+  background: #f8f9fa;
+  padding: 10px;
+  font-weight: bold;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.table-row {
+  padding: 10px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
+}

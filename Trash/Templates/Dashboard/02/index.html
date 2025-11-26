@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard del Sistema - Bento</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <h1>📊 Dashboard del Sistema</h1>
+            <p>Panel de control principal - Vista general del negocio</p>
+        </header>
+
+        <!-- ========================================
+             SECCIÓN: DASHBOARD PRINCIPAL
+        ========================================= -->
+        <section class="dashboard-section" data-section="dashboard-principal">
+            <div class="section-title">
+                <h2>📊 DASHBOARD PRINCIPAL</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- VENTAS DEL DÍA -->
+                <div class="bento-card large" data-card="ventas-dia">
+                    <div class="card-header">
+                        <h3>💰 Ventas del Día</h3>
+                        <div class="card-value">$1,247,500</div>
+                    </div>
+                    <div class="card-trend">↗️ +12% vs ayer</div>
+                    <canvas id="ventasDiaChart"></canvas>
+                </div>
+
+                <!-- MÉTRICAS PRINCIPALES -->
+                <div class="bento-card small metric-card" data-card="facturas">
+                    <div class="card-icon">📄</div>
+                    <div class="card-title">Facturas Pendientes</div>
+                    <div class="metric">47</div>
+                    <small>🔔 3 críticas</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="stock">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Stock Bajo</div>
+                    <div class="metric">23</div>
+                    <small>⚠️ Requiere atención</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="caja">
+                    <div class="card-icon">💵</div>
+                    <div class="card-title">Caja Activa</div>
+                    <div class="metric">$850,200</div>
+                    <small>✅ 5 cajas abiertas</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="clientes">
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">Clientes Activos</div>
+                    <div class="metric">1,956</div>
+                    <small>+47 este mes</small>
+                </div>
+
+                <!-- ALERTAS CRÍTICAS -->
+                <div class="bento-card tall alert-card" data-card="alertas">
+                    <div class="card-header">
+                        <h3>🔔 Alertas Críticas</h3>
+                        <span class="badge">8</span>
+                    </div>
+                    <div class="alerts-list">
+                        <div class="alert-item danger">
+                            <span class="alert-icon">🚨</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Cliente ABC superó límite</div>
+                                <div class="alert-time">Hace 5 min</div>
+                            </div>
+                        </div>
+                        <div class="alert-item danger">
+                            <span class="alert-icon">⚠️</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Producto XYZ stock crítico</div>
+                                <div class="alert-time">Hace 15 min</div>
+                            </div>
+                        </div>
+                        <div class="alert-item warning">
+                            <span class="alert-icon">📅</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Factura #1234 vence hoy</div>
+                                <div class="alert-time">Hace 1 hora</div>
+                            </div>
+                        </div>
+                        <div class="alert-item warning">
+                            <span class="alert-icon">💰</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Caja 3 requiere cuadre</div>
+                                <div class="alert-time">Hace 2 horas</div>
+                            </div>
+                        </div>
+                        <div class="alert-item info">
+                            <span class="alert-icon">📦</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Productos vencen en 15 días</div>
+                                <div class="alert-time">Hace 3 horas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: GESTIÓN DE PRODUCTOS
+        ========================================= -->
+        <section class="dashboard-section" data-section="gestion-productos">
+            <div class="section-title">
+                <h2>📦 GESTIÓN DE PRODUCTOS</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- TOP PRODUCTOS -->
+                <div class="bento-card medium ranking-card" data-card="top-productos">
+                    <div class="card-header">
+                        <h3>🔥 Top 5 Productos Más Vendidos</h3>
+                    </div>
+                    <div class="ranking-list">
+                        <div class="ranking-item">
+                            <span class="rank">1</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Laptop Gaming XYZ</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">147 unid.</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">2</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Mouse Logitech</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 85%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">234 unid.</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">3</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Monitor Samsung</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">89 unid.</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">4</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Teclado Mecánico</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 55%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">156 unid.</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">5</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Smartphone iPhone</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 45%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">67 unid.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MÉTRICAS DE PRODUCTOS -->
+                <div class="bento-card small metric-card" data-card="total-productos">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Total Productos</div>
+                    <div class="metric">1,247</div>
+                    <small>1,201 activos</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="sin-movimiento">
+                    <div class="card-icon">⏸️</div>
+                    <div class="card-title">Sin Movimiento</div>
+                    <div class="metric">86</div>
+                    <small>+90 días</small>
+                </div>
+
+                <!-- RENTABILIDAD -->
+                <div class="bento-card medium ranking-card" data-card="rentabilidad">
+                    <div class="card-header">
+                        <h3>💎 Productos Más Rentables</h3>
+                    </div>
+                    <div class="ranking-list">
+                        <div class="ranking-item">
+                            <span class="rank">1</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Laptop Gaming XYZ</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">25%</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">2</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Smartphone ABC</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 72%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">18%</span>
+                        </div>
+                        <div class="ranking-item">
+                            <span class="rank">3</span>
+                            <div class="ranking-info">
+                                <div class="ranking-name">Tablet Pro</div>
+                                <div class="ranking-bar">
+                                    <div class="bar-fill" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <span class="ranking-value">15%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: CONTROL DE INVENTARIO
+        ========================================= -->
+        <section class="dashboard-section" data-section="inventario">
+            <div class="section-title">
+                <h2>📊 CONTROL DE INVENTARIO</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- VALOR INVENTARIO -->
+                <div class="bento-card small metric-card highlight" data-card="valor-inventario">
+                    <div class="card-icon">💎</div>
+                    <div class="card-title">Valor Inventario</div>
+                    <div class="metric">$15.2M</div>
+                    <canvas id="inventarioSparkline" height="40"></canvas>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="productos-stock">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Productos en Stock</div>
+                    <div class="metric">1,156</div>
+                    <small>De 1,247 totales</small>
+                </div>
+
+                <!-- ANÁLISIS ABC -->
+                <div class="bento-card medium" data-card="abc-analysis">
+                    <div class="card-header">
+                        <h3>📊 Análisis ABC - Rotación</h3>
+                    </div>
+                    <canvas id="abcChart"></canvas>
+                    <div class="abc-legend">
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background: #28a745"></span>
+                            <span>Clase A: Alta rotación (80% ventas)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background: #ffc107"></span>
+                            <span>Clase B: Media rotación (15% ventas)</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-dot" style="background: #dc3545"></span>
+                            <span>Clase C: Baja rotación (5% ventas)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STOCK CRÍTICO -->
+                <div class="bento-card medium table-card" data-card="stock-critico">
+                    <div class="card-header">
+                        <h3>⚠️ Stock Crítico - Reordenar</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="status-indicator status-danger"></span>
+                            <span class="product-name">Teclado Mecánico</span>
+                            <span class="stock-value">3 / 10</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-danger"></span>
+                            <span class="product-name">Cable HDMI</span>
+                            <span class="stock-value">1 / 15</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Mouse Logitech</span>
+                            <span class="stock-value">5 / 10</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Monitor LG 24"</span>
+                            <span class="stock-value">7 / 12</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVIMIENTOS RECIENTES -->
+                <div class="bento-card wide table-card" data-card="movimientos">
+                    <div class="card-header">
+                        <h3>🔄 Movimientos de Inventario en Tiempo Real</h3>
+                    </div>
+                    <div class="movements-table">
+                        <div class="movement-row">
+                            <span class="movement-icon">📤</span>
+                            <span class="movement-type">Venta</span>
+                            <span class="movement-product">Laptop Dell</span>
+                            <span class="movement-location">Bodega Centro</span>
+                            <span class="movement-qty">-1 und</span>
+                            <span class="movement-time">14:32</span>
+                        </div>
+                        <div class="movement-row">
+                            <span class="movement-icon">📥</span>
+                            <span class="movement-type">Entrada</span>
+                            <span class="movement-product">Monitor LG</span>
+                            <span class="movement-location">Bodega Norte</span>
+                            <span class="movement-qty">+15 und</span>
+                            <span class="movement-time">14:28</span>
+                        </div>
+                        <div class="movement-row">
+                            <span class="movement-icon">🔄</span>
+                            <span class="movement-type">Transferencia</span>
+                            <span class="movement-product">Mouse Logitech</span>
+                            <span class="movement-location">Norte → Centro</span>
+                            <span class="movement-qty">10 und</span>
+                            <span class="movement-time">14:15</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="lotes-activos">
+                    <div class="card-icon">🏷️</div>
+                    <div class="card-title">Lotes Activos</div>
+                    <div class="metric">156</div>
+                    <small>Control de lotes</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="proximos-vencer">
+                    <div class="card-icon">📅</div>
+                    <div class="card-title">Próximos a Vencer</div>
+                    <div class="metric">12</div>
+                    <small>En 30 días</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: PUNTO DE VENTA
+        ========================================= -->
+        <section class="dashboard-section" data-section="punto-venta">
+            <div class="section-title">
+                <h2>💰 PUNTO DE VENTA</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- VENTAS DEL MES -->
+                <div class="bento-card wide" data-card="ventas-mes">
+                    <div class="card-header">
+                        <h3>📈 Evolución de Ventas Mensual</h3>
+                        <div class="card-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Mes:</span>
+                                <span class="stat-value">$15.8M</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">vs Mes Anterior:</span>
+                                <span class="stat-value success">+8%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <canvas id="ventasMesChart"></canvas>
+                </div>
+
+                <!-- TERMINALES POS -->
+                <div class="bento-card small metric-card" data-card="cajas-abiertas">
+                    <div class="card-icon">🏪</div>
+                    <div class="card-title">Terminales POS</div>
+                    <div class="metric">5/8</div>
+                    <small>Cajas activas</small>
+                </div>
+
+                <!-- MÉTODOS DE PAGO -->
+                <div class="bento-card medium" data-card="metodos-pago">
+                    <div class="card-header">
+                        <h3>💳 Métodos de Pago Hoy</h3>
+                    </div>
+                    <canvas id="metodosPagoChart"></canvas>
+                </div>
+
+                <!-- TOP VENDEDORES -->
+                <div class="bento-card wide" data-card="top-vendedores">
+                    <div class="card-header">
+                        <h3>🏆 Top Vendedores del Mes</h3>
+                    </div>
+                    <canvas id="vendedoresChart"></canvas>
+                </div>
+
+                <!-- DOCUMENTOS SII -->
+                <div class="bento-card small status-card" data-card="estado-sii">
+                    <div class="card-icon">📄</div>
+                    <div class="card-title">Estado SII</div>
+                    <div class="status-badge success">✅ Operativo</div>
+                    <small>Última sync: 14:45</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="docs-emitidos">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">Documentos Hoy</div>
+                    <div class="metric">247</div>
+                    <small>Facturas y Boletas</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: GESTIÓN DE CLIENTES
+        ========================================= -->
+        <section class="dashboard-section" data-section="clientes">
+            <div class="section-title">
+                <h2>👥 GESTIÓN DE CLIENTES</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- SEGMENTACIÓN -->
+                <div class="bento-card medium" data-card="segmentacion">
+                    <div class="card-header">
+                        <h3>👥 Segmentación de Clientes</h3>
+                    </div>
+                    <canvas id="segmentacionChart"></canvas>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="total-clientes">
+                    <div class="card-icon">👥</div>
+                    <div class="card-title">Total Clientes</div>
+                    <div class="metric">2,847</div>
+                    <small>1,956 activos</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="nuevos-clientes">
+                    <div class="card-icon">✨</div>
+                    <div class="card-title">Nuevos este Mes</div>
+                    <div class="metric">47</div>
+                    <small>+12% vs anterior</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="vip">
+                    <div class="card-icon">⭐</div>
+                    <div class="card-title">VIP/Corporativos</div>
+                    <div class="metric">156</div>
+                    <small>Alto valor</small>
+                </div>
+
+                <!-- ALERTAS DE CRÉDITO -->
+                <div class="bento-card medium table-card" data-card="credito-clientes">
+                    <div class="card-header">
+                        <h3>💳 Alertas de Límite de Crédito</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="status-indicator status-danger"></span>
+                            <span class="product-name">Empresa XYZ</span>
+                            <span class="stock-value">Excedido</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Comercial ABC</span>
+                            <span class="stock-value">85% usado</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Dist. Global</span>
+                            <span class="stock-value">78% usado</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: CUENTAS POR COBRAR
+        ========================================= -->
+        <section class="dashboard-section" data-section="cuentas-cobrar">
+            <div class="section-title">
+                <h2>💳 CUENTAS POR COBRAR</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- AGING -->
+                <div class="bento-card medium" data-card="aging">
+                    <div class="card-header">
+                        <h3>📊 Antigüedad de Saldos (Aging)</h3>
+                        <div class="card-value">$2.8M</div>
+                    </div>
+                    <canvas id="agingChart"></canvas>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="facturas-pendientes">
+                    <div class="card-icon">📄</div>
+                    <div class="card-title">Facturas Pendientes</div>
+                    <div class="metric">347</div>
+                    <small>Total cartera</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="cartera-vencida">
+                    <div class="card-icon">⏰</div>
+                    <div class="card-title">Cartera Vencida</div>
+                    <div class="metric">$485K</div>
+                    <small>17% del total</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="dias-mora">
+                    <div class="card-icon">📅</div>
+                    <div class="card-title">Promedio Días Mora</div>
+                    <div class="metric">18</div>
+                    <small>días</small>
+                </div>
+
+                <!-- COBRANZA PRIORITARIA -->
+                <div class="bento-card medium table-card" data-card="cobranza">
+                    <div class="card-header">
+                        <h3>📞 Clientes Prioritarios para Cobranza</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="status-indicator status-danger"></span>
+                            <span class="product-name">Empresa ABC</span>
+                            <span class="stock-value">$125K</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-danger"></span>
+                            <span class="product-name">Comercial XYZ</span>
+                            <span class="stock-value">$85K</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Dist. Norte</span>
+                            <span class="stock-value">$62K</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: CONTROL DE CAJA
+        ========================================= -->
+        <section class="dashboard-section" data-section="caja">
+            <div class="section-title">
+                <h2>💵 CONTROL DE CAJA</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <div class="bento-card small metric-card" data-card="cajas-abiertas-caja">
+                    <div class="card-icon">💵</div>
+                    <div class="card-title">Cajas Abiertas</div>
+                    <div class="metric">5</div>
+                    <small>De 8 disponibles</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="efectivo-total">
+                    <div class="card-icon">💰</div>
+                    <div class="card-title">Efectivo Total</div>
+                    <div class="metric">$385K</div>
+                    <small>En cajas</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="pendientes-cuadre">
+                    <div class="card-icon">🧮</div>
+                    <div class="card-title">Pendientes Cuadre</div>
+                    <div class="metric">2</div>
+                    <small>Requieren revisión</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="diferencias">
+                    <div class="card-icon">⚖️</div>
+                    <div class="card-title">Diferencias</div>
+                    <div class="metric">$2,500</div>
+                    <small>Sobrantes netos</small>
+                </div>
+
+                <!-- SESIONES ACTIVAS -->
+                <div class="bento-card medium table-card" data-card="sesiones-caja">
+                    <div class="card-header">
+                        <h3>🏪 Cajeros en Turno</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="status-indicator status-good"></span>
+                            <span class="product-name">Caja 1 - Juan Pérez</span>
+                            <span class="stock-value">$125K</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-good"></span>
+                            <span class="product-name">Caja 2 - María García</span>
+                            <span class="stock-value">$98K</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">Caja 3 - Carlos López</span>
+                            <span class="stock-value">$45K</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAJA CHICA -->
+                <div class="bento-card medium table-card" data-card="caja-chica">
+                    <div class="card-header">
+                        <h3>💼 Caja Chica y Gastos</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="product-name">Fondos Activos</span>
+                            <span class="stock-value">$45,000</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="product-name">Gastos del Día</span>
+                            <span class="stock-value">$8,500</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="product-name">Reposiciones</span>
+                            <span class="stock-value">2 pend.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: DEVOLUCIONES
+        ========================================= -->
+        <section class="dashboard-section" data-section="devoluciones">
+            <div class="section-title">
+                <h2>🔄 DEVOLUCIONES</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <div class="bento-card small metric-card" data-card="devoluciones-dia">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Devoluciones Hoy</div>
+                    <div class="metric">12</div>
+                    <small>$68,500 total</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="productos-retornados">
+                    <div class="card-icon">📦</div>
+                    <div class="card-title">Retornados</div>
+                    <div class="metric">8</div>
+                    <small>Al inventario</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="reembolsos">
+                    <div class="card-icon">💸</div>
+                    <div class="card-title">Reembolsos</div>
+                    <div class="metric">4</div>
+                    <small>Por procesar</small>
+                </div>
+
+                <!-- MOTIVOS -->
+                <div class="bento-card medium" data-card="motivos-devolucion">
+                    <div class="card-header">
+                        <h3>📋 Motivos de Devolución</h3>
+                    </div>
+                    <div class="kpi-grid">
+                        <div class="kpi-item">
+                            <div class="kpi-label">Producto Defectuoso</div>
+                            <div class="kpi-value">5 (42%)</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill danger" style="width: 42%"></div>
+                            </div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Cambio de Opinión</div>
+                            <div class="kpi-value">4 (33%)</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill warning" style="width: 33%"></div>
+                            </div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Error en Pedido</div>
+                            <div class="kpi-value">3 (25%)</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill success" style="width: 25%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NOTAS DE CRÉDITO -->
+                <div class="bento-card medium table-card" data-card="notas-credito">
+                    <div class="card-header">
+                        <h3>📝 Notas de Crédito Generadas</h3>
+                    </div>
+                    <div class="compact-table">
+                        <div class="table-row">
+                            <span class="status-indicator status-good"></span>
+                            <span class="product-name">NC-001234 - María G.</span>
+                            <span class="stock-value">$45K</span>
+                        </div>
+                        <div class="table-row">
+                            <span class="status-indicator status-warning"></span>
+                            <span class="product-name">NC-001235 - Com. XYZ</span>
+                            <span class="stock-value">$120K</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================
+             SECCIÓN: REPORTERÍA Y ANÁLISIS
+        ========================================= -->
+        <section class="dashboard-section" data-section="reporteria">
+            <div class="section-title">
+                <h2>📈 REPORTERÍA Y ANÁLISIS</h2>
+            </div>
+            
+            <div class="bento-grid">
+                <!-- KPI FINANCIEROS -->
+                <div class="bento-card medium kpi-card" data-card="kpi-financiero">
+                    <div class="card-header">
+                        <h3>💹 Indicadores Financieros</h3>
+                    </div>
+                    <div class="kpi-grid">
+                        <div class="kpi-item">
+                            <div class="kpi-label">ROI Inventario</div>
+                            <div class="kpi-value">18.5%</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill success" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Días Cobro</div>
+                            <div class="kpi-value">35 días</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill warning" style="width: 58%"></div>
+                            </div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Efectividad Cobranza</div>
+                            <div class="kpi-value">94.2%</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill success" style="width: 94%"></div>
+                            </div>
+                        </div>
+                        <div class="kpi-item">
+                            <div class="kpi-label">Costo de Ventas</div>
+                            <div class="kpi-value">77.5%</div>
+                            <div class="kpi-bar">
+                                <div class="kpi-fill" style="width: 77%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="margen-promedio">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">Margen Promedio</div>
+                    <div class="metric">22.5%</div>
+                    <small>↗️ +1.2%</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="ticket-promedio">
+                    <div class="card-icon">🎫</div>
+                    <div class="card-title">Ticket Promedio</div>
+                    <div class="metric">$87.5K</div>
+                    <small>↘️ -3%</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="transacciones">
+                    <div class="card-icon">💳</div>
+                    <div class="card-title">Transacciones</div>
+                    <div class="metric">3,247</div>
+                    <small>↗️ +12%</small>
+                </div>
+
+                <div class="bento-card small metric-card" data-card="rotacion">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Rotación</div>
+                    <div class="metric">4.2x</div>
+                    <small>Veces por año</small>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

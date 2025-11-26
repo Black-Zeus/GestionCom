@@ -1,0 +1,73 @@
+{
+  "terminales": [
+    {
+      "title": "POS 1 - Centro",
+      "value": "$125,400",
+      "subtitle": "✅ Activo - Juan Pérez"
+    },
+    {
+      "title": "POS 2 - Norte",
+      "value": "$98,700",
+      "subtitle": "✅ Activo - María García"
+    },
+    {
+      "title": "POS 3 - Sur",
+      "value": "$87,200",
+      "subtitle": "⚠️ Requiere cuadre"
+    },
+    {
+      "title": "POS Online",
+      "value": "$156,800",
+      "subtitle": "🌐 Web/App"
+    }
+  ],
+  "facturacion": [
+    {
+      "title": "Documentos Emitidos Hoy",
+      "value": "247",
+      "subtitle": "📄 Facturas y Boletas"
+    },
+    {
+      "title": "Estado SII",
+      "value": "✅ OK",
+      "subtitle": "Conectado y operativo"
+    },
+    {
+      "title": "Pendientes Envío",
+      "value": "3",
+      "subtitle": "⏳ En cola de envío"
+    }
+  ],
+  "transacciones": [
+    {
+      "descripcion": "POS 1 - Venta #2024001234 - Cliente: Empresa ABC",
+      "estado": "$45,600 - En proceso"
+    },
+    {
+      "descripcion": "POS 2 - Cotización #COT-0456 - Cliente: Juan Rodríguez",
+      "estado": "$12,400 - Pendiente"
+    }
+  ],
+  "metodosPago": [
+    {
+      "title": "Efectivo",
+      "value": "$185,400",
+      "subtitle": "35% del total"
+    },
+    {
+      "title": "Tarjetas",
+      "value": "$245,800",
+      "subtitle": "46% del total"
+    },
+    {
+      "title": "Transferencias",
+      "value": "$87,300",
+      "subtitle": "16% del total"
+    },
+    {
+      "title": "Crédito",
+      "value": "$15,600",
+      "subtitle": "3% del total"
+    }
+  ]
+}

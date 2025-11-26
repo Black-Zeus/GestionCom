@@ -1,0 +1,64 @@
+{
+  "estadoCartera": [
+    {
+      "title": "Saldo Total",
+      "value": "$2.8M"
+    },
+    {
+      "title": "Facturas Pendientes",
+      "value": "347"
+    },
+    {
+      "title": "Cartera Vencida",
+      "value": "$485K",
+      "subtitle": "",
+      "status": "danger"
+    },
+    {
+      "title": "Promedio Días Mora",
+      "value": "18 días"
+    }
+  ],
+  "aging": [
+    {
+      "title": "0-30 días",
+      "value": "$1.8M",
+      "subtitle": "64% del total"
+    },
+    {
+      "title": "31-60 días",
+      "value": "$485K",
+      "subtitle": "17% del total"
+    },
+    {
+      "title": "61-90 días",
+      "value": "$345K",
+      "subtitle": "12% del total"
+    },
+    {
+      "title": "+90 días",
+      "value": "$170K",
+      "subtitle": "7% del total"
+    }
+  ],
+  "cobranza": [
+    {
+      "descripcion": "Empresa ABC - $125K vencida hace 45 días",
+      "accion": "🔔 Contactar urgente"
+    },
+    {
+      "descripcion": "Comercial XYZ - $85K vence mañana",
+      "accion": "📞 Recordatorio"
+    }
+  ],
+  "pagos": [
+    {
+      "descripcion": "Empresa DEF - Transferencia $45K - Fact. #1234",
+      "estado": "✅ Aplicado"
+    },
+    {
+      "descripcion": "Cliente GHI - Cheque $15K - Fact. #1235",
+      "estado": "⏳ Pendiente compensación"
+    }
+  ]
+}
