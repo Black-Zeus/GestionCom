@@ -60,10 +60,16 @@ export const sidebarNavData = {
                                 path: "/admin/warehouses"
                             },
                             {
-                                id: "caja-config",
-                                text: "Configuración de Caja",
-                                icon: "💵",
-                                path: "/admin/cash-config"
+                                id: "caja-pos",
+                                text: "Caja POS",
+                                icon: "🧾",
+                                path: "/admin/cash-pos"
+                            },
+                            {
+                                id: "caja-chica",
+                                text: "Caja Chica",
+                                icon: "🪙",
+                                path: "/admin/cash-petty"
                             },
                             {
                                 id: "menu",
