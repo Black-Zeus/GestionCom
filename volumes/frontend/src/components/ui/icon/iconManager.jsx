@@ -30,64 +30,85 @@ import {
   FaCircleInfo,
   FaTriangleExclamation,
   FaPrint,
-  FaShield,
   FaClockRotateLeft,
   FaShieldHalved,
+  FaFloppyDisk,
+  FaCartShopping,
+  FaPerson,
+  FaReceipt,
+  FaAngleUp,
+  FaAngleDown,
+  FaCreditCard,
+  FaAnglesUp,
+  FaAnglesDown,
+  FaBuilding,
 } from "react-icons/fa6";
 
 const ICON_REGISTRY = {
   // Estados vacíos / listados
-  inbox: FaInbox, // fa-inbox
-  usersEmpty: FaUsers, // listado sin usuarios / bodegas
+  inbox: FaInbox,
+  usersEmpty: FaUsers,
 
   // Acciones genéricas
-  plus: FaPlus, // fa-plus (acción genérica "agregar")
-  add: FaPlus, // alias
-  addUser: FaUserPlus, // fa-user-plus (agregar usuario)
-  addUsers: FaUserPlus, // alias
-  edit: FaPenToSquare, // fa-edit → pen-to-square en FA6
-  users: FaUsers, // fa-users
-  zones: FaLayerGroup, // fa-layer-group
-  delete: FaTrash, // fa-trash
-  password: FaKey, // fa-key
-  key: FaKey, // fa-key (permisos)
+  plus: FaPlus,
+  add: FaPlus,
+  addUser: FaUserPlus,
+  addUsers: FaUserPlus,
+  edit: FaPenToSquare,
+  users: FaUsers,
+  zones: FaLayerGroup,
+  delete: FaTrash,
+  password: FaKey,
+  key: FaKey,
+  save: FaFloppyDisk,
 
   // Estado / toggles
-  ban: FaBan, // fa-ban (bloquear / desactivar)
-  checkCircle: FaCircleCheck, // fa-check-circle
-  success: FaCircleCheck, // alias para estados OK
-  error: FaCircleXmark, // fa-times-circle → circle-xmark
-  timesCircle: FaCircleXmark, // alias directo
+  ban: FaBan,
+  checkCircle: FaCircleCheck,
+  success: FaCircleCheck,
+  error: FaCircleXmark,
+  timesCircle: FaCircleXmark,
 
   // Conectividad / seguridad / infraestructura
-  wifi: FaWifi, // fa-wifi
-  security: FaUserShield, // fa-user-shield
-  warehouse: FaWarehouse, // fa-warehouse
-  location: FaLocationDot, // reemplazo de map-marker-alt
+  wifi: FaWifi,
+  security: FaUserShield,
+  warehouse: FaWarehouse,
+  location: FaLocationDot,
 
   // Navegación / búsqueda / cierre
-  chevronLeft: FaChevronLeft, // fa-chevron-left
-  chevronRight: FaChevronRight, // fa-chevron-right
-  search: FaMagnifyingGlass, // fa-search → magnifying-glass en FA6
-  close: FaXmark, // fa-times → xmark en FA6
+  chevronLeft: FaChevronLeft,
+  chevronRight: FaChevronRight,
+  search: FaMagnifyingGlass,
+  close: FaXmark,
+  expandLess: FaAngleUp,
+  expandMore: FaAngleDown,
 
   // Visibilidad / campos de contraseña
   eye: FaEye,
   eyeSlash: FaEyeSlash,
 
   // Módulo Caja POS
-  cash: FaMoneyBill, // fa-money-bill (dinero/caja)
-  folder: FaFolder, // fa-folder (sesiones/archivos)
-  list: FaList, // fa-list (movimientos/listados)
-  lock: FaLock, // fa-lock (cerrar sesión)
-  activity: FaChartLine, // fa-chart-line (actividad/operación)
-  info: FaCircleInfo, // fa-circle-info (información)
-  warning: FaTriangleExclamation, // fa-triangle-exclamation (advertencia)
-  print: FaPrint, // fa-print (imprimir)
+  cash: FaMoneyBill,
+  folder: FaFolder,
+  list: FaList,
+  lock: FaLock,
+  activity: FaChartLine,
+  info: FaCircleInfo,
+  warning: FaTriangleExclamation,
+  print: FaPrint,
 
   // Módulo Roles y Permisos
-  shield: FaShieldHalved, // fa-shield-halved (roles/seguridad)
-  history: FaClockRotateLeft, // fa-clock-rotate-left (auditoría/historial)
+  shield: FaShieldHalved,
+  history: FaClockRotateLeft,
+
+  // Módulo Ventas (Sales)
+  shoppingCart: FaCartShopping,
+  person: FaPerson,
+  receipt: FaReceipt,
+  payments: FaCreditCard,
+  unfoldLess: FaAnglesUp,
+  unfoldMore: FaAnglesDown,
+  business: FaBuilding,
 };
 
 /**

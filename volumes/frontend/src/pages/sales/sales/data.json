@@ -1,0 +1,542 @@
+{
+  "customers": {
+    "1-9": {
+      "customer_code": "CLI000",
+      "tax_id": "1-9",
+      "legal_name": "Cliente Genérico",
+      "customer_type": "INDIVIDUAL",
+      "commercial_name": null,
+      "contact_person": "Cliente Genérico",
+      "email": "generico@sistema.local",
+      "phone": "-",
+      "is_credit_customer": false
+    },
+    "12345678-9": {
+      "customer_code": "CLI001",
+      "tax_id": "12345678-9",
+      "legal_name": "Juan Pérez González",
+      "customer_type": "INDIVIDUAL",
+      "commercial_name": null,
+      "contact_person": "Juan Pérez",
+      "email": "juan.perez@email.com",
+      "phone": "+56912345678",
+      "is_credit_customer": false
+    },
+    "76543210-K": {
+      "customer_code": "CLI002",
+      "tax_id": "76543210-K",
+      "legal_name": "Tecnología Avanzada SpA",
+      "customer_type": "COMPANY",
+      "commercial_name": "TechnoAdvance",
+      "contact_person": "Carlos Mendoza",
+      "email": "contacto@technoadvance.cl",
+      "phone": "+56987654321",
+      "is_credit_customer": true
+    },
+    "11111111-1": {
+      "customer_code": "CLI003",
+      "tax_id": "11111111-1",
+      "legal_name": "María González Silva",
+      "customer_type": "INDIVIDUAL",
+      "commercial_name": null,
+      "contact_person": "María González",
+      "email": "maria.gonzalez@email.com",
+      "phone": "+56911223344",
+      "is_credit_customer": false
+    },
+    "87654321-0": {
+      "customer_code": "CLI004",
+      "tax_id": "87654321-0",
+      "legal_name": "Constructora del Sur Limitada",
+      "customer_type": "COMPANY",
+      "commercial_name": "ConSur",
+      "contact_person": "Roberto Silva",
+      "email": "info@consur.cl",
+      "phone": "+56922334455",
+      "is_credit_customer": true
+    },
+    "98765432-1": {
+      "customer_code": "CLI005",
+      "tax_id": "98765432-1",
+      "legal_name": "Servicios Integrales Ltda",
+      "customer_type": "COMPANY",
+      "commercial_name": "ServiIntegrales",
+      "contact_person": "Laura Morales",
+      "email": "laura@serviintegrales.cl",
+      "phone": "+56933445566",
+      "is_credit_customer": true
+    },
+    "22222222-2": {
+      "customer_code": "CLI006",
+      "tax_id": "22222222-2",
+      "legal_name": "Ana Patricia Rojas",
+      "customer_type": "INDIVIDUAL",
+      "commercial_name": null,
+      "contact_person": "Ana Rojas",
+      "email": "ana.rojas@email.com",
+      "phone": "+56955667788",
+      "is_credit_customer": false
+    },
+    "95432100-7": {
+      "customer_code": "CLI007",
+      "tax_id": "95432100-7",
+      "legal_name": "Importadora Digital Chile S.A.",
+      "customer_type": "COMPANY",
+      "commercial_name": "DigiChile",
+      "contact_person": "Fernando Castro",
+      "email": "ventas@digichile.cl",
+      "phone": "+56233998877",
+      "is_credit_customer": true
+    }
+  },
+  "authorized_buyers": {
+    "76543210-K": [
+      {
+        "id": 1,
+        "authorized_name": "Carlos Mendoza Rivera",
+        "authorized_tax_id": "15555555-5",
+        "position": "Gerente General",
+        "email": "carlos.mendoza@technoadvance.cl",
+        "phone": "+56912345678",
+        "is_primary_contact": true,
+        "authorization_level": "FULL",
+        "max_purchase_amount": null
+      },
+      {
+        "id": 2,
+        "authorized_name": "Ana López Torres",
+        "authorized_tax_id": "16666666-6",
+        "position": "Jefe de Compras",
+        "email": "ana.lopez@technoadvance.cl",
+        "phone": "+56998765432",
+        "is_primary_contact": false,
+        "authorization_level": "ADVANCED",
+        "max_purchase_amount": 5000000
+      },
+      {
+        "id": 3,
+        "authorized_name": "Pedro Ramírez Soto",
+        "authorized_tax_id": "17777777-7",
+        "position": "Asistente de Compras",
+        "email": "pedro.ramirez@technoadvance.cl",
+        "phone": "+56987654321",
+        "is_primary_contact": false,
+        "authorization_level": "BASIC",
+        "max_purchase_amount": 500000
+      }
+    ],
+    "87654321-0": [
+      {
+        "id": 4,
+        "authorized_name": "Roberto Silva Peña",
+        "authorized_tax_id": "18888888-8",
+        "position": "Gerente de Obras",
+        "email": "roberto.silva@consur.cl",
+        "phone": "+56922334455",
+        "is_primary_contact": true,
+        "authorization_level": "FULL",
+        "max_purchase_amount": null
+      },
+      {
+        "id": 5,
+        "authorized_name": "Claudia Morales Díaz",
+        "authorized_tax_id": "19999999-9",
+        "position": "Encargada de Adquisiciones",
+        "email": "claudia.morales@consur.cl",
+        "phone": "+56933445566",
+        "is_primary_contact": false,
+        "authorization_level": "ADVANCED",
+        "max_purchase_amount": 3000000
+      }
+    ],
+    "98765432-1": [
+      {
+        "id": 6,
+        "authorized_name": "Laura Morales González",
+        "authorized_tax_id": "20000000-0",
+        "position": "Directora Ejecutiva",
+        "email": "laura@serviintegrales.cl",
+        "phone": "+56933445566",
+        "is_primary_contact": true,
+        "authorization_level": "FULL",
+        "max_purchase_amount": null
+      },
+      {
+        "id": 7,
+        "authorized_name": "José Martínez Ruiz",
+        "authorized_tax_id": "21111111-1",
+        "position": "Supervisor de Compras",
+        "email": "jose.martinez@serviintegrales.cl",
+        "phone": "+56944556677",
+        "is_primary_contact": false,
+        "authorization_level": "ADVANCED",
+        "max_purchase_amount": 2000000
+      }
+    ],
+    "95432100-7": [
+      {
+        "id": 8,
+        "authorized_name": "Fernando Castro López",
+        "authorized_tax_id": "23333333-3",
+        "position": "Gerente Comercial",
+        "email": "fernando.castro@digichile.cl",
+        "phone": "+56233998877",
+        "is_primary_contact": true,
+        "authorization_level": "FULL",
+        "max_purchase_amount": null
+      },
+      {
+        "id": 9,
+        "authorized_name": "Patricia Sánchez Vera",
+        "authorized_tax_id": "24444444-4",
+        "position": "Encargada Compras TI",
+        "email": "patricia.sanchez@digichile.cl",
+        "phone": "+56988776655",
+        "is_primary_contact": false,
+        "authorization_level": "ADVANCED",
+        "max_purchase_amount": 8000000
+      }
+    ]
+  },
+  "products": {
+    "PROD001": {
+      "variant_sku": "PROD001",
+      "product_name": "Notebook HP Pavilion 15\"",
+      "price": 699990,
+      "stock": 15,
+      "brand": "HP",
+      "category": "Computadores",
+      "description": "Notebook con procesador Intel Core i5, 8GB RAM, 256GB SSD",
+      "barcode": "7809123456789"
+    },
+    "PROD002": {
+      "variant_sku": "PROD002",
+      "product_name": "Mouse Logitech MX Master 3",
+      "price": 89990,
+      "stock": 25,
+      "brand": "Logitech",
+      "category": "Accesorios",
+      "description": "Mouse inalámbrico ergonómico para profesionales",
+      "barcode": "7809234567890"
+    },
+    "PROD003": {
+      "variant_sku": "PROD003",
+      "product_name": "Teclado Mecánico Corsair K95",
+      "price": 159990,
+      "stock": 12,
+      "brand": "Corsair",
+      "category": "Accesorios",
+      "description": "Teclado mecánico RGB con switches Cherry MX",
+      "barcode": "7809345678901"
+    },
+    "PROD004": {
+      "variant_sku": "PROD004",
+      "product_name": "Monitor Samsung 27\" 4K",
+      "price": 429990,
+      "stock": 8,
+      "brand": "Samsung",
+      "category": "Monitores",
+      "description": "Monitor 4K UHD de 27 pulgadas con HDR",
+      "barcode": "7809456789012"
+    },
+    "PROD005": {
+      "variant_sku": "PROD005",
+      "product_name": "Auriculares Sony WH-1000XM4",
+      "price": 289990,
+      "stock": 18,
+      "brand": "Sony",
+      "category": "Audio",
+      "description": "Auriculares inalámbricos con cancelación de ruido",
+      "barcode": "7809567890123"
+    },
+    "7801234567890": {
+      "variant_sku": "7801234567890",
+      "product_name": "Cable USB-C Premium 2m",
+      "price": 19990,
+      "stock": 50,
+      "brand": "Generic",
+      "category": "Cables",
+      "description": "Cable USB-C trenzado de 2 metros de alta velocidad",
+      "barcode": "7801234567890"
+    },
+    "KB001": {
+      "variant_sku": "KB001",
+      "product_name": "Teclado Inalámbrico Logitech K380",
+      "price": 45990,
+      "stock": 30,
+      "brand": "Logitech",
+      "category": "Accesorios",
+      "description": "Teclado inalámbrico compacto multi-dispositivo",
+      "barcode": "7809678901234"
+    },
+    "WEB001": {
+      "variant_sku": "WEB001",
+      "product_name": "Webcam Logitech C920",
+      "price": 79990,
+      "stock": 20,
+      "brand": "Logitech",
+      "category": "Video",
+      "description": "Webcam Full HD 1080p con micrófono estéreo",
+      "barcode": "7809789012345"
+    },
+    "CAM001": {
+      "variant_sku": "CAM001",
+      "product_name": "Cámara Logitech StreamCam",
+      "price": 179990,
+      "stock": 10,
+      "brand": "Logitech",
+      "category": "Video",
+      "description": "Cámara de streaming Full HD con enfoque automático",
+      "barcode": "7809890123456"
+    },
+    "MSE001": {
+      "variant_sku": "MSE001",
+      "product_name": "Mouse Gaming Razer DeathAdder V2",
+      "price": 69990,
+      "stock": 16,
+      "brand": "Razer",
+      "category": "Gaming",
+      "description": "Mouse gaming con sensor óptico de 20000 DPI",
+      "barcode": "7809901234567"
+    },
+    "PAD001": {
+      "variant_sku": "PAD001",
+      "product_name": "Mousepad Gaming XL Corsair",
+      "price": 29990,
+      "stock": 25,
+      "brand": "Corsair",
+      "category": "Gaming",
+      "description": "Mousepad de tela extendido para gaming",
+      "barcode": "7809012345678"
+    },
+    "HDD001": {
+      "variant_sku": "HDD001",
+      "product_name": "Disco Externo WD 2TB",
+      "price": 89990,
+      "stock": 18,
+      "brand": "Western Digital",
+      "category": "Almacenamiento",
+      "description": "Disco duro externo USB 3.0 de 2TB",
+      "barcode": "7809123456780"
+    },
+    "HUB001": {
+      "variant_sku": "HUB001",
+      "product_name": "Hub USB-C Anker 7 puertos",
+      "price": 59990,
+      "stock": 15,
+      "brand": "Anker",
+      "category": "Conectividad",
+      "description": "Hub USB-C con 7 puertos y carga PD",
+      "barcode": "7809234567891"
+    },
+    "LAP001": {
+      "variant_sku": "LAP001",
+      "product_name": "Notebook Gaming ASUS ROG",
+      "price": 1499990,
+      "stock": 5,
+      "brand": "ASUS",
+      "category": "Gaming",
+      "description": "Laptop gaming con RTX 3060, Intel i7, 16GB RAM",
+      "barcode": "7809345678902"
+    },
+    "DESK001": {
+      "variant_sku": "DESK001",
+      "product_name": "PC Desktop Dell OptiPlex 3000",
+      "price": 549990,
+      "stock": 8,
+      "brand": "Dell",
+      "category": "Computadores",
+      "description": "PC de escritorio Intel Core i5, 8GB RAM, 500GB HDD",
+      "barcode": "7809678901245"
+    },
+    "TAB001": {
+      "variant_sku": "TAB001",
+      "product_name": "Tablet Samsung Galaxy Tab S8",
+      "price": 449990,
+      "stock": 14,
+      "brand": "Samsung",
+      "category": "Computadores",
+      "description": "Tablet Android de 11 pulgadas con S Pen incluido",
+      "barcode": "7809789012356"
+    },
+    "PRIN001": {
+      "variant_sku": "PRIN001",
+      "product_name": "Impresora HP LaserJet Pro M404n",
+      "price": 179990,
+      "stock": 12,
+      "brand": "HP",
+      "category": "Impresoras",
+      "description": "Impresora láser monocromática con conectividad de red",
+      "barcode": "7809890123467"
+    },
+    "SSD001": {
+      "variant_sku": "SSD001",
+      "product_name": "SSD Samsung 980 PRO 1TB",
+      "price": 149990,
+      "stock": 22,
+      "brand": "Samsung",
+      "category": "Almacenamiento",
+      "description": "SSD NVMe M.2 de 1TB con velocidades hasta 7000 MB/s",
+      "barcode": "7809901234578"
+    },
+    "RAM001": {
+      "variant_sku": "RAM001",
+      "product_name": "Memoria RAM Corsair 16GB DDR4",
+      "price": 89990,
+      "stock": 30,
+      "brand": "Corsair",
+      "category": "Componentes",
+      "description": "Kit de memoria RAM DDR4 16GB (2x8GB) 3200MHz",
+      "barcode": "7809012345689"
+    }
+  },
+  "categories": {
+    "COMP": {
+      "category_code": "COMP",
+      "category_name": "Computadores",
+      "description": "Laptops, desktops, tablets y equipos de cómputo"
+    },
+    "ACC": {
+      "category_code": "ACC",
+      "category_name": "Accesorios",
+      "description": "Accesorios para computadores y dispositivos"
+    },
+    "AUDIO": {
+      "category_code": "AUDIO",
+      "category_name": "Audio",
+      "description": "Dispositivos de audio y sonido"
+    },
+    "VIDEO": {
+      "category_code": "VIDEO",
+      "category_name": "Video",
+      "description": "Cámaras, webcams y dispositivos de video"
+    },
+    "GAMING": {
+      "category_code": "GAMING",
+      "category_name": "Gaming",
+      "description": "Accesorios y periféricos para gaming"
+    },
+    "STORAGE": {
+      "category_code": "STORAGE",
+      "category_name": "Almacenamiento",
+      "description": "Dispositivos de almacenamiento y backup"
+    },
+    "CONNECT": {
+      "category_code": "CONNECT",
+      "category_name": "Conectividad",
+      "description": "Cables, adaptadores y hubs"
+    },
+    "MONITOR": {
+      "category_code": "MONITOR",
+      "category_name": "Monitores",
+      "description": "Monitores y pantallas"
+    },
+    "CABLES": {
+      "category_code": "CABLES",
+      "category_name": "Cables",
+      "description": "Cables USB, HDMI, de poder y conectividad"
+    },
+    "PRINTER": {
+      "category_code": "PRINTER",
+      "category_name": "Impresoras",
+      "description": "Impresoras láser, inyección de tinta y multifuncionales"
+    },
+    "COMPONENTS": {
+      "category_code": "COMPONENTS",
+      "category_name": "Componentes",
+      "description": "Componentes internos para PC: RAM, SSD, tarjetas, etc."
+    }
+  },
+  "payment_methods": {
+    "CASH": {
+      "method_code": "CASH",
+      "method_name": "Efectivo",
+      "method_type": "CASH",
+      "affects_cash_flow": true,
+      "requires_authorization": false,
+      "allows_postdated": false,
+      "requires_bank_info": false
+    },
+    "DEBIT": {
+      "method_code": "DEBIT",
+      "method_name": "Tarjeta de Débito",
+      "method_type": "CARD",
+      "affects_cash_flow": true,
+      "requires_authorization": false,
+      "allows_postdated": false,
+      "requires_bank_info": false
+    },
+    "CREDIT": {
+      "method_code": "CREDIT",
+      "method_name": "Tarjeta de Crédito",
+      "method_type": "CARD",
+      "affects_cash_flow": true,
+      "requires_authorization": false,
+      "allows_postdated": false,
+      "requires_bank_info": false
+    },
+    "TRANSFER": {
+      "method_code": "TRANSFER",
+      "method_name": "Transferencia Bancaria",
+      "method_type": "TRANSFER",
+      "affects_cash_flow": true,
+      "requires_authorization": false,
+      "allows_postdated": false,
+      "requires_bank_info": true
+    },
+    "CHECK": {
+      "method_code": "CHECK",
+      "method_name": "Cheque",
+      "method_type": "OTHER",
+      "affects_cash_flow": false,
+      "requires_authorization": true,
+      "allows_postdated": true,
+      "requires_bank_info": true
+    },
+    "CREDIT_ACCOUNT": {
+      "method_code": "CREDIT_ACCOUNT",
+      "method_name": "Cuenta Corriente",
+      "method_type": "OTHER",
+      "affects_cash_flow": false,
+      "requires_authorization": true,
+      "allows_postdated": false,
+      "requires_bank_info": false,
+      "default_terms_days": 30
+    }
+  },
+  "system_config": {
+    "company": {
+      "name": "Empresa Tecnológica Ltda.",
+      "rut": "96543210-1",
+      "address": "Av. Providencia 1234, Santiago",
+      "phone": "+56223456789",
+      "email": "ventas@empresa.cl"
+    },
+    "tax_settings": {
+      "iva_rate": 0.19,
+      "currency": "CLP",
+      "currency_symbol": "$"
+    },
+    "pos_settings": {
+      "allow_negative_stock": false,
+      "require_customer_for_sale": true,
+      "require_authorized_buyer_for_companies": true,
+      "max_discount_percentage": 50,
+      "auto_save_draft_minutes": 5,
+      "enable_barcode_search": true,
+      "enable_partial_search": true,
+      "min_search_chars": 2,
+      "search_delay_ms": 300,
+      "show_stock_warnings": true,
+      "low_stock_threshold": 10
+    },
+    "user_session": {
+      "user_name": "María González",
+      "user_id": "USR001",
+      "warehouse": "Centro",
+      "warehouse_id": "WH001",
+      "pos_terminal": "TERM001",
+      "session_start": "2025-07-24T14:00:00Z"
+    }
+  }
+}
