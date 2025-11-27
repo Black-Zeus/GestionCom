@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roles y Permisos - Sistema Administrativo</title>
+    <link rel="stylesheet" href="styles-common.css">
+    <link rel="stylesheet" href="styles-roles-permisos.css">
+</head>
+<body>
+    <div class="container">
+        <header class="page-header">
+            <h1>Gestión de Roles y Permisos</h1>
+        </header>
+
+        <!-- Navegación de tabs -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" data-tab="roles">Roles</button>
+            <button class="tab-btn" data-tab="permissions">Permisos</button>
+            <button class="tab-btn" data-tab="user-roles">Usuarios-Roles</button>
+            <button class="tab-btn" data-tab="audit">Auditoría</button>
+        </nav>
+
+        <!-- Vista: Roles -->
+        <section id="roles-view" class="tab-content active">
+            <div class="section-header">
+                <h2>Roles del Sistema</h2>
+                <button class="btn-primary" onclick="openModal('role-modal')">+ Nuevo Rol</button>
+            </div>
+
+            <div class="filters-bar">
+                <input type="text" id="filter-role-name" placeholder="Buscar por nombre..." class="input-filter">
+                <select id="filter-role-status" class="select-filter">
+                    <option value="">Todos los estados</option>
+                    <option value="1">Activos</option>
+                    <option value="0">Inactivos</option>
+                </select>
+                <button class="btn-secondary" onclick="applyFilters('roles')">Filtrar</button>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roles-table-body">
+                        <!-- Datos cargados dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="roles-pagination"></div>
+        </section>
+
+        <!-- Vista: Permisos -->
+        <section id="permissions-view" class="tab-content">
+            <div class="section-header">
+                <h2>Permisos del Sistema</h2>
+            </div>
+
+            <div class="filters-bar">
+                <input type="text" id="filter-permission-name" placeholder="Buscar por nombre..." class="input-filter">
+                <select id="filter-permission-category" class="select-filter">
+                    <option value="">Todas las categorías</option>
+                </select>
+                <button class="btn-secondary" onclick="applyFilters('permissions')">Filtrar</button>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="permissions-table-body">
+                        <!-- Datos cargados dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="permissions-pagination"></div>
+        </section>
+
+        <!-- Vista: Usuarios-Roles -->
+        <section id="user-roles-view" class="tab-content">
+            <div class="section-header">
+                <h2>Usuarios y sus Roles Asignados</h2>
+            </div>
+
+            <div class="filters-bar">
+                <input type="text" id="filter-user-name" placeholder="Buscar usuario..." class="input-filter">
+                <select id="filter-user-role" class="select-filter">
+                    <option value="">Todos los roles</option>
+                </select>
+                <select id="filter-user-status" class="select-filter">
+                    <option value="">Todos los estados</option>
+                    <option value="1">Activos</option>
+                    <option value="0">Inactivos</option>
+                </select>
+                <button class="btn-secondary" onclick="applyFilters('user-roles')">Filtrar</button>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>RUT</th>
+                            <th>Email</th>
+                            <th>Rol(es) Asignado(s)</th>
+                            <th>Estado Usuario</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-roles-table-body">
+                        <!-- Datos cargados dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="user-roles-pagination"></div>
+        </section>
+
+        <!-- Vista: Auditoría -->
+        <section id="audit-view" class="tab-content">
+            <div class="section-header">
+                <h2>Log de Auditoría</h2>
+            </div>
+
+            <div class="filters-bar">
+                <input type="text" id="filter-audit-actor" placeholder="Usuario que realizó..." class="input-filter">
+                <select id="filter-audit-action" class="select-filter">
+                    <option value="">Todas las acciones</option>
+                    <option value="ASSIGN_ROLE">Asignar Rol</option>
+                    <option value="REVOKE_ROLE">Revocar Rol</option>
+                    <option value="GRANT_PERMISSION">Conceder Permiso</option>
+                    <option value="REVOKE_PERMISSION">Revocar Permiso</option>
+                </select>
+                <input type="date" id="filter-audit-date-from" class="input-filter" placeholder="Desde">
+                <input type="date" id="filter-audit-date-to" class="input-filter" placeholder="Hasta">
+                <button class="btn-secondary" onclick="applyFilters('audit')">Filtrar</button>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                            <th>Actor</th>
+                            <th>Usuario Afectado</th>
+                            <th>Descripción</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-table-body">
+                        <!-- Datos cargados dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pagination" id="audit-pagination"></div>
+        </section>
+    </div>
+
+    <!-- Modal: Rol -->
+    <div id="role-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="role-modal-title">Nuevo Rol</h3>
+                <button class="btn-close" onclick="closeModal('role-modal')">&times;</button>
+            </div>
+            <form id="role-form">
+                <div class="form-group">
+                    <label>Código del Rol *</label>
+                    <input type="text" id="role-code" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Rol *</label>
+                    <input type="text" id="role-name" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea id="role-description" rows="3" class="form-input"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="role-is-system">
+                        <span>Rol del Sistema (no editable)</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="role-is-active" checked>
+                        <span>Activo</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('role-modal')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Ver/Gestionar Permisos del Rol -->
+    <div id="role-permissions-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="role-permissions-modal-title">Permisos del Rol</h3>
+                <button class="btn-close" onclick="closeModal('role-permissions-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="role-permissions-info">
+                    <p><strong>Rol:</strong> <span id="rp-role-name"></span></p>
+                    <p><strong>Descripción:</strong> <span id="rp-role-description"></span></p>
+                </div>
+                
+                <div class="permissions-grid" id="permissions-grid">
+                    <!-- Permisos agrupados por categoría cargados dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('role-permissions-modal')">Cerrar</button>
+                <button type="button" class="btn-primary" onclick="saveRolePermissions()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Asignar Roles a Usuario -->
+    <div id="user-roles-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="user-roles-modal-title">Asignar Roles a Usuario</h3>
+                <button class="btn-close" onclick="closeModal('user-roles-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="user-roles-info">
+                    <p><strong>Usuario:</strong> <span id="ur-user-name"></span></p>
+                    <p><strong>RUT:</strong> <span id="ur-user-rut"></span></p>
+                </div>
+                
+                <form id="user-roles-form">
+                    <div class="form-group">
+                        <label>Seleccionar Rol(es) *</label>
+                        <div id="roles-checkboxes" class="checkboxes-group">
+                            <!-- Roles como checkboxes cargados dinámicamente -->
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('user-roles-modal')">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="saveUserRoles()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalle de Auditoría -->
+    <div id="audit-detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Detalle del Registro de Auditoría</h3>
+                <button class="btn-close" onclick="closeModal('audit-detail-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="audit-detail-grid" id="audit-detail-content">
+                    <!-- Contenido cargado dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('audit-detail-modal')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script-common.js"></script>
+    <script src="script-roles-permisos.js"></script>
+</body>
+</html>

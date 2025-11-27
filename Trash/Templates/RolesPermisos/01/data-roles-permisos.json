@@ -1,0 +1,845 @@
+{
+    "roles": [
+        {
+            "id": 1,
+            "role_code": "ADMIN",
+            "role_name": "Administrador",
+            "role_description": "Acceso total al sistema",
+            "is_system_role": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 2,
+            "role_code": "GERENTE",
+            "role_name": "Gerente de Sucursal",
+            "role_description": "Gestión completa de sucursal y reportes",
+            "is_system_role": 0,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:05:00Z",
+            "updated_at": "2024-01-15T10:05:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 3,
+            "role_code": "CAJERO",
+            "role_name": "Cajero",
+            "role_description": "Operación de caja y ventas",
+            "is_system_role": 0,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:10:00Z",
+            "updated_at": "2024-01-15T10:10:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 4,
+            "role_code": "BODEGUERO",
+            "role_name": "Bodeguero",
+            "role_description": "Gestión de inventario y bodegas",
+            "is_system_role": 0,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:15:00Z",
+            "updated_at": "2024-01-15T10:15:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 5,
+            "role_code": "CONTADOR",
+            "role_name": "Contador",
+            "role_description": "Acceso a reportes financieros y auditoría",
+            "is_system_role": 0,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:20:00Z",
+            "updated_at": "2024-01-15T10:20:00Z",
+            "deleted_at": null
+        }
+    ],
+    "permissions": [
+        {
+            "id": 1,
+            "permission_code": "USERS_VIEW",
+            "permission_name": "Ver Usuarios",
+            "permission_description": "Permite visualizar la lista de usuarios",
+            "category": "Usuarios",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 2,
+            "permission_code": "USERS_CREATE",
+            "permission_name": "Crear Usuarios",
+            "permission_description": "Permite crear nuevos usuarios",
+            "category": "Usuarios",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 3,
+            "permission_code": "USERS_EDIT",
+            "permission_name": "Editar Usuarios",
+            "permission_description": "Permite modificar información de usuarios",
+            "category": "Usuarios",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 4,
+            "permission_code": "USERS_DELETE",
+            "permission_name": "Eliminar Usuarios",
+            "permission_description": "Permite eliminar usuarios del sistema",
+            "category": "Usuarios",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 5,
+            "permission_code": "ROLES_VIEW",
+            "permission_name": "Ver Roles",
+            "permission_description": "Permite visualizar roles del sistema",
+            "category": "Roles y Permisos",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 6,
+            "permission_code": "ROLES_MANAGE",
+            "permission_name": "Gestionar Roles",
+            "permission_description": "Permite crear, editar y eliminar roles",
+            "category": "Roles y Permisos",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 7,
+            "permission_code": "PERMISSIONS_VIEW",
+            "permission_name": "Ver Permisos",
+            "permission_description": "Permite visualizar permisos del sistema",
+            "category": "Roles y Permisos",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 8,
+            "permission_code": "PERMISSIONS_MANAGE",
+            "permission_name": "Gestionar Permisos",
+            "permission_description": "Permite asignar y revocar permisos",
+            "category": "Roles y Permisos",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 9,
+            "permission_code": "WAREHOUSE_VIEW",
+            "permission_name": "Ver Bodegas",
+            "permission_description": "Permite visualizar información de bodegas",
+            "category": "Inventario",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 10,
+            "permission_code": "WAREHOUSE_MANAGE",
+            "permission_name": "Gestionar Bodegas",
+            "permission_description": "Permite crear, editar y eliminar bodegas",
+            "category": "Inventario",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 11,
+            "permission_code": "INVENTORY_VIEW",
+            "permission_name": "Ver Inventario",
+            "permission_description": "Permite visualizar stock y movimientos",
+            "category": "Inventario",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 12,
+            "permission_code": "INVENTORY_ADJUST",
+            "permission_name": "Ajustar Inventario",
+            "permission_description": "Permite realizar ajustes de inventario",
+            "category": "Inventario",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 13,
+            "permission_code": "POS_ACCESS",
+            "permission_name": "Acceso a Caja POS",
+            "permission_description": "Permite acceder al sistema de caja",
+            "category": "Ventas",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 14,
+            "permission_code": "POS_SALES",
+            "permission_name": "Realizar Ventas",
+            "permission_description": "Permite procesar ventas en caja",
+            "category": "Ventas",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 15,
+            "permission_code": "POS_REFUNDS",
+            "permission_name": "Procesar Devoluciones",
+            "permission_description": "Permite realizar devoluciones y reembolsos",
+            "category": "Ventas",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 16,
+            "permission_code": "PETTY_CASH_VIEW",
+            "permission_name": "Ver Caja Chica",
+            "permission_description": "Permite visualizar movimientos de caja chica",
+            "category": "Finanzas",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 17,
+            "permission_code": "PETTY_CASH_MANAGE",
+            "permission_name": "Gestionar Caja Chica",
+            "permission_description": "Permite registrar gastos y reposiciones",
+            "category": "Finanzas",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 18,
+            "permission_code": "REPORTS_SALES",
+            "permission_name": "Reportes de Ventas",
+            "permission_description": "Permite acceder a reportes de ventas",
+            "category": "Reportes",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 19,
+            "permission_code": "REPORTS_FINANCIAL",
+            "permission_name": "Reportes Financieros",
+            "permission_description": "Permite acceder a reportes financieros",
+            "category": "Reportes",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        },
+        {
+            "id": 20,
+            "permission_code": "REPORTS_INVENTORY",
+            "permission_name": "Reportes de Inventario",
+            "permission_description": "Permite acceder a reportes de inventario",
+            "category": "Reportes",
+            "is_system_permission": 1,
+            "is_active": 1,
+            "created_at": "2024-01-15T10:00:00Z",
+            "updated_at": "2024-01-15T10:00:00Z",
+            "deleted_at": null
+        }
+    ],
+    "rolePermissions": [
+        {
+            "id": 1,
+            "role_id": 1,
+            "permission_id": 1,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 2,
+            "role_id": 1,
+            "permission_id": 2,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 3,
+            "role_id": 1,
+            "permission_id": 3,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 4,
+            "role_id": 1,
+            "permission_id": 4,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 5,
+            "role_id": 1,
+            "permission_id": 5,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 6,
+            "role_id": 1,
+            "permission_id": 6,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 7,
+            "role_id": 1,
+            "permission_id": 7,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 8,
+            "role_id": 1,
+            "permission_id": 8,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 9,
+            "role_id": 1,
+            "permission_id": 9,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 10,
+            "role_id": 1,
+            "permission_id": 10,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:30:00Z",
+            "updated_at": "2024-01-15T10:30:00Z"
+        },
+        {
+            "id": 11,
+            "role_id": 2,
+            "permission_id": 1,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 12,
+            "role_id": 2,
+            "permission_id": 9,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 13,
+            "role_id": 2,
+            "permission_id": 10,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 14,
+            "role_id": 2,
+            "permission_id": 11,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 15,
+            "role_id": 2,
+            "permission_id": 13,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 16,
+            "role_id": 2,
+            "permission_id": 14,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 17,
+            "role_id": 2,
+            "permission_id": 15,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 18,
+            "role_id": 2,
+            "permission_id": 16,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 19,
+            "role_id": 2,
+            "permission_id": 17,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 20,
+            "role_id": 2,
+            "permission_id": 18,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:35:00Z",
+            "updated_at": "2024-01-15T10:35:00Z"
+        },
+        {
+            "id": 21,
+            "role_id": 3,
+            "permission_id": 13,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:40:00Z",
+            "updated_at": "2024-01-15T10:40:00Z"
+        },
+        {
+            "id": 22,
+            "role_id": 3,
+            "permission_id": 14,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:40:00Z",
+            "updated_at": "2024-01-15T10:40:00Z"
+        },
+        {
+            "id": 23,
+            "role_id": 3,
+            "permission_id": 15,
+            "is_allowed": 0,
+            "created_at": "2024-01-15T10:40:00Z",
+            "updated_at": "2024-01-15T10:40:00Z"
+        },
+        {
+            "id": 24,
+            "role_id": 4,
+            "permission_id": 9,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:45:00Z",
+            "updated_at": "2024-01-15T10:45:00Z"
+        },
+        {
+            "id": 25,
+            "role_id": 4,
+            "permission_id": 11,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:45:00Z",
+            "updated_at": "2024-01-15T10:45:00Z"
+        },
+        {
+            "id": 26,
+            "role_id": 4,
+            "permission_id": 12,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:45:00Z",
+            "updated_at": "2024-01-15T10:45:00Z"
+        },
+        {
+            "id": 27,
+            "role_id": 4,
+            "permission_id": 20,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:45:00Z",
+            "updated_at": "2024-01-15T10:45:00Z"
+        },
+        {
+            "id": 28,
+            "role_id": 5,
+            "permission_id": 16,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:50:00Z",
+            "updated_at": "2024-01-15T10:50:00Z"
+        },
+        {
+            "id": 29,
+            "role_id": 5,
+            "permission_id": 18,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:50:00Z",
+            "updated_at": "2024-01-15T10:50:00Z"
+        },
+        {
+            "id": 30,
+            "role_id": 5,
+            "permission_id": 19,
+            "is_allowed": 1,
+            "created_at": "2024-01-15T10:50:00Z",
+            "updated_at": "2024-01-15T10:50:00Z"
+        }
+    ],
+    "users": [
+        {
+            "id": 1,
+            "rut": "12345678-9",
+            "first_name": "Juan",
+            "last_name": "Pérez",
+            "email": "juan.perez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 2,
+            "rut": "23456789-0",
+            "first_name": "María",
+            "last_name": "González",
+            "email": "maria.gonzalez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 3,
+            "rut": "34567890-1",
+            "first_name": "Carlos",
+            "last_name": "Rodríguez",
+            "email": "carlos.rodriguez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 4,
+            "rut": "45678901-2",
+            "first_name": "Ana",
+            "last_name": "Martínez",
+            "email": "ana.martinez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 5,
+            "rut": "56789012-3",
+            "first_name": "Pedro",
+            "last_name": "Sánchez",
+            "email": "pedro.sanchez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 6,
+            "rut": "67890123-4",
+            "first_name": "Laura",
+            "last_name": "López",
+            "email": "laura.lopez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        },
+        {
+            "id": 7,
+            "rut": "78901234-5",
+            "first_name": "Diego",
+            "last_name": "Fernández",
+            "email": "diego.fernandez@empresa.cl",
+            "is_active": 1,
+            "deleted_at": null
+        }
+    ],
+    "userRoles": [
+        {
+            "id": 1,
+            "user_id": 1,
+            "role_id": 1,
+            "assigned_by": 1,
+            "assigned_at": "2024-01-15T11:00:00Z"
+        },
+        {
+            "id": 2,
+            "user_id": 2,
+            "role_id": 2,
+            "assigned_by": 1,
+            "assigned_at": "2024-01-15T11:05:00Z"
+        },
+        {
+            "id": 3,
+            "user_id": 3,
+            "role_id": 2,
+            "assigned_by": 1,
+            "assigned_at": "2024-01-15T11:10:00Z"
+        },
+        {
+            "id": 4,
+            "user_id": 4,
+            "role_id": 3,
+            "assigned_by": 2,
+            "assigned_at": "2024-01-15T11:15:00Z"
+        },
+        {
+            "id": 5,
+            "user_id": 5,
+            "role_id": 3,
+            "assigned_by": 2,
+            "assigned_at": "2024-01-15T11:20:00Z"
+        },
+        {
+            "id": 6,
+            "user_id": 6,
+            "role_id": 4,
+            "assigned_by": 3,
+            "assigned_at": "2024-01-15T11:25:00Z"
+        },
+        {
+            "id": 7,
+            "user_id": 7,
+            "role_id": 5,
+            "assigned_by": 1,
+            "assigned_at": "2024-01-15T11:30:00Z"
+        }
+    ],
+    "userPermissions": [
+        {
+            "id": 1,
+            "user_id": 4,
+            "permission_id": 15,
+            "is_allowed": 1,
+            "granted_by": 2,
+            "granted_at": "2024-01-16T09:00:00Z"
+        },
+        {
+            "id": 2,
+            "user_id": 5,
+            "permission_id": 11,
+            "is_allowed": 1,
+            "granted_by": 2,
+            "granted_at": "2024-01-16T09:15:00Z"
+        }
+    ],
+    "menuItemPermissions": [
+        {
+            "id": 1,
+            "menu_item_id": 1,
+            "permission_id": 1,
+            "created_at": "2024-01-15T12:00:00Z"
+        },
+        {
+            "id": 2,
+            "menu_item_id": 2,
+            "permission_id": 5,
+            "created_at": "2024-01-15T12:00:00Z"
+        },
+        {
+            "id": 3,
+            "menu_item_id": 3,
+            "permission_id": 9,
+            "created_at": "2024-01-15T12:00:00Z"
+        },
+        {
+            "id": 4,
+            "menu_item_id": 4,
+            "permission_id": 13,
+            "created_at": "2024-01-15T12:00:00Z"
+        }
+    ],
+    "permissionAuditLog": [
+        {
+            "id": 1,
+            "actor_user_id": 1,
+            "target_user_id": 2,
+            "target_role_id": 2,
+            "permission_id": null,
+            "action_type": "ASSIGN_ROLE",
+            "description": "Asignó el rol 'Gerente de Sucursal' al usuario María González",
+            "metadata": {
+                "role_name": "Gerente de Sucursal",
+                "user_name": "María González"
+            },
+            "created_at": "2024-01-15T11:05:00Z"
+        },
+        {
+            "id": 2,
+            "actor_user_id": 1,
+            "target_user_id": 3,
+            "target_role_id": 2,
+            "permission_id": null,
+            "action_type": "ASSIGN_ROLE",
+            "description": "Asignó el rol 'Gerente de Sucursal' al usuario Carlos Rodríguez",
+            "metadata": {
+                "role_name": "Gerente de Sucursal",
+                "user_name": "Carlos Rodríguez"
+            },
+            "created_at": "2024-01-15T11:10:00Z"
+        },
+        {
+            "id": 3,
+            "actor_user_id": 2,
+            "target_user_id": 4,
+            "target_role_id": 3,
+            "permission_id": null,
+            "action_type": "ASSIGN_ROLE",
+            "description": "Asignó el rol 'Cajero' al usuario Ana Martínez",
+            "metadata": {
+                "role_name": "Cajero",
+                "user_name": "Ana Martínez"
+            },
+            "created_at": "2024-01-15T11:15:00Z"
+        },
+        {
+            "id": 4,
+            "actor_user_id": 2,
+            "target_user_id": 4,
+            "target_role_id": null,
+            "permission_id": 15,
+            "action_type": "GRANT_PERMISSION",
+            "description": "Concedió el permiso 'Procesar Devoluciones' al usuario Ana Martínez",
+            "metadata": {
+                "permission_name": "Procesar Devoluciones",
+                "user_name": "Ana Martínez"
+            },
+            "created_at": "2024-01-16T09:00:00Z"
+        },
+        {
+            "id": 5,
+            "actor_user_id": 2,
+            "target_user_id": 5,
+            "target_role_id": null,
+            "permission_id": 11,
+            "action_type": "GRANT_PERMISSION",
+            "description": "Concedió el permiso 'Ver Inventario' al usuario Pedro Sánchez",
+            "metadata": {
+                "permission_name": "Ver Inventario",
+                "user_name": "Pedro Sánchez"
+            },
+            "created_at": "2024-01-16T09:15:00Z"
+        },
+        {
+            "id": 6,
+            "actor_user_id": 1,
+            "target_user_id": null,
+            "target_role_id": 2,
+            "permission_id": 18,
+            "action_type": "GRANT_PERMISSION",
+            "description": "Asignó el permiso 'Reportes de Ventas' al rol 'Gerente de Sucursal'",
+            "metadata": {
+                "permission_name": "Reportes de Ventas",
+                "role_name": "Gerente de Sucursal"
+            },
+            "created_at": "2024-01-17T10:00:00Z"
+        },
+        {
+            "id": 7,
+            "actor_user_id": 1,
+            "target_user_id": null,
+            "target_role_id": 3,
+            "permission_id": 15,
+            "action_type": "REVOKE_PERMISSION",
+            "description": "Revocó el permiso 'Procesar Devoluciones' del rol 'Cajero'",
+            "metadata": {
+                "permission_name": "Procesar Devoluciones",
+                "role_name": "Cajero"
+            },
+            "created_at": "2024-01-18T14:30:00Z"
+        },
+        {
+            "id": 8,
+            "actor_user_id": 3,
+            "target_user_id": 6,
+            "target_role_id": 4,
+            "permission_id": null,
+            "action_type": "ASSIGN_ROLE",
+            "description": "Asignó el rol 'Bodeguero' al usuario Laura López",
+            "metadata": {
+                "role_name": "Bodeguero",
+                "user_name": "Laura López"
+            },
+            "created_at": "2024-01-15T11:25:00Z"
+        },
+        {
+            "id": 9,
+            "actor_user_id": 1,
+            "target_user_id": 7,
+            "target_role_id": 5,
+            "permission_id": null,
+            "action_type": "ASSIGN_ROLE",
+            "description": "Asignó el rol 'Contador' al usuario Diego Fernández",
+            "metadata": {
+                "role_name": "Contador",
+                "user_name": "Diego Fernández"
+            },
+            "created_at": "2024-01-15T11:30:00Z"
+        },
+        {
+            "id": 10,
+            "actor_user_id": 1,
+            "target_user_id": null,
+            "target_role_id": 5,
+            "permission_id": 19,
+            "action_type": "GRANT_PERMISSION",
+            "description": "Asignó el permiso 'Reportes Financieros' al rol 'Contador'",
+            "metadata": {
+                "permission_name": "Reportes Financieros",
+                "role_name": "Contador"
+            },
+            "created_at": "2024-01-19T08:00:00Z"
+        }
+    ]
+}
