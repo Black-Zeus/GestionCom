@@ -22,6 +22,14 @@ import {
   FaXmark,
   FaEye,
   FaEyeSlash,
+  FaMoneyBill,
+  FaFolder,
+  FaList,
+  FaLock,
+  FaChartLine,
+  FaCircleInfo,
+  FaTriangleExclamation,
+  FaPrint,
 } from "react-icons/fa6";
 
 const ICON_REGISTRY = {
@@ -62,6 +70,16 @@ const ICON_REGISTRY = {
   // Visibilidad / campos de contraseña
   eye: FaEye,
   eyeSlash: FaEyeSlash,
+
+  // Módulo Caja POS
+  cash: FaMoneyBill, // fa-money-bill (dinero/caja)
+  folder: FaFolder, // fa-folder (sesiones/archivos)
+  list: FaList, // fa-list (movimientos/listados)
+  lock: FaLock, // fa-lock (cerrar sesión)
+  activity: FaChartLine, // fa-chart-line (actividad/operación)
+  info: FaCircleInfo, // fa-circle-info (información)
+  warning: FaTriangleExclamation, // fa-triangle-exclamation (advertencia)
+  print: FaPrint, // fa-print (imprimir)
 };
 
 /**
