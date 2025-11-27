@@ -30,6 +30,9 @@ import {
   FaCircleInfo,
   FaTriangleExclamation,
   FaPrint,
+  FaShield,
+  FaClockRotateLeft,
+  FaShieldHalved,
 } from "react-icons/fa6";
 
 const ICON_REGISTRY = {
@@ -47,6 +50,7 @@ const ICON_REGISTRY = {
   zones: FaLayerGroup, // fa-layer-group
   delete: FaTrash, // fa-trash
   password: FaKey, // fa-key
+  key: FaKey, // fa-key (permisos)
 
   // Estado / toggles
   ban: FaBan, // fa-ban (bloquear / desactivar)
@@ -80,6 +84,10 @@ const ICON_REGISTRY = {
   info: FaCircleInfo, // fa-circle-info (información)
   warning: FaTriangleExclamation, // fa-triangle-exclamation (advertencia)
   print: FaPrint, // fa-print (imprimir)
+
+  // Módulo Roles y Permisos
+  shield: FaShieldHalved, // fa-shield-halved (roles/seguridad)
+  history: FaClockRotateLeft, // fa-clock-rotate-left (auditoría/historial)
 };
 
 /**
