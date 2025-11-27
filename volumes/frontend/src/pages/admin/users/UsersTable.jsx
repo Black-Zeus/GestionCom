@@ -8,41 +8,22 @@ const UsersTable = ({
   onToggleStatus,
   onDelete,
 }) => {
-  const getRoleColor = (roles) => {
-    if (!roles || roles.length === 0) return "text-gray-600";
-
-    const role = roles[0].toLowerCase();
-    if (role.includes("admin")) return "text-red-600";
-    if (role.includes("jefe") || role.includes("manager"))
-      return "text-blue-600";
-    if (role.includes("supervisor")) return "text-purple-600";
-    if (role.includes("vendedor") || role.includes("sales"))
-      return "text-green-600";
-    if (role.includes("cajero") || role.includes("cashier"))
-      return "text-yellow-600";
-    if (role.includes("contador") || role.includes("accountant"))
-      return "text-indigo-600";
-    return "text-gray-600";
-  };
-
-  // Estado de la cuenta (Activa / Inactiva)
+  // Estado de la cuenta (Activa / Inactiva) con dot + texto gris
   const getAccountStatus = (isActive) => {
     if (isActive) {
       return {
         label: "Activa",
-        textClass: "text-green-600",
         dotClass: "bg-green-500",
       };
     }
 
     return {
       label: "Inactiva",
-      textClass: "text-red-600",
       dotClass: "bg-red-500",
     };
   };
 
-  // Estado de sesión (online / offline)
+  // Estado de sesión (online / offline / sin sesión)
   const getPresenceStatus = (isActive, status) => {
     // Si la cuenta está inactiva, la sesión no aplica
     if (!isActive) {
@@ -140,16 +121,14 @@ const UsersTable = ({
                   )}
                 </td>
 
-                {/* Rol */}
+                {/* Rol (sin colores por rol, todo gris) */}
                 <td className="px-4 py-4">
                   {user.roles && user.roles.length > 0 ? (
                     <div className="flex flex-col gap-1">
                       {user.roles.slice(0, 2).map((role, index) => (
                         <span
                           key={index}
-                          className={`text-xs font-medium ${getRoleColor([
-                            role,
-                          ])}`}
+                          className="text-xs font-medium text-gray-700"
                         >
                           {role}
                         </span>
@@ -178,7 +157,7 @@ const UsersTable = ({
                   )}
                 </td>
 
-                {/* Sesión */}
+                {/* Sesión (dot + texto gris) */}
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <span
@@ -188,15 +167,13 @@ const UsersTable = ({
                   </div>
                 </td>
 
-                {/* Cuenta */}
+                {/* Cuenta (dot + texto gris) */}
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <span
                       className={`w-2 h-2 rounded-full ${account.dotClass}`}
                     />
-                    <span
-                      className={`text-sm font-medium ${account.textClass}`}
-                    >
+                    <span className="text-sm text-gray-700">
                       {account.label}
                     </span>
                   </div>
@@ -204,7 +181,7 @@ const UsersTable = ({
 
                 {/* Acciones */}
                 <td className="px-4 py-4">
-                  <div className="flex gap-2">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => onEdit(user)}
                       title="Editar"

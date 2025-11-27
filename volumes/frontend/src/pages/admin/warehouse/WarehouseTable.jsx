@@ -96,13 +96,15 @@ const WarehouseTable = ({
                 </span>
               </td>
               <td className="px-4 py-4 text-sm">
-                <span
-                  className={`font-medium ${
-                    warehouse.is_active ? "text-gray-900" : "text-red-600"
-                  }`}
-                >
-                  {warehouse.is_active ? "Activo" : "Inactivo"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2 h-2 rounded-full ${warehouse.is_active ? "bg-green-500" : "bg-red-500"
+                      }`}
+                  />
+                  <span className="text-sm text-gray-700">
+                    {warehouse.is_active ? "Activa" : "Inactiva"}
+                  </span>
+                </div>
               </td>
               <td className="px-4 py-4">
                 <div className="flex gap-2">
