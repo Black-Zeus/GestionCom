@@ -3,8 +3,8 @@ import { lazy } from 'react';
 const UsersPage = lazy(() => import('@/pages/admin/Users'));
 const RolesPage = lazy(() => import('@/pages/admin/Roles'));
 const WarehousesPage = lazy(() => import('@/pages/admin/Warehouses'));
-const CashConfigPage = lazy(() => import('@/pages/admin/CashConfig'));
 const MenuConfigPage = lazy(() => import('@/pages/admin/MenuConfig'));
+const CashPosPage  = lazy(() => import('@/pages/admin/CashPos'));
 
 export const adminRoutes = [
     {
@@ -29,9 +29,9 @@ export const adminRoutes = [
         requiredRoles: ['admin', 'supervisor']
     },
     {
-        path: '/admin/cash-config',
-        component: CashConfigPage,
-        title: 'Configuración de Caja',
+        path: '/admin/cash-pos',
+        component: CashPosPage,
+        title: 'Configuración de Caja POS',
         requiresAuth: true,
         requiredRoles: ['admin', 'supervisor']
     },

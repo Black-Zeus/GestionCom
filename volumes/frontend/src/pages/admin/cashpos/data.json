@@ -1,0 +1,304 @@
+{
+  "cashRegisters": [
+    {
+      "id": 1,
+      "registerCode": "CAJA01",
+      "registerName": "Caja Principal - Tienda Centro",
+      "warehouseId": 2,
+      "warehouseName": "Tienda Centro",
+      "terminalIdentifier": "TERM-CENTRO-01",
+      "ipAddress": "192.168.1.101",
+      "locationDescription": "Mostrador principal, planta baja",
+      "isActive": true,
+      "requiresSupervisorApproval": true,
+      "maxDifferenceAmount": 1000.0,
+      "hasOpenSession": true
+    },
+    {
+      "id": 2,
+      "registerCode": "CAJA02",
+      "registerName": "Caja Secundaria - Tienda Centro",
+      "warehouseId": 2,
+      "warehouseName": "Tienda Centro",
+      "terminalIdentifier": "TERM-CENTRO-02",
+      "ipAddress": "192.168.1.102",
+      "locationDescription": "Segundo piso, área de cajas",
+      "isActive": true,
+      "requiresSupervisorApproval": true,
+      "maxDifferenceAmount": 500.0,
+      "hasOpenSession": false
+    },
+    {
+      "id": 3,
+      "registerCode": "CAJA03",
+      "registerName": "Caja Principal - Mall Plaza",
+      "warehouseId": 3,
+      "warehouseName": "Tienda Mall Plaza",
+      "terminalIdentifier": "TERM-MALL-01",
+      "ipAddress": "192.168.2.101",
+      "locationDescription": "Entrada principal del local",
+      "isActive": true,
+      "requiresSupervisorApproval": true,
+      "maxDifferenceAmount": 2000.0,
+      "hasOpenSession": true
+    },
+    {
+      "id": 4,
+      "registerCode": "CAJA04",
+      "registerName": "Caja Express - Mall Plaza",
+      "warehouseId": 3,
+      "warehouseName": "Tienda Mall Plaza",
+      "terminalIdentifier": "TERM-MALL-02",
+      "ipAddress": "192.168.2.102",
+      "locationDescription": "Área de cajas rápidas",
+      "isActive": false,
+      "requiresSupervisorApproval": false,
+      "maxDifferenceAmount": 300.0,
+      "hasOpenSession": false
+    }
+  ],
+  "sessions": [
+    {
+      "id": 1,
+      "sessionCode": "SES-20250126-001",
+      "cashRegisterId": 1,
+      "cashierName": "María González",
+      "openingAmount": 10000,
+      "openingDatetime": "2025-01-26T09:00:00",
+      "closingDatetime": null,
+      "theoreticalAmount": null,
+      "physicalAmount": null,
+      "differenceAmount": null,
+      "status": "Abierta"
+    },
+    {
+      "id": 2,
+      "sessionCode": "SES-20250125-001",
+      "cashRegisterId": 1,
+      "cashierName": "María González",
+      "openingAmount": 10000,
+      "openingDatetime": "2025-01-25T09:00:00",
+      "closingDatetime": "2025-01-25T18:30:00",
+      "theoreticalAmount": 285000,
+      "physicalAmount": 284500,
+      "differenceAmount": -500,
+      "status": "Cerrada"
+    },
+    {
+      "id": 3,
+      "sessionCode": "SES-20250126-002",
+      "cashRegisterId": 3,
+      "cashierName": "Juan Pérez",
+      "openingAmount": 15000,
+      "openingDatetime": "2025-01-26T10:00:00",
+      "closingDatetime": null,
+      "theoreticalAmount": null,
+      "physicalAmount": null,
+      "differenceAmount": null,
+      "status": "Abierta"
+    },
+    {
+      "id": 4,
+      "sessionCode": "SES-20250125-002",
+      "cashRegisterId": 3,
+      "cashierName": "Juan Pérez",
+      "openingAmount": 15000,
+      "openingDatetime": "2025-01-25T10:00:00",
+      "closingDatetime": "2025-01-25T20:00:00",
+      "theoreticalAmount": 425000,
+      "physicalAmount": 425000,
+      "differenceAmount": 0,
+      "status": "Cerrada"
+    },
+    {
+      "id": 5,
+      "sessionCode": "SES-20250124-001",
+      "cashRegisterId": 1,
+      "cashierName": "María González",
+      "openingAmount": 10000,
+      "openingDatetime": "2025-01-24T09:00:00",
+      "closingDatetime": "2025-01-24T18:30:00",
+      "theoreticalAmount": 320000,
+      "physicalAmount": 321500,
+      "differenceAmount": 1500,
+      "status": "Cerrada"
+    }
+  ],
+  "movements": [
+    {
+      "id": 1,
+      "sessionId": 1,
+      "movementType": "OPENING",
+      "paymentMethod": "Efectivo",
+      "amount": 10000,
+      "changeAmount": 0,
+      "documentReference": null,
+      "description": "Apertura de caja",
+      "createdAt": "2025-01-26T09:00:00"
+    },
+    {
+      "id": 2,
+      "sessionId": 1,
+      "movementType": "SALE",
+      "paymentMethod": "Efectivo",
+      "amount": 25000,
+      "changeAmount": 3000,
+      "documentReference": "BV-00001234",
+      "description": "Venta contado",
+      "createdAt": "2025-01-26T09:15:30"
+    },
+    {
+      "id": 3,
+      "sessionId": 1,
+      "movementType": "SALE",
+      "paymentMethod": "Tarjeta Débito",
+      "amount": 45000,
+      "changeAmount": 0,
+      "documentReference": "BV-00001235",
+      "description": "Venta tarjeta",
+      "createdAt": "2025-01-26T09:30:15"
+    },
+    {
+      "id": 4,
+      "sessionId": 1,
+      "movementType": "SALE",
+      "paymentMethod": "Efectivo",
+      "amount": 18500,
+      "changeAmount": 1500,
+      "documentReference": "BV-00001236",
+      "description": "Venta contado",
+      "createdAt": "2025-01-26T10:05:22"
+    },
+    {
+      "id": 5,
+      "sessionId": 1,
+      "movementType": "SALE",
+      "paymentMethod": "Tarjeta Crédito",
+      "amount": 67000,
+      "changeAmount": 0,
+      "documentReference": "BV-00001237",
+      "description": "Venta tarjeta",
+      "createdAt": "2025-01-26T10:45:10"
+    },
+    {
+      "id": 6,
+      "sessionId": 1,
+      "movementType": "RETURN",
+      "paymentMethod": "Efectivo",
+      "amount": -8000,
+      "changeAmount": 0,
+      "documentReference": "DEV-00000123",
+      "description": "Devolución producto defectuoso",
+      "createdAt": "2025-01-26T11:20:40"
+    },
+    {
+      "id": 7,
+      "sessionId": 1,
+      "movementType": "SALE",
+      "paymentMethod": "Efectivo",
+      "amount": 32000,
+      "changeAmount": 8000,
+      "documentReference": "BV-00001238",
+      "description": "Venta contado",
+      "createdAt": "2025-01-26T11:55:05"
+    },
+    {
+      "id": 8,
+      "sessionId": 1,
+      "movementType": "PETTY_CASH",
+      "paymentMethod": "Efectivo",
+      "amount": -5000,
+      "changeAmount": 0,
+      "documentReference": "CC-00000045",
+      "description": "Compra insumos oficina",
+      "createdAt": "2025-01-26T12:30:00"
+    },
+    {
+      "id": 9,
+      "sessionId": 3,
+      "movementType": "OPENING",
+      "paymentMethod": "Efectivo",
+      "amount": 15000,
+      "changeAmount": 0,
+      "documentReference": null,
+      "description": "Apertura de caja",
+      "createdAt": "2025-01-26T10:00:00"
+    },
+    {
+      "id": 10,
+      "sessionId": 3,
+      "movementType": "SALE",
+      "paymentMethod": "Efectivo",
+      "amount": 35000,
+      "changeAmount": 5000,
+      "documentReference": "BV-00002001",
+      "description": "Venta contado",
+      "createdAt": "2025-01-26T10:20:15"
+    },
+    {
+      "id": 11,
+      "sessionId": 3,
+      "movementType": "SALE",
+      "paymentMethod": "Tarjeta Débito",
+      "amount": 52000,
+      "changeAmount": 0,
+      "documentReference": "BV-00002002",
+      "description": "Venta tarjeta",
+      "createdAt": "2025-01-26T10:55:30"
+    },
+    {
+      "id": 12,
+      "sessionId": 3,
+      "movementType": "SALE",
+      "paymentMethod": "Transferencia",
+      "amount": 125000,
+      "changeAmount": 0,
+      "documentReference": "BV-00002003",
+      "description": "Venta transferencia",
+      "createdAt": "2025-01-26T11:30:45"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": 1,
+      "methodCode": "CASH",
+      "methodName": "Efectivo",
+      "methodType": "CASH",
+      "affectsCashFlow": true,
+      "isActive": true
+    },
+    {
+      "id": 2,
+      "methodCode": "DEBIT",
+      "methodName": "Tarjeta Débito",
+      "methodType": "CARD",
+      "affectsCashFlow": true,
+      "isActive": true
+    },
+    {
+      "id": 3,
+      "methodCode": "CREDIT",
+      "methodName": "Tarjeta Crédito",
+      "methodType": "CARD",
+      "affectsCashFlow": true,
+      "isActive": true
+    },
+    {
+      "id": 4,
+      "methodCode": "TRANSFER",
+      "methodName": "Transferencia Bancaria",
+      "methodType": "TRANSFER",
+      "affectsCashFlow": true,
+      "isActive": true
+    },
+    {
+      "id": 5,
+      "methodCode": "CHECK",
+      "methodName": "Cheque",
+      "methodType": "OTHER",
+      "affectsCashFlow": true,
+      "allowsPostdated": true,
+      "isActive": false
+    }
+  ]
+}
