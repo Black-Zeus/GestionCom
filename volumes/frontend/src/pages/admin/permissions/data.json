@@ -1,0 +1,578 @@
+{
+  "roles": [
+    {
+      "id": 1,
+      "role_code": "ADMIN",
+      "role_name": "Administrador",
+      "role_description": "Acceso total al sistema",
+      "is_system_role": 1,
+      "is_active": 1,
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "role_code": "GERENTE",
+      "role_name": "Gerente de Sucursal",
+      "role_description": "Gestión completa de sucursal y reportes",
+      "is_system_role": 0,
+      "is_active": 1,
+      "created_at": "2024-01-15T10:05:00Z",
+      "updated_at": "2024-01-15T10:05:00Z"
+    },
+    {
+      "id": 3,
+      "role_code": "CAJERO",
+      "role_name": "Cajero",
+      "role_description": "Operación de caja y ventas",
+      "is_system_role": 0,
+      "is_active": 1,
+      "created_at": "2024-01-15T10:10:00Z",
+      "updated_at": "2024-01-15T10:10:00Z"
+    },
+    {
+      "id": 4,
+      "role_code": "BODEGUERO",
+      "role_name": "Bodeguero",
+      "role_description": "Gestión de inventario y bodegas",
+      "is_system_role": 0,
+      "is_active": 1,
+      "created_at": "2024-01-15T10:15:00Z",
+      "updated_at": "2024-01-15T10:15:00Z"
+    },
+    {
+      "id": 5,
+      "role_code": "CONTADOR",
+      "role_name": "Contador",
+      "role_description": "Acceso a reportes financieros y auditoría",
+      "is_system_role": 0,
+      "is_active": 1,
+      "created_at": "2024-01-15T10:20:00Z",
+      "updated_at": "2024-01-15T10:20:00Z"
+    }
+  ],
+  "permissions": [
+    {
+      "id": 1,
+      "permission_code": "USERS_VIEW",
+      "permission_name": "Ver Usuarios",
+      "permission_description": "Permite visualizar la lista de usuarios",
+      "category": "Usuarios",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 2,
+      "permission_code": "USERS_CREATE",
+      "permission_name": "Crear Usuarios",
+      "permission_description": "Permite crear nuevos usuarios",
+      "category": "Usuarios",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 3,
+      "permission_code": "USERS_EDIT",
+      "permission_name": "Editar Usuarios",
+      "permission_description": "Permite modificar información de usuarios",
+      "category": "Usuarios",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 4,
+      "permission_code": "USERS_DELETE",
+      "permission_name": "Eliminar Usuarios",
+      "permission_description": "Permite eliminar usuarios del sistema",
+      "category": "Usuarios",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 5,
+      "permission_code": "ROLES_VIEW",
+      "permission_name": "Ver Roles",
+      "permission_description": "Permite visualizar roles del sistema",
+      "category": "Roles y Permisos",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 6,
+      "permission_code": "ROLES_MANAGE",
+      "permission_name": "Gestionar Roles",
+      "permission_description": "Permite crear, editar y eliminar roles",
+      "category": "Roles y Permisos",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 7,
+      "permission_code": "PERMISSIONS_VIEW",
+      "permission_name": "Ver Permisos",
+      "permission_description": "Permite visualizar permisos del sistema",
+      "category": "Roles y Permisos",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 8,
+      "permission_code": "PERMISSIONS_MANAGE",
+      "permission_name": "Gestionar Permisos",
+      "permission_description": "Permite asignar y revocar permisos",
+      "category": "Roles y Permisos",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 9,
+      "permission_code": "WAREHOUSE_VIEW",
+      "permission_name": "Ver Bodegas",
+      "permission_description": "Permite visualizar información de bodegas",
+      "category": "Inventario",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 10,
+      "permission_code": "WAREHOUSE_MANAGE",
+      "permission_name": "Gestionar Bodegas",
+      "permission_description": "Permite crear, editar y eliminar bodegas",
+      "category": "Inventario",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 11,
+      "permission_code": "INVENTORY_VIEW",
+      "permission_name": "Ver Inventario",
+      "permission_description": "Permite visualizar stock y movimientos",
+      "category": "Inventario",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 12,
+      "permission_code": "INVENTORY_ADJUST",
+      "permission_name": "Ajustar Inventario",
+      "permission_description": "Permite realizar ajustes de inventario",
+      "category": "Inventario",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 13,
+      "permission_code": "POS_ACCESS",
+      "permission_name": "Acceso a Caja POS",
+      "permission_description": "Permite acceder al sistema de caja",
+      "category": "Ventas",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 14,
+      "permission_code": "POS_SALES",
+      "permission_name": "Realizar Ventas",
+      "permission_description": "Permite procesar ventas en caja",
+      "category": "Ventas",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 15,
+      "permission_code": "POS_REFUNDS",
+      "permission_name": "Procesar Devoluciones",
+      "permission_description": "Permite realizar devoluciones y reembolsos",
+      "category": "Ventas",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 16,
+      "permission_code": "REPORTS_VIEW",
+      "permission_name": "Ver Reportes",
+      "permission_description": "Permite visualizar reportes del sistema",
+      "category": "Reportes",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 17,
+      "permission_code": "REPORTS_EXPORT",
+      "permission_name": "Exportar Reportes",
+      "permission_description": "Permite exportar reportes en diferentes formatos",
+      "category": "Reportes",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 18,
+      "permission_code": "REPORTS_SALES",
+      "permission_name": "Reportes de Ventas",
+      "permission_description": "Acceso a reportes detallados de ventas",
+      "category": "Reportes",
+      "is_system_permission": 1,
+      "is_active": 1
+    },
+    {
+      "id": 19,
+      "permission_code": "REPORTS_FINANCIAL",
+      "permission_name": "Reportes Financieros",
+      "permission_description": "Acceso a reportes financieros y contables",
+      "category": "Reportes",
+      "is_system_permission": 1,
+      "is_active": 1
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "rut": "12.345.678-9",
+      "first_name": "Juan",
+      "last_name": "Pérez",
+      "email": "juan.perez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 1,
+          "role_name": "Administrador",
+          "assigned_at": "2024-01-15T11:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "rut": "23.456.789-0",
+      "first_name": "María",
+      "last_name": "González",
+      "email": "maria.gonzalez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 2,
+          "role_name": "Gerente de Sucursal",
+          "assigned_at": "2024-01-15T11:05:00Z"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "rut": "34.567.890-1",
+      "first_name": "Carlos",
+      "last_name": "Rodríguez",
+      "email": "carlos.rodriguez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 2,
+          "role_name": "Gerente de Sucursal",
+          "assigned_at": "2024-01-15T11:10:00Z"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "rut": "45.678.901-2",
+      "first_name": "Ana",
+      "last_name": "Martínez",
+      "email": "ana.martinez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 3,
+          "role_name": "Cajero",
+          "assigned_at": "2024-01-15T11:15:00Z"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "rut": "56.789.012-3",
+      "first_name": "Pedro",
+      "last_name": "Sánchez",
+      "email": "pedro.sanchez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 3,
+          "role_name": "Cajero",
+          "assigned_at": "2024-01-15T11:20:00Z"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "rut": "67.890.123-4",
+      "first_name": "Laura",
+      "last_name": "López",
+      "email": "laura.lopez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 4,
+          "role_name": "Bodeguero",
+          "assigned_at": "2024-01-15T11:25:00Z"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "rut": "78.901.234-5",
+      "first_name": "Diego",
+      "last_name": "Fernández",
+      "email": "diego.fernandez@empresa.cl",
+      "is_active": 1,
+      "assigned_roles": [
+        {
+          "role_id": 5,
+          "role_name": "Contador",
+          "assigned_at": "2024-01-15T11:30:00Z"
+        }
+      ]
+    }
+  ],
+  "rolePermissions": [
+    {
+      "role_id": 1,
+      "permission_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    },
+    {
+      "role_id": 2,
+      "permission_ids": [1, 9, 11, 13, 14, 16, 18]
+    },
+    {
+      "role_id": 3,
+      "permission_ids": [13, 14]
+    },
+    {
+      "role_id": 4,
+      "permission_ids": [9, 10, 11, 12]
+    },
+    {
+      "role_id": 5,
+      "permission_ids": [16, 17, 19]
+    }
+  ],
+  "auditLog": [
+    {
+      "id": 1,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": 2,
+      "target_user_name": "María González",
+      "target_user_email": "maria.gonzalez@empresa.cl",
+      "target_role_id": 2,
+      "permission_id": null,
+      "action_type": "ASSIGN_ROLE",
+      "description": "Asignó el rol 'Gerente de Sucursal' al usuario María González",
+      "role_name": "Gerente de Sucursal",
+      "permission_name": null,
+      "metadata": {
+        "role_name": "Gerente de Sucursal",
+        "user_name": "María González",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-15T11:05:00Z"
+    },
+    {
+      "id": 2,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": 3,
+      "target_user_name": "Carlos Rodríguez",
+      "target_user_email": "carlos.rodriguez@empresa.cl",
+      "target_role_id": 2,
+      "permission_id": null,
+      "action_type": "ASSIGN_ROLE",
+      "description": "Asignó el rol 'Gerente de Sucursal' al usuario Carlos Rodríguez",
+      "role_name": "Gerente de Sucursal",
+      "permission_name": null,
+      "metadata": {
+        "role_name": "Gerente de Sucursal",
+        "user_name": "Carlos Rodríguez",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-15T11:10:00Z"
+    },
+    {
+      "id": 3,
+      "actor_user_id": 2,
+      "actor_name": "María González",
+      "actor_email": "maria.gonzalez@empresa.cl",
+      "target_user_id": 4,
+      "target_user_name": "Ana Martínez",
+      "target_user_email": "ana.martinez@empresa.cl",
+      "target_role_id": 3,
+      "permission_id": null,
+      "action_type": "ASSIGN_ROLE",
+      "description": "Asignó el rol 'Cajero' al usuario Ana Martínez",
+      "role_name": "Cajero",
+      "permission_name": null,
+      "metadata": {
+        "role_name": "Cajero",
+        "user_name": "Ana Martínez",
+        "ip_address": "192.168.1.105",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-15T11:15:00Z"
+    },
+    {
+      "id": 4,
+      "actor_user_id": 2,
+      "actor_name": "María González",
+      "actor_email": "maria.gonzalez@empresa.cl",
+      "target_user_id": 4,
+      "target_user_name": "Ana Martínez",
+      "target_user_email": "ana.martinez@empresa.cl",
+      "target_role_id": null,
+      "permission_id": 15,
+      "action_type": "GRANT_PERMISSION",
+      "description": "Concedió el permiso 'Procesar Devoluciones' al usuario Ana Martínez",
+      "role_name": null,
+      "permission_name": "Procesar Devoluciones",
+      "metadata": {
+        "permission_name": "Procesar Devoluciones",
+        "user_name": "Ana Martínez",
+        "ip_address": "192.168.1.105",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-16T09:00:00Z"
+    },
+    {
+      "id": 5,
+      "actor_user_id": 2,
+      "actor_name": "María González",
+      "actor_email": "maria.gonzalez@empresa.cl",
+      "target_user_id": 5,
+      "target_user_name": "Pedro Sánchez",
+      "target_user_email": "pedro.sanchez@empresa.cl",
+      "target_role_id": null,
+      "permission_id": 11,
+      "action_type": "GRANT_PERMISSION",
+      "description": "Concedió el permiso 'Ver Inventario' al usuario Pedro Sánchez",
+      "role_name": null,
+      "permission_name": "Ver Inventario",
+      "metadata": {
+        "permission_name": "Ver Inventario",
+        "user_name": "Pedro Sánchez",
+        "ip_address": "192.168.1.105",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-16T09:15:00Z"
+    },
+    {
+      "id": 6,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": null,
+      "target_user_name": null,
+      "target_user_email": null,
+      "target_role_id": 2,
+      "permission_id": 18,
+      "action_type": "GRANT_PERMISSION",
+      "description": "Asignó el permiso 'Reportes de Ventas' al rol 'Gerente de Sucursal'",
+      "role_name": "Gerente de Sucursal",
+      "permission_name": "Reportes de Ventas",
+      "metadata": {
+        "permission_name": "Reportes de Ventas",
+        "role_name": "Gerente de Sucursal",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-17T10:00:00Z"
+    },
+    {
+      "id": 7,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": null,
+      "target_user_name": null,
+      "target_user_email": null,
+      "target_role_id": 3,
+      "permission_id": 15,
+      "action_type": "REVOKE_PERMISSION",
+      "description": "Revocó el permiso 'Procesar Devoluciones' del rol 'Cajero'",
+      "role_name": "Cajero",
+      "permission_name": "Procesar Devoluciones",
+      "metadata": {
+        "permission_name": "Procesar Devoluciones",
+        "role_name": "Cajero",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-18T14:30:00Z"
+    },
+    {
+      "id": 8,
+      "actor_user_id": 3,
+      "actor_name": "Carlos Rodríguez",
+      "actor_email": "carlos.rodriguez@empresa.cl",
+      "target_user_id": 6,
+      "target_user_name": "Laura López",
+      "target_user_email": "laura.lopez@empresa.cl",
+      "target_role_id": 4,
+      "permission_id": null,
+      "action_type": "ASSIGN_ROLE",
+      "description": "Asignó el rol 'Bodeguero' al usuario Laura López",
+      "role_name": "Bodeguero",
+      "permission_name": null,
+      "metadata": {
+        "role_name": "Bodeguero",
+        "user_name": "Laura López",
+        "ip_address": "192.168.1.110",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-15T11:25:00Z"
+    },
+    {
+      "id": 9,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": 7,
+      "target_user_name": "Diego Fernández",
+      "target_user_email": "diego.fernandez@empresa.cl",
+      "target_role_id": 5,
+      "permission_id": null,
+      "action_type": "ASSIGN_ROLE",
+      "description": "Asignó el rol 'Contador' al usuario Diego Fernández",
+      "role_name": "Contador",
+      "permission_name": null,
+      "metadata": {
+        "role_name": "Contador",
+        "user_name": "Diego Fernández",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-15T11:30:00Z"
+    },
+    {
+      "id": 10,
+      "actor_user_id": 1,
+      "actor_name": "Juan Pérez",
+      "actor_email": "juan.perez@empresa.cl",
+      "target_user_id": null,
+      "target_user_name": null,
+      "target_user_email": null,
+      "target_role_id": 5,
+      "permission_id": 19,
+      "action_type": "GRANT_PERMISSION",
+      "description": "Asignó el permiso 'Reportes Financieros' al rol 'Contador'",
+      "role_name": "Contador",
+      "permission_name": "Reportes Financieros",
+      "metadata": {
+        "permission_name": "Reportes Financieros",
+        "role_name": "Contador",
+        "ip_address": "192.168.1.100",
+        "user_agent": "Mozilla/5.0"
+      },
+      "created_at": "2024-01-19T08:00:00Z"
+    }
+  ]
+}

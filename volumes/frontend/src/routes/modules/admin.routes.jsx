@@ -43,13 +43,13 @@ export const adminRoutes = [
         requiresAuth: true,
         requiredRoles: ['admin', 'supervisor', 'finance']
     },
-    {
-        path: '/admin/menu',
-        component: MenuConfigPage,
-        title: 'Configuración de Menú',
-        requiresAuth: true,
-        requiredRoles: ['admin']
-    }
+    // {
+    //     path: '/admin/menu',
+    //     component: MenuConfigPage,
+    //     title: 'Configuración de Menú',
+    //     requiresAuth: true,
+    //     requiredRoles: ['admin']
+    // }
 ];
 
 export default adminRoutes;

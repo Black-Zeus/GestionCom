@@ -71,12 +71,12 @@ export const sidebarNavData = {
                                 icon: "🪙",
                                 path: "/admin/cash-petty"
                             },
-                            {
-                                id: "menu",
-                                text: "Configuración de Menú",
-                                icon: "📋",
-                                path: "/admin/menu"
-                            }
+                            // {
+                            //     id: "menu",
+                            //     text: "Configuración de Menú",
+                            //     icon: "📋",
+                            //     path: "/admin/menu"
+                            // }
                         ]
                     }
                 ]
