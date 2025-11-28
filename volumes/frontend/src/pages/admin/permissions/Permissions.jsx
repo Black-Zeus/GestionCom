@@ -32,8 +32,8 @@ const Permissions = () => {
   };
 
   return (
-    <div className="min-h-screen p-8 -mt-10">
-      <div className="max-w-[90%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="min-h-screen pt-2 -mt-10">
+      <div className="max-w-[100%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         {/* Header */}
         <div className="mb-8 pb-6 border-b-2 border-gray-200">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2 mb-2">

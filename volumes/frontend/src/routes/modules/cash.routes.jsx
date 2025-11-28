@@ -1,3 +1,4 @@
+
 import { lazy } from 'react';
 
 const CashOpeningPage = lazy(() => import('@/pages/cash/CashOpening'));
@@ -9,7 +10,24 @@ const AdditionalIncomePage = lazy(() => import('@/pages/finance/AdditionalIncome
 const SupplierPaymentsPage = lazy(() => import('@/pages/finance/SupplierPayments'));
 const BankReconciliationPage = lazy(() => import('@/pages/finance/BankReconciliation'));
 
+const CashPetty = lazy(() => import('@/pages/cash/CashPetty'));
+const CashPos = lazy(() => import('@/pages/cash/CashPos'));
+
 export const cashRoutes = [
+    // Modulos Caja
+    {
+        path: '/cash/petty',
+        component: CashPetty,
+        title: 'Gastos Menores',
+        requiresAuth: true
+    },
+    {
+        path: '/cash/pos',
+        component: CashPos,
+        title: 'Cobro en Caja',
+        requiresAuth: true
+    },
+
     // Operaciones de caja
     {
         path: '/cash/opening',

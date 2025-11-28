@@ -551,8 +551,8 @@ const SalesManagement = () => {
   // ==========================================
 
   return (
-    <div className="min-h-screen p-8 -mt-10">
-      <div className="max-w-[95%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="min-h-screen pt-2 -mt-10">
+      <div className="max-w-[100%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8 pb-6 border-b-2 border-gray-200">
           <div>

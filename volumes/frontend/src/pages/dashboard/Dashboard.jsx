@@ -1,5 +1,5 @@
 // Dashboard.jsx
-import './Dashboard.css'
+
 import Header from './head/Header'
 import DashboardPrincipal from './dashboard-principal/DashboardPrincipal'
 import GestionProductos from './gestion-productos/GestionProductos'
@@ -15,19 +15,21 @@ import CentroNotificaciones from './centro-notificaciones/CentroNotificaciones'
 
 const Dashboard = () => {
   return (
-    <div className="dashboard-container">
-      <Header />
-      <DashboardPrincipal />
-      <GestionProductos />
-      <ControlInventario />
-      <PuntoVenta />
-      <GestionClientes />
-      <CuentasPorCobrar />
-      <ControlCaja />
-      <Devoluciones />
-      <DocumentacionComercial />
-      <ReporteriaAnalisis />
-      <CentroNotificaciones />
+    <div className="min-h-screen pt-2 -mt-10">
+      <div className="max-w-[100%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <Header />
+        <DashboardPrincipal />
+        <GestionProductos />
+        <ControlInventario />
+        <PuntoVenta />
+        <GestionClientes />
+        <CuentasPorCobrar />
+        <ControlCaja />
+        <Devoluciones />
+        <DocumentacionComercial />
+        <ReporteriaAnalisis />
+        <CentroNotificaciones />
+      </div>
     </div>
   )
 }

@@ -366,8 +366,8 @@ const PettyCashManagement = () => {
   const totalPages = Math.ceil(getFilteredFunds().length / itemsPerPage);
 
   return (
-    <div className="min-h-screen p-8 -mt-10">
-      <div className="max-w-[90%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+    <div className="min-h-screen pt-2 -mt-10">
+      <div className="max-w-[100%] mx-auto bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b-2 border-gray-200">
           <div>
