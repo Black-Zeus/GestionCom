@@ -1,12 +1,8 @@
 import React from 'react';
+import CategoryManagement from './categories/CategoryManagement';
 
 const Categories = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Categories</h1>
-            <p>Soy Categories</p>
-        </div>
-    );
+    return <CategoryManagement />
 };
 
 export default Categories;
