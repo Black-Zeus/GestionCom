@@ -17,7 +17,10 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     badge,
     hasSubmenu,
     submenu,
+    tooltip,
   } = item;
+
+  const tooltipLabel = tooltip || text || '';
 
   // Estado local simple para el submenu
   const isSubmenuOpen = openSubmenus.includes(id);
@@ -26,11 +29,13 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
   // Match por ruta para marcar activo
   const submenuMatch = useMemo(() => {
     if (!hasSubmenu || !submenu) return null;
-    return submenu.find(subitem => {
+    return submenu.find((subitem) => {
       if (!subitem.path) return false;
       // Coincidencia exacta o que la ruta actual inicie con la ruta del subitem
-      return location.pathname === subitem.path || 
-             location.pathname.startsWith(subitem.path + '/');
+      return (
+        location.pathname === subitem.path ||
+        location.pathname.startsWith(subitem.path + '/')
+      );
     });
   }, [hasSubmenu, submenu, location.pathname]);
 
@@ -40,19 +45,34 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
       // Para items con submenú, está activo si algún subitem coincide
       return Boolean(submenuMatch);
     }
-    
+
     if (path) {
       // Para items sin submenú, coincidencia exacta o de dashboard
-      if (path === '/dashboard' && (location.pathname === '/' || location.pathname === '/dashboard')) return true;
-      if (path === '/' && (location.pathname === '/' || location.pathname === '/dashboard')) return true;
-      return location.pathname === path || location.pathname.startsWith(path + '/');
+      if (
+        path === '/dashboard' &&
+        (location.pathname === '/' || location.pathname === '/dashboard')
+      ) {
+        return true;
+      }
+
+      if (
+        path === '/' &&
+        (location.pathname === '/' || location.pathname === '/dashboard')
+      ) {
+        return true;
+      }
+
+      return (
+        location.pathname === path ||
+        location.pathname.startsWith(path + '/')
+      );
     }
-    
+
     // Fallback por texto de sección
     return activeSection === text;
   }, [hasSubmenu, submenuMatch, path, location.pathname, activeSection, text]);
 
-  // Sincronizar estado activo con submenu match - SIN causar bucles
+  // Sincronizar estado activo con submenu match - evitando bucles
   useEffect(() => {
     if (submenuMatch && submenuMatch.id !== activeSubmenuItem) {
       setActiveSubmenuItem(submenuMatch.id);
@@ -60,7 +80,15 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
     } else if (!hasSubmenu && isItemActive && activeSection !== text) {
       setActiveSection(text);
     }
-  }, [submenuMatch?.id, isItemActive, hasSubmenu, text]); // Solo dependencias específicas
+  }, [
+    submenuMatch,
+    activeSubmenuItem,
+    hasSubmenu,
+    isItemActive,
+    activeSection,
+    text,
+    setActiveSection,
+  ]);
 
   const handleClickParent = (e) => {
     if (hasSubmenu) {
@@ -127,33 +155,35 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
           to={path || '#'}
           end={path === '/'}
           onClick={() => setActiveSection(text)}
+          title={tooltipLabel}
+          aria-label={tooltipLabel}
           className={({ isActive }) =>
             cn(
               // Estilos base
               'flex items-center px-6 py-3 relative cursor-pointer mb-0.5',
               'text-white/90 transition-all duration-200',
-              
+
               // Borde izquierdo y efectos hover
               'border-l-4 border-transparent',
               'hover:bg-white/10 hover:text-white hover:border-l-blue-400',
-              
+
               // Estado activo con estilos más visibles
               (isActive || isItemActive) && [
                 'bg-blue-500/30 border-l-blue-400',
                 'text-white font-semibold',
                 'shadow-lg shadow-blue-500/20',
               ],
-              
+
               // Estilos para collapsed
               isCollapsed && ['justify-center', 'px-4'],
               className
             )
           }
-          data-tooltip={isCollapsed ? text : ''}
+          data-tooltip={isCollapsed ? tooltipLabel : ''}
         >
           <ItemContent />
         </NavLink>
-        {isCollapsed && <SidebarTooltip text={text} />}
+        {isCollapsed && <SidebarTooltip text={tooltipLabel} />}
       </div>
     );
   }
@@ -164,32 +194,34 @@ function SidebarNavItem({ item, isCollapsed, isDarkMode, className }) {
       <button
         type="button"
         onClick={handleClickParent}
+        title={tooltipLabel}
+        aria-label={tooltipLabel}
         className={cn(
           // Estilos base
           'flex items-center px-6 py-3 relative cursor-pointer mb-0.5 w-full text-left',
           'text-white/90 transition-all duration-200',
-          
+
           // Borde izquierdo y efectos hover
           'border-l-4 border-transparent',
           'hover:bg-white/10 hover:text-white hover:border-l-blue-400',
-          
+
           // Estado activo con estilos más visibles
           isItemActive && [
             'bg-blue-500/30 border-l-blue-400',
             'text-white font-semibold',
             'shadow-lg shadow-blue-500/20',
           ],
-          
+
           // Estilos para collapsed
           isCollapsed && ['justify-center', 'px-4'],
           className
         )}
-        data-tooltip={isCollapsed ? text : ''}
+        data-tooltip={isCollapsed ? tooltipLabel : ''}
       >
         <ItemContent />
       </button>
 
-      {isCollapsed && <SidebarTooltip text={text} />}
+      {isCollapsed && <SidebarTooltip text={tooltipLabel} />}
 
       {!isCollapsed && hasSubmenu && submenu && (
         <SidebarSubmenu

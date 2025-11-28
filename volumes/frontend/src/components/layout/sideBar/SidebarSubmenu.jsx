@@ -16,7 +16,7 @@ function SidebarSubmenu({
   const location = useLocation();
 
   const baseItemCls = cn(
-    'flex items-center',
+    'flex items-center w-full',        // <-- w-full para que toda la fila sea clicable
     'pl-8 pr-6 py-3',
     'relative cursor-pointer',
     'text-sm text-white/80',
@@ -37,7 +37,7 @@ function SidebarSubmenu({
   // Helper para verificar si un subitem está activo
   const isSubitemActive = (subitem) => {
     if (!subitem.path) return activeSubmenuItem === subitem.id;
-    
+
     // Verificar coincidencia de ruta
     if (location.pathname === subitem.path) return true;
     if (subitem.path === '/' && location.pathname === '/dashboard') return true;
@@ -56,11 +56,18 @@ function SidebarSubmenu({
         className
       )}
     >
-      <div className={cn('py-1', 'transition-all duration-300 ease-out', isOpen ? 'delay-100' : '')}>
+      <div
+        className={cn(
+          'py-1',
+          'transition-all duration-300 ease-out',
+          isOpen ? 'delay-100' : ''
+        )}
+      >
         {items?.map((subitem) => {
           if (!subitem) return null;
 
           const isActive = isSubitemActive(subitem);
+          const label = subitem.tooltip || subitem.text || '';
 
           const content = (
             <>
@@ -83,6 +90,9 @@ function SidebarSubmenu({
                 to={subitem.path}
                 end={subitem.path === '/'}
                 onClick={() => onSubmenuItemClick?.(subitem)}
+                title={label}          // tooltip en TODO el row
+                aria-label={label}
+                data-tooltip={label}
                 className={({ isActive: navIsActive }) =>
                   cn(baseItemCls, (isActive || navIsActive) && activeCls)
                 }
@@ -98,7 +108,10 @@ function SidebarSubmenu({
               key={subitem.id}
               type="button"
               onClick={() => onSubmenuItemClick?.(subitem)}
-              className={cn(baseItemCls, isActive && activeCls, 'w-full text-left')}
+              title={label}
+              aria-label={label}
+              data-tooltip={label}
+              className={cn(baseItemCls, isActive && activeCls, 'text-left')}
             >
               {content}
             </button>
