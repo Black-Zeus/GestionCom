@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@components/ui/icon/iconManager";
 import ModalManager from "@/components/ui/modal/ModalManager";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import RoleModal from "./RoleModal";
 import RolePermissionsModal from "./RolePermissionsModal";
 

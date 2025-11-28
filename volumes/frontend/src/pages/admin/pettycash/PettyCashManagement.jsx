@@ -5,7 +5,7 @@ import PettyCashModal from "./PettyCashModal";
 import ExpensesModal from "./ExpensesModal";
 import ReplenishmentsModal from "./ReplenishmentsModal";
 import CategoriesModal from "./CategoriesModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import { Icon } from "@components/ui/icon/iconManager";
 import ModalManager from "@/components/ui/modal/ModalManager";
 import mockData from "./data.json";

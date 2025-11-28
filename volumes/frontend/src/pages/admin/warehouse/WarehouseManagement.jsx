@@ -4,7 +4,7 @@ import WarehouseFilters from "./WarehouseFilters";
 import WarehouseModal from "./WarehouseModal";
 import ZonesModal from "./ZonesModal";
 import UsersModal from "./UsersModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import ModalManager from "@/components/ui/modal/ModalManager";
 import warehousesData from "./data.json";
 import { Icon } from "@components/ui/icon/iconManager";

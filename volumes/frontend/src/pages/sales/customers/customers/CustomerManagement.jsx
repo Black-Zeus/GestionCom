@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import CustomerTable from "./CustomerTable";
 import CustomerFiltersBar from "./CustomerFiltersBar";
 import CustomerModal from "./CustomerModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import { Icon } from "@components/ui/icon/iconManager";
 import ModalManager from "@/components/ui/modal/ModalManager";
 import customersData from "./data.json";

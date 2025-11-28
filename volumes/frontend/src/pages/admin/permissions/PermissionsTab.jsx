@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@components/ui/icon/iconManager";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 
 const PermissionsTab = ({ data }) => {
   const [permissions, setPermissions] = useState([]);

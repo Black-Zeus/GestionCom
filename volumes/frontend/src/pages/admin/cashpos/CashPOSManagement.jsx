@@ -3,7 +3,7 @@ import CashPOSTable from "./CashPOSTable";
 import CashPOSFilters from "./CashPOSFilters";
 import CashPOSModal from "./CashPOSModal";
 import SessionsModal from "./SessionsModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import ModalManager from "@/components/ui/modal/ModalManager";
 import cashPOSData from "./data.json";
 

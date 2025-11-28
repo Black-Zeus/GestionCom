@@ -5,7 +5,7 @@ import ProductModal from "./ProductModal";
 import VariantsModal from "./VariantsModal";
 import AttributesModal from "./AttributesModal";
 import StockViewModal from "./StockViewModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import { Icon } from "@components/ui/icon/iconManager";
 import ModalManager from "@/components/ui/modal/ModalManager";
 import mockData from "./data.json";

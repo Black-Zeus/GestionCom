@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import SalesHistoryFilters from "./SalesHistoryFilters";
 import SalesHistoryTable from "./SalesHistoryTable";
 import SalesHistorySummary from "./SalesHistorySummary";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import { Icon } from "@components/ui/icon/iconManager";
 import mockData from "./data.json";
 

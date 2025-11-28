@@ -3,7 +3,7 @@ import UsersTable from "./UsersTable";
 import UsersFilters from "./UsersFilters";
 import UserModal from "./UserModal";
 import ChangePasswordModal from "./ChangePasswordModal";
-import Pagination from "./Pagination";
+import Pagination from "@components/common/pagination/Pagination"
 import ModalManager from "@/components/ui/modal/ModalManager";
 import usersData from "./data.json";
 
