@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Módulo de Códigos de Barra y QR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <h1 class="app-title">Códigos de Barra y QR</h1>
+        <p class="app-subtitle">
+          Simulador de códigos EAN/UPC y QR para productos y variantes del catálogo.
+        </p>
+      </div>
+      <span class="chip chip-muted">Template UI · Solo front</span>
+    </header>
+
+    <main class="app-main">
+      <section class="panel panel-form">
+        <h2 class="panel-title">Configuración de código</h2>
+
+        <form id="barcode-form" class="form">
+          <div class="form-row">
+            <label for="product-select" class="label">Producto</label>
+            <select id="product-select" class="input" required>
+              <option value="">Selecciona un producto…</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label for="variant-select" class="label">Variante</label>
+            <select id="variant-select" class="input">
+              <option value="">Sin variante / SKU base</option>
+            </select>
+            <p class="help">
+              Se muestran solo variantes activas asociadas al producto.
+            </p>
+          </div>
+
+          <div class="form-row form-row-inline">
+            <div class="form-col">
+              <label for="barcode-type" class="label">Tipo de código</label>
+              <select id="barcode-type" class="input" required>
+                <option value="">Selecciona tipo…</option>
+                <optgroup label="EAN / UPC / Code 128">
+                  <option value="EAN13">EAN-13</option>
+                  <option value="EAN8">EAN-8</option>
+                  <option value="UPCA">UPC-A</option>
+                  <option value="UPCE">UPC-E</option>
+                  <option value="CODE128">Code 128</option>
+                </optgroup>
+                <optgroup label="2D">
+                  <option value="QR">QR estándar</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-col">
+              <span class="label">Marcadores</span>
+              <label class="checkbox">
+                <input type="checkbox" id="is-primary" />
+                <span>Código principal de la variante</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <label for="barcode-value" class="label">Valor</label>
+            <input
+              id="barcode-value"
+              type="text"
+              class="input"
+              placeholder="Ej: 7501234567890 / URL interna / ID lógico"
+              required
+            />
+            <p class="help">
+              No se valida el estándar real, solo se simula la representación visual.
+            </p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Agregar código</button>
+            <button type="reset" class="btn btn-ghost">Limpiar</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel panel-preview">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Previsualización</h2>
+            <p class="panel-subtitle">
+              Visualiza los códigos existentes y los simulados sobre el catálogo.
+            </p>
+          </div>
+          <button id="clear-all" class="btn btn-outline btn-small">
+            Limpiar lista
+          </button>
+        </div>
+
+        <div id="preview-empty" class="empty">
+          <p class="empty-title">Sin códigos para mostrar</p>
+          <p class="empty-text">
+            Se cargan los códigos del catálogo (product_barcodes) y luego puedes
+            agregar simulaciones desde el formulario.
+          </p>
+        </div>
+
+        <div id="preview-list" class="preview-list">
+          <!-- Tarjetas generadas por script.js -->
+        </div>
+      </section>
+
+      <section class="panel panel-types">
+        <h2 class="panel-title">Tipos de código más utilizados</h2>
+        <div class="types-grid">
+          <div class="type-block">
+            <h3 class="type-title">Lineales (EAN / UPC / Code 128)</h3>
+            <ul class="type-list">
+              <li>
+                <span class="chip chip-ean">EAN-13</span>
+                <span class="type-text">
+                  Retail general, 13 dígitos (muy común en Europa y LATAM).
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-ean">EAN-8</span>
+                <span class="type-text">
+                  Envases pequeños, 8 dígitos.
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-ean">UPC-A</span>
+                <span class="type-text">
+                  Retail EE. UU./Canadá, 12 dígitos.
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-ean">UPC-E</span>
+                <span class="type-text">
+                  UPC comprimido para productos de tamaño reducido.
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-code">Code 128</span>
+                <span class="type-text">
+                  Alfanumérico, alta densidad, muy usado en logística y etiquetas internas.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="type-block">
+            <h3 class="type-title">2D (QR)</h3>
+            <ul class="type-list">
+              <li>
+                <span class="chip chip-qr">QR estándar</span>
+                <span class="type-text">
+                  URLs, IDs internos, payloads para apps móviles.
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-qr">QR ficha producto</span>
+                <span class="type-text">
+                  Enlace a ficha técnica / detalle comercial.
+                </span>
+              </li>
+              <li>
+                <span class="chip chip-qr">QR interno</span>
+                <span class="type-text">
+                  Codifica SKU/variant_id para procesos de bodega y POS.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

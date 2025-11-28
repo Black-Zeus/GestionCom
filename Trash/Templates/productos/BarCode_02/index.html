@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestión de Códigos de Barra y QR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1 class="app-title">Módulo de Códigos de Barra</h1>
+        <p class="app-subtitle">
+          Simulación de códigos EAN/UPC y QR para productos y sus variantes.
+        </p>
+      </div>
+      <div class="app-header-meta">
+        <span class="badge badge-neutral">Template UI</span>
+        <span class="badge badge-accent">Sólo simulación (sin backend)</span>
+      </div>
+    </header>
+
+    <main class="app-layout">
+      <!-- Columna izquierda: formulario -->
+      <section class="card card-form">
+        <h2 class="card-title">Configuración del código</h2>
+        <p class="card-description">
+          Selecciona el producto, define el tipo de código y el valor a simular.
+        </p>
+
+        <form id="barcodeForm" class="form">
+          <!-- Producto -->
+          <div class="form-row">
+            <label for="productSelect" class="form-label">Producto</label>
+            <select id="productSelect" name="productId" class="form-control" required>
+              <option value="">Selecciona un producto…</option>
+            </select>
+          </div>
+
+          <!-- Variante -->
+          <div class="form-row">
+            <label for="variantSelect" class="form-label">Variante</label>
+            <select id="variantSelect" name="variantId" class="form-control">
+              <option value="">Sin variante / SKU base</option>
+            </select>
+            <p class="form-help">
+              Si el producto no maneja variantes, deja la opción por defecto.
+            </p>
+          </div>
+
+          <!-- Tipo de código -->
+          <div class="form-row form-row-inline">
+            <div class="form-col">
+              <label for="barcodeType" class="form-label">Tipo de código</label>
+              <select id="barcodeType" name="barcodeType" class="form-control" required>
+                <option value="">Selecciona tipo…</option>
+                <optgroup label="Códigos lineales (EAN / UPC / Code 128)">
+                  <option value="EAN13">EAN-13</option>
+                  <option value="EAN8">EAN-8</option>
+                  <option value="UPCA">UPC-A</option>
+                  <option value="UPCE">UPC-E</option>
+                  <option value="CODE128">Code 128</option>
+                </optgroup>
+                <optgroup label="Códigos 2D">
+                  <option value="QR">QR estándar</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="form-col">
+              <label for="isPrimary" class="form-label">Prioridad</label>
+              <label class="checkbox">
+                <input type="checkbox" id="isPrimary" name="isPrimary" />
+                <span>Código principal del producto</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Valor -->
+          <div class="form-row">
+            <label for="barcodeValue" class="form-label">Valor del código</label>
+            <input
+              type="text"
+              id="barcodeValue"
+              name="barcodeValue"
+              class="form-control"
+              placeholder="Ej: 7801234567890 / https://mi-sitio.cl/producto/123"
+              required
+            />
+            <p class="form-help">
+              No se valida el estándar real, este template solo simula el resultado visual.
+            </p>
+          </div>
+
+          <!-- Botones -->
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Agregar código</button>
+            <button type="reset" class="btn btn-ghost">Limpiar formulario</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Columna derecha: previsualización y catálogo -->
+      <section class="card card-preview">
+        <div class="card-header-inline">
+          <div>
+            <h2 class="card-title">Previsualización</h2>
+            <p class="card-description">
+              Visualiza cómo se verían los códigos asociados al producto/variante.
+            </p>
+          </div>
+          <button id="clearAllButton" class="btn btn-outline btn-small">
+            Limpiar lista
+          </button>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <p class="empty-title">Sin códigos aún</p>
+          <p class="empty-subtitle">
+            Completa el formulario y usa <strong>“Agregar código”</strong> para construir la lista.
+          </p>
+        </div>
+
+        <div id="barcodeList" class="barcode-list">
+          <!-- Tarjetas generadas por script.js -->
+        </div>
+      </section>
+
+      <!-- Fila inferior: catálogo de tipos -->
+      <section class="card card-reference">
+        <div class="card-reference-inner">
+          <div class="reference-block">
+            <h3 class="reference-title">Lineales (EAN / UPC / Code 128)</h3>
+            <ul class="reference-list">
+              <li>
+                <span class="pill pill-ean">EAN-13</span>
+                <span class="reference-text">
+                  Código más utilizado en retail europeo/latinoamericano (13 dígitos).
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-ean">EAN-8</span>
+                <span class="reference-text">
+                  Variante corta (8 dígitos), para envases pequeños.
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-ean">UPC-A</span>
+                <span class="reference-text">
+                  Estándar predominante en EE. UU./Canadá (12 dígitos).
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-ean">UPC-E</span>
+                <span class="reference-text">
+                  Versión comprimida de UPC-A para empaques reducidos.
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-code">Code 128</span>
+                <span class="reference-text">
+                  Código alfanumérico de alta densidad, común en logística y etiquetas internas.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="reference-block">
+            <h3 class="reference-title">Códigos 2D (QR)</h3>
+            <ul class="reference-list">
+              <li>
+                <span class="pill pill-qr">QR estándar</span>
+                <span class="reference-text">
+                  Soporta URL, texto, identificadores internos, payloads para apps móviles, etc.
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-qr">QR URL</span>
+                <span class="reference-text">
+                  Enlace a ficha de producto, catálogo web o landing de soporte.
+                </span>
+              </li>
+              <li>
+                <span class="pill pill-qr">QR interno</span>
+                <span class="reference-text">
+                  Puede codificar IDs internos de producto/variante para uso en almacén.
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

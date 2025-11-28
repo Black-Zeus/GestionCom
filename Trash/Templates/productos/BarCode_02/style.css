@@ -1,0 +1,493 @@
+/* ---------- Variables ---------- */
+:root {
+  --bg-body: #0b1020;
+  --bg-card: #0f172a;
+  --bg-card-subtle: #020617;
+  --border-subtle: #1f2937;
+  --border-strong: #334155;
+  --text-main: #e5e7eb;
+  --text-muted: #9ca3af;
+  --primary: #3b82f6;
+  --primary-soft: rgba(59, 130, 246, 0.08);
+  --primary-border: rgba(59, 130, 246, 0.5);
+  --accent: #22c55e;
+  --accent-soft: rgba(34, 197, 94, 0.12);
+  --danger: #ef4444;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --shadow-elevated: 0 18px 40px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.65);
+}
+
+/* ---------- Reset básico ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: radial-gradient(circle at top left, #111827, #020617 60%);
+  color: var(--text-main);
+}
+
+/* ---------- Shell ---------- */
+.app-shell {
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0 16px 32px;
+}
+
+/* ---------- Header ---------- */
+.app-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.app-title {
+  margin: 0 0 4px;
+  font-size: 1.9rem;
+  letter-spacing: 0.03em;
+}
+
+.app-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.app-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  border: 1px solid transparent;
+}
+
+.badge-neutral {
+  border-color: var(--border-subtle);
+  background: rgba(15, 23, 42, 0.5);
+  color: var(--text-muted);
+}
+
+.badge-accent {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(22, 163, 74, 0.12);
+  color: #bbf7d0;
+}
+
+/* ---------- Layout principal ---------- */
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* La tarjeta inferior ocupa ancho completo */
+.card-reference {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: radial-gradient(circle at top, #020617, #020617 70%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-elevated);
+  padding: 18px 20px 20px;
+}
+
+.card-title {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+
+.card-description {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.card-header-inline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---------- Formulario ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row-inline {
+  display: flex;
+  gap: 12px;
+}
+
+.form-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.form-control {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-card-subtle);
+  color: var(--text-main);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-control:focus {
+  border-color: var(--primary-border);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+
+.form-help {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Checkbox */
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 15px;
+  height: 15px;
+}
+
+/* Acciones de formulario */
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease,
+    background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #f9fafb;
+  box-shadow: var(--shadow-soft);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
+.btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-main);
+}
+
+.btn-outline:hover {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.btn-small {
+  padding: 5px 10px;
+  font-size: 0.78rem;
+}
+
+/* ---------- Empty state ---------- */
+.empty-state {
+  margin-top: 6px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border-subtle);
+  padding: 20px 12px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.empty-title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.empty-subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Lista de códigos ---------- */
+.barcode-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.barcode-card {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(circle at top left, #020617, #020617 70%);
+}
+
+.barcode-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.barcode-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.barcode-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+/* Pills / badges dentro de tarjetas */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  border: 1px solid transparent;
+}
+
+.pill-ean {
+  background: var(--primary-soft);
+  color: #bfdbfe;
+  border-color: var(--primary-border);
+}
+
+.pill-code {
+  background: rgba(249, 115, 22, 0.08);
+  color: #fed7aa;
+  border-color: rgba(249, 115, 22, 0.6);
+}
+
+.pill-qr {
+  background: var(--accent-soft);
+  color: #bbf7d0;
+  border-color: rgba(34, 197, 94, 0.6);
+}
+
+.pill-primary {
+  background: rgba(234, 179, 8, 0.1);
+  color: #facc15;
+  border-color: rgba(234, 179, 8, 0.65);
+}
+
+.pill-product {
+  background: rgba(148, 163, 184, 0.1);
+  color: #e5e7eb;
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+/* Visualización simulada */
+.barcode-visual-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barcode-visual,
+.qr-visual {
+  border-radius: 10px;
+  background-color: #020617;
+  border: 1px solid var(--border-subtle);
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* “Barras” simuladas */
+.barcode-visual {
+  width: 100%;
+  max-width: 320px;
+  height: 80px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #020617 0,
+    #020617 1px,
+    #e5e7eb 1px,
+    #e5e7eb 2px,
+    #020617 2px,
+    #020617 3px,
+    #e5e7eb 3px,
+    #e5e7eb 4px
+  );
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.qr-visual {
+  width: 120px;
+  height: 120px;
+  background-image: radial-gradient(circle, #e5e7eb 1px, #020617 2px);
+  background-size: 8px 8px;
+}
+
+/* Texto superpuesto */
+.barcode-value-text {
+  position: absolute;
+  bottom: 3px;
+  width: 100%;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: #f9fafb;
+  text-shadow: 0 0 4px rgba(15, 23, 42, 0.9);
+}
+
+.qr-value-text {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ---------- Catálogo de tipos ---------- */
+.card-reference-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.reference-block {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  padding: 12px 14px;
+}
+
+.reference-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.reference-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.reference-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.reference-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 960px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card {
+    padding: 16px 14px 18px;
+  }
+
+  .barcode-card {
+    grid-template-columns: 1fr;
+  }
+
+  .card-reference-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-row-inline {
+    flex-direction: column;
+  }
+}
