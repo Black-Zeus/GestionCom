@@ -18,6 +18,7 @@ import {
   FaLocationDot,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
   FaMagnifyingGlass,
   FaXmark,
   FaEye,
@@ -78,6 +79,7 @@ const ICON_REGISTRY = {
   // Navegación / búsqueda / cierre
   chevronLeft: FaChevronLeft,
   chevronRight: FaChevronRight,
+  chevronDown: FaChevronDown,
   search: FaMagnifyingGlass,
   close: FaXmark,
   expandLess: FaAngleUp,
