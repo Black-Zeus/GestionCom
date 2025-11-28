@@ -158,7 +158,7 @@ export const sidebarNavData = {
             text: "Caja y Facturación",
             tooltip: "Cobro en caja",
             icon: "🏧",
-            path: "/pos",
+            path: "/cash/pos",
             badge: null,
             hasSubmenu: false,
             active: false
