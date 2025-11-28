@@ -33,24 +33,6 @@ export const salesRoutes = [
         requiresAuth: true
     },
     {
-        path: '/customers/corporate',
-        component: CorporateCustomersPage,
-        title: 'Clientes Empresariales',
-        requiresAuth: true
-    },
-    {
-        path: '/customers/authorized-persons',
-        component: AuthorizedPersonsPage,
-        title: 'Personas Autorizadas',
-        requiresAuth: true
-    },
-    {
-        path: '/customers/credit-limits',
-        component: CustomerCreditPage,
-        title: 'Créditos y Límites',
-        requiresAuth: true
-    },
-    {
         path: '/customers/purchase-history',
         component: CustomerPurchaseHistoryPage,
         title: 'Historial de Compras',

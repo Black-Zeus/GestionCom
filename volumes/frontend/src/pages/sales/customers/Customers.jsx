@@ -1,12 +1,8 @@
 import React from 'react';
+import CustomerManagement from './customers/CustomerManagement';
 
 const Customers = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Customers</h1>
-            <p>Soy Customers</p>
-        </div>
-    );
+    return <CustomerManagement />;
 };
 
 export default Customers;
