@@ -342,7 +342,7 @@ function Demo() {
     setLastError(null);
     
     try {
-      console.log('🔐 Attempting login...', credentials);
+      //console.log('🔐 Attempting login...', credentials);
       
       // Simular llamada API
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -360,7 +360,7 @@ function Demo() {
         });
         setIsAuthenticated(true);
         setApiStatus('connected');
-        console.log('✅ Login successful');
+        //console.log('✅ Login successful');
       } else {
         throw new Error('Credenciales inválidas');
       }
@@ -379,12 +379,12 @@ function Demo() {
     setIsLoading(true);
     
     try {
-      console.log('🚪 Attempting logout...');
+      //console.log('🚪 Attempting logout...');
       
       // Simular llamada API
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      console.log('✅ Logout successful');
+      //console.log('✅ Logout successful');
       
     } catch (error) {
       console.warn('⚠️ Logout API failed:', error.message);
@@ -684,7 +684,7 @@ function Demo() {
                   <Button variant="outline" size="sm" onClick={testApiConnection}>
                     Test Conexión
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => console.log('Auth Store:', { isAuthenticated, userDisplay, hasPermission: hasPermission('USER_MENU_ADMIN') })}>
+                  <Button variant="ghost" size="sm" onClick={() => //console.log('Auth Store:', { isAuthenticated, userDisplay, hasPermission: hasPermission('USER_MENU_ADMIN') })}>
                     Debug Store
                   </Button>
                 </div>

@@ -109,11 +109,12 @@ export const MODAL_SIZES = {
   },
   fullscreen: {
     width: 'max-w-7xl min-h-screen',
-    padding: 'p-8'
+    padding: 'p-8',
   },
   fullscreenWide: {
     width: 'max-w-7xl',   // igual ancho que fullscreen, sin min-h-screen
     padding: 'p-8'        // mismo padding que fullscreen/xlarge
+    
   }
 };
 

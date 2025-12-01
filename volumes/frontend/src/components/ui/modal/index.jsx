@@ -204,10 +204,10 @@ export const debugModalSystem = () => {
  
  const status = getModalSystemStatus();
  console.group('🔍 Modal System Debug');
- console.log('Estado:', status);
- console.log('Modales activos:', modalState.modals);
- console.log('Contenedor:', modalState.container);
- console.groupEnd();
+ //console.log('Estado:', status);
+ //console.log('Modales activos:', modalState.modals);
+ //console.log('Contenedor:', modalState.container);
+ //console.groupEnd();
  
  return status;
 };

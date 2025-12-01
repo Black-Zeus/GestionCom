@@ -82,7 +82,7 @@ class ErrorBoundary extends React.Component {
     navigator.clipboard
       .writeText(JSON.stringify(errorDetails, null, 2))
       .then(() => alert("Detalles del error copiados al portapapeles"))
-      .catch(() => console.log("Error al copiar al portapapeles"));
+      .catch(() => console.error("Error al copiar al portapapeles"));
   };
 
   getErrorSeverity = () => {

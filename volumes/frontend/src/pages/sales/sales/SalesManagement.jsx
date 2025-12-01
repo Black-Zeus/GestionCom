@@ -335,7 +335,7 @@ const SalesManagement = () => {
   // ==========================================
 
   const handleSaveDraft = () => {
-    console.log("Guardando borrador...", {
+    console.info("Guardando borrador...", {
       customer: selectedCustomer,
       buyer: selectedBuyer,
       items: cartItems,
@@ -443,7 +443,7 @@ const SalesManagement = () => {
         const folio = Math.floor(100000 + Math.random() * 900000);
 
         // Simular guardado de venta
-        console.log("Completando venta...", {
+        console.info("Completando venta...", {
           folio,
           customer: selectedCustomer,
           buyer: selectedBuyer,
@@ -514,7 +514,7 @@ const SalesManagement = () => {
                   onClick={() => {
                     ModalManager.closeAll();
                     // Aquí se redirige al módulo de caja
-                    console.log("Redirigiendo a módulo de caja...");
+                    console.info("Redirigiendo a módulo de caja...");
                     // window.location.href = '/cash/pos';
                   }}
                   className="w-full px-6 py-4 bg-green-600 text-white rounded-lg font-bold text-lg hover:bg-green-700 transition-all hover:-translate-y-0.5 hover:shadow-lg flex items-center justify-center gap-3"

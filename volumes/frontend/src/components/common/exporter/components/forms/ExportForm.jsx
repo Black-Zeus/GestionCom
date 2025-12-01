@@ -50,10 +50,10 @@ export const ExportForm = ({
     enabledFormats,
     showProgress,
     onExportStart: (info) => {
-      console.log("Exportación iniciada:", info);
+      console.info("Exportación iniciada:", info);
     },
     onExportComplete: (result) => {
-      console.log("Exportación completada:", result);
+      console.info("Exportación completada:", result);
       if (onExport) {
         onExport(result);
       }

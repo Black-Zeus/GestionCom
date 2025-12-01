@@ -54,7 +54,7 @@ const RolesTab = ({ data }) => {
                         };
                         setRoles([...roles, newRole]);
                         ModalManager.closeAll();
-                        ModalManager.alert({
+                        ModalManager.info({
                             title: "Rol Creado",
                             message: `El rol "${roleData.role_name}" ha sido creado exitosamente.`,
                         });
@@ -81,7 +81,7 @@ const RolesTab = ({ data }) => {
                             )
                         );
                         ModalManager.closeAll();
-                        ModalManager.alert({
+                        ModalManager.info({
                             title: "Rol Actualizado",
                             message: `El rol "${roleData.role_name}" ha sido actualizado exitosamente.`,
                         });
@@ -103,9 +103,9 @@ const RolesTab = ({ data }) => {
                     rolePermissions={data.rolePermissions}
                     onSave={(permissionIds) => {
                         // Actualizar permisos del rol
-                        console.log("Permisos actualizados:", permissionIds);
+                        //console.log("Permisos actualizados:", permissionIds);
                         ModalManager.closeAll();
-                        ModalManager.alert({
+                        ModalManager.info({
                             title: "Permisos Actualizados",
                             message: `Los permisos del rol "${role.role_name}" han sido actualizados exitosamente.`,
                         });
@@ -118,7 +118,7 @@ const RolesTab = ({ data }) => {
 
     const handleDeleteRole = (role) => {
         if (role.is_system_role) {
-            ModalManager.alert({
+            ModalManager.info({
                 title: "Operación no permitida",
                 message: "No se pueden eliminar roles del sistema.",
             });
@@ -130,7 +130,7 @@ const RolesTab = ({ data }) => {
             message: `¿Está seguro que desea eliminar el rol "${role.role_name}"?`,
             onConfirm: () => {
                 setRoles(roles.filter((r) => r.id !== role.id));
-                ModalManager.alert({
+                ModalManager.info({
                     title: "Rol Eliminado",
                     message: `El rol "${role.role_name}" ha sido eliminado exitosamente.`,
                 });

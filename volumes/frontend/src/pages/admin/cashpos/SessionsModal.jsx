@@ -38,7 +38,7 @@ const SessionsModal = ({ cashRegister, onClose }) => {
           session={session}
           cashRegister={cashRegister}
           onSave={(closureData) => {
-            console.log("Sesión cerrada:", closureData);
+            console.infolog("Sesión cerrada:", closureData);
             // Actualizar la sesión
             setSessions(
               sessions.map((s) =>

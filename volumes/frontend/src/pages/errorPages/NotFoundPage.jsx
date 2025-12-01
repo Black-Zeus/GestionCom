@@ -29,7 +29,7 @@ const NotFoundPage = () => {
     // Simular búsqueda
     setTimeout(() => {
       // Aquí podrías implementar una búsqueda real o sugerencias
-      console.log("Búsqueda realizada");
+      console.info("Búsqueda realizada");
     }, 500);
   };
 

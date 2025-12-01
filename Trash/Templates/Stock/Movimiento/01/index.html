@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gestión de Stock - Movimientos de Inventario</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="app">
+    <div class="app-shell">
+      <!-- Header simple (puedes reemplazar por tu layout real) -->
+      <header class="app-header">
+        <div class="header-inner">
+          <div class="header-left">
+            <div class="header-breadcrumb">Gestión de Stock</div>
+            <h1 class="header-title">Movimientos de Stock</h1>
+          </div>
+
+          <div class="header-actions">
+            <button id="btn-refresh" type="button" class="btn btn--secondary">
+              Recargar
+            </button>
+            <button id="btn-export" type="button" class="btn btn--primary">
+              Exportar CSV
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <section id="inventory-movements-root" class="layout-container">
+          <!-- Tarjetas de estadísticas -->
+          <div id="stats-cards" class="ims-stats">
+            <!-- Se rellenan desde app.js -->
+          </div>
+
+          <!-- Panel principal -->
+          <div class="ims-card ims-card--main">
+            <!-- Filtros -->
+            <div class="ims-filters">
+              <div class="filter-row">
+                <div class="filter-group filter-group--4">
+                  <div class="filter-field">
+                    <label for="filter-date-from" class="filter-label">
+                      Fecha desde
+                    </label>
+                    <input
+                      id="filter-date-from"
+                      type="date"
+                      class="input"
+                    />
+                  </div>
+
+                  <div class="filter-field">
+                    <label for="filter-date-to" class="filter-label">
+                      Fecha hasta
+                    </label>
+                    <input
+                      id="filter-date-to"
+                      type="date"
+                      class="input"
+                    />
+                  </div>
+
+                  <div class="filter-field">
+                    <label for="filter-search" class="filter-label">
+                      Producto / código / variante
+                    </label>
+                    <input
+                      id="filter-search"
+                      type="text"
+                      placeholder="Buscar..."
+                      class="input"
+                    />
+                  </div>
+
+                  <div class="filter-field">
+                    <label
+                      for="filter-movement-type"
+                      class="filter-label"
+                    >
+                      Naturaleza
+                    </label>
+                    <select
+                      id="filter-movement-type"
+                      class="select"
+                    >
+                      <option value="">Todos</option>
+                      <option value="IN">Entrada</option>
+                      <option value="OUT">Salida</option>
+                      <option value="TRANSFER">Transferencia</option>
+                      <option value="ADJUSTMENT">Ajuste</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="filter-row filter-row--bottom">
+                <div class="filter-group filter-group--3">
+                  <div class="filter-field">
+                    <label for="filter-warehouse" class="filter-label">
+                      Bodega
+                    </label>
+                    <select
+                      id="filter-warehouse"
+                      class="select"
+                    >
+                      <option value="">Todas</option>
+                    </select>
+                  </div>
+
+                  <div class="filter-field">
+                    <label
+                      for="filter-reference-type"
+                      class="filter-label"
+                    >
+                      Origen
+                    </label>
+                    <select
+                      id="filter-reference-type"
+                      class="select"
+                    >
+                      <option value="">Todos</option>
+                    </select>
+                  </div>
+
+                  <div class="filter-field">
+                    <label for="filter-user" class="filter-label">
+                      Usuario
+                    </label>
+                    <select
+                      id="filter-user"
+                      class="select"
+                    >
+                      <option value="">Todos</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="filter-actions">
+                  <button
+                    id="btn-clear-filters"
+                    type="button"
+                    class="btn btn--ghost"
+                  >
+                    Limpiar
+                  </button>
+                  <button
+                    id="btn-apply-filters"
+                    type="button"
+                    class="btn btn--primary"
+                  >
+                    Aplicar filtros
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla de movimientos -->
+            <div class="ims-table-wrapper">
+              <table class="ims-table">
+                <thead class="ims-table-head">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Bodega</th>
+                    <th>Naturaleza</th>
+                    <th>Origen</th>
+                    <th class="ims-table-col-right">Cantidad</th>
+                    <th class="ims-table-col-right">Antes</th>
+                    <th class="ims-table-col-right">Después</th>
+                    <th>Usuario</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="movements-tbody" class="ims-table-body">
+                  <!-- Se rellena desde app.js -->
+                </tbody>
+              </table>
+
+              <div id="empty-state" class="empty-state empty-state--hidden">
+                No se encontraron movimientos con los filtros actuales.
+              </div>
+            </div>
+
+            <!-- Paginación -->
+            <div id="pagination-container" class="pagination">
+              <!-- Se construye desde app.js -->
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal de detalle -->
+    <div
+      id="movement-detail-backdrop"
+      class="modal-backdrop modal-backdrop--hidden"
+      aria-hidden="true"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <h2 class="modal-title">Detalle de movimiento</h2>
+            <p
+              id="movement-detail-subtitle"
+              class="modal-subtitle"
+            ></p>
+          </div>
+          <button
+            id="btn-close-detail"
+            type="button"
+            class="btn btn--ghost btn--sm"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        <div
+          id="movement-detail-body"
+          class="modal-body"
+        >
+          <!-- Detalle generado por JS -->
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

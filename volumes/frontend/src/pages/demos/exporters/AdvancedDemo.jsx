@@ -134,14 +134,14 @@ const AdvancedDemo = () => {
   // Handler para status
   const handleStatus = useCallback((message) => {
     setStatus(message);
-    console.log("Demo Status:", message);
+    //console.log("Demo Status:", message);
     setTimeout(() => setStatus(""), 4000);
   }, []);
 
   // Handler para exportación exitosa
   const handleExportSuccess = useCallback(
     (result, format) => {
-      console.log(`Exportación ${format} exitosa:`, result);
+      //console.log(`Exportación ${format} exitosa:`, result);
       handleStatus(`✅ Archivo ${format.toUpperCase()} generado exitosamente`);
     },
     [handleStatus]
@@ -192,7 +192,7 @@ const AdvancedDemo = () => {
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
-              console.log("PDF config changed:", config);
+              //console.log("PDF config changed:", config);
               handleStatus("🔧 Configuración PDF actualizada");
             }}
             onExport={async (config) => {
@@ -232,7 +232,7 @@ const AdvancedDemo = () => {
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
-              console.log("Excel config changed:", config);
+              //console.log("Excel config changed:", config);
               handleStatus("🔧 Configuración Excel actualizada");
             }}
             onExport={async (config) => {
@@ -272,7 +272,7 @@ const AdvancedDemo = () => {
             showPreview={true}
             showEstimation={true}
             onConfigChange={(config) => {
-              console.log("CSV config changed:", config);
+              //console.log("CSV config changed:", config);
               handleStatus("🔧 Configuración CSV actualizada");
             }}
             onExport={async (config) => {
@@ -532,7 +532,7 @@ const AdvancedDemo = () => {
           onCancel={() => handleStatus("❌ Exportación cancelada")}
           onFormatChange={(format) => setSelectedFormat(format)}
           onConfigChange={(config) => {
-            console.log("Interactive config changed:", config);
+            //console.log("Interactive config changed:", config);
           }}
           className="mt-4"
           title="Configuración Personalizada"

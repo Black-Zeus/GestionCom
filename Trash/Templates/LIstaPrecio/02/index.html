@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Módulo Listas de Precio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="app">
+    <header class="app-header">
+        <div class="app-header__title">
+            <h1>Listas de precios</h1>
+            <p>Administración y consulta de listas de precios por grupo y variante de producto.</p>
+        </div>
+        <div class="app-header__meta">
+            <span class="badge badge--primary">Inventario</span>
+            <span class="badge">Módulo comercial</span>
+
+            <!-- NUEVO: botón para abrir el modal de creación -->
+            <button id="btn-open-create-list" class="btn-primary">
+                Nueva lista de precios
+            </button>
+        </div>
+    </header>
+
+
+    <main class="app-main">
+        <!-- PANEL IZQUIERDO: GRUPOS + LISTAS -->
+        <aside class="sidebar">
+            <div class="sidebar__section">
+                <h2 class="sidebar__title">Grupos de listas</h2>
+                <div id="price-list-groups" class="pill-group">
+                    <!-- Se llena desde JS -->
+                </div>
+            </div>
+
+            <div class="sidebar__section">
+                <div class="sidebar__header-row">
+                    <h2 class="sidebar__title">Listas del grupo</h2>
+                    <span id="current-group-label" class="sidebar__subtitle">–</span>
+                </div>
+                <div id="price-lists" class="list-cards">
+                    <!-- Se llena desde JS -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- PANEL DERECHO: DETALLE DE LISTA -->
+        <section class="content">
+            <section id="price-list-summary" class="card card--summary">
+                <div class="card__header">
+                    <div>
+                        <h2 id="price-list-name" class="card__title">Selecciona una lista</h2>
+                        <p id="price-list-description" class="card__subtitle">
+                            Primero selecciona un grupo y luego una lista para ver sus precios.
+                        </p>
+                    </div>
+                    <div class="summary-tags">
+                        <span id="price-list-code" class="badge badge--outline">Código: –</span>
+                        <span id="price-list-currency" class="badge badge--outline">Moneda: –</span>
+                    </div>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Grupo</span>
+                        <span id="summary-group" class="summary-value">–</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Vigencia desde</span>
+                        <span id="summary-valid-from" class="summary-value">–</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Vigencia hasta</span>
+                        <span id="summary-valid-to" class="summary-value">Sin fecha</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Lista base</span>
+                        <span id="summary-base-list" class="summary-value">N/A</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Ajuste base</span>
+                        <span id="summary-adjustment" class="summary-value">–</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Total ítems activos</span>
+                        <span id="summary-items-count" class="summary-value">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FILTROS -->
+            <section class="card card--filters">
+                <div class="filters-row">
+                    <div class="filters-row__block">
+                        <label for="filter-search" class="filter-label">Buscar producto / SKU</label>
+                        <input id="filter-search" type="search" placeholder="Ej.: iPhone, LAP-001-V1, Nike..."
+                            class="filter-input" />
+                    </div>
+                    <div class="filters-row__block filters-row__block--compact">
+                        <label for="filter-active" class="filter-label">Estado ítems</label>
+                        <select id="filter-active" class="filter-select">
+                            <option value="ALL">Todos</option>
+                            <option value="ACTIVE">Solo activos</option>
+                            <option value="INACTIVE">Solo inactivos</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TABLA DE ITEMS -->
+            <section class="card card--table">
+                <div class="card__header card__header--compact">
+                    <h3 class="card__title">Detalle de precios por variante</h3>
+                    <span id="table-meta" class="card__subtitle">Sin datos</span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>SKU Variante</th>
+                                <th>Producto / Variante</th>
+                                <th>Unidad</th>
+                                <th class="table__th--numeric">Precio base</th>
+                                <th class="table__th--numeric">% desc.</th>
+                                <th class="table__th--numeric">Precio venta</th>
+                                <th class="table__th--numeric">Costo</th>
+                                <th class="table__th--numeric">Margen %</th>
+                            </tr>
+                        </thead>
+                        <tbody id="price-list-items-body">
+                            <!-- Se llena desde JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+    </main>
+
+
+
+    <!-- =========================
+     MODAL CREAR LISTA DE PRECIOS
+     ========================= -->
+    <div id="create-list-modal" class="modal hidden">
+        <div class="modal__backdrop"></div>
+
+        <div class="modal__content">
+            <header class="modal__header">
+                <div>
+                    <h2 class="modal__title">Nueva lista de precios</h2>
+                    <p class="modal__subtitle">
+                        Define los datos generales de la lista y selecciona los productos que formarán parte de ella.
+                    </p>
+                </div>
+            </header>
+
+            <form id="create-list-form" class="modal-form">
+                <section class="modal-form__grid">
+                    <div class="modal-field">
+                        <label for="create-list-code">Código</label>
+                        <input id="create-list-code" type="text" placeholder="GENERAL_RETAIL_2025" required />
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-name">Nombre</label>
+                        <input id="create-list-name" type="text" placeholder="Lista Retail 2025" required />
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-group">Grupo</label>
+                        <select id="create-list-group" required>
+                            <!-- Se llena desde JS con price_list_groups -->
+                        </select>
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-currency">Divisa</label>
+                        <select id="create-list-currency" required>
+                            <!-- Se llena desde JS, tomando las divisas existentes y agregando CLP por defecto -->
+                        </select>
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-type">Tipo de lista</label>
+                        <select id="create-list-type" required>
+                            <option value="GENERAL">General (todos los productos)</option>
+                            <option value="ESPECIFICA">Específica (solo productos seleccionados)</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-status">Estado</label>
+                        <select id="create-list-status" required>
+                            <option value="ACTIVE">Activa</option>
+                            <option value="INACTIVE">Inactiva</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-valid-from">Vigencia desde</label>
+                        <input id="create-list-valid-from" type="date" />
+                    </div>
+
+                    <div class="modal-field">
+                        <label for="create-list-valid-to">Vigencia hasta</label>
+                        <input id="create-list-valid-to" type="date" />
+                    </div>
+                </section>
+
+                <div class="modal-field">
+                    <label for="create-list-base-price">Precio Base Sugerido</label>
+                    <input id="create-list-base-price" type="number" min="0" value="0" placeholder="Ej: 15000" />
+                </div>
+
+                <section class="modal-field">
+                    <label>Productos / variantes</label>
+                    <div id="create-list-variants" class="variant-selector">
+                        <!-- Se llena desde JS con product_variants + products -->
+                    </div>
+                    <p class="modal-help">
+                        Si el tipo de lista es <strong>Específica</strong>, se requerirá al menos una variante
+                        seleccionada.
+                    </p>
+                </section>
+
+                <footer class="modal__footer">
+                    <button type="button" id="create-list-cancel" class="btn-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        Crear lista
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

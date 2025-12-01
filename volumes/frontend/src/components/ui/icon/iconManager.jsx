@@ -43,6 +43,7 @@ import {
   FaAnglesUp,
   FaAnglesDown,
   FaBuilding,
+  FaTag,
 } from "react-icons/fa6";
 
 const ICON_REGISTRY = {
@@ -111,6 +112,9 @@ const ICON_REGISTRY = {
   unfoldLess: FaAnglesUp,
   unfoldMore: FaAnglesDown,
   business: FaBuilding,
+
+  // Módulo Listas de Precio / Tags
+  tag: FaTag,            // ⬅️ NUEVO
 };
 
 /**

@@ -42,7 +42,7 @@ const SalesHistoryTable = ({ documents }) => {
 
   const handleRowClick = (doc) => {
     // TODO: Navegar a vista de detalle del documento
-    console.log("Ver detalle del documento:", doc.id);
+    console.info("Ver detalle del documento:", doc.id);
   };
 
   return (

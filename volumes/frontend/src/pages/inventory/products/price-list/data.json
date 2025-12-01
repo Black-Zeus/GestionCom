@@ -1,0 +1,465 @@
+{
+  "price_list_groups": [
+    {
+      "id": 1,
+      "group_code": "RETAIL",
+      "group_name": "Retail",
+      "group_description": "Listas de precio para venta al por menor",
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "group_code": "WHOLESALE",
+      "group_name": "Mayorista",
+      "group_description": "Listas de precio para venta al por mayor",
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "group_code": "SPECIAL",
+      "group_name": "Especial",
+      "group_description": "Listas de precio para clientes especiales y promociones",
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  ],
+  "price_lists": [
+    {
+      "id": 1,
+      "price_list_group_id": 1,
+      "price_list_code": "RETAIL_GENERAL_2025",
+      "price_list_name": "Lista Retail General 2025",
+      "price_list_description": "Lista de precios estándar para ventas retail del año 2025",
+      "currency": "CLP",
+      "list_type": "GENERAL",
+      "status": "ACTIVE",
+      "valid_from": "2025-01-01",
+      "valid_to": null,
+      "base_price_list_id": null,
+      "base_adjustment_type": null,
+      "base_adjustment_value": null,
+      "created_at": "2024-12-01T10:00:00Z",
+      "updated_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "price_list_group_id": 1,
+      "price_list_code": "RETAIL_PROMO_BF2024",
+      "price_list_name": "Promoción Black Friday 2024",
+      "price_list_description": "Lista especial con descuentos para Black Friday",
+      "currency": "CLP",
+      "list_type": "ESPECIFICA",
+      "status": "ACTIVE",
+      "valid_from": "2024-11-25",
+      "valid_to": "2024-11-30",
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -15,
+      "created_at": "2024-11-01T10:00:00Z",
+      "updated_at": "2024-11-01T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "price_list_group_id": 2,
+      "price_list_code": "WHOLESALE_STANDARD",
+      "price_list_name": "Lista Mayorista Estándar",
+      "price_list_description": "Precios para venta mayorista estándar",
+      "currency": "CLP",
+      "list_type": "GENERAL",
+      "status": "ACTIVE",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -20,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 4,
+      "price_list_group_id": 2,
+      "price_list_code": "WHOLESALE_VOLUME",
+      "price_list_name": "Mayorista Alto Volumen",
+      "price_list_description": "Precios especiales para clientes de alto volumen",
+      "currency": "CLP",
+      "list_type": "ESPECIFICA",
+      "status": "ACTIVE",
+      "valid_from": "2024-06-01",
+      "valid_to": null,
+      "base_price_list_id": 3,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -10,
+      "created_at": "2024-06-01T10:00:00Z",
+      "updated_at": "2024-06-01T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "price_list_group_id": 3,
+      "price_list_code": "SPECIAL_CORPORATE",
+      "price_list_name": "Clientes Corporativos",
+      "price_list_description": "Lista especial para clientes corporativos VIP",
+      "currency": "CLP",
+      "list_type": "ESPECIFICA",
+      "status": "ACTIVE",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "base_price_list_id": null,
+      "base_adjustment_type": null,
+      "base_adjustment_value": null,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "price_list_group_id": 3,
+      "price_list_code": "SPECIAL_EMPLOYEE",
+      "price_list_name": "Empleados",
+      "price_list_description": "Precios especiales para empleados de la empresa",
+      "currency": "CLP",
+      "list_type": "GENERAL",
+      "status": "INACTIVE",
+      "valid_from": "2024-01-01",
+      "valid_to": null,
+      "base_price_list_id": 1,
+      "base_adjustment_type": "PERCENTAGE",
+      "base_adjustment_value": -30,
+      "created_at": "2024-01-01T10:00:00Z",
+      "updated_at": "2024-01-01T10:00:00Z"
+    }
+  ],
+  "price_list_items": [
+    {
+      "id": 1,
+      "price_list_id": 1,
+      "product_variant_id": 1,
+      "base_price": 850000,
+      "discount_percentage": 0,
+      "final_price": 850000,
+      "cost_price": 680000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "price_list_id": 1,
+      "product_variant_id": 2,
+      "base_price": 1200000,
+      "discount_percentage": 0,
+      "final_price": 1200000,
+      "cost_price": 960000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 3,
+      "price_list_id": 1,
+      "product_variant_id": 3,
+      "base_price": 1050000,
+      "discount_percentage": 0,
+      "final_price": 1050000,
+      "cost_price": 840000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 4,
+      "price_list_id": 1,
+      "product_variant_id": 4,
+      "base_price": 1400000,
+      "discount_percentage": 0,
+      "final_price": 1400000,
+      "cost_price": 1120000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 5,
+      "price_list_id": 1,
+      "product_variant_id": 6,
+      "base_price": 1150000,
+      "discount_percentage": 0,
+      "final_price": 1150000,
+      "cost_price": 920000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 6,
+      "price_list_id": 1,
+      "product_variant_id": 7,
+      "base_price": 35000,
+      "discount_percentage": 0,
+      "final_price": 35000,
+      "cost_price": 28000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 7,
+      "price_list_id": 1,
+      "product_variant_id": 8,
+      "base_price": 35000,
+      "discount_percentage": 0,
+      "final_price": 35000,
+      "cost_price": 28000,
+      "margin_percentage": 25.0,
+      "is_active": true,
+      "created_at": "2024-12-01T10:00:00Z"
+    },
+    {
+      "id": 8,
+      "price_list_id": 2,
+      "product_variant_id": 1,
+      "base_price": 850000,
+      "discount_percentage": 15,
+      "final_price": 722500,
+      "cost_price": 680000,
+      "margin_percentage": 6.25,
+      "is_active": true,
+      "created_at": "2024-11-01T10:00:00Z"
+    },
+    {
+      "id": 9,
+      "price_list_id": 2,
+      "product_variant_id": 6,
+      "base_price": 1150000,
+      "discount_percentage": 15,
+      "final_price": 977500,
+      "cost_price": 920000,
+      "margin_percentage": 6.25,
+      "is_active": true,
+      "created_at": "2024-11-01T10:00:00Z"
+    },
+    {
+      "id": 10,
+      "price_list_id": 3,
+      "product_variant_id": 1,
+      "base_price": 850000,
+      "discount_percentage": 20,
+      "final_price": 680000,
+      "cost_price": 680000,
+      "margin_percentage": 0,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 11,
+      "price_list_id": 3,
+      "product_variant_id": 2,
+      "base_price": 1200000,
+      "discount_percentage": 20,
+      "final_price": 960000,
+      "cost_price": 960000,
+      "margin_percentage": 0,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 12,
+      "price_list_id": 3,
+      "product_variant_id": 3,
+      "base_price": 1050000,
+      "discount_percentage": 20,
+      "final_price": 840000,
+      "cost_price": 840000,
+      "margin_percentage": 0,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 13,
+      "price_list_id": 4,
+      "product_variant_id": 2,
+      "base_price": 960000,
+      "discount_percentage": 10,
+      "final_price": 864000,
+      "cost_price": 960000,
+      "margin_percentage": -10.0,
+      "is_active": true,
+      "created_at": "2024-06-01T10:00:00Z"
+    },
+    {
+      "id": 14,
+      "price_list_id": 4,
+      "product_variant_id": 4,
+      "base_price": 1120000,
+      "discount_percentage": 10,
+      "final_price": 1008000,
+      "cost_price": 1120000,
+      "margin_percentage": -10.0,
+      "is_active": true,
+      "created_at": "2024-06-01T10:00:00Z"
+    },
+    {
+      "id": 15,
+      "price_list_id": 5,
+      "product_variant_id": 1,
+      "base_price": 800000,
+      "discount_percentage": 0,
+      "final_price": 800000,
+      "cost_price": 680000,
+      "margin_percentage": 17.65,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 16,
+      "price_list_id": 5,
+      "product_variant_id": 6,
+      "base_price": 1100000,
+      "discount_percentage": 0,
+      "final_price": 1100000,
+      "cost_price": 920000,
+      "margin_percentage": 19.55,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    },
+    {
+      "id": 17,
+      "price_list_id": 5,
+      "product_variant_id": 7,
+      "base_price": 30000,
+      "discount_percentage": 0,
+      "final_price": 30000,
+      "cost_price": 28000,
+      "margin_percentage": 7.14,
+      "is_active": true,
+      "created_at": "2024-01-01T10:00:00Z"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "product_code": "LAP-001",
+      "product_name": "Laptop Dell Latitude 5420",
+      "brand": "Dell",
+      "model": "Latitude 5420",
+      "has_variants": true,
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "product_code": "PHO-001",
+      "product_name": "iPhone 14 Pro",
+      "brand": "Apple",
+      "model": "iPhone 14 Pro",
+      "has_variants": true,
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "product_code": "TSH-001",
+      "product_name": "Camiseta Deportiva Nike",
+      "brand": "Nike",
+      "model": "Dri-FIT Pro",
+      "has_variants": true,
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "product_code": "LAP-002",
+      "product_name": "MacBook Air M2",
+      "brand": "Apple",
+      "model": "MacBook Air M2",
+      "has_variants": true,
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "product_code": "PHO-002",
+      "product_name": "Samsung Galaxy S23 Ultra",
+      "brand": "Samsung",
+      "model": "Galaxy S23 Ultra",
+      "has_variants": true,
+      "is_active": false
+    }
+  ],
+  "product_variants": [
+    {
+      "id": 1,
+      "product_id": 1,
+      "variant_sku": "LAP-001-V1",
+      "variant_name": "Dell Latitude 5420 - 8GB RAM / 256GB SSD",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "product_id": 1,
+      "variant_sku": "LAP-001-V2",
+      "variant_name": "Dell Latitude 5420 - 16GB RAM / 512GB SSD",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "product_id": 1,
+      "variant_sku": "LAP-001-V3",
+      "variant_name": "Dell Latitude 5420 - 8GB RAM / 512GB SSD",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "product_id": 1,
+      "variant_sku": "LAP-001-V4",
+      "variant_name": "Dell Latitude 5420 - 16GB RAM / 1TB SSD",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "product_id": 2,
+      "variant_sku": "PHO-001-V1",
+      "variant_name": "iPhone 14 Pro - 128GB - Negro espacial",
+      "is_active": false
+    },
+    {
+      "id": 6,
+      "product_id": 2,
+      "variant_sku": "PHO-001-V2",
+      "variant_name": "iPhone 14 Pro - 256GB - Negro espacial",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "product_id": 3,
+      "variant_sku": "TSH-001-V1",
+      "variant_name": "Nike Dri-FIT Pro - Talla M - Negro",
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "product_id": 3,
+      "variant_sku": "TSH-001-V2",
+      "variant_name": "Nike Dri-FIT Pro - Talla L - Negro",
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "product_id": 4,
+      "variant_sku": "LAP-002-V1",
+      "variant_name": "MacBook Air M2 - 8GB / 256GB - Gris espacial",
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "product_id": 4,
+      "variant_sku": "LAP-002-V2",
+      "variant_name": "MacBook Air M2 - 16GB / 512GB - Plata",
+      "is_active": true
+    }
+  ],
+  "measurement_units": [
+    {
+      "id": 1,
+      "unit_code": "UNIT",
+      "unit_name": "Unidad",
+      "unit_symbol": "UN"
+    }
+  ]
+}

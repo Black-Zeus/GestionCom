@@ -122,7 +122,7 @@ const UserManagement = () => {
         <ChangePasswordModal
           user={user}
           onSave={(passwordData) => {
-            console.log("Cambiar contraseña:", passwordData);
+            //console.log("Cambiar contraseña:", passwordData);
             ModalManager.closeAll();
           }}
           onClose={() => ModalManager.closeAll()}

@@ -105,7 +105,7 @@ function UserProfileDropdown({ isOpen, onClose }) {
         navigate(action.url);
         break;
       default:
-        console.log(`Acción ${action.id} no implementada`);
+        console.info(`Acción ${action.id} no implementada`);
     }
   };
 

@@ -1,12 +1,8 @@
 import React from 'react';
+import PriceListManagement from './price-list/PriceListManagement';
 
 const PriceLists = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">PriceLists</h1>
-            <p>Soy PriceLists</p>
-        </div>
-    );
+    return <PriceListManagement />;
 };
 
 export default PriceLists;

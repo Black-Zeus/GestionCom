@@ -734,7 +734,7 @@ class ModalManager {
  static notify(options = {}) {
    // Esta será una implementación de toast/notification
    // que se puede mostrar sin bloquear la UI
-   console.log('🔔 Notification:', options);
+   //console.log('🔔 Notification:', options);
    
    // TODO: Implementar sistema de notificaciones toast
    // que aparezcan en esquina y se auto-cierren
@@ -756,7 +756,7 @@ export const initializeModalSystem = (config = {}) => {
  // Asegurar que el contenedor existe
  modalState.ensureContainer();
  
- console.log('✅ Sistema de modales inicializado');
+ //console.log('✅ Sistema de modales inicializado');
  return modalState.getStats();
 };
 
@@ -773,7 +773,7 @@ export const isModalSystemReady = () => {
 */
 export const cleanupModalSystem = () => {
  modalState.cleanup();
- console.log('🧹 Sistema de modales limpiado');
+ //console.log('🧹 Sistema de modales limpiado');
 };
 
 // ====================================
