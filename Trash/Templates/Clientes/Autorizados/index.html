@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Gestión de Clientes - Personas Autorizadas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <main class="page">
+        <!-- HEADER -->
+        <header class="page-header">
+            <div class="page-title-block">
+                <h1 class="page-title">Gestión de Clientes</h1>
+                <p class="page-subtitle">
+                    Administra tus clientes, contactos autorizados y configuración de crédito.
+                </p>
+            </div>
+            <!-- Sin botón Nuevo Cliente en este módulo -->
+        </header>
+
+        <!-- KPI -->
+        <section class="metrics-grid">
+            <article class="metric-card metric-total">
+                <div class="metric-label">Total Clientes</div>
+                <div class="metric-value" id="metricTotalClients">0</div>
+                <div class="metric-helper">Clientes registrados</div>
+            </article>
+
+            <article class="metric-card metric-active">
+                <div class="metric-label">Clientes Activos</div>
+                <div class="metric-value" id="metricActiveClients">0</div>
+                <div class="metric-helper">Habilitados para operar</div>
+            </article>
+
+            <article class="metric-card metric-credit">
+                <div class="metric-label">Con Crédito</div>
+                <div class="metric-value" id="metricCreditClients">0</div>
+                <div class="metric-helper">Clientes con línea de crédito</div>
+            </article>
+
+            <article class="metric-card metric-inactive">
+                <div class="metric-label">Inactivos</div>
+                <div class="metric-value" id="metricInactiveClients">0</div>
+                <div class="metric-helper">Clientes deshabilitados</div>
+            </article>
+        </section>
+
+        <!-- FILTROS LISTADO CLIENTES -->
+        <section class="card filters-card" id="filtersCard">
+            <header class="filters-header">
+                <h2 class="filters-title">Filtros</h2>
+            </header>
+
+            <div class="filters-grid">
+                <div class="filter-group filter-group-full">
+                    <label for="searchInput" class="form-label">Buscar</label>
+                    <input id="searchInput" class="form-control" type="text"
+                        placeholder="Código, RUT, Razón Social, Contacto..." />
+                </div>
+
+                <div class="filter-group">
+                    <label for="statusFilter" class="form-label">Estado</label>
+                    <select id="statusFilter" class="form-control">
+                        <option value="ALL">Todos</option>
+                        <option value="ACTIVE">Activos</option>
+                        <option value="INACTIVE">Inactivos</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="typeFilter" class="form-label">Tipo de Cliente</label>
+                    <select id="typeFilter" class="form-control">
+                        <option value="ALL">Todos</option>
+                        <option value="COMPANY">Empresa</option>
+                        <option value="INDIVIDUAL">Persona</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="regionFilter" class="form-label">Región</label>
+                    <select id="regionFilter" class="form-control">
+                        <option value="ALL">Región</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="cityFilter" class="form-label">Ciudad</label>
+                    <select id="cityFilter" class="form-control">
+                        <option value="ALL">Ciudad</option>
+                    </select>
+                </div>
+
+                <div class="filter-group filter-group-actions">
+                    <button id="clearFiltersBtn" type="button" class="btn btn-secondary">
+                        Limpiar Filtros
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- LISTADO CLIENTES (VISTA LIST) -->
+        <section class="card table-card" id="customersCard">
+            <header class="table-header">
+                <h2 class="table-title">Clientes</h2>
+            </header>
+
+            <div class="table-wrapper">
+                <table class="table" id="customersTable">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>RUT</th>
+                            <th>Razón Social</th>
+                            <th>Ciudad / Región</th>
+                            <th>Estado</th>
+                            <th>Autorizados</th>
+                            <th class="cell-actions-header">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- DETALLE PERSONAS AUTORIZADAS (VISTA DETAIL) -->
+        <section class="card detail-card is-hidden" id="detailCard">
+            <header class="detail-header">
+                <div>
+                    <h2 class="detail-title" id="detailTitle">
+                        Personas Autorizadas
+                    </h2>
+                    <p class="detail-subtitle" id="detailSubtitle">
+                        Seleccione un cliente para ver y administrar sus personas autorizadas.
+                    </p>
+                </div>
+                <div class="detail-header-actions">
+                    <button id="backToListBtn" type="button" class="btn btn-secondary btn-sm">
+                        ← Volver a clientes
+                    </button>
+                    <div id="detailBadges" class="detail-badges">
+                        <!-- badges dinámicas -->
+                    </div>
+                </div>
+            </header>
+
+            <section id="detailEmptyState" class="detail-empty">
+                <p id="detailEmptyText">
+                    No hay cliente seleccionado. Seleccione un cliente de la tabla de clientes.
+                </p>
+            </section>
+
+            <section id="detailContent" class="detail-content is-hidden">
+                <!-- resumen mini del cliente -->
+                <div class="detail-summary">
+                    <div class="detail-summary-item">
+                        <div class="summary-label">Cliente</div>
+                        <div class="summary-value" id="summaryName">-</div>
+                    </div>
+                    <div class="detail-summary-item">
+                        <div class="summary-label">RUT</div>
+                        <div class="summary-value" id="summaryTaxId">-</div>
+                    </div>
+                    <div class="detail-summary-item">
+                        <div class="summary-label">Contacto</div>
+                        <div class="summary-value" id="summaryContact">-</div>
+                    </div>
+                    <div class="detail-summary-item">
+                        <div class="summary-label">Correo</div>
+                        <div class="summary-value" id="summaryEmail">-</div>
+                    </div>
+
+                    <!-- NUEVO: notas internas del cliente -->
+                    <div class="detail-summary-item detail-summary-item-wide">
+                        <div class="summary-label">Notas internas</div>
+                        <div class="summary-value" id="summaryInternalNotes">-</div>
+                    </div>
+                </div>
+
+
+                <!-- cabecera submódulo -->
+                <div class="detail-subsection-header">
+                    <div>
+                        <h3 class="detail-subsection-title">Personas Autorizadas</h3>
+                        <p class="detail-subsection-helper">
+                            Defina quién puede comprar o autorizar operaciones en representación de este
+                            cliente.
+                        </p>
+                    </div>
+                    <div>
+                        <button id="btnAddUser" type="button" class="btn btn-primary btn-sm">
+                            Agregar Persona
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table" id="authorizedUsersTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>RUT</th>
+                                <th>Cargo</th>
+                                <th>Contacto</th>
+                                <th>Nivel</th>
+                                <th>Monto Máx</th>
+                                <th>Principal</th>
+                                <th>Activo</th>
+                                <th class="cell-actions-header">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- filas dinámicas -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <!-- MODAL PERSONA AUTORIZADA -->
+        <div id="modalBackdrop" class="modal-backdrop is-hidden"></div>
+        <div id="userModal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3 id="userModalTitle" class="modal-title">Agregar persona autorizada</h3>
+                    <button id="btnCloseModal" type="button" class="btn btn-icon" aria-label="Cerrar">
+                        ×
+                    </button>
+                </div>
+                <form id="userForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="fieldUserId" />
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="fieldAuthorizedName" class="form-label">Nombre completo</label>
+                                <input id="fieldAuthorizedName" class="form-control" type="text"
+                                    placeholder="Ej: Juan Pérez González" required />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldAuthorizedTaxId" class="form-label">RUT</label>
+                                <input id="fieldAuthorizedTaxId" class="form-control" type="text"
+                                    placeholder="15.678.901-2" required />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldPosition" class="form-label">Cargo</label>
+                                <input id="fieldPosition" class="form-control" type="text"
+                                    placeholder="Gerente de Compras" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldEmail" class="form-label">Correo</label>
+                                <input id="fieldEmail" class="form-control" type="email"
+                                    placeholder="nombre@empresa.cl" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldPhone" class="form-label">Teléfono</label>
+                                <input id="fieldPhone" class="form-control" type="tel" placeholder="+56 9 1234 5678" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldAuthorizationLevel" class="form-label">Nivel de autorización</label>
+                                <select id="fieldAuthorizationLevel" class="form-control">
+                                    <option value="BASIC">Básico</option>
+                                    <option value="ADVANCED">Avanzado</option>
+                                    <option value="FULL">Completo</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fieldMaxAmount" class="form-label">Monto máximo autorizado (CLP)</label>
+                                <input id="fieldMaxAmount" class="form-control" type="number" min="0" step="1000"
+                                    placeholder="5000000" />
+                            </div>
+                            <div class="form-group form-group-inline">
+  <label class="form-checkbox">
+    <input id="fieldIsPrimary" type="checkbox" />
+    <span>Contacto principal</span>
+  </label>
+  <label class="form-checkbox">
+    <input id="fieldIsActive" type="checkbox" checked />
+    <span>Activo</span>
+  </label>
+</div>
+
+
+                            <!-- Nota interna asociada a la persona autorizada -->
+                            <div class="form-group detail-summary-item-wide">
+                                <label for="fieldInternalNotes" class="form-label">
+                                    Nota interna (uso interno)
+                                </label>
+                                <textarea id="fieldInternalNotes" class="form-control" rows="2"
+                                    placeholder="Ej: Requiere confirmación telefónica para compras sobre 5 millones."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button id="btnCancelModal" type="button" class="btn btn-secondary">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
