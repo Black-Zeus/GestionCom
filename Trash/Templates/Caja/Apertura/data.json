@@ -1,0 +1,185 @@
+{
+  "cashRegisters": [
+    {
+      "id": 1,
+      "code": "CJ-001",
+      "name": "Caja Principal - Casa Matriz",
+      "branch": "Casa Matriz",
+      "description": "Caja principal para ventas en salón.",
+      "is_active": true,
+      "allow_negative_balance": false,
+      "default_currency": "CLP"
+    },
+    {
+      "id": 2,
+      "code": "CJ-002",
+      "name": "Caja Secundaria - Casa Matriz",
+      "branch": "Casa Matriz",
+      "description": "Caja secundaria para refuerzo de fin de mes.",
+      "is_active": true,
+      "allow_negative_balance": false,
+      "default_currency": "CLP"
+    },
+    {
+      "id": 3,
+      "code": "CJ-003",
+      "name": "Caja Local Mall Norte",
+      "branch": "Mall Plaza Norte",
+      "description": "Caja única en local Mall Plaza Norte.",
+      "is_active": true,
+      "allow_negative_balance": false,
+      "default_currency": "CLP"
+    },
+    {
+      "id": 4,
+      "code": "CJ-004",
+      "name": "Caja Chica - Bodega Central",
+      "branch": "Bodega Central",
+      "description": "Caja chica para gastos menores en bodega.",
+      "is_active": false,
+      "allow_negative_balance": true,
+      "default_currency": "CLP"
+    }
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "full_name": "Administrador General",
+      "role": "ADMIN",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "username": "cajero1",
+      "full_name": "María Gómez",
+      "role": "CASHIER",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "username": "cajero2",
+      "full_name": "Luis Ramírez",
+      "role": "CASHIER",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "username": "supervisor1",
+      "full_name": "Carolina Soto",
+      "role": "SUPERVISOR",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "username": "ex_cajero",
+      "full_name": "Juan Pérez (Inactivo)",
+      "role": "CASHIER",
+      "is_active": false
+    }
+  ],
+  "openings": [
+    {
+      "id": 1,
+      "opening_code": "AP-20251130-CJ-001-0001",
+      "cash_register_id": 1,
+      "branch": "Casa Matriz",
+      "opened_at": "2025-11-30T09:00:00-03:00",
+      "responsible_user_id": 2,
+      "initial_amount": 150000,
+      "currency": "CLP",
+      "status": "CLOSED",
+      "closed_at": "2025-11-30T18:10:00-03:00",
+      "closing_user_id": 2,
+      "closing_amount": 485000,
+      "difference_amount": 0,
+      "notes": "Turno mañana sin novedades.",
+      "tags": ["TURNO_MAÑANA", "VENTA_MOSTRADOR"]
+    },
+    {
+      "id": 2,
+      "opening_code": "AP-20251130-CJ-001-0002",
+      "cash_register_id": 1,
+      "branch": "Casa Matriz",
+      "opened_at": "2025-11-30T18:30:00-03:00",
+      "responsible_user_id": 3,
+      "initial_amount": 200000,
+      "currency": "CLP",
+      "status": "CLOSED",
+      "closed_at": "2025-11-30T22:30:00-03:00",
+      "closing_user_id": 3,
+      "closing_amount": 650000,
+      "difference_amount": -5000,
+      "notes": "Turno tarde, diferencia negativa de -5.000 por cuadratura.",
+      "tags": ["TURNO_TARDE"]
+    },
+    {
+      "id": 3,
+      "opening_code": "AP-20251201-CJ-003-0001",
+      "cash_register_id": 3,
+      "branch": "Mall Plaza Norte",
+      "opened_at": "2025-12-01T10:00:00-03:00",
+      "responsible_user_id": 2,
+      "initial_amount": 100000,
+      "currency": "CLP",
+      "status": "CLOSED",
+      "closed_at": "2025-12-01T21:30:00-03:00",
+      "closing_user_id": 2,
+      "closing_amount": 430000,
+      "difference_amount": 10000,
+      "notes": "Turno completo en Mall, diferencia positiva por redondeos.",
+      "tags": ["MALL", "VENTA_MOSTRADOR"]
+    },
+    {
+      "id": 4,
+      "opening_code": "AP-20251202-CJ-002-0001",
+      "cash_register_id": 2,
+      "branch": "Casa Matriz",
+      "opened_at": "2025-12-02T09:15:00-03:00",
+      "responsible_user_id": 3,
+      "initial_amount": 120000,
+      "currency": "CLP",
+      "status": "CANCELED",
+      "closed_at": "2025-12-02T09:45:00-03:00",
+      "closing_user_id": 4,
+      "closing_amount": 120000,
+      "difference_amount": 0,
+      "notes": "Apertura anulada por error de asignación de caja.",
+      "tags": ["ANULADA", "ERROR_OPERATIVO"]
+    },
+    {
+      "id": 5,
+      "opening_code": "AP-20251203-CJ-001-0001",
+      "cash_register_id": 1,
+      "branch": "Casa Matriz",
+      "opened_at": "2025-12-03T08:55:00-03:00",
+      "responsible_user_id": 2,
+      "initial_amount": 180000,
+      "currency": "CLP",
+      "status": "OPEN",
+      "closed_at": null,
+      "closing_user_id": null,
+      "closing_amount": null,
+      "difference_amount": null,
+      "notes": "Turno mañana 03/12, aún en curso.",
+      "tags": ["EN_CURSO", "TURNO_MAÑANA"]
+    },
+    {
+      "id": 6,
+      "opening_code": "AP-20251203-CJ-003-0002",
+      "cash_register_id": 3,
+      "branch": "Mall Plaza Norte",
+      "opened_at": "2025-12-03T10:05:00-03:00",
+      "responsible_user_id": 3,
+      "initial_amount": 90000,
+      "currency": "CLP",
+      "status": "OPEN",
+      "closed_at": null,
+      "closing_user_id": null,
+      "closing_amount": null,
+      "difference_amount": null,
+      "notes": "Apertura segunda caja en mall por alta afluencia.",
+      "tags": ["EN_CURSO", "MALL", "ALTA_AFLUENCIA"]
+    }
+  ]
+}

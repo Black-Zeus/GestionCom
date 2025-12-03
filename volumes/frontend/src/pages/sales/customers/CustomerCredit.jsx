@@ -1,12 +1,8 @@
-import React from 'react';
+import React from "react";
+import CreditManagementMain from "./credit-management/CreditManagementMain";
 
 const CustomerCredit = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">CustomerCredit</h1>
-            <p>Soy CustomerCredit</p>
-        </div>
-    );
+  return <CreditManagementMain />;
 };
 
 export default CustomerCredit;

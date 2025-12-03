@@ -1,12 +1,8 @@
-import React from 'react';
+import React from "react";
+import AuthorizedPersonsManagement from "./authorized-person/AuthorizedPersonsManagement";
 
 const AuthorizedPersons = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">AuthorizedPersons</h1>
-            <p>Soy AuthorizedPersons</p>
-        </div>
-    );
+  return <AuthorizedPersonsManagement />;
 };
 
 export default AuthorizedPersons;

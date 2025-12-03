@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gestión de Créditos de Clientes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Reutiliza el mismo styles.css de tu módulo principal y agrega las clases nuevas indicadas -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- HEADER -->
+      <header class="page-header">
+        <div class="page-title-block">
+          <h1 class="page-title">Gestión de Créditos</h1>
+          <p class="page-subtitle">
+            Administra los límites de crédito, exposición y estado de cuentas
+            por cobrar de tus clientes.
+          </p>
+        </div>
+        <!-- Sin botón "Nuevo" en este módulo, toda la configuración se hace por cliente -->
+      </header>
+
+      <!-- KPI -->
+      <section class="metrics-grid">
+        <article class="metric-card">
+          <div class="metric-label">Clientes con crédito</div>
+          <div class="metric-value" id="metricCreditTotalClients">0</div>
+          <div class="metric-helper">
+            Clientes con configuración de crédito activa
+          </div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Crédito asignado</div>
+          <div class="metric-value" id="metricCreditExposure">$ 0</div>
+          <div class="metric-helper">Suma de límites de crédito</div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Crédito utilizado</div>
+          <div class="metric-value" id="metricCreditUsed">$ 0</div>
+          <div class="metric-helper">
+            Monto utilizado por todos los clientes
+          </div>
+        </article>
+
+        <article class="metric-card">
+          <div class="metric-label">Clientes bloqueados / en mora grave</div>
+          <div class="metric-value" id="metricCreditBlocked">0</div>
+          <div class="metric-helper">
+            Según reglas de bloqueo automático por mora
+          </div>
+        </article>
+      </section>
+
+      <!-- FILTROS -->
+      <section class="card filters-card" id="filtersCard">
+        <header class="filters-header">
+          <h2 class="filters-title">Filtros</h2>
+        </header>
+
+        <div class="filters-grid">
+          <div class="filter-group">
+            <label for="searchFilter" class="form-label">Buscar</label>
+            <input
+              id="searchFilter"
+              class="form-control"
+              type="text"
+              placeholder="Nombre, razón social o RUT"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label for="riskFilter" class="form-label">Riesgo</label>
+            <select id="riskFilter" class="form-control">
+              <option value="ALL">Todos</option>
+              <option value="LOW">Bajo</option>
+              <option value="MEDIUM">Medio</option>
+              <option value="HIGH">Alto</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="creditStatusFilter" class="form-label"
+              >Estado de crédito</label
+            >
+            <select id="creditStatusFilter" class="form-control">
+              <option value="ALL">Todos</option>
+              <option value="NORMAL">Normal</option>
+              <option value="EN_MORA">Con mora</option>
+              <option value="BLOQUEADO">Bloqueado</option>
+            </select>
+          </div>
+
+          <div class="filter-group filter-group-actions">
+            <button
+              id="clearFiltersBtn"
+              type="button"
+              class="btn btn-secondary"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- LISTADO CLIENTES CON CRÉDITO -->
+      <section class="card table-card" id="creditCustomersCard">
+        <header class="table-header">
+          <h2 class="table-title">Clientes con Crédito</h2>
+        </header>
+
+        <div class="table-wrapper">
+          <table class="table" id="creditCustomersTable">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Cliente</th>
+                <th>RUT</th>
+                <th>Riesgo</th>
+                <th>Límite</th>
+                <th>Utilizado</th>
+                <th>Disponible</th>
+                <th>En mora</th>
+                <th>Estado crédito</th>
+                <th class="cell-actions-header">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DETALLE CRÉDITO POR CLIENTE -->
+      <section class="card detail-card is-hidden" id="creditDetailCard">
+        <header class="detail-header">
+          <div>
+            <h2 class="detail-title" id="detailTitle">Detalle de crédito</h2>
+            <p class="detail-subtitle" id="detailSubtitle">
+              Seleccione un cliente para ver su configuración de crédito y
+              documentos por cobrar.
+            </p>
+          </div>
+          <div class="detail-header-actions">
+            <button
+              id="backToListBtn"
+              type="button"
+              class="btn btn-secondary btn-sm"
+            >
+              ← Volver a listado
+            </button>
+            <div id="detailBadges" class="detail-badges">
+              <!-- badges dinámicas -->
+            </div>
+          </div>
+        </header>
+
+        <!-- Estado vacío -->
+        <section class="empty-state" id="detailEmptyState">
+          <div class="empty-state-icon">ℹ️</div>
+          <h3 class="empty-state-title">Sin configuración de crédito</h3>
+          <p class="empty-state-text" id="detailEmptyText">
+            Este cliente no tiene configuración de crédito asociada en el
+            sistema.
+          </p>
+        </section>
+
+        <!-- Contenido principal -->
+        <section id="detailContent" class="detail-content is-hidden">
+          <!-- Resumen cliente -->
+          <section class="detail-subsection">
+            <header class="detail-subsection-header">
+              <h3 class="detail-subsection-title">Resumen del cliente</h3>
+            </header>
+            <div class="detail-summary-grid">
+              <div>
+                <div class="summary-label">Nombre / Razón Social</div>
+                <div class="summary-value" id="summaryName">-</div>
+              </div>
+              <div>
+                <div class="summary-label">RUT</div>
+                <div class="summary-value" id="summaryTaxId">-</div>
+              </div>
+              <div>
+                <div class="summary-label">Contacto</div>
+                <div class="summary-value" id="summaryContact">-</div>
+              </div>
+              <div>
+                <div class="summary-label">Correo</div>
+                <div class="summary-value" id="summaryEmail">-</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Configuración de crédito -->
+          <section class="detail-subsection">
+            <header class="detail-subsection-header">
+              <h3 class="detail-subsection-title">Configuración de crédito</h3>
+            </header>
+            <div class="credit-config-grid" id="creditConfigList">
+              <!-- filas dinámicas -->
+            </div>
+          </section>
+
+          <!-- Documentos por cobrar -->
+          <section class="detail-subsection">
+            <header class="detail-subsection-header">
+              <h3 class="detail-subsection-title">Documentos por cobrar</h3>
+            </header>
+            <div class="table-wrapper">
+              <table class="table table-sm" id="receivablesTable">
+                <thead>
+                  <tr>
+                    <th>Documento</th>
+                    <th>Tipo</th>
+                    <th>Emisión</th>
+                    <th>Vencimiento</th>
+                    <th>Monto</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- filas dinámicas -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Excepciones de límite -->
+          <section class="detail-subsection">
+            <header class="detail-subsection-header">
+              <h3 class="detail-subsection-title">Excepciones de límite</h3>
+            </header>
+            <div class="table-wrapper">
+              <table class="table table-sm" id="exceptionsTable">
+                <thead>
+                  <tr>
+                    <th>Motivo</th>
+                    <th>Monto excepción</th>
+                    <th>Nuevo límite efectivo</th>
+                    <th>Vigencia</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- filas dinámicas -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

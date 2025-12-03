@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Historial de Compras del Cliente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- HEADER -->
+      <header class="page-header">
+        <div class="page-title-block">
+          <h1 class="page-title">Historial de Compras del Cliente</h1>
+          <p class="page-subtitle">
+            Analiza el comportamiento de compra de tus clientes: volumen,
+            frecuencia, ticket promedio y mix contado/crédito.
+          </p>
+        </div>
+      </header>
+
+      <!-- 1) IDENTIFICACIÓN DEL CLIENTE (reemplaza la sección de filtros original) -->
+      <section class="card" id="clientIdentificationCard">
+        <header class="filters-header">
+          <h2 class="filters-title">Identificación del cliente</h2>
+        </header>
+
+        <div class="filters-grid">
+          <div class="filter-group filter-group-client">
+            <label class="form-label">Cliente seleccionado</label>
+            <div class="client-selector-row">
+              <div class="client-selected-label" id="selectedCustomerLabel">
+                Ningún cliente seleccionado
+              </div>
+              <button
+                id="openCustomerSearchBtn"
+                type="button"
+                class="btn btn-primary btn-sm"
+              >
+                Seleccionar Cliente
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) FILTROS DE COMPRAS (separados de la identificación del cliente) -->
+      <section class="card filters-card" id="purchaseFiltersCard">
+        <header class="filters-header">
+          <h2 class="filters-title">Filtros de compras</h2>
+        </header>
+
+        <div class="filters-grid filters-grid-compact">
+          <div class="filter-group">
+            <label for="dateFromFilter" class="form-label">Desde</label>
+            <input id="dateFromFilter" class="form-control" type="date" />
+          </div>
+
+          <div class="filter-group">
+            <label for="dateToFilter" class="form-label">Hasta</label>
+            <input id="dateToFilter" class="form-control" type="date" />
+          </div>
+
+          <div class="filter-group">
+            <label for="docTypeFilter" class="form-label">Tipo documento</label>
+            <select id="docTypeFilter" class="form-control">
+              <option value="ALL">Todos</option>
+              <option value="FACTURA">Factura</option>
+              <option value="BOLETA">Boleta</option>
+              <option value="NC">Nota de Crédito</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label for="paymentConditionFilter" class="form-label"
+              >Condición de pago</label
+            >
+            <select id="paymentConditionFilter" class="form-control">
+              <option value="ALL">Todas</option>
+              <option value="CONTADO">Contado</option>
+              <option value="CREDITO">Crédito</option>
+            </select>
+          </div>
+
+          <div class="filter-group filter-group-actions">
+            <label class="form-label">&nbsp;</label>
+            <button
+              id="clearFiltersBtn"
+              type="button"
+              class="btn btn-secondary"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3) ESTADO VACÍO (SIN CLIENTE) -->
+      <section class="card empty-state-card" id="emptyStateCard">
+        <section class="empty-state">
+          <div class="empty-state-icon">👥</div>
+          <h3 class="empty-state-title">Selecciona un cliente</h3>
+          <p class="empty-state-text">
+            Para visualizar el historial de compras, utiliza el botón
+            <strong>“Seleccionar Cliente”</strong> y elige un cliente desde el
+            buscador.
+          </p>
+        </section>
+      </section>
+
+      <!-- 4) CONTENIDO CUANDO HAY CLIENTE SELECCIONADO -->
+      <section class="card detail-card is-hidden" id="customerHistoryCard">
+        <header class="detail-header">
+          <div>
+            <h2 class="detail-title" id="detailTitle">Historial del cliente</h2>
+            <p class="detail-subtitle" id="detailSubtitle">
+              Resumen de compras, frecuencia, ticket promedio y mix de pago en
+              el período seleccionado.
+            </p>
+          </div>
+          <div class="detail-header-actions">
+            <div id="detailBadges" class="detail-badges"></div>
+          </div>
+        </header>
+
+        <!-- PERFIL DEL CLIENTE -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Perfil del cliente</h3>
+          </header>
+          <div class="customer-profile-grid">
+            <div class="profile-item">
+              <div class="summary-label">Nombre / Razón Social</div>
+              <div class="summary-value" id="summaryName">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">RUT</div>
+              <div class="summary-value" id="summaryTaxId">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Contacto</div>
+              <div class="summary-value" id="summaryContact">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Correo</div>
+              <div class="summary-value" id="summaryEmail">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Ciudad / Región</div>
+              <div class="summary-value" id="summaryLocation">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Fecha registro</div>
+              <div class="summary-value" id="summaryRegistrationDate">-</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- KPI DE COMPRAS -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">
+              Resumen de compras del cliente
+            </h3>
+          </header>
+          <section class="metrics-grid metrics-grid-customer">
+            <article class="metric-card">
+              <div class="metric-label">Documentos en el período</div>
+              <div class="metric-value" id="metricCustomerDocs">0</div>
+              <div class="metric-helper">
+                Facturas, boletas y notas de crédito
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Monto total comprado</div>
+              <div class="metric-value" id="metricCustomerTotalAmount">$ 0</div>
+              <div class="metric-helper">
+                Incluye notas de crédito (puede ser negativo)
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Ticket promedio</div>
+              <div class="metric-value" id="metricCustomerAverageTicket">
+                $ 0
+              </div>
+              <div class="metric-helper">Monto promedio por documento</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Última compra</div>
+              <div class="metric-value" id="metricCustomerLastPurchase">-</div>
+              <div class="metric-helper">
+                Fecha del último documento completado
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <!-- COMPORTAMIENTO DE PAGO -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Comportamiento de pago</h3>
+          </header>
+
+          <div class="behavior-grid">
+            <div class="behavior-card">
+              <div class="behavior-label">Mix de condición de pago</div>
+              <div class="behavior-mix-row">
+                <div class="behavior-mix-label">Contado</div>
+                <div class="behavior-mix-bar">
+                  <div id="mixCashBar" class="behavior-mix-bar-inner"></div>
+                </div>
+                <div class="behavior-mix-value" id="mixCashValue">0%</div>
+              </div>
+              <div class="behavior-mix-row">
+                <div class="behavior-mix-label">Crédito</div>
+                <div class="behavior-mix-bar">
+                  <div id="mixCreditBar" class="behavior-mix-bar-inner"></div>
+                </div>
+                <div class="behavior-mix-value" id="mixCreditValue">0%</div>
+              </div>
+            </div>
+
+            <div class="behavior-card">
+              <div class="behavior-label">Frecuencia de compra (aprox.)</div>
+              <p class="behavior-text">
+                <span id="freqLabel"
+                  >Sin datos suficientes para calcular frecuencia.</span
+                >
+              </p>
+              <p class="behavior-helper">
+                Se calcula como el promedio de días entre documentos emitidos en
+                el período.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- DOCUMENTOS DEL CLIENTE -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">
+              Documentos del cliente en el período
+            </h3>
+          </header>
+
+          <div class="table-wrapper">
+            <table class="table table-sm" id="customerDocumentsTable">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Documento</th>
+                  <th>Tipo</th>
+                  <th>Condición</th>
+                  <th>Sucursal / Caja</th>
+                  <th>Vendedor</th>
+                  <th>Monto</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- MODAL BÚSQUEDA DE CLIENTES -->
+    <div class="modal-backdrop is-hidden" id="customerSearchModal">
+      <div
+        class="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customerSearchTitle"
+      >
+        <header class="modal-header">
+          <h2 class="modal-title" id="customerSearchTitle">Buscar cliente</h2>
+          <button
+            id="customerSearchCloseBtn"
+            type="button"
+            class="btn-icon"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </header>
+
+        <section class="modal-body">
+          <div class="filters-grid modal-filters-grid">
+            <div class="filter-group">
+              <label for="customerSearchInput" class="form-label">Buscar</label>
+              <input
+                id="customerSearchInput"
+                class="form-control"
+                type="text"
+                placeholder="Nombre, RUT o código"
+              />
+            </div>
+
+            <div class="filter-group">
+              <label for="customerSearchTypeFilter" class="form-label"
+                >Tipo</label
+              >
+              <select id="customerSearchTypeFilter" class="form-control">
+                <option value="ALL">Todos</option>
+                <option value="COMPANY">Empresa</option>
+                <option value="INDIVIDUAL">Persona Natural</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="customerSearchSegmentFilter" class="form-label"
+                >Segmento</label
+              >
+              <select id="customerSearchSegmentFilter" class="form-control">
+                <option value="ALL">Todos</option>
+                <option value="PYME">PYME</option>
+                <option value="Mayorista">Mayorista</option>
+                <option value="Retail">Retail</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrapper modal-table-wrapper">
+            <table class="table table-sm" id="customerSearchTable">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>RUT</th>
+                  <th>Segmento</th>
+                  <th>Ciudad / Región</th>
+                  <th class="cell-actions-header">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer class="modal-footer">
+          <button
+            id="customerSearchCancelBtn"
+            type="button"
+            class="btn btn-secondary btn-sm"
+          >
+            Cerrar
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -71,13 +71,6 @@ export const sidebarNavData = {
                                 permissionKey: "customers.list.manager"
                             },
                             {
-                                id: "clientes-empresariales",
-                                text: "Clientes Empresariales",
-                                icon: "🏢",
-                                path: "/customers/corporate",
-                                permissionKey: "customers.corporate.manager"
-                            },
-                            {
                                 id: "personas-autorizadas",
                                 text: "Personas Autorizadas",
                                 icon: "👤",

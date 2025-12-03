@@ -1,0 +1,335 @@
+{
+  "customers": [
+    {
+      "id": 1,
+      "customer_code": "CLI-001",
+      "customer_type": "COMPANY",
+      "tax_id": "76.123.456-7",
+      "legal_name": "TechCorp S.A.",
+      "commercial_name": "TechCorp",
+      "contact_person": "Juan Pérez",
+      "email": "contacto@techcorp.cl",
+      "phone": "+56 2 2345 6789",
+      "city": "Santiago",
+      "region": "Región Metropolitana",
+      "registration_date": "2024-01-15",
+      "segment": "PYME",
+      "credit_limit": 1500000
+    },
+    {
+      "id": 2,
+      "customer_code": "CLI-002",
+      "customer_type": "COMPANY",
+      "tax_id": "96.987.654-3",
+      "legal_name": "Distribuidora Norte Ltda.",
+      "commercial_name": "DistNorte",
+      "contact_person": "María González",
+      "email": "mgonzalez@distnorte.cl",
+      "phone": "+56 2 2987 6543",
+      "city": "Antofagasta",
+      "region": "Región de Antofagasta",
+      "registration_date": "2023-11-02",
+      "segment": "Mayorista",
+      "credit_limit": 3000000
+    },
+    {
+      "id": 3,
+      "customer_code": "CLI-003",
+      "customer_type": "INDIVIDUAL",
+      "tax_id": "12.345.678-9",
+      "legal_name": "Pedro Silva",
+      "commercial_name": "Pedro Silva",
+      "contact_person": "Pedro Silva",
+      "email": "pedro.silva@example.com",
+      "phone": "+56 9 7777 8888",
+      "city": "Santiago",
+      "region": "Región Metropolitana",
+      "registration_date": "2024-03-10",
+      "segment": "Retail",
+      "credit_limit": 250000
+    },
+    {
+      "id": 4,
+      "customer_code": "CLI-004",
+      "customer_type": "INDIVIDUAL",
+      "tax_id": "15.555.777-1",
+      "legal_name": "Carolina Torres",
+      "commercial_name": "Carolina Torres",
+      "contact_person": "Carolina Torres",
+      "email": "carolina.torres@example.com",
+      "phone": "+56 9 5555 1111",
+      "city": "Valparaíso",
+      "region": "Región de Valparaíso",
+      "registration_date": "2024-05-20",
+      "segment": "Retail",
+      "credit_limit": 0
+    }
+  ],
+  "receivables": [
+    {
+      "id": 1,
+      "customer_id": 1,
+      "document_number": "F001-1001",
+      "document_type_code": "FACTURA",
+      "document_type_label": "Factura Electrónica",
+      "issue_date": "2025-10-10",
+      "due_date": "2025-11-10",
+      "original_amount": 450000,
+      "balance_amount": 450000,
+      "payment_condition": "CREDITO",
+      "status": "OPEN",
+      "branch_name": "Casa Matriz",
+      "seller_name": "Luis Gómez",
+      "sales_channel": "Mostrador",
+      "observations": "Condición especial aprobada por jefe de ventas.",
+      "line_items": [
+        {
+          "product_code": "P-001",
+          "product_name": "Monitor 24\"",
+          "quantity": 2,
+          "unit_price": 120000,
+          "line_total": 240000
+        },
+        {
+          "product_code": "P-002",
+          "product_name": "Teclado mecánico",
+          "quantity": 3,
+          "unit_price": 70000,
+          "line_total": 210000
+        }
+      ],
+      "payments": []
+    },
+    {
+      "id": 2,
+      "customer_id": 1,
+      "document_number": "F001-1002",
+      "document_type_code": "FACTURA",
+      "document_type_label": "Factura Electrónica",
+      "issue_date": "2025-11-05",
+      "due_date": "2025-12-05",
+      "original_amount": 600000,
+      "balance_amount": 380000,
+      "payment_condition": "CREDITO",
+      "status": "OPEN",
+      "branch_name": "Casa Matriz",
+      "seller_name": "Luis Gómez",
+      "sales_channel": "Online",
+      "observations": "Cliente paga habitualmente con 10 días de atraso.",
+      "line_items": [
+        {
+          "product_code": "P-010",
+          "product_name": "Notebook 14\"",
+          "quantity": 1,
+          "unit_price": 600000,
+          "line_total": 600000
+        }
+      ],
+      "payments": [
+        {
+          "date": "2025-11-25",
+          "type": "Transferencia",
+          "amount": 220000,
+          "reference": "TRX-1234"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "customer_id": 1,
+      "document_number": "NC01-10",
+      "document_type_code": "NC",
+      "document_type_label": "Nota de Crédito",
+      "issue_date": "2025-11-20",
+      "due_date": "2025-11-20",
+      "original_amount": -50000,
+      "balance_amount": -50000,
+      "payment_condition": "CREDITO",
+      "status": "APPLIED",
+      "branch_name": "Casa Matriz",
+      "seller_name": "Sistema",
+      "sales_channel": "Backoffice",
+      "observations": "Devolución parcial por producto dañado.",
+      "line_items": [
+        {
+          "product_code": "P-002",
+          "product_name": "Teclado mecánico",
+          "quantity": -1,
+          "unit_price": 50000,
+          "line_total": -50000
+        }
+      ],
+      "payments": []
+    },
+    {
+      "id": 4,
+      "customer_id": 2,
+      "document_number": "F002-3001",
+      "document_type_code": "FACTURA",
+      "document_type_label": "Factura Electrónica",
+      "issue_date": "2025-09-01",
+      "due_date": "2025-09-30",
+      "original_amount": 980000,
+      "balance_amount": 500000,
+      "payment_condition": "CREDITO",
+      "status": "OPEN",
+      "branch_name": "Sucursal Norte",
+      "seller_name": "Andrea Rojas",
+      "sales_channel": "Mayorista",
+      "observations": "Factura con atraso superior a 60 días.",
+      "line_items": [
+        {
+          "product_code": "P-100",
+          "product_name": "Impresora térmica",
+          "quantity": 7,
+          "unit_price": 140000,
+          "line_total": 980000
+        }
+      ],
+      "payments": [
+        {
+          "date": "2025-10-10",
+          "type": "Transferencia",
+          "amount": 480000,
+          "reference": "TRX-5550"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "customer_id": 2,
+      "document_number": "F002-3002",
+      "document_type_code": "FACTURA",
+      "document_type_label": "Factura Electrónica",
+      "issue_date": "2025-11-15",
+      "due_date": "2025-12-15",
+      "original_amount": 550000,
+      "balance_amount": 550000,
+      "payment_condition": "CREDITO",
+      "status": "OPEN",
+      "branch_name": "Sucursal Norte",
+      "seller_name": "Andrea Rojas",
+      "sales_channel": "Mayorista",
+      "observations": "Operación con condiciones estándar.",
+      "line_items": [
+        {
+          "product_code": "P-200",
+          "product_name": "Scanner código de barras",
+          "quantity": 10,
+          "unit_price": 55000,
+          "line_total": 550000
+        }
+      ],
+      "payments": []
+    },
+    {
+      "id": 6,
+      "customer_id": 3,
+      "document_number": "F003-4001",
+      "document_type_code": "FACTURA",
+      "document_type_label": "Factura Electrónica",
+      "issue_date": "2025-10-25",
+      "due_date": "2025-11-25",
+      "original_amount": 200000,
+      "balance_amount": 0,
+      "payment_condition": "CREDITO",
+      "status": "PAID",
+      "branch_name": "Casa Matriz",
+      "seller_name": "Carla Díaz",
+      "sales_channel": "Mostrador",
+      "observations": "Cliente cumplidor, paga antes del vencimiento.",
+      "line_items": [
+        {
+          "product_code": "P-020",
+          "product_name": "Disco SSD 1TB",
+          "quantity": 1,
+          "unit_price": 200000,
+          "line_total": 200000
+        }
+      ],
+      "payments": [
+        {
+          "date": "2025-11-10",
+          "type": "Tarjeta Débito",
+          "amount": 200000,
+          "reference": "POS-334455"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "customer_id": 3,
+      "document_number": "B003-5001",
+      "document_type_code": "BOLETA",
+      "document_type_label": "Boleta Electrónica",
+      "issue_date": "2025-11-20",
+      "due_date": "2025-11-20",
+      "original_amount": 85000,
+      "balance_amount": 0,
+      "payment_condition": "CONTADO",
+      "status": "PAID",
+      "branch_name": "Casa Matriz",
+      "seller_name": "Carla Díaz",
+      "sales_channel": "Mostrador",
+      "observations": "Venta al contado, no genera saldo.",
+      "line_items": [
+        {
+          "product_code": "P-030",
+          "product_name": "Mouse inalámbrico",
+          "quantity": 1,
+          "unit_price": 25000,
+          "line_total": 25000
+        },
+        {
+          "product_code": "P-031",
+          "product_name": "Auriculares",
+          "quantity": 1,
+          "unit_price": 60000,
+          "line_total": 60000
+        }
+      ],
+      "payments": [
+        {
+          "date": "2025-11-20",
+          "type": "Efectivo",
+          "amount": 85000,
+          "reference": "CAJA-0001"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "customer_id": 4,
+      "document_number": "B004-7001",
+      "document_type_code": "BOLETA",
+      "document_type_label": "Boleta Electrónica",
+      "issue_date": "2025-11-10",
+      "due_date": "2025-11-10",
+      "original_amount": 45000,
+      "balance_amount": 0,
+      "payment_condition": "CONTADO",
+      "status": "PAID",
+      "branch_name": "Sucursal Costa",
+      "seller_name": "Diego Fuentes",
+      "sales_channel": "Mostrador",
+      "observations": "Cliente sin línea de crédito.",
+      "line_items": [
+        {
+          "product_code": "P-050",
+          "product_name": "Parlantes Bluetooth",
+          "quantity": 1,
+          "unit_price": 45000,
+          "line_total": 45000
+        }
+      ],
+      "payments": [
+        {
+          "date": "2025-11-10",
+          "type": "Tarjeta Crédito",
+          "amount": 45000,
+          "reference": "POS-7777"
+        }
+      ]
+    }
+  ]
+}

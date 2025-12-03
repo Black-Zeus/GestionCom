@@ -1,120 +1,192 @@
 // src/components/icons/iconManager.jsx
 import React from "react";
 import {
+  // Estados vacíos / listados
   FaInbox,
   FaUsers,
+
+  // Acciones genéricas
+  FaPlus,
+  FaUserPlus,
   FaPenToSquare,
-  FaLayerGroup,
   FaTrash,
   FaKey,
+  FaFloppyDisk,
+  FaFilter,
+  FaLayerGroup,
+
+  // Estado / toggles
   FaBan,
   FaCircleCheck,
   FaCircleXmark,
-  FaPlus,
+  FaCheck,
+  FaXmark,
+
+  // Conectividad / seguridad / infraestructura
   FaWifi,
   FaUserShield,
   FaWarehouse,
-  FaUserPlus,
   FaLocationDot,
+  FaShieldHalved,
+
+  // Navegación / búsqueda / cierre
   FaChevronLeft,
   FaChevronRight,
   FaChevronDown,
+  FaChevronUp,
   FaMagnifyingGlass,
-  FaXmark,
-  FaEye,
-  FaEyeSlash,
-  FaMoneyBill,
-  FaFolder,
-  FaList,
-  FaLock,
-  FaChartLine,
-  FaCircleInfo,
-  FaTriangleExclamation,
-  FaPrint,
-  FaClockRotateLeft,
-  FaShieldHalved,
-  FaFloppyDisk,
-  FaCartShopping,
-  FaPerson,
-  FaReceipt,
   FaAngleUp,
   FaAngleDown,
-  FaCreditCard,
   FaAnglesUp,
   FaAnglesDown,
+  FaArrowRotateLeft,
+  FaArrowRotateRight,
+
+  // Visibilidad / campos de contraseña
+  FaEye,
+  FaEyeSlash,
+
+  // Financiero / Dinero
+  FaMoneyBill,
+  FaCreditCard,
+  FaDollarSign,
+
+  // Documentos / Archivos
+  FaFolder,
+  FaRegFileLines,
+  FaPrint,
+  FaReceipt,
+
+  // Gráficos / Estadísticas
+  FaChartLine,
+  FaChartSimple,
+
+  // Información / Alertas
+  FaCircleInfo,
+  FaTriangleExclamation,
+
+  // Sistema / Seguridad
+  FaList,
+  FaLock,
+  FaClockRotateLeft,
+
+  // Comercio / Ventas
+  FaCartShopping,
+  FaPerson,
   FaBuilding,
   FaTag,
+  FaTags,
 } from "react-icons/fa6";
 
 const ICON_REGISTRY = {
-  // Estados vacíos / listados
+  // ====================================
+  // ESTADOS VACÍOS / LISTADOS
+  // ====================================
   inbox: FaInbox,
   usersEmpty: FaUsers,
 
-  // Acciones genéricas
+  // ====================================
+  // ACCIONES GENÉRICAS
+  // ====================================
   plus: FaPlus,
   add: FaPlus,
   addUser: FaUserPlus,
   addUsers: FaUserPlus,
   edit: FaPenToSquare,
-  users: FaUsers,
-  zones: FaLayerGroup,
   delete: FaTrash,
   password: FaKey,
   key: FaKey,
   save: FaFloppyDisk,
+  filter: FaFilter,
+  zones: FaLayerGroup,
+  return: FaArrowRotateLeft,
 
-  // Estado / toggles
+  // ====================================
+  // ESTADO / TOGGLES
+  // ====================================
   ban: FaBan,
   checkCircle: FaCircleCheck,
   success: FaCircleCheck,
   error: FaCircleXmark,
   timesCircle: FaCircleXmark,
+  check: FaCheck,
+  cancel: FaXmark,
 
-  // Conectividad / seguridad / infraestructura
+  // ====================================
+  // CONECTIVIDAD / SEGURIDAD / INFRAESTRUCTURA
+  // ====================================
   wifi: FaWifi,
   security: FaUserShield,
   warehouse: FaWarehouse,
   location: FaLocationDot,
+  shield: FaShieldHalved,
 
-  // Navegación / búsqueda / cierre
+  // ====================================
+  // NAVEGACIÓN / BÚSQUEDA / CIERRE
+  // ====================================
   chevronLeft: FaChevronLeft,
   chevronRight: FaChevronRight,
   chevronDown: FaChevronDown,
+  "chevron-up": FaChevronUp,
   search: FaMagnifyingGlass,
   close: FaXmark,
   expandLess: FaAngleUp,
   expandMore: FaAngleDown,
+  unfoldLess: FaAnglesUp,
+  unfoldMore: FaAnglesDown,
+  refresh: FaArrowRotateRight,
 
-  // Visibilidad / campos de contraseña
+  // ====================================
+  // VISIBILIDAD / CAMPOS DE CONTRASEÑA
+  // ====================================
   eye: FaEye,
   eyeSlash: FaEyeSlash,
 
-  // Módulo Caja POS
+  // ====================================
+  // FINANCIERO / DINERO
+  // ====================================
   cash: FaMoneyBill,
+  money: FaMoneyBill,
+  dollar: FaDollarSign,
+  payments: FaCreditCard,
+  "credit-card": FaCreditCard,
+
+  // ====================================
+  // DOCUMENTOS / ARCHIVOS
+  // ====================================
   folder: FaFolder,
-  list: FaList,
-  lock: FaLock,
+  document: FaRegFileLines,
+  print: FaPrint,
+  receipt: FaReceipt,
+
+  // ====================================
+  // GRÁFICOS / ESTADÍSTICAS
+  // ====================================
+  chart: FaChartSimple,
   activity: FaChartLine,
+
+  // ====================================
+  // INFORMACIÓN / ALERTAS
+  // ====================================
   info: FaCircleInfo,
   warning: FaTriangleExclamation,
-  print: FaPrint,
 
-  // Módulo Roles y Permisos
-  shield: FaShieldHalved,
+  // ====================================
+  // SISTEMA / SEGURIDAD
+  // ====================================
+  list: FaList,
+  lock: FaLock,
   history: FaClockRotateLeft,
 
-  // Módulo Ventas (Sales)
+  // ====================================
+  // COMERCIO / VENTAS / CLIENTES
+  // ====================================
   shoppingCart: FaCartShopping,
   person: FaPerson,
-  receipt: FaReceipt,
-  payments: FaCreditCard,
-  unfoldLess: FaAnglesUp,
-  unfoldMore: FaAnglesDown,
   business: FaBuilding,
-
-  // Módulo Listas de Precio / Tags
-  tag: FaTag,            // ⬅️ NUEVO
+  users: FaUsers,
+  tag: FaTag,
+  discount: FaTags,
 };
 
 /**
@@ -122,6 +194,7 @@ const ICON_REGISTRY = {
  *
  * Uso:
  *   <Icon name="edit" className="w-4 h-4" />
+ *   <Icon name="users" className="text-2xl text-blue-600" />
  */
 export const Icon = ({ name, className = "", ...rest }) => {
   const IconComponent = ICON_REGISTRY[name];
@@ -137,3 +210,5 @@ export const Icon = ({ name, className = "", ...rest }) => {
 };
 
 export const ICONS = ICON_REGISTRY;
+
+export default Icon;

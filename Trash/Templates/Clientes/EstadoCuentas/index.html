@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Estado de Cuenta del Cliente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- HEADER -->
+      <header class="page-header">
+        <div class="page-title-block">
+          <h1 class="page-title">Estado de Cuenta del Cliente</h1>
+          <p class="page-subtitle">
+            Consulta el saldo pendiente, crédito utilizado, monto vencido y
+            antigüedad de saldos a una fecha de corte.
+          </p>
+        </div>
+      </header>
+
+      <!-- 1) IDENTIFICACIÓN DEL CLIENTE -->
+      <section class="card" id="clientIdentificationCard">
+        <header class="filters-header">
+          <h2 class="filters-title">Identificación del cliente</h2>
+        </header>
+
+        <div class="filters-grid">
+          <div class="filter-group filter-group-client">
+            <label class="form-label">Cliente seleccionado</label>
+            <div class="client-selector-row">
+              <div class="client-selected-label" id="selectedCustomerLabel">
+                Ningún cliente seleccionado
+              </div>
+              <button
+                id="openCustomerSearchBtn"
+                type="button"
+                class="btn btn-primary btn-sm"
+              >
+                Seleccionar Cliente
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2) PARÁMETROS DEL ESTADO DE CUENTA -->
+      <section class="card filters-card" id="accountFiltersCard">
+        <header class="filters-header">
+          <h2 class="filters-title">Parámetros de consulta</h2>
+        </header>
+
+        <div class="filters-grid filters-grid-compact">
+          <div class="filter-group">
+            <label for="cutoffDateFilter" class="form-label"
+              >Fecha de corte</label
+            >
+            <input id="cutoffDateFilter" class="form-control" type="date" />
+          </div>
+
+          <div class="filter-group">
+            <label for="viewFilter" class="form-label">Ver documentos</label>
+            <select id="viewFilter" class="form-control">
+              <option value="OPEN">Pendientes (incluye vencidos)</option>
+              <option value="OVERDUE">Solo vencidos</option>
+              <option value="ALL">Todos (histórico)</option>
+            </select>
+          </div>
+
+          <div class="filter-group filter-group-actions">
+            <label class="form-label">&nbsp;</label>
+            <button
+              id="clearFiltersBtn"
+              type="button"
+              class="btn btn-secondary"
+            >
+              Limpiar parámetros
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3) ESTADO VACÍO -->
+      <section class="card empty-state-card" id="emptyStateCard">
+        <section class="empty-state">
+          <div class="empty-state-icon">📄</div>
+          <h3 class="empty-state-title">Sin cliente seleccionado</h3>
+          <p class="empty-state-text">
+            Para visualizar el estado de cuenta, utiliza el botón
+            <strong>“Seleccionar Cliente”</strong> y elige un cliente desde el
+            buscador.
+          </p>
+        </section>
+      </section>
+
+      <!-- 4) ESTADO DE CUENTA DEL CLIENTE -->
+      <section class="card detail-card is-hidden" id="accountStatusCard">
+        <header class="detail-header">
+          <div>
+            <h2 class="detail-title" id="detailTitle">Estado de Cuenta</h2>
+            <p class="detail-subtitle" id="detailSubtitle">
+              Resumen de crédito y documentos pendientes a la fecha de corte
+              seleccionada.
+            </p>
+          </div>
+          <div class="detail-header-actions">
+            <div id="detailBadges" class="detail-badges"></div>
+          </div>
+        </header>
+
+        <!-- ALERTA DE RIESGO -->
+        <section class="detail-subsection" id="riskAlertSection">
+          <div class="alert alert-ok is-hidden" id="alertOk">
+            <span class="alert-icon">✅</span>
+            <span class="alert-text">
+              Cliente sin deuda vencida a la fecha de corte.
+            </span>
+          </div>
+          <div class="alert alert-warning is-hidden" id="alertOverdue">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-text">
+              El cliente presenta deuda vencida por
+              <strong id="alertOverdueAmount">$ 0</strong>.
+            </span>
+          </div>
+        </section>
+
+        <!-- PERFIL DEL CLIENTE -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Perfil del cliente</h3>
+          </header>
+          <div class="customer-profile-grid">
+            <div class="profile-item">
+              <div class="summary-label">Nombre / Razón Social</div>
+              <div class="summary-value" id="summaryName">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">RUT</div>
+              <div class="summary-value" id="summaryTaxId">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Contacto</div>
+              <div class="summary-value" id="summaryContact">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Correo</div>
+              <div class="summary-value" id="summaryEmail">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Ciudad / Región</div>
+              <div class="summary-value" id="summaryLocation">-</div>
+            </div>
+            <div class="profile-item">
+              <div class="summary-label">Fecha registro</div>
+              <div class="summary-value" id="summaryRegistrationDate">-</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RESUMEN FINANCIERO -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Resumen financiero</h3>
+          </header>
+
+          <section class="metrics-grid metrics-grid-account">
+            <article class="metric-card">
+              <div class="metric-label">Límite de crédito</div>
+              <div class="metric-value" id="metricCreditLimit">$ 0</div>
+              <div class="metric-helper">Límite autorizado para el cliente</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Saldo utilizado</div>
+              <div class="metric-value" id="metricUsedBalance">$ 0</div>
+              <div class="metric-helper">
+                Documentos pendientes a la fecha de corte
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Crédito disponible</div>
+              <div class="metric-value" id="metricAvailableCredit">$ 0</div>
+              <div class="metric-helper">Límite menos saldo utilizado</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Monto vencido</div>
+              <div class="metric-value" id="metricOverdueAmount">$ 0</div>
+              <div class="metric-helper">Documentos con fecha vencida</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-label">Documentos pendientes</div>
+              <div class="metric-value" id="metricOpenDocs">0</div>
+              <div class="metric-helper">Facturas / documentos con saldo</div>
+            </article>
+          </section>
+
+          <!-- BARRA DE USO DE CRÉDITO -->
+          <div class="credit-usage-wrapper">
+            <div class="credit-usage-header">
+              <span class="credit-usage-label">Uso de crédito</span>
+              <span class="credit-usage-value" id="creditUsagePercentLabel"
+                >0%</span
+              >
+            </div>
+            <div class="credit-usage-bar">
+              <div
+                id="creditUsageBarInner"
+                class="credit-usage-bar-inner"
+              ></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ANTIGÜEDAD DE SALDOS -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Antigüedad de saldos</h3>
+          </header>
+
+          <div class="aging-wrapper">
+            <table class="table table-sm aging-table">
+              <thead>
+                <tr>
+                  <th>Tramo</th>
+                  <th>Saldo</th>
+                  <th>Documentos</th>
+                </tr>
+              </thead>
+              <tbody id="agingTableBody">
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- LISTA DE DOCUMENTOS -->
+        <section class="detail-subsection">
+          <header class="detail-subsection-header">
+            <h3 class="detail-subsection-title">Documentos del cliente</h3>
+          </header>
+
+          <div class="table-wrapper">
+            <table class="table table-sm" id="accountDocumentsTable">
+              <thead>
+                <tr>
+                  <th>Emisión</th>
+                  <th>Vencimiento</th>
+                  <th>Documento</th>
+                  <th>Tipo</th>
+                  <th>Condición</th>
+                  <th>Monto</th>
+                  <th>Saldo</th>
+                  <th>Días atraso</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- MODAL BÚSQUEDA DE CLIENTES -->
+    <div class="modal-backdrop is-hidden" id="customerSearchModal">
+      <div
+        class="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customerSearchTitle"
+      >
+        <header class="modal-header">
+          <h2 class="modal-title" id="customerSearchTitle">Buscar cliente</h2>
+          <button
+            id="customerSearchCloseBtn"
+            type="button"
+            class="btn-icon"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </header>
+
+        <section class="modal-body">
+          <div class="filters-grid modal-filters-grid">
+            <div class="filter-group">
+              <label for="customerSearchInput" class="form-label">Buscar</label>
+              <input
+                id="customerSearchInput"
+                class="form-control"
+                type="text"
+                placeholder="Nombre, RUT o código"
+              />
+            </div>
+
+            <div class="filter-group">
+              <label for="customerSearchTypeFilter" class="form-label"
+                >Tipo</label
+              >
+              <select id="customerSearchTypeFilter" class="form-control">
+                <option value="ALL">Todos</option>
+                <option value="COMPANY">Empresa</option>
+                <option value="INDIVIDUAL">Persona Natural</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="customerSearchSegmentFilter" class="form-label"
+                >Segmento</label
+              >
+              <select id="customerSearchSegmentFilter" class="form-control">
+                <option value="ALL">Todos</option>
+                <option value="PYME">PYME</option>
+                <option value="Mayorista">Mayorista</option>
+                <option value="Retail">Retail</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrapper modal-table-wrapper">
+            <table class="table table-sm" id="customerSearchTable">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>RUT</th>
+                  <th>Segmento</th>
+                  <th>Ciudad / Región</th>
+                  <th class="cell-actions-header">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- MODAL DETALLE DE DOCUMENTO -->
+        <div class="modal-backdrop is-hidden" id="documentDetailModal">
+          <div
+            class="modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="documentDetailTitle"
+          >
+            <header class="modal-header">
+              <h2 class="modal-title" id="documentDetailTitle">
+                Detalle de documento
+              </h2>
+              <button
+                id="documentDetailCloseBtn"
+                type="button"
+                class="btn-icon"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </header>
+
+            <section class="modal-body">
+              <!-- ENCABEZADO / DATOS GENERALES -->
+              <section class="detail-subsection">
+                <div class="doc-detail-grid">
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Documento</div>
+                    <div class="summary-value" id="detailDocNumber">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Tipo</div>
+                    <div class="summary-value" id="detailDocType">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Estado</div>
+                    <div class="summary-value" id="detailDocStatus">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Cliente</div>
+                    <div class="summary-value" id="detailDocCustomer">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">RUT</div>
+                    <div class="summary-value" id="detailDocTaxId">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Sucursal</div>
+                    <div class="summary-value" id="detailDocBranch">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Vendedor</div>
+                    <div class="summary-value" id="detailDocSeller">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Canal</div>
+                    <div class="summary-value" id="detailDocChannel">-</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- INFORMACIÓN FINANCIERA -->
+              <section class="detail-subsection">
+                <header class="detail-subsection-header">
+                  <h3 class="detail-subsection-title">
+                    Resumen financiero del documento
+                  </h3>
+                </header>
+                <div class="doc-detail-grid">
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Fecha emisión</div>
+                    <div class="summary-value" id="detailDocIssueDate">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Fecha vencimiento</div>
+                    <div class="summary-value" id="detailDocDueDate">-</div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Condición de pago</div>
+                    <div class="summary-value" id="detailDocPaymentCondition">
+                      -
+                    </div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Monto original</div>
+                    <div class="summary-value" id="detailDocOriginalAmount">
+                      -
+                    </div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Saldo pendiente</div>
+                    <div class="summary-value" id="detailDocBalanceAmount">
+                      -
+                    </div>
+                  </div>
+                  <div class="doc-detail-item">
+                    <div class="summary-label">Días de atraso</div>
+                    <div class="summary-value" id="detailDocDaysOverdue">-</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- DETALLE DE PRODUCTOS -->
+              <section class="detail-subsection">
+                <header class="detail-subsection-header">
+                  <h3 class="detail-subsection-title">
+                    Detalle de productos / ítems
+                  </h3>
+                </header>
+                <div class="table-wrapper">
+                  <table class="table table-sm" id="detailItemsTable">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio unitario</th>
+                        <th>Total línea</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- filas dinámicas -->
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <!-- PAGOS / MOVIMIENTOS -->
+              <section class="detail-subsection">
+                <header class="detail-subsection-header">
+                  <h3 class="detail-subsection-title">
+                    Pagos / movimientos asociados
+                  </h3>
+                </header>
+                <div class="table-wrapper">
+                  <table class="table table-sm" id="detailPaymentsTable">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Referencia</th>
+                        <th>Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- filas dinámicas -->
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <!-- OBSERVACIONES -->
+              <section class="detail-subsection">
+                <header class="detail-subsection-header">
+                  <h3 class="detail-subsection-title">Observaciones</h3>
+                </header>
+                <p class="doc-detail-observations" id="detailDocObservations">
+                  -
+                </p>
+              </section>
+            </section>
+
+            <footer class="modal-footer">
+              <button
+                id="documentDetailCloseFooterBtn"
+                type="button"
+                class="btn btn-secondary btn-sm"
+              >
+                Cerrar
+              </button>
+            </footer>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button
+            id="customerSearchCancelBtn"
+            type="button"
+            class="btn btn-secondary btn-sm"
+          >
+            Cerrar
+          </button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

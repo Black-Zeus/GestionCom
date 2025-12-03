@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Módulo de Caja - Apertura de Caja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <main class="page">
+      <!-- HEADER -->
+      <header class="page-header">
+        <div class="page-title-block">
+          <h1 class="page-title">Módulo de Caja</h1>
+          <p class="page-subtitle">Submódulo: Apertura de Caja</p>
+        </div>
+        <div class="page-actions">
+          <button id="btnRefresh" type="button" class="btn btn-secondary">
+            Recargar datos dummy
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENIDO PRINCIPAL -->
+      <section class="page-content">
+        <!-- MÉTRICAS PRINCIPALES -->
+        <section class="metrics-grid">
+          <article class="metric-card">
+            <div class="metric-label">Total de aperturas</div>
+            <div class="metric-value" id="metricTotalOpenings">0</div>
+            <div class="metric-helper">Registros históricos de apertura</div>
+          </article>
+
+          <article class="metric-card">
+            <div class="metric-label">Aperturas hoy</div>
+            <div class="metric-value" id="metricOpeningsToday">0</div>
+            <div class="metric-helper">
+              Aperturas registradas en la fecha actual
+            </div>
+          </article>
+
+          <article class="metric-card metric-success">
+            <div class="metric-label">Cajas abiertas</div>
+            <div class="metric-value" id="metricOpenCashRegisters">0</div>
+            <div class="metric-helper">
+              Cajas con estado <strong>Abierta</strong>
+            </div>
+          </article>
+
+          <article class="metric-card metric-warning">
+            <div class="metric-label">Última apertura (monto)</div>
+            <div class="metric-value" id="metricLastOpeningAmount">$0</div>
+            <div class="metric-helper" id="metricLastOpeningInfo">
+              Sin aperturas registradas
+            </div>
+          </article>
+        </section>
+
+        <!-- LAYOUT PRINCIPAL: FORM + ESTADO ACTUAL + HISTORIAL -->
+        <section class="page-layout">
+          <!-- COLUMNA IZQUIERDA: FORMULARIO DE APERTURA -->
+          <section class="page-column page-column-main">
+            <section class="card" id="openCashFormCard">
+              <header class="card-header">
+                <div>
+                  <h2 class="card-title">Registrar apertura de caja</h2>
+                  <p class="card-subtitle">
+                    Complete los datos para iniciar un nuevo turno de caja.
+                  </p>
+                </div>
+                <div class="card-header-status">
+                  <span class="status-label">Caja seleccionada</span>
+                  <span id="currentRegisterBadge" class="badge badge-muted"
+                    >Sin selección</span
+                  >
+                </div>
+              </header>
+
+              <form id="openCashForm" class="form-grid">
+                <!-- IDENTIFICACIÓN DE CAJA -->
+                <fieldset class="form-section">
+                  <legend class="form-section-title">
+                    Identificación de la caja
+                  </legend>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="fieldRegisterId">Caja</label>
+                      <select
+                        id="fieldRegisterId"
+                        name="registerId"
+                        class="form-control"
+                        required
+                      >
+                        <option value="">Seleccione una caja...</option>
+                        <!-- opciones dinámicas -->
+                      </select>
+                      <small class="form-helper" id="registerDescriptionHelper">
+                        Seleccione la caja a aperturar.
+                      </small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="fieldBranch">Sucursal</label>
+                      <input
+                        id="fieldBranch"
+                        name="branch"
+                        type="text"
+                        class="form-control"
+                        readonly
+                        placeholder="Se completa según la caja"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="fieldOpeningDate">Fecha de apertura</label>
+                      <input
+                        id="fieldOpeningDate"
+                        name="openingDate"
+                        type="date"
+                        class="form-control"
+                        required
+                      />
+                    </div>
+
+                    <div class="form-group">
+                      <label for="fieldOpeningTime">Hora de apertura</label>
+                      <input
+                        id="fieldOpeningTime"
+                        name="openingTime"
+                        type="time"
+                        class="form-control"
+                        required
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+
+                <!-- RESPONSABLE Y MONTO -->
+                <fieldset class="form-section">
+                  <legend class="form-section-title">
+                    Responsable y monto
+                  </legend>
+
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="fieldResponsibleId"
+                        >Usuario responsable</label
+                      >
+                      <select
+                        id="fieldResponsibleId"
+                        name="responsibleId"
+                        class="form-control"
+                        required
+                      >
+                        <option value="">Seleccione un usuario...</option>
+                        <!-- opciones dinámicas -->
+                      </select>
+                      <small class="form-helper"
+                        >Usuario que quedará asociado al turno.</small
+                      >
+                    </div>
+
+                    <div class="form-group">
+                      <label for="fieldInitialAmount">Monto de apertura</label>
+                      <input
+                        id="fieldInitialAmount"
+                        name="initialAmount"
+                        type="text"
+                        inputmode="numeric"
+                        class="form-control"
+                        placeholder="Ej: 150.000"
+                        required
+                      />
+                      <small class="form-helper">
+                        Monto inicial declarado en efectivo (CLP).
+                      </small>
+                    </div>
+                  </div>
+
+                  <div class="form-row">
+                    <div class="form-group form-group-inline">
+                      <label for="fieldCurrency">Moneda</label>
+                      <select
+                        id="fieldCurrency"
+                        name="currency"
+                        class="form-control"
+                      >
+                        <option value="CLP">CLP - Peso chileno</option>
+                        <option value="USD">USD - Dólar</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group form-group-inline">
+                      <label class="form-label-inline">
+                        <input type="checkbox" id="fieldAutoCode" checked />
+                        Generar código automáticamente
+                      </label>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <!-- OBSERVACIONES -->
+                <fieldset class="form-section">
+                  <legend class="form-section-title">Observaciones</legend>
+
+                  <div class="form-row">
+                    <div class="form-group form-group-full">
+                      <label for="fieldNotes">Detalle / comentarios</label>
+                      <textarea
+                        id="fieldNotes"
+                        name="notes"
+                        rows="3"
+                        class="form-control"
+                        placeholder="Ej: Turno mañana, responsable principal de recaudación."
+                      ></textarea>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <div class="form-actions">
+                  <button type="reset" class="btn btn-ghost">
+                    Limpiar formulario
+                  </button>
+                  <button type="submit" class="btn btn-primary">
+                    Registrar apertura
+                  </button>
+                </div>
+              </form>
+            </section>
+          </section>
+
+          <!-- COLUMNA DERECHA: ESTADO ACTUAL + FILTROS + HISTORIAL -->
+          <section class="page-column page-column-side">
+            <!-- ESTADO ACTUAL DE CAJA -->
+            <section class="card" id="currentStatusCard">
+              <header class="card-header">
+                <div>
+                  <h2 class="card-title">
+                    Estado actual de la caja seleccionada
+                  </h2>
+                  <p class="card-subtitle">
+                    Resumen del último movimiento de apertura asociado a la
+                    caja.
+                  </p>
+                </div>
+              </header>
+
+              <div class="detail-summary" id="currentStatusSummary">
+                <div class="detail-item">
+                  <div class="detail-label">Caja</div>
+                  <div class="detail-value" id="currentStatusRegister">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Estado</div>
+                  <div class="detail-value">
+                    <span id="currentStatusBadge" class="badge badge-muted"
+                      >Sin datos</span
+                    >
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Responsable</div>
+                  <div class="detail-value" id="currentStatusUser">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Monto apertura</div>
+                  <div class="detail-value" id="currentStatusAmount">$0</div>
+                </div>
+
+                <div class="detail-item detail-item-full">
+                  <div class="detail-label">Última observación</div>
+                  <div class="detail-value" id="currentStatusNotes">
+                    Sin comentarios.
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- FILTROS HISTORIAL APERTURAS -->
+            <section class="card filters-card" id="filtersCard">
+              <header class="filters-header">
+                <h2 class="filters-title">Filtros de historial</h2>
+              </header>
+
+              <div class="filters-grid">
+                <div class="form-group">
+                  <label for="filterText">Buscar</label>
+                  <input
+                    id="filterText"
+                    type="text"
+                    class="form-control"
+                    placeholder="Código, caja, sucursal..."
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="filterStatus">Estado</label>
+                  <select id="filterStatus" class="form-control">
+                    <option value="">Todos</option>
+                    <option value="OPEN">Abierta</option>
+                    <option value="CLOSED">Cerrada</option>
+                    <option value="CANCELED">Anulada</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="filterRegister">Caja</label>
+                  <select id="filterRegister" class="form-control">
+                    <option value="">Todas</option>
+                    <!-- dinámico -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="filterUser">Usuario</label>
+                  <select id="filterUser" class="form-control">
+                    <option value="">Todos</option>
+                    <!-- dinámico -->
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="filterDateFrom">Fecha desde</label>
+                  <input id="filterDateFrom" type="date" class="form-control" />
+                </div>
+
+                <div class="form-group">
+                  <label for="filterDateTo">Fecha hasta</label>
+                  <input id="filterDateTo" type="date" class="form-control" />
+                </div>
+              </div>
+            </section>
+          </section>
+        </section>
+
+        <!-- TABLA HISTORIAL APERTURAS -->
+        <section class="card card-table">
+          <header class="card-header">
+            <div>
+              <h2 class="card-title">Historial de aperturas de caja</h2>
+              <p class="card-subtitle">
+                Registros de aperturas agrupados por caja, fecha y usuario
+                responsable.
+              </p>
+            </div>
+            <div class="card-header-actions">
+              <span class="table-counter" id="tableCounterLabel"
+                >0 registros</span
+              >
+            </div>
+          </header>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Caja</th>
+                  <th>Sucursal</th>
+                  <th>Fecha / Hora</th>
+                  <th>Responsable</th>
+                  <th>Monto apertura</th>
+                  <th>Estado</th>
+                  <th class="cell-actions-header">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="openingsTableBody">
+                <!-- filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- MODAL DETALLE APERTURA -->
+      <div id="modalBackdrop" class="modal-backdrop is-hidden"></div>
+      <div
+        id="openingModal"
+        class="modal is-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="openingModalTitle"
+      >
+        <div class="modal-dialog">
+          <div class="modal-header">
+            <h3 id="openingModalTitle" class="modal-title">
+              Detalle de apertura de caja
+            </h3>
+            <button
+              id="btnCloseModal"
+              type="button"
+              class="btn btn-icon"
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Sec 1: Identificación de la apertura -->
+            <section class="modal-section">
+              <h4 class="modal-section-title">
+                1. Identificación de la apertura
+              </h4>
+
+              <div class="modal-grid">
+                <div class="detail-item">
+                  <div class="detail-label">Código de apertura</div>
+                  <div class="detail-value" id="detailOpeningCode">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Caja</div>
+                  <div class="detail-value" id="detailRegister">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Sucursal</div>
+                  <div class="detail-value" id="detailBranch">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Estado</div>
+                  <div class="detail-value">
+                    <span id="detailStatusBadge" class="badge badge-muted"
+                      >-</span
+                    >
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Fecha / Hora apertura</div>
+                  <div class="detail-value" id="detailOpenedAt">-</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Usuario responsable</div>
+                  <div class="detail-value" id="detailUser">-</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sec 2: Información de montos -->
+            <section class="modal-section">
+              <h4 class="modal-section-title">
+                2. Información de montos y cierre
+              </h4>
+
+              <div class="modal-grid">
+                <div class="detail-item">
+                  <div class="detail-label">Monto apertura</div>
+                  <div class="detail-value" id="detailInitialAmount">$0</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Monto cierre</div>
+                  <div class="detail-value" id="detailClosingAmount">$0</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Diferencia</div>
+                  <div class="detail-value" id="detailDifferenceAmount">$0</div>
+                </div>
+
+                <div class="detail-item">
+                  <div class="detail-label">Fecha / Hora cierre</div>
+                  <div class="detail-value" id="detailClosedAt">-</div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sec 3: Observaciones -->
+            <section class="modal-section">
+              <h4 class="modal-section-title">3. Observaciones</h4>
+              <p class="detail-value" id="detailNotes">
+                Sin observaciones registradas.
+              </p>
+            </section>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              id="btnCloseModalFooter"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
