@@ -1,5 +1,7 @@
 import React from "react";
 import { Icon } from "@components/ui/icon/iconManager";
+import ModalManager from "@/components/ui/modal/ModalManager";
+import CreditConfigModal from "./CreditConfigModal";
 
 const CreditManagementDetail = ({
   customer,
@@ -24,6 +26,58 @@ const CreditManagementDetail = ({
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
+    });
+  };
+
+  // Handlers para acciones con ModalManager
+  const handleEditCreditConfig = () => {
+    ModalManager.show({
+      title: "Editar configuración de crédito",
+      size: "xlarge",
+      content: (
+        <CreditConfigModal
+          customer={customer}
+          creditConfig={creditConfig}
+          onSave={(updatedConfig) => {
+            console.log("Configuración actualizada:", updatedConfig);
+            // Aquí se conectaría con el backend
+          }}
+        />
+      ),
+    });
+  };
+
+  const handleBlockCredit = () => {
+    ModalManager.confirm({
+      title: "Bloquear crédito del cliente",
+      message: `¿Está seguro de bloquear el crédito para ${
+        customer.commercial_name || customer.legal_name
+      }? El cliente no podrá realizar compras a crédito.`,
+      confirmText: "Sí",
+      cancelText: "No",
+      type: "danger",
+      onConfirm: () => {
+        ModalManager.success({
+          title: "Crédito bloqueado",
+          message: "El crédito del cliente ha sido bloqueado exitosamente.",
+        });
+      },
+    });
+  };
+
+  const handleDeleteException = (exception) => {
+    ModalManager.confirm({
+      title: "Eliminar excepción",
+      message: `¿Está seguro de eliminar la excepción "${exception.reason}"? Esta acción no se puede deshacer.`,
+      confirmText: "Sí",
+      cancelText: "No",
+      type: "danger",
+      onConfirm: () => {
+        ModalManager.success({
+          title: "Excepción eliminada",
+          message: "La excepción de límite ha sido eliminada exitosamente.",
+        });
+      },
     });
   };
 
@@ -129,7 +183,7 @@ const CreditManagementDetail = ({
 
   return (
     <div>
-      {/* Header del detalle */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">
@@ -147,6 +201,24 @@ const CreditManagementDetail = ({
             <Icon name="chevron-left" className="text-base" />
             Volver a listado
           </button>
+          {creditConfig && (
+            <>
+              <button
+                onClick={handleEditCreditConfig}
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="Editar configuración"
+              >
+                <Icon name="edit" className="text-lg" />
+              </button>
+              <button
+                onClick={handleBlockCredit}
+                className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                title="Bloquear crédito"
+              >
+                <Icon name="ban" className="text-lg" />
+              </button>
+            </>
+          )}
           {creditConfig && getRiskBadge(creditConfig.risk_level)}
           {getCreditStatusBadge()}
         </div>
@@ -405,6 +477,9 @@ const CreditManagementDetail = ({
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Estado
                       </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -426,6 +501,15 @@ const CreditManagementDetail = ({
                         </td>
                         <td className="px-4 py-3">
                           {getExceptionStatusBadge(exception.exception_status)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => handleDeleteException(exception)}
+                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                            title="Eliminar excepción"
+                          >
+                            <Icon name="delete" className="text-lg" />
+                          </button>
                         </td>
                       </tr>
                     ))}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@components/ui/icon/iconManager";
+import ModalManager from "@/components/ui/modal/ModalManager";
 import CustomerPurchaseHistoryIdentification from "./CustomerPurchaseHistoryIdentification";
 import CustomerPurchaseHistoryFilters from "./CustomerPurchaseHistoryFilters";
 import CustomerPurchaseHistoryEmpty from "./CustomerPurchaseHistoryEmpty";
@@ -7,14 +8,13 @@ import CustomerPurchaseHistoryDetail from "./CustomerPurchaseHistoryDetail";
 import CustomerSearchModal from "./CustomerSearchModal";
 import mockData from "./data.json";
 
-const CustomerPurchaseManager = () => {
+const CustomerPurchaseHistoryMain = () => {
   // Datos del sistema
   const [customers, setCustomers] = useState([]);
   const [documents, setDocuments] = useState([]);
 
   // Estado de selección
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [showSearchModal, setShowSearchModal] = useState(false);
 
   // Filtros de documentos
   const [documentFilters, setDocumentFilters] = useState({
@@ -36,7 +36,6 @@ const CustomerPurchaseManager = () => {
 
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
-    setShowSearchModal(false);
     // Reset filtros al cambiar de cliente
     setDocumentFilters({
       dateFrom: "",
@@ -47,11 +46,16 @@ const CustomerPurchaseManager = () => {
   };
 
   const handleOpenSearchModal = () => {
-    setShowSearchModal(true);
-  };
-
-  const handleCloseSearchModal = () => {
-    setShowSearchModal(false);
+    ModalManager.show({
+      title: "Buscar cliente",
+      size: "xlarge",
+      content: (
+        <CustomerSearchModal
+          customers={customers}
+          onSelectCustomer={handleSelectCustomer}
+        />
+      ),
+    });
   };
 
   const handleFilterChange = (newFilters) => {
@@ -150,18 +154,9 @@ const CustomerPurchaseManager = () => {
             )}
           />
         )}
-
-        {/* Modal de búsqueda de clientes */}
-        {showSearchModal && (
-          <CustomerSearchModal
-            customers={customers}
-            onSelectCustomer={handleSelectCustomer}
-            onClose={handleCloseSearchModal}
-          />
-        )}
       </div>
     </div>
   );
 };
 
-export default CustomerPurchaseManager;
+export default CustomerPurchaseHistoryMain;
