@@ -110,23 +110,13 @@ export const sidebarNavData = {
                 items: [
                     {
                         id: "apertura-caja",
-                        text: "Apertura de Caja",
-                        icon: "🔓",
+                        text: "Apertura/Cierre de Caja",
+                        icon: "💰",
                         path: "/cash/opening",
                         badge: null,
                         hasSubmenu: false,
                         active: false,
-                        permissionKey: "cash.operations.opening"
-                    },
-                    {
-                        id: "cierre-caja",
-                        text: "Cierre de Caja",
-                        icon: "🔒",
-                        path: "/cash/closing",
-                        badge: null,
-                        hasSubmenu: false,
-                        active: false,
-                        permissionKey: "cash.operations.closing"
+                        permissionKey: "cash.operations"
                     },
                     {
                         id: "movimientos-caja",

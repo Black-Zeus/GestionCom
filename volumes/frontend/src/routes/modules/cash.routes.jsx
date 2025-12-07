@@ -2,7 +2,6 @@
 import { lazy } from 'react';
 
 const CashOpeningPage = lazy(() => import('@/pages/cash/CashOpening'));
-const CashClosingPage = lazy(() => import('@/pages/cash/CashClosing'));
 const CashCountPage = lazy(() => import('@/pages/cash/CashCount'));
 const CashMovementsPage = lazy(() => import('@/pages/cash/CashMovements'));
 const ExpensesPage = lazy(() => import('@/pages/finance/Expenses'));
@@ -33,12 +32,6 @@ export const cashRoutes = [
         path: '/cash/opening',
         component: CashOpeningPage,
         title: 'Apertura de Caja',
-        requiresAuth: true
-    },
-    {
-        path: '/cash/closing',
-        component: CashClosingPage,
-        title: 'Cierre de Caja',
         requiresAuth: true
     },
     {

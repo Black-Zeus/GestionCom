@@ -509,8 +509,8 @@ services:
   # MAILPIT - Mail Testing
   # =========================
   mailpit:
-    container_name: ${PROJECT_NAME}-mailpit
-    image: axllent/mailpit:v1.21.6
+    container_name: ${PROJECT_NAME}-mailpit    
+    image: axllent/mailpit:v1.28
     ports:
       - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
       - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
@@ -615,56 +615,10 @@ services:
       - seccomp:unconfined
 
   # =========================
-  # PHPMYADMIN - Administrador de BD
-  # =========================
-  phpmyadmin:
-    container_name: ${PROJECT_NAME}-phpmyadmin
-    image: phpmyadmin:5.2.2-apache
-    ports:
-      - "${MYSQL_PORT_PHPMYADMIN}:80"
-    labels:
-      - stack=${PROJECT_NAME}
-    environment:
-      PMA_HOST: mariadb
-      PMA_PORT: ${MYSQL_PORT}
-      PMA_USER: root
-      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      PMA_ARBITRARY: 1
-      # Configuración para desarrollo
-      MAX_EXECUTION_TIME: 600
-      MEMORY_LIMIT: 512M
-      UPLOAD_LIMIT: 100M
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    networks:
-      - ${INTERNAL_NETWORK}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/"]
-      interval: ${HEALTH_CHECK_INTERVAL}
-      retries: ${HEALTH_CHECK_RETRIES}
-      timeout: ${HEALTH_CHECK_TIMEOUT}
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "256M"
-        reservations:
-          cpus: "0.25"
-          memory: "128M"
-
-  # =========================
   # RABBITMQ - Mensajería (Configuración Mejorada)
   # =========================
   rabbitmq:
-    image: rabbitmq:4.0.5-management-alpine
+    image: rabbitmq:4.1.6-management-alpine
     container_name: ${PROJECT_NAME}-rabbitmq
     ports:
       - "${RABBITMQ_PORT}:5672"

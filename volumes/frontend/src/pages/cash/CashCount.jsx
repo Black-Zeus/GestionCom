@@ -1,12 +1,8 @@
 import React from 'react';
+import CashRegisterSessionsMain from './cash-count/CashRegisterSessionsMain';
 
 const CashCount = () => {
-    return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">CashCount</h1>
-            <p>Soy CashCount</p>
-        </div>
-    );
+    return <CashRegisterSessionsMain />;
 };
 
 export default CashCount;

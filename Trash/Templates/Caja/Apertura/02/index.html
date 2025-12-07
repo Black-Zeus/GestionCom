@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Módulo de Caja · Aperturas de caja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page-container">
+    <!-- Título -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Módulo de Caja · Aperturas de caja</h1>
+        <p class="page-subtitle">
+          Gestión de aperturas de caja, estado actual de la caja seleccionada e historial de sesiones del usuario.
+        </p>
+      </div>
+      <div class="page-header-meta">
+        <span id="currentUserName" class="user-chip"></span>
+      </div>
+    </header>
+
+    <!-- Estructura principal -->
+    <main class="layout-single">
+      <!-- |-------------------------------------------------------------|
+           |  card1 | card2 | card3 | card4                             |
+           |-------------------------------------------------------------| -->
+      <section class="card">
+        <div class="card-body">
+          <div class="kpi-grid kpi-grid-4">
+            <div class="kpi-card">
+              <div class="kpi-label">Sesiones abiertas hoy</div>
+              <div class="kpi-value" id="kpiSessionsOpenToday">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Sesiones cerradas año en curso</div>
+              <div class="kpi-value" id="kpiSessionsClosedYear">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Diferencia acumulada año</div>
+              <div class="kpi-value" id="kpiDiffYear">$0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Indicador libre</div>
+              <div class="kpi-value">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- |-------------------------------------------------------------|
+           |   Estado actual de la caja seleccionada   <Aperturar caja> |
+           |-------------------------------------------------------------| -->
+      <section class="card">
+        <div class="card-header card-header-inline">
+          <div>
+            <h2 class="card-title">Estado actual de la caja seleccionada</h2>
+            <p class="card-subtitle">
+              Seleccione la caja y visualice su estado. Desde aquí se realiza la apertura de caja.
+            </p>
+          </div>
+          <div class="card-header-actions">
+            <button
+              type="button"
+              id="openOpeningModalFromStateBtn"
+              class="btn btn-primary"
+              disabled
+            >
+              Aperturar caja
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Sucursal / usuario -->
+          <div class="status-context-grid">
+            <div>
+              <span class="key-value-item-label">Sucursal actual</span>
+              <span id="statusBranchLabel" class="key-value-item-value"></span>
+            </div>
+            <div>
+              <span class="key-value-item-label">Usuario</span>
+              <span id="statusUserLabel" class="key-value-item-value"></span>
+            </div>
+          </div>
+
+          <!-- Selección de caja -->
+          <div class="form-grid status-form-grid">
+            <div class="form-group">
+              <label for="statusRegisterSelect">Caja</label>
+              <select id="statusRegisterSelect" class="input">
+                <option value="">Seleccione una caja...</option>
+              </select>
+              <small id="statusRegisterInfo" class="field-help"></small>
+            </div>
+          </div>
+
+          <!-- Resumen de estado -->
+          <div id="statusSummaryContainer" class="status-summary">
+            <!-- Contenido dinámico vía JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- |-------------------------------------------------------------|
+           |  Filtro de Historial                                        |
+           |-------------------------------------------------------------| -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Filtro de historial</h2>
+          <p class="card-subtitle">
+            Defina los parámetros para consultar el historial de aperturas de caja del usuario.
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="form-group">
+              <label for="filterDateFrom">Desde</label>
+              <input type="date" id="filterDateFrom" class="input" />
+            </div>
+
+            <div class="form-group">
+              <label for="filterDateTo">Hasta</label>
+              <input type="date" id="filterDateTo" class="input" />
+            </div>
+
+            <div class="form-group">
+              <label for="filterBranchSelect">Sucursal</label>
+              <select id="filterBranchSelect" class="input">
+                <option value="">Todas las sucursales</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="filterRegisterSelect">Caja</label>
+              <select id="filterRegisterSelect" class="input">
+                <option value="">Todas las cajas</option>
+              </select>
+            </div>
+
+            <div class="filters-actions">
+              <button id="applyFiltersBtn" class="btn btn-secondary">
+                Buscar
+              </button>
+              <button id="clearFiltersBtn" class="btn btn-ghost">
+                Limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- |-------------------------------------------------------------|
+           |  Historial de aperturas de caja                             |
+           |-------------------------------------------------------------| -->
+      <section class="card">
+        <div class="card-header">
+          <h2 class="card-title">Historial de aperturas de caja</h2>
+          <p class="card-subtitle">
+            Listado de sesiones de caja asociadas al usuario, según los filtros definidos.
+          </p>
+        </div>
+        <div class="card-body">
+          <div class="table-wrapper">
+            <table class="table" id="sessionsTable">
+              <thead>
+                <tr>
+                  <th>Sesión</th>
+                  <th>Sucursal</th>
+                  <th>Caja</th>
+                  <th>F. Apertura</th>
+                  <th>F. Cierre</th>
+                  <th>Estado</th>
+                  <th>Monto apertura</th>
+                  <th>Teórico</th>
+                  <th>Físico</th>
+                  <th>Diferencia</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="sessionsTableBody">
+                <!-- Filas dinámicas -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="sessionsEmptyState" class="empty-state">
+            No hay sesiones de caja para los filtros seleccionados.
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Apertura de Caja -->
+  <div id="openingModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="openingModalTitle">
+      <header class="modal-header">
+        <div>
+          <h2 id="openingModalTitle" class="modal-title">Registrar apertura de caja</h2>
+          <p class="modal-subtitle">
+            Inicie una nueva sesión de caja. Solo se permite una apertura activa por caja y usuario.
+          </p>
+        </div>
+        <button class="btn btn-icon" type="button" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </header>
+
+      <form id="openingModalForm">
+        <div class="modal-body">
+          <div id="openingAlert" class="alert" aria-live="polite"></div>
+
+          <div class="modal-section">
+            <h3 class="modal-section-title">Contexto de la apertura</h3>
+
+            <div class="key-value-grid">
+              <div>
+                <span class="key-value-item-label">Sucursal</span>
+                <span id="openingBranchLabel" class="key-value-item-value"></span>
+              </div>
+              <div>
+                <span class="key-value-item-label">Usuario</span>
+                <span id="openingUserLabel" class="key-value-item-value"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <h3 class="modal-section-title">Datos de la apertura</h3>
+
+            <div class="form-grid">
+              <div class="form-group full-width">
+                <label for="openingRegisterSelect">Caja</label>
+                <select id="openingRegisterSelect" class="input">
+                  <option value="">Seleccione una caja...</option>
+                </select>
+                <small id="openingRegisterInfo" class="field-help"></small>
+              </div>
+
+              <div class="form-group">
+                <label for="openingAmount">Monto de apertura</label>
+                <div class="input-prefix-group">
+                  <span class="input-prefix">$</span>
+                  <input
+                    type="number"
+                    id="openingAmount"
+                    class="input"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                  />
+                </div>
+                <small class="field-help">
+                  Monto inicial entregado para vueltos y gastos menores. Puede ser 0 o superior.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="openingNotes">Notas de apertura (opcional)</label>
+                <textarea
+                  id="openingNotes"
+                  class="input textarea"
+                  rows="3"
+                  placeholder="Ej: Apertura turno mañana, punto de venta sala de ventas."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <p class="summary-notes">
+              Regla de operación: por cada caja y usuario solo se permite una sesión en estado
+              <strong>Abierta</strong>. Para volver a abrir la misma caja, la sesión anterior
+              debe estar en estado <strong>Cerrada</strong> o <strong>Arqueada</strong>.
+            </p>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn btn-ghost" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar apertura</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de Sesión (tabs para movimientos) -->
+  <div id="sessionDetailModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-modal-close></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="sessionDetailTitle">
+      <header class="modal-header">
+        <div>
+          <h2 id="sessionDetailTitle" class="modal-title">Detalle de sesión de caja</h2>
+          <p id="sessionDetailSubtitle" class="modal-subtitle"></p>
+        </div>
+        <button class="btn btn-icon" type="button" data-modal-close aria-label="Cerrar">
+          ✕
+        </button>
+      </header>
+
+      <div class="modal-body">
+        <!-- Tabs -->
+        <div id="sessionDetailTabs" class="tabs" role="tablist">
+          <button type="button" class="tab tab-active" data-tab-id="summary">Resumen</button>
+          <button type="button" class="tab" data-tab-id="cash">Movimientos de caja</button>
+          <button type="button" class="tab" data-tab-id="petty">Caja chica</button>
+        </div>
+
+        <!-- Panel Resumen -->
+        <div class="tab-panel tab-panel-active" data-tab-panel-id="summary">
+          <section class="modal-section">
+            <h3 class="modal-section-title">Identificación de la sesión</h3>
+            <div class="key-value-grid" id="sessionIdentityInfo">
+              <!-- Rellenado por JS -->
+            </div>
+          </section>
+
+          <section class="modal-section">
+            <h3 class="modal-section-title">Apertura de caja</h3>
+            <div class="key-value-grid" id="sessionOpeningInfo">
+              <!-- Rellenado por JS -->
+            </div>
+          </section>
+
+          <section class="modal-section">
+            <h3 class="modal-section-title">Resumen de cierre y arqueo</h3>
+            <div id="sessionSummaryCards" class="summary-cards">
+              <!-- Tarjetas dinámicas -->
+            </div>
+            <p id="sessionSummaryNotes" class="summary-notes"></p>
+          </section>
+        </div>
+
+        <!-- Panel Movimientos de caja -->
+        <div class="tab-panel" data-tab-panel-id="cash">
+          <section class="modal-section">
+            <h3 class="modal-section-title">Movimientos de caja</h3>
+            <div class="table-wrapper table-wrapper-compact">
+              <table class="table table-compact">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Documento</th>
+                    <th>Medio pago</th>
+                    <th>Recibido</th>
+                    <th>Vuelto</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody id="cashMovementsTableBody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- Panel Caja chica -->
+        <div class="tab-panel" data-tab-panel-id="petty">
+          <section class="modal-section">
+            <h3 class="modal-section-title">Movimientos de caja chica</h3>
+            <div class="table-wrapper table-wrapper-compact">
+              <table class="table table-compact">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Categoría / Fondo</th>
+                    <th>Descripción</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="pettyCashTableBody">
+                  <!-- Dinámico -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <footer class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-modal-close>
+          Cerrar
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <script src="script.js" type="module"></script>
+</body>
+</html>

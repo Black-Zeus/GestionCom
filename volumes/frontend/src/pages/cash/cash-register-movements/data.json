@@ -1,0 +1,386 @@
+{
+  "currentUser": {
+    "id": 10,
+    "username": "vsoto",
+    "full_name": "Víctor Soto"
+  },
+  "currentBranch": {
+    "id": 1,
+    "branch_code": "SCL-CENTRO",
+    "branch_name": "Sucursal Santiago Centro"
+  },
+  "branches": [
+    {
+      "id": 1,
+      "branch_code": "SCL-CENTRO",
+      "branch_name": "Sucursal Santiago Centro"
+    },
+    {
+      "id": 2,
+      "branch_code": "SCL-CONCHALI",
+      "branch_name": "Sucursal Conchalí"
+    }
+  ],
+  "registers": [
+    {
+      "id": 1,
+      "register_code": "CAJA01",
+      "register_name": "Caja Principal Sala de Ventas",
+      "branch_id": 1,
+      "branch_code": "SCL-CENTRO",
+      "branch_name": "Sucursal Santiago Centro"
+    },
+    {
+      "id": 2,
+      "register_code": "CAJA02",
+      "register_name": "Caja Bodega Despacho",
+      "branch_id": 1,
+      "branch_code": "SCL-CENTRO",
+      "branch_name": "Sucursal Santiago Centro"
+    },
+    {
+      "id": 3,
+      "register_code": "CAJA-SC01",
+      "register_name": "Caja Principal Sucursal Conchalí",
+      "branch_id": 2,
+      "branch_code": "SCL-CONCHALI",
+      "branch_name": "Sucursal Conchalí"
+    }
+  ],
+  "sessionStatuses": [
+    {
+      "code": "OPEN",
+      "label": "Abierta"
+    },
+    {
+      "code": "CLOSED",
+      "label": "Cerrada"
+    },
+    {
+      "code": "RECONCILED",
+      "label": "Arqueada"
+    }
+  ],
+  "sessions": [
+    {
+      "id": 101,
+      "session_code": "SES-2025-12-05-0001",
+      "branch_id": 1,
+      "branch_code": "SCL-CENTRO",
+      "branch_name": "Sucursal Santiago Centro",
+      "cash_register_id": 1,
+      "cash_register_code": "CAJA01",
+      "cash_register_name": "Caja Principal Sala de Ventas",
+      "cashier_user_id": 10,
+      "cashier_name": "Víctor Soto",
+      "opening_amount": 50000,
+      "opening_datetime": "2025-12-05T09:00:00",
+      "closing_datetime": null,
+      "theoretical_amount": null,
+      "physical_amount": null,
+      "status_code": "OPEN"
+    },
+    {
+      "id": 102,
+      "session_code": "SES-2025-12-04-0003",
+      "branch_id": 1,
+      "branch_code": "SCL-CENTRO",
+      "branch_name": "Sucursal Santiago Centro",
+      "cash_register_id": 1,
+      "cash_register_code": "CAJA01",
+      "cash_register_name": "Caja Principal Sala de Ventas",
+      "cashier_user_id": 10,
+      "cashier_name": "Víctor Soto",
+      "opening_amount": 40000,
+      "opening_datetime": "2025-12-04T09:15:00",
+      "closing_datetime": "2025-12-04T18:05:00",
+      "theoretical_amount": 285000,
+      "physical_amount": 283500,
+      "status_code": "CLOSED"
+    },
+    {
+      "id": 103,
+      "session_code": "SES-2025-12-03-0004",
+      "branch_id": 2,
+      "branch_code": "SCL-CONCHALI",
+      "branch_name": "Sucursal Conchalí",
+      "cash_register_id": 3,
+      "cash_register_code": "CAJA-SC01",
+      "cash_register_name": "Caja Principal Sucursal Conchalí",
+      "cashier_user_id": 10,
+      "cashier_name": "Víctor Soto",
+      "opening_amount": 60000,
+      "opening_datetime": "2025-12-03T08:55:00",
+      "closing_datetime": "2025-12-03T18:30:00",
+      "theoretical_amount": 350000,
+      "physical_amount": 350000,
+      "status_code": "RECONCILED"
+    }
+  ],
+  "movementTypes": [
+    {
+      "code": "OPENING",
+      "label": "Apertura",
+      "icon": "FaDoorOpen",
+      "color": "blue"
+    },
+    {
+      "code": "SALE",
+      "label": "Venta",
+      "icon": "FaShoppingCart",
+      "color": "green"
+    },
+    {
+      "code": "REFUND",
+      "label": "Devolución",
+      "icon": "FaUndo",
+      "color": "orange"
+    },
+    {
+      "code": "PETTY_CASH",
+      "label": "Gasto caja chica",
+      "icon": "FaReceipt",
+      "color": "red"
+    },
+    {
+      "code": "WITHDRAWAL",
+      "label": "Retiro",
+      "icon": "FaArrowDown",
+      "color": "purple"
+    },
+    {
+      "code": "DEPOSIT",
+      "label": "Depósito",
+      "icon": "FaArrowUp",
+      "color": "teal"
+    },
+    {
+      "code": "CLOSING",
+      "label": "Cierre",
+      "icon": "FaLock",
+      "color": "gray"
+    }
+  ],
+  "paymentMethods": [
+    {
+      "id": 1,
+      "name": "Efectivo",
+      "code": "CASH"
+    },
+    {
+      "id": 2,
+      "name": "Tarjeta débito",
+      "code": "DEBIT"
+    },
+    {
+      "id": 3,
+      "name": "Tarjeta crédito",
+      "code": "CREDIT"
+    },
+    {
+      "id": 4,
+      "name": "Transferencia",
+      "code": "TRANSFER"
+    }
+  ],
+  "cashMovements": [
+    {
+      "id": 1,
+      "cash_register_session_id": 102,
+      "movement_type": "OPENING",
+      "movement_type_label": "Apertura",
+      "document_id": null,
+      "document_number": null,
+      "document_summary": "Apertura de caja",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 40000,
+      "change_amount": 0,
+      "received_amount": 40000,
+      "reference_number": null,
+      "description": "Monto de apertura de caja.",
+      "created_at": "2025-12-04T09:15:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 2,
+      "cash_register_session_id": 102,
+      "movement_type": "SALE",
+      "movement_type_label": "Venta",
+      "document_id": 2001,
+      "document_number": "F-001234",
+      "document_summary": "Factura F-001234",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 85000,
+      "change_amount": 5000,
+      "received_amount": 90000,
+      "reference_number": "F-001234",
+      "description": "Venta mostrador muebles comedor.",
+      "created_at": "2025-12-04T10:40:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 3,
+      "cash_register_session_id": 102,
+      "movement_type": "SALE",
+      "movement_type_label": "Venta",
+      "document_id": 2002,
+      "document_number": "B-004501",
+      "document_summary": "Boleta B-004501",
+      "payment_method_id": 2,
+      "payment_method_name": "Tarjeta débito",
+      "amount": 120000,
+      "change_amount": 0,
+      "received_amount": 120000,
+      "reference_number": "B-004501",
+      "description": "Venta dormitorio completo.",
+      "created_at": "2025-12-04T11:10:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 4,
+      "cash_register_session_id": 102,
+      "movement_type": "SALE",
+      "movement_type_label": "Venta",
+      "document_id": 2003,
+      "document_number": "B-004502",
+      "document_summary": "Boleta B-004502",
+      "payment_method_id": 3,
+      "payment_method_name": "Tarjeta crédito",
+      "amount": 65000,
+      "change_amount": 0,
+      "received_amount": 65000,
+      "reference_number": "B-004502",
+      "description": "Venta escritorio oficina.",
+      "created_at": "2025-12-04T12:25:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 5,
+      "cash_register_session_id": 102,
+      "movement_type": "PETTY_CASH",
+      "movement_type_label": "Gasto caja chica",
+      "document_id": null,
+      "document_number": null,
+      "document_summary": "Gasto menor limpieza",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": -3500,
+      "change_amount": 0,
+      "received_amount": 0,
+      "reference_number": null,
+      "description": "Detergente y bolsas de basura.",
+      "created_at": "2025-12-04T13:05:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 6,
+      "cash_register_session_id": 102,
+      "movement_type": "REFUND",
+      "movement_type_label": "Devolución",
+      "document_id": 2004,
+      "document_number": "NC-000125",
+      "document_summary": "Nota crédito NC-000125",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": -15000,
+      "change_amount": 0,
+      "received_amount": 0,
+      "reference_number": "NC-000125",
+      "description": "Devolución producto defectuoso.",
+      "created_at": "2025-12-04T14:30:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 7,
+      "cash_register_session_id": 102,
+      "movement_type": "SALE",
+      "movement_type_label": "Venta",
+      "document_id": 2005,
+      "document_number": "F-001235",
+      "document_summary": "Factura F-001235",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 95000,
+      "change_amount": 5000,
+      "received_amount": 100000,
+      "reference_number": "F-001235",
+      "description": "Venta juego living.",
+      "created_at": "2025-12-04T15:45:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 8,
+      "cash_register_session_id": 102,
+      "movement_type": "WITHDRAWAL",
+      "movement_type_label": "Retiro",
+      "document_id": null,
+      "document_number": null,
+      "document_summary": "Retiro para depósito",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": -50000,
+      "change_amount": 0,
+      "received_amount": 0,
+      "reference_number": null,
+      "description": "Retiro para depósito bancario diario.",
+      "created_at": "2025-12-04T16:30:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 9,
+      "cash_register_session_id": 102,
+      "movement_type": "CLOSING",
+      "movement_type_label": "Cierre",
+      "document_id": null,
+      "document_number": null,
+      "document_summary": "Cierre de caja",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 0,
+      "change_amount": 0,
+      "received_amount": 0,
+      "reference_number": null,
+      "description": "Conteo final de efectivo y medios de pago.",
+      "created_at": "2025-12-04T18:00:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 10,
+      "cash_register_session_id": 101,
+      "movement_type": "OPENING",
+      "movement_type_label": "Apertura",
+      "document_id": null,
+      "document_number": null,
+      "document_summary": "Apertura de caja",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 50000,
+      "change_amount": 0,
+      "received_amount": 50000,
+      "reference_number": null,
+      "description": "Monto de apertura de caja.",
+      "created_at": "2025-12-05T09:00:00",
+      "created_by": "Víctor Soto"
+    },
+    {
+      "id": 11,
+      "cash_register_session_id": 101,
+      "movement_type": "SALE",
+      "movement_type_label": "Venta",
+      "document_id": 2006,
+      "document_number": "B-004503",
+      "document_summary": "Boleta B-004503",
+      "payment_method_id": 1,
+      "payment_method_name": "Efectivo",
+      "amount": 45000,
+      "change_amount": 5000,
+      "received_amount": 50000,
+      "reference_number": "B-004503",
+      "description": "Venta silla oficina.",
+      "created_at": "2025-12-05T10:15:00",
+      "created_by": "Víctor Soto"
+    }
+  ]
+}

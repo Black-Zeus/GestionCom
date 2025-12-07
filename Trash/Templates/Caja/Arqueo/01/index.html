@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>GestiónCom · Arqueo de caja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="./styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Header -->
+      <header class="app-header">
+        <div>
+          <h1 class="app-title">Módulo de arqueo de caja</h1>
+          <p class="app-subtitle">
+            Conciliación de sesiones de caja por sucursal, caja y usuario, con
+            detalle de medios de pago y conteo físico.
+          </p>
+        </div>
+        <div class="app-header-user">
+          <span id="currentUserName" class="app-header-user-label"></span>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <!-- KPIs -->
+        <section class="kpi-grid card">
+          <div class="card-header">
+            <h2 class="card-title">Resumen operativo</h2>
+            <p class="card-subtitle">
+              Indicadores básicos del estado de las sesiones de caja.
+            </p>
+          </div>
+          <div class="card-body kpi-items-grid">
+            <div class="kpi-item">
+              <div class="kpi-label">Sesiones abiertas</div>
+              <div id="kpiSessionsOpen" class="kpi-value">0</div>
+              <div class="kpi-hint">Sesiones en curso sin cierre.</div>
+            </div>
+            <div class="kpi-item">
+              <div class="kpi-label">Pendientes de arqueo</div>
+              <div id="kpiSessionsPending" class="kpi-value">0</div>
+              <div class="kpi-hint">
+                Sesiones cerradas sin conciliación final.
+              </div>
+            </div>
+            <div class="kpi-item">
+              <div class="kpi-label">Arqueadas hoy</div>
+              <div id="kpiSessionsReconciledToday" class="kpi-value">0</div>
+              <div class="kpi-hint">
+                Sesiones con arqueo confirmado en la fecha actual.
+              </div>
+            </div>
+            <div class="kpi-item">
+              <div class="kpi-label">Dif. acumulada mes</div>
+              <div id="kpiDiffMonth" class="kpi-value">0</div>
+              <div class="kpi-hint">
+                Suma de diferencias de sesiones cerradas/arqueadas del mes.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Selección / filtro de sesiones -->
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Filtro de sesiones de caja</h2>
+            <p class="card-subtitle">
+              Filtre las sesiones por rango de fechas, sucursal, caja y estado.
+            </p>
+          </div>
+          <div class="card-body">
+            <div class="filters-grid">
+              <div class="form-group">
+                <label for="filterDateFrom">Desde (F. cierre)</label>
+                <input type="date" id="filterDateFrom" class="input" />
+              </div>
+              <div class="form-group">
+                <label for="filterDateTo">Hasta (F. cierre)</label>
+                <input type="date" id="filterDateTo" class="input" />
+              </div>
+              <div class="form-group">
+                <label for="filterBranchSelect">Sucursal</label>
+                <select id="filterBranchSelect" class="input">
+                  <option value="">Todas las sucursales</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filterRegisterSelect">Caja</label>
+                <select id="filterRegisterSelect" class="input">
+                  <option value="">Todas las cajas</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="filterStatusSelect">Estado</label>
+                <select id="filterStatusSelect" class="input">
+                  <option value="">Todos</option>
+                  <option value="OPEN">Abierta</option>
+                  <option value="CLOSED">Cerrada</option>
+                  <option value="RECONCILED">Arqueada</option>
+                </select>
+              </div>
+              <div class="filters-actions">
+                <button id="applyFiltersBtn" class="btn btn-secondary">
+                  Buscar
+                </button>
+                <button id="clearFiltersBtn" class="btn btn-ghost">Limpiar</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Estado rápido de sesión seleccionada -->
+        <section class="card">
+          <div class="card-header card-header-inline">
+            <div>
+              <h2 class="card-title">Detalle rápido de sesión</h2>
+              <p class="card-subtitle">
+                Revise el contexto de la sesión seleccionada y acceda al arqueo.
+              </p>
+            </div>
+            <div class="card-header-actions">
+              <button
+                type="button"
+                id="openReconciliationModalBtn"
+                class="btn btn-primary"
+                disabled
+              >
+                Arquear / editar arqueo
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="status-context-grid">
+              <div>
+                <span class="key-value-item-label">Sucursal actual</span>
+                <span
+                  id="statusBranchLabel"
+                  class="key-value-item-value"
+                ></span>
+              </div>
+              <div>
+                <span class="key-value-item-label">Usuario</span>
+                <span id="statusUserLabel" class="key-value-item-value"></span>
+              </div>
+            </div>
+
+            <div id="quickSessionInfo" class="status-summary">
+              <!-- Contenido dinámico -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Historial de sesiones -->
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">Sesiones de caja</h2>
+            <p class="card-subtitle">
+              Listado de sesiones, su estado y diferencias de arqueo.
+            </p>
+          </div>
+          <div class="card-body">
+            <div class="table-wrapper">
+              <table class="table" id="sessionsTable">
+                <thead>
+                  <tr>
+                    <th>Sesión</th>
+                    <th>Sucursal</th>
+                    <th>Caja</th>
+                    <th>F. Apertura</th>
+                    <th>F. Cierre</th>
+                    <th>Estado</th>
+                    <th>Monto apertura</th>
+                    <th>Teórico</th>
+                    <th>Físico</th>
+                    <th>Diferencia</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="sessionsTableBody">
+                  <!-- Filas dinámicas -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="sessionsEmptyState" class="empty-state">
+              No hay sesiones de caja para los filtros seleccionados.
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal de arqueo -->
+    <div id="reconciliationModal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-modal-close></div>
+      <div
+        class="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reconciliationModalTitle"
+      >
+        <header class="modal-header">
+          <div>
+            <h2 id="reconciliationModalTitle" class="modal-title">
+              Arqueo de sesión de caja
+            </h2>
+            <p id="reconciliationModalSubtitle" class="modal-subtitle"></p>
+          </div>
+          <button
+            class="btn btn-icon"
+            type="button"
+            data-modal-close
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </header>
+
+        <form id="reconciliationForm">
+          <div class="modal-body">
+            <div id="reconciliationAlert" class="alert" aria-live="polite"></div>
+
+            <!-- TABS -->
+            <div class="modal-tabs" role="tablist">
+              <button
+                type="button"
+                class="tab tab-active"
+                data-tab-target="tab-context"
+              >
+                1. Contexto sesión
+              </button>
+              <button
+                type="button"
+                class="tab"
+                data-tab-target="tab-theoretical"
+              >
+                2. Movimientos teóricos
+              </button>
+              <button
+                type="button"
+                class="tab"
+                data-tab-target="tab-physical"
+              >
+                3. Conteo físico
+              </button>
+              <button
+                type="button"
+                class="tab"
+                data-tab-target="tab-summary"
+              >
+                4. Resumen y cierre
+              </button>
+            </div>
+
+            <div class="modal-tabs-panels">
+              <!-- TAB 1: CONTEXTO -->
+              <div
+                id="tab-context"
+                class="tab-panel tab-panel-active"
+                role="tabpanel"
+              >
+                <!-- Sección 1: Identificación -->
+                <section class="modal-section">
+                  <h3 class="modal-section-title">Identificación de la sesión</h3>
+                  <div class="key-value-grid" id="sessionIdentityInfo">
+                    <!-- Dinámico -->
+                  </div>
+                </section>
+              </div>
+
+              <!-- TAB 2: MOVIMIENTOS TEÓRICOS -->
+              <div id="tab-theoretical" class="tab-panel" role="tabpanel">
+                <!-- Sección 2: Resumen teórico por medio de pago -->
+                <section class="modal-section">
+                  <h3 class="modal-section-title">
+                    Resumen teórico por medio de pago
+                  </h3>
+                  <div class="table-wrapper table-wrapper-compact">
+                    <table class="table table-compact">
+                      <thead>
+                        <tr>
+                          <th>Medio de pago</th>
+                          <th class="numeric">Teórico</th>
+                          <th class="numeric">Físico</th>
+                          <th class="numeric">Diferencia</th>
+                        </tr>
+                      </thead>
+                      <tbody id="paymentSummaryTableBody">
+                        <!-- Dinámico -->
+                      </tbody>
+                    </table>
+                  </div>
+                  <p class="summary-notes">
+                    El monto teórico se calcula a partir de los movimientos de caja
+                    asociados a la sesión (ventas, costos, caja chica, etc.).
+                  </p>
+                </section>
+              </div>
+
+              <!-- TAB 3: CONTEO FÍSICO -->
+              <div id="tab-physical" class="tab-panel" role="tabpanel">
+                <!-- Sección 3: Conteo físico -->
+                <section class="modal-section">
+                  <h3 class="modal-section-title">Conteo físico</h3>
+
+                  <div class="modal-subsection-title">
+                    Efectivo - detalle por denominación
+                  </div>
+                  <div class="table-wrapper table-wrapper-compact">
+                    <table class="table table-compact">
+                      <thead>
+                        <tr>
+                          <th>Denominación</th>
+                          <th class="numeric">Cantidad</th>
+                          <th class="numeric">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody id="cashDenominationsTableBody">
+                        <!-- Filas dinámicas de denominaciones -->
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <th>Total efectivo físico</th>
+                          <th></th>
+                          <th class="numeric" id="cashTotalPhysical">0</th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  <div class="modal-subsection-title">
+                    Otros medios de pago - montos físicos
+                  </div>
+                  <div class="table-wrapper table-wrapper-compact">
+                    <table class="table table-compact">
+                      <thead>
+                        <tr>
+                          <th>Medio de pago</th>
+                          <th class="numeric">Monto físico</th>
+                        </tr>
+                      </thead>
+                      <tbody id="otherPaymentsPhysicalTableBody">
+                        <!-- Dinámico -->
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+
+              <!-- TAB 4: RESUMEN Y CIERRE -->
+              <div id="tab-summary" class="tab-panel" role="tabpanel">
+                <!-- Sección 4: Resumen final -->
+                <section class="modal-section">
+                  <h3 class="modal-section-title">Resumen de arqueo</h3>
+                  <div
+                    class="summary-cards"
+                    id="reconciliationSummaryCards"
+                  >
+                    <!-- Dinámico -->
+                  </div>
+
+                  <div class="form-grid" style="margin-top: 10px">
+                    <div class="form-group">
+                      <label for="reconciliationStatusSelect">
+                        Estado de la sesión
+                      </label>
+                      <select
+                        id="reconciliationStatusSelect"
+                        class="input"
+                        name="status"
+                      >
+                        <!-- Opciones dinámicas -->
+                      </select>
+                      <small class="field-help">
+                        Normalmente se establece en <strong>Arqueada</strong> tras
+                        confirmar el conteo.
+                      </small>
+                    </div>
+
+                    <div class="form-group">
+                      <label for="reconciliationNotes">Notas de cierre</label>
+                      <textarea
+                        id="reconciliationNotes"
+                        class="input textarea"
+                        rows="3"
+                        placeholder="Ej: Diferencia aceptada, billete entregado como propina, cuadre verificado por supervisor."
+                      ></textarea>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn btn-ghost" data-modal-close>
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Guardar arqueo
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <script src="./script.js" type="module"></script>
+  </body>
+</html>

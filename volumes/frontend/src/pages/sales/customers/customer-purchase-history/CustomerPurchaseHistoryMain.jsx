@@ -46,7 +46,7 @@ const CustomerPurchaseHistoryMain = () => {
   };
 
   const handleOpenSearchModal = () => {
-    ModalManager.show({
+    ModalManager.custom({
       title: "Buscar cliente",
       size: "xlarge",
       content: (

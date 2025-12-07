@@ -93,6 +93,8 @@ const ModalDemo = () => {
     });
   };
 
+  
+
   const showNotificationInfo = () => {
     ModalManager.show({
       type: 'notification',

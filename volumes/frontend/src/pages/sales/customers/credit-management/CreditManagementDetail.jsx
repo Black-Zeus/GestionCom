@@ -31,7 +31,7 @@ const CreditManagementDetail = ({
 
   // Handlers para acciones con ModalManager
   const handleEditCreditConfig = () => {
-    ModalManager.show({
+    ModalManager.custom({
       title: "Editar configuración de crédito",
       size: "xlarge",
       content: (
