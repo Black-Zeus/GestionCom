@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Finanzas · Conciliación Bancaria</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./script.js" defer></script>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="container topbar__row">
+      <div class="topbar__left">
+        <div class="brand">
+          <div class="brand__logo">GC</div>
+          <div class="brand__meta">
+            <div class="brand__title">GestionCom</div>
+            <div class="brand__subtitle">Finanzas · Conciliación Bancaria</div>
+          </div>
+        </div>
+
+        <nav class="breadcrumb" aria-label="breadcrumb">
+          <a href="#" class="breadcrumb__link">Finanzas</a>
+          <span class="breadcrumb__sep">/</span>
+          <span class="breadcrumb__current">Conciliación Bancaria</span>
+          <span class="breadcrumb__path">(<code>finance/bank-reconciliation</code>)</span>
+        </nav>
+      </div>
+
+      <div class="topbar__right">
+        <button class="btn btn--ghost" id="btnRefresh" type="button">Actualizar</button>
+        <button class="btn btn--primary" id="btnNewRecon" type="button">+ Nuevo movimiento</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page">
+    <!-- KPIs -->
+    <section class="kpis" aria-label="KPIs">
+      <div class="kpi">
+        <div class="kpi__label">Total extracto</div>
+        <div class="kpi__value" id="kpiTotal">$0</div>
+        <div class="kpi__hint" id="kpiTotalHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Conciliados</div>
+        <div class="kpi__value kpi__value--ok" id="kpiReconciled">$0</div>
+        <div class="kpi__hint" id="kpiReconciledHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Pendientes</div>
+        <div class="kpi__value kpi__value--warn" id="kpiPending">$0</div>
+        <div class="kpi__hint" id="kpiPendingHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Discrepancias</div>
+        <div class="kpi__value kpi__value--bad" id="kpiDiscrepancy">$0</div>
+        <div class="kpi__hint" id="kpiDiscrepancyHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Neto</div>
+        <div class="kpi__value" id="kpiNet">$0</div>
+        <div class="kpi__hint" id="kpiNetHint">Créditos − Débitos (según filtros)</div>
+      </div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="card" aria-label="Filtros">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Filtros</h2>
+          <p class="card__subtitle">Filtra por texto, fechas, estado, tipo, cuenta bancaria, centro de costo y flags.</p>
+        </div>
+        <div class="card__actions">
+          <button class="btn btn--ghost" id="btnResetFilters" type="button">Limpiar</button>
+          <button class="btn btn--primary" id="btnApplyFilters" type="button">Aplicar</button>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <form class="filters" id="filtersForm">
+          <div class="field">
+            <label class="label" for="q">Búsqueda</label>
+            <input class="input" id="q" name="q" placeholder="Ej: código, referencia, glosa, ledger…" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="dateFrom">Desde</label>
+            <input class="input" id="dateFrom" name="dateFrom" type="date" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="dateTo">Hasta</label>
+            <input class="input" id="dateTo" name="dateTo" type="date" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="status">Estado</label>
+            <select class="select" id="status" name="status">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="txnType">Tipo</label>
+            <select class="select" id="txnType" name="txnType">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="bankAccount">Cuenta bancaria</label>
+            <select class="select" id="bankAccount" name="bankAccount">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="costCenter">Centro de costo</label>
+            <select class="select" id="costCenter" name="costCenter">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="onlyMatched" name="onlyMatched" />
+              <span>Solo con match</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="onlyWithSupport" name="onlyWithSupport" />
+              <span>Solo con respaldo</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="onlyAutoMatch" name="onlyAutoMatch" />
+              <span>Solo auto-match</span>
+            </label>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Tabla -->
+    <section class="card" aria-label="Listado">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Movimientos de conciliación</h2>
+          <p class="card__subtitle">
+            Acciones por fila: ver, editar (solo si no está finalizado), aprobar/rechazar (confirmación) y reversar (⟲).
+          </p>
+        </div>
+
+        <div class="card__actions">
+          <div class="chip" id="resultsCount">0 resultados</div>
+          <select class="select select--compact" id="sortBy" aria-label="Orden">
+            <option value="date_desc">Fecha ↓</option>
+            <option value="date_asc">Fecha ↑</option>
+            <option value="amount_desc">Monto ↓</option>
+            <option value="amount_asc">Monto ↑</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table class="table" id="reconTable">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Código</th>
+                <th>Cuenta</th>
+                <th>Tipo</th>
+                <th>Referencia</th>
+                <th>Descripción</th>
+                <th class="th-right">Monto</th>
+                <th>Estado</th>
+                <th>Match</th>
+                <th>Flags</th>
+                <th class="th-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="reconTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="muted" id="tableSummary">—</div>
+          <div class="pager">
+            <button class="btn btn--ghost btn--sm" id="btnPrev" type="button">Anterior</button>
+            <div class="pager__info" id="pageInfo">1 / 1</div>
+            <button class="btn btn--ghost btn--sm" id="btnNext" type="button">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Crear/Editar -->
+  <div class="modal" id="editModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="editModal"></div>
+    <div class="modal__panel" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="editModalTitle">Nuevo movimiento</div>
+          <div class="modal__subtitle" id="editModalSubtitle">Complete los campos requeridos.</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="editModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <form id="editForm" class="form-grid">
+          <input type="hidden" id="editId" value="" />
+
+          <div class="field">
+            <label class="label" for="editDate">Fecha</label>
+            <input class="input" id="editDate" type="date" required />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editCode">Código</label>
+            <input class="input" id="editCode" placeholder="Ej: BR-250001" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editBankAccount">Cuenta bancaria</label>
+            <select class="select" id="editBankAccount" required></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="editTxnType">Tipo</label>
+            <select class="select" id="editTxnType" required></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="editReference">Referencia</label>
+            <input class="input" id="editReference" placeholder="N° transferencia / comprobante / referencia banco" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editCostCenter">Centro de costo</label>
+            <select class="select" id="editCostCenter"></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="editAmount">Monto</label>
+            <input class="input" id="editAmount" type="number" min="0" step="0.01" required />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editLedgerMatch">Match contable (Ledger)</label>
+            <select class="select" id="editLedgerMatch"></select>
+          </div>
+
+          <div class="field field--full">
+            <label class="label" for="editDesc">Descripción</label>
+            <textarea class="textarea" id="editDesc" rows="3" placeholder="Glosa / detalle del movimiento"></textarea>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="editHasSupport" />
+              <span>Posee respaldo</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="editIsAutoMatch" />
+              <span>Auto-match</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="editIsMatched" />
+              <span>Marcado como “matched”</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label" for="editStatus">Estado</label>
+            <select class="select" id="editStatus"></select>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="editModalHint">Los cambios se mantienen en memoria (demo).</div>
+        <div class="modal__footerActions">
+          <button class="btn btn--ghost" type="button" data-close="editModal">Cancelar</button>
+          <button class="btn btn--primary" id="btnSave" type="button">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: View (idéntico a Edit, solo lectura) -->
+  <div class="modal" id="viewModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="viewModal"></div>
+    <div class="modal__panel" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="viewModalTitle">Ver · —</div>
+          <div class="modal__subtitle" id="viewModalSubtitle">Vista de solo lectura.</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="viewModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <form id="viewForm" class="form-grid readonly" aria-readonly="true">
+          <input type="hidden" id="viewId" value="" />
+
+          <div class="field">
+            <label class="label" for="viewDate">Fecha</label>
+            <input class="input" id="viewDate" type="date" readonly />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewCode">Código</label>
+            <input class="input" id="viewCode" readonly />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewBankAccount">Cuenta bancaria</label>
+            <select class="select" id="viewBankAccount" disabled></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewTxnType">Tipo</label>
+            <select class="select" id="viewTxnType" disabled></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewReference">Referencia</label>
+            <input class="input" id="viewReference" readonly />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewCostCenter">Centro de costo</label>
+            <select class="select" id="viewCostCenter" disabled></select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewAmount">Monto</label>
+            <input class="input" id="viewAmount" type="number" readonly />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewLedgerMatch">Match contable (Ledger)</label>
+            <select class="select" id="viewLedgerMatch" disabled></select>
+          </div>
+
+          <div class="field field--full">
+            <label class="label" for="viewDesc">Descripción</label>
+            <textarea class="textarea" id="viewDesc" rows="3" readonly></textarea>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="viewHasSupport" disabled />
+              <span>Posee respaldo</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="viewIsAutoMatch" disabled />
+              <span>Auto-match</span>
+            </label>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="viewIsMatched" disabled />
+              <span>Marcado como “matched”</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewStatus">Estado</label>
+            <select class="select" id="viewStatus" disabled></select>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="viewHint">Vista de solo lectura.</div>
+        <div class="modal__footerActions">
+          <button class="btn btn--primary" type="button" data-close="viewModal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmación Aprobar/Rechazar -->
+  <div class="modal" id="confirmModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="confirmModal"></div>
+    <div class="modal__panel modal__panel--sm" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="confirmTitle">Confirmar acción</div>
+          <div class="modal__subtitle" id="confirmSubtitle">—</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="confirmModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="confirm-box">
+          <div class="confirm-box__msg" id="confirmMessage">—</div>
+          <pre class="confirm-box__meta" id="confirmMeta">—</pre>
+          <div class="muted" id="confirmHint">Al confirmar, Aprobar/Rechazar quedan deshabilitados y se habilita Reversar.</div>
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="confirmFooterLeft">Workflow: Pendiente / Conciliado / Discrepancia</div>
+        <div class="modal__footerActions">
+          <button class="btn btn--ghost" type="button" data-close="confirmModal">Cancelar</button>
+          <button class="btn btn--primary" id="btnConfirmYes" type="button">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delegación cierre modales -->
+  <script>
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t && t.dataset && t.dataset.close) {
+        const id = t.dataset.close;
+        const m = document.getElementById(id);
+        if (m) { m.classList.remove("is-open"); m.setAttribute("aria-hidden", "true"); }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,713 @@
+{
+  "module": "suppliers",
+  "submodule": "accounts-payable",
+  "route": "suppliers/accounts-payable",
+  "meta": {
+    "currency": "CLP",
+    "timezone": "America/Santiago",
+    "seed_note": "Dataset demo para probar filtros, KPIs, workflow (aprobar/rechazar/reversar) y saldos abiertos AP."
+  },
+  "supplier_statuses": [
+    {
+      "id": 10,
+      "status_code": "PENDING",
+      "status_label": "Pendiente",
+      "is_final": false,
+      "sort_order": 10
+    },
+    {
+      "id": 11,
+      "status_code": "APPROVED",
+      "status_label": "Aprobado",
+      "is_final": true,
+      "sort_order": 20
+    },
+    {
+      "id": 12,
+      "status_code": "REJECTED",
+      "status_label": "Rechazado",
+      "is_final": true,
+      "sort_order": 30
+    }
+  ],
+  "supplier_categories": [
+    {
+      "id": 100,
+      "category_code": "SERV",
+      "category_name": "Servicios"
+    },
+    {
+      "id": 101,
+      "category_code": "TECH",
+      "category_name": "Tecnología"
+    },
+    {
+      "id": 102,
+      "category_code": "LOG",
+      "category_name": "Logística"
+    },
+    {
+      "id": 103,
+      "category_code": "MAINT",
+      "category_name": "Mantención"
+    },
+    {
+      "id": 104,
+      "category_code": "CONS",
+      "category_name": "Consultoría"
+    }
+  ],
+  "payment_terms": [
+    {
+      "id": 200,
+      "term_code": "IMMEDIATE",
+      "term_label": "Contado",
+      "term_days": 0
+    },
+    {
+      "id": 201,
+      "term_code": "NET_15",
+      "term_label": "15 días",
+      "term_days": 15
+    },
+    {
+      "id": 202,
+      "term_code": "NET_30",
+      "term_label": "30 días",
+      "term_days": 30
+    },
+    {
+      "id": 203,
+      "term_code": "NET_45",
+      "term_label": "45 días",
+      "term_days": 45
+    }
+  ],
+  "cost_centers": [
+    {
+      "id": 300,
+      "cost_center_code": "CC-ADM",
+      "cost_center_name": "Administración",
+      "is_active": true
+    },
+    {
+      "id": 301,
+      "cost_center_code": "CC-OPS",
+      "cost_center_name": "Operaciones",
+      "is_active": true
+    },
+    {
+      "id": 302,
+      "cost_center_code": "CC-IT",
+      "cost_center_name": "TI & Soporte",
+      "is_active": true
+    },
+    {
+      "id": 303,
+      "cost_center_code": "CC-LAB",
+      "cost_center_name": "Laboratorio",
+      "is_active": true
+    },
+    {
+      "id": 304,
+      "cost_center_code": "CC-COM",
+      "cost_center_name": "Compras",
+      "is_active": true
+    }
+  ],
+  "currencies": [
+    {
+      "currency_code": "CLP",
+      "currency_name": "Peso chileno"
+    },
+    {
+      "currency_code": "USD",
+      "currency_name": "Dólar estadounidense"
+    },
+    {
+      "currency_code": "EUR",
+      "currency_name": "Euro"
+    }
+  ],
+  "countries": [
+    {
+      "country_code": "CL",
+      "country_name": "Chile"
+    },
+    {
+      "country_code": "AR",
+      "country_name": "Argentina"
+    },
+    {
+      "country_code": "US",
+      "country_name": "Estados Unidos"
+    },
+    {
+      "country_code": "ES",
+      "country_name": "España"
+    },
+    {
+      "country_code": "PE",
+      "country_name": "Perú"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": 1,
+      "supplier_code": "SUP-00001",
+      "created_at": "2025-11-05T00:00:00Z",
+      "status_id": 11,
+      "category_id": 101,
+      "legal_name": "TecnoSur SpA",
+      "trade_name": "TecnoSur",
+      "rut": "76.123.456-7",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "ap@tecnosur.cl",
+      "phone": "+56 2 2345 6789",
+      "payment_term_id": 202,
+      "default_cost_center_id": 302,
+      "currency_code": "CLP",
+      "credit_limit_clp": 25000000,
+      "is_critical": true,
+      "kyc_complete": true,
+      "tags": [
+        "hardware",
+        "soporte",
+        "infra"
+      ],
+      "notes": "Proveedor estratégico TI. Acuerdo marco vigente."
+    },
+    {
+      "id": 2,
+      "supplier_code": "SUP-00002",
+      "created_at": "2025-11-08T00:00:00Z",
+      "status_id": 10,
+      "category_id": 100,
+      "legal_name": "Servicios Andinos Ltda.",
+      "trade_name": "ServAndinos",
+      "rut": "77.222.333-4",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Valparaíso",
+      "email": "cuentas@servandinos.cl",
+      "phone": "+56 9 7654 3210",
+      "payment_term_id": 201,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 6000000,
+      "is_critical": false,
+      "kyc_complete": false,
+      "tags": [
+        "servicios",
+        "aseo"
+      ],
+      "notes": "Falta documentación bancaria."
+    },
+    {
+      "id": 3,
+      "supplier_code": "SUP-00003",
+      "created_at": "2025-11-12T00:00:00Z",
+      "status_id": 12,
+      "category_id": 104,
+      "legal_name": "Consultores Delta SpA",
+      "trade_name": "Delta Consulting",
+      "rut": "76.999.888-1",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "finance@deltaconsulting.cl",
+      "phone": "+56 2 2987 6543",
+      "payment_term_id": 203,
+      "default_cost_center_id": 300,
+      "currency_code": "CLP",
+      "credit_limit_clp": 4000000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "consultoría",
+        "proyectos"
+      ],
+      "notes": "Rechazado por inconsistencias tributarias (demo)."
+    },
+    {
+      "id": 4,
+      "supplier_code": "SUP-00004",
+      "created_at": "2025-11-15T00:00:00Z",
+      "status_id": 11,
+      "category_id": 102,
+      "legal_name": "Logística Pacífico Ltda.",
+      "trade_name": "LogiPac",
+      "rut": "78.101.202-3",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Concepción",
+      "email": "ap@logipac.cl",
+      "phone": "+56 41 212 1212",
+      "payment_term_id": 202,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 12000000,
+      "is_critical": true,
+      "kyc_complete": true,
+      "tags": [
+        "fletes",
+        "transporte"
+      ],
+      "notes": "Ruta norte/sur. KPI de cumplimiento OK."
+    },
+    {
+      "id": 5,
+      "supplier_code": "SUP-00005",
+      "created_at": "2025-11-19T00:00:00Z",
+      "status_id": 10,
+      "category_id": 103,
+      "legal_name": "Mantenciones Rojas EIRL",
+      "trade_name": "MantenRojas",
+      "rut": "17.345.678-5",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "pagos@mantenrojas.cl",
+      "phone": "+56 9 5555 0000",
+      "payment_term_id": 200,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 2500000,
+      "is_critical": false,
+      "kyc_complete": false,
+      "tags": [
+        "mantención",
+        "infra"
+      ],
+      "notes": "Pendiente validación de póliza (demo)."
+    },
+    {
+      "id": 6,
+      "supplier_code": "SUP-00006",
+      "created_at": "2025-11-21T00:00:00Z",
+      "status_id": 11,
+      "category_id": 101,
+      "legal_name": "Cloud & Networks Chile SpA",
+      "trade_name": "CNC",
+      "rut": "76.444.555-6",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "ap@cnc.cl",
+      "phone": "+56 2 2900 1000",
+      "payment_term_id": 202,
+      "default_cost_center_id": 302,
+      "currency_code": "CLP",
+      "credit_limit_clp": 35000000,
+      "is_critical": true,
+      "kyc_complete": true,
+      "tags": [
+        "redes",
+        "licencias",
+        "seguridad"
+      ],
+      "notes": "Contratos renovables. Evaluación anual."
+    },
+    {
+      "id": 7,
+      "supplier_code": "SUP-00007",
+      "created_at": "2025-11-26T00:00:00Z",
+      "status_id": 11,
+      "category_id": 104,
+      "legal_name": "Advisory Partners SpA",
+      "trade_name": "Advisory Partners",
+      "rut": "77.111.222-3",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "ap@advisory.cl",
+      "phone": "+56 2 2777 8888",
+      "payment_term_id": 203,
+      "default_cost_center_id": 300,
+      "currency_code": "CLP",
+      "credit_limit_clp": 8000000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "auditoría",
+        "legal"
+      ],
+      "notes": "Servicios bajo orden de compra."
+    },
+    {
+      "id": 8,
+      "supplier_code": "SUP-00008",
+      "created_at": "2025-11-28T00:00:00Z",
+      "status_id": 10,
+      "category_id": 100,
+      "legal_name": "Servicios del Sur Ltda.",
+      "trade_name": "ServSur",
+      "rut": "76.010.020-0",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Concepción",
+      "email": "ap@servsur.cl",
+      "phone": "+56 9 4000 1200",
+      "payment_term_id": 201,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 3000000,
+      "is_critical": false,
+      "kyc_complete": false,
+      "tags": [
+        "servicios",
+        "operación"
+      ],
+      "notes": "Pendiente verificación de representante (demo)."
+    },
+    {
+      "id": 9,
+      "supplier_code": "SUP-00009",
+      "created_at": "2025-12-01T00:00:00Z",
+      "status_id": 11,
+      "category_id": 102,
+      "legal_name": "Transporte Ruta 5 SpA",
+      "trade_name": "Ruta5",
+      "rut": "78.000.111-9",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "cuentas@ruta5.cl",
+      "phone": "+56 2 2100 2200",
+      "payment_term_id": 202,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 15000000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "logística",
+        "fletes"
+      ],
+      "notes": "Operación metropolitana."
+    },
+    {
+      "id": 10,
+      "supplier_code": "SUP-00010",
+      "created_at": "2025-12-03T00:00:00Z",
+      "status_id": 10,
+      "category_id": 101,
+      "legal_name": "Importaciones Northwind Inc.",
+      "trade_name": "Northwind",
+      "rut": "",
+      "tax_id_alt": "US-98-1234567",
+      "country_code": "US",
+      "city": "Miami",
+      "email": "ap@northwind.com",
+      "phone": "+1 305 555 0101",
+      "payment_term_id": 203,
+      "default_cost_center_id": 304,
+      "currency_code": "USD",
+      "credit_limit_clp": 50000000,
+      "is_critical": true,
+      "kyc_complete": false,
+      "tags": [
+        "importación",
+        "hardware"
+      ],
+      "notes": "Proveedor extranjero. Requiere KYC reforzado (demo)."
+    },
+    {
+      "id": 11,
+      "supplier_code": "SUP-00011",
+      "created_at": "2025-12-05T00:00:00Z",
+      "status_id": 11,
+      "category_id": 103,
+      "legal_name": "Mantención Industrial S.A.",
+      "trade_name": "MI",
+      "rut": "76.555.666-7",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Antofagasta",
+      "email": "ap@mi.cl",
+      "phone": "+56 55 222 3333",
+      "payment_term_id": 202,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 20000000,
+      "is_critical": true,
+      "kyc_complete": true,
+      "tags": [
+        "mantención",
+        "operación"
+      ],
+      "notes": "Servicios críticos para operación (demo)."
+    },
+    {
+      "id": 12,
+      "supplier_code": "SUP-00012",
+      "created_at": "2025-12-07T00:00:00Z",
+      "status_id": 12,
+      "category_id": 102,
+      "legal_name": "Express Cargo SpA",
+      "trade_name": "ExpressCargo",
+      "rut": "77.333.444-5",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "ap@expresscargo.cl",
+      "phone": "+56 2 2456 7890",
+      "payment_term_id": 201,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 5000000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "logística"
+      ],
+      "notes": "Rechazado por historial de incumplimiento (demo)."
+    },
+    {
+      "id": 13,
+      "supplier_code": "SUP-00013",
+      "created_at": "2025-12-09T00:00:00Z",
+      "status_id": 11,
+      "category_id": 100,
+      "legal_name": "Servicios Norte SpA",
+      "trade_name": "ServNorte",
+      "rut": "76.777.888-9",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Iquique",
+      "email": "ap@servnorte.cl",
+      "phone": "+56 9 3333 4444",
+      "payment_term_id": 201,
+      "default_cost_center_id": 301,
+      "currency_code": "CLP",
+      "credit_limit_clp": 3500000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "servicios",
+        "operación"
+      ],
+      "notes": "Soporte terreno región norte."
+    },
+    {
+      "id": 14,
+      "supplier_code": "SUP-00014",
+      "created_at": "2025-12-10T00:00:00Z",
+      "status_id": 10,
+      "category_id": 104,
+      "legal_name": "Consultoría Horizonte SpA",
+      "trade_name": "Horizonte",
+      "rut": "76.222.111-0",
+      "tax_id_alt": "",
+      "country_code": "CL",
+      "city": "Santiago",
+      "email": "ap@horizonte.cl",
+      "phone": "+56 2 2333 4444",
+      "payment_term_id": 203,
+      "default_cost_center_id": 300,
+      "currency_code": "CLP",
+      "credit_limit_clp": 9000000,
+      "is_critical": false,
+      "kyc_complete": false,
+      "tags": [
+        "consultoría"
+      ],
+      "notes": "Pendiente validación de contrato marco (demo)."
+    },
+    {
+      "id": 15,
+      "supplier_code": "SUP-00015",
+      "created_at": "2025-12-12T00:00:00Z",
+      "status_id": 11,
+      "category_id": 101,
+      "legal_name": "Iberia Tech SL",
+      "trade_name": "IberiaTech",
+      "rut": "",
+      "tax_id_alt": "ES-B12345678",
+      "country_code": "ES",
+      "city": "Madrid",
+      "email": "ap@iberiatech.es",
+      "phone": "+34 91 555 0101",
+      "payment_term_id": 202,
+      "default_cost_center_id": 302,
+      "currency_code": "EUR",
+      "credit_limit_clp": 18000000,
+      "is_critical": false,
+      "kyc_complete": true,
+      "tags": [
+        "licencias",
+        "software"
+      ],
+      "notes": "Proveedor extranjero con KYC OK."
+    }
+  ],
+  "ap_invoices": [
+    {
+      "id": 1,
+      "supplier_id": 1,
+      "invoice_number": "F-TS-10291",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-02T00:00:00Z",
+      "due_date": "2026-01-01T00:00:00Z",
+      "amount_total_clp": 4800000,
+      "amount_paid_clp": 1200000,
+      "invoice_status": "PARTIAL"
+    },
+    {
+      "id": 2,
+      "supplier_id": 1,
+      "invoice_number": "F-TS-10310",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-11-20T00:00:00Z",
+      "due_date": "2025-12-20T00:00:00Z",
+      "amount_total_clp": 3200000,
+      "amount_paid_clp": 3200000,
+      "invoice_status": "PAID"
+    },
+    {
+      "id": 3,
+      "supplier_id": 2,
+      "invoice_number": "F-SA-5560",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-05T00:00:00Z",
+      "due_date": "2025-12-20T00:00:00Z",
+      "amount_total_clp": 950000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 4,
+      "supplier_id": 2,
+      "invoice_number": "F-SA-5521",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-11-10T00:00:00Z",
+      "due_date": "2025-11-25T00:00:00Z",
+      "amount_total_clp": 540000,
+      "amount_paid_clp": 540000,
+      "invoice_status": "PAID"
+    },
+    {
+      "id": 5,
+      "supplier_id": 4,
+      "invoice_number": "F-LP-8801",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-01T00:00:00Z",
+      "due_date": "2025-12-31T00:00:00Z",
+      "amount_total_clp": 1750000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 6,
+      "supplier_id": 4,
+      "invoice_number": "F-LP-8722",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-11-18T00:00:00Z",
+      "due_date": "2025-12-18T00:00:00Z",
+      "amount_total_clp": 2200000,
+      "amount_paid_clp": 1100000,
+      "invoice_status": "PARTIAL"
+    },
+    {
+      "id": 7,
+      "supplier_id": 5,
+      "invoice_number": "F-MR-330",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-08T00:00:00Z",
+      "due_date": "2025-12-08T00:00:00Z",
+      "amount_total_clp": 410000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 8,
+      "supplier_id": 6,
+      "invoice_number": "F-CNC-7740",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-06T00:00:00Z",
+      "due_date": "2026-01-05T00:00:00Z",
+      "amount_total_clp": 8600000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 9,
+      "supplier_id": 6,
+      "invoice_number": "F-CNC-7711",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-11-22T00:00:00Z",
+      "due_date": "2025-12-22T00:00:00Z",
+      "amount_total_clp": 1900000,
+      "amount_paid_clp": 1900000,
+      "invoice_status": "PAID"
+    },
+    {
+      "id": 10,
+      "supplier_id": 9,
+      "invoice_number": "F-R5-1902",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-03T00:00:00Z",
+      "due_date": "2026-01-02T00:00:00Z",
+      "amount_total_clp": 1250000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 11,
+      "supplier_id": 10,
+      "invoice_number": "INV-NW-7781",
+      "invoice_type": "Invoice",
+      "invoice_date": "2025-12-09T00:00:00Z",
+      "due_date": "2026-01-23T00:00:00Z",
+      "amount_total_clp": 14200000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 12,
+      "supplier_id": 10,
+      "invoice_number": "INV-NW-7720",
+      "invoice_type": "Invoice",
+      "invoice_date": "2025-11-29T00:00:00Z",
+      "due_date": "2026-01-13T00:00:00Z",
+      "amount_total_clp": 9800000,
+      "amount_paid_clp": 3000000,
+      "invoice_status": "PARTIAL"
+    },
+    {
+      "id": 13,
+      "supplier_id": 11,
+      "invoice_number": "F-MI-5001",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-10T00:00:00Z",
+      "due_date": "2026-01-09T00:00:00Z",
+      "amount_total_clp": 6300000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 14,
+      "supplier_id": 13,
+      "invoice_number": "F-SN-1201",
+      "invoice_type": "Factura",
+      "invoice_date": "2025-12-11T00:00:00Z",
+      "due_date": "2025-12-26T00:00:00Z",
+      "amount_total_clp": 780000,
+      "amount_paid_clp": 0,
+      "invoice_status": "OPEN"
+    },
+    {
+      "id": 15,
+      "supplier_id": 15,
+      "invoice_number": "INV-IBT-2209",
+      "invoice_type": "Invoice",
+      "invoice_date": "2025-12-07T00:00:00Z",
+      "due_date": "2026-01-06T00:00:00Z",
+      "amount_total_clp": 5200000,
+      "amount_paid_clp": 5200000,
+      "invoice_status": "PAID"
+    }
+  ]
+}

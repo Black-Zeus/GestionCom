@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@components/ui/icon/iconManager";
+import { formatCurrency } from "@/utils/formats";
 
+/**
+ * CashDenominationsForm
+ * Formulario para contar denominaciones de efectivo - estilos corregidos (tema claro)
+ */
 const CashDenominationsForm = ({
   session,
   theoreticalCash,
@@ -20,13 +25,6 @@ const CashDenominationsForm = ({
     setDenominations(initialDenominations);
   }, [cashDenominationsCatalog]);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-    }).format(amount);
-  };
-
   const handleDenominationChange = (value, quantity) => {
     const qty = parseInt(quantity) || 0;
     setDenominations({ ...denominations, [value]: qty });
@@ -34,7 +32,7 @@ const CashDenominationsForm = ({
 
   const calculateTotalPhysical = () => {
     return Object.entries(denominations).reduce(
-      (total, [value, quantity]) => total + value * quantity,
+      (total, [value, quantity]) => total + parseInt(value) * quantity,
       0
     );
   };
@@ -63,33 +61,60 @@ const CashDenominationsForm = ({
   const totalPhysical = calculateTotalPhysical();
   const difference = calculateDifference();
 
+  // Agrupar denominaciones
+  const billsOver10k = cashDenominationsCatalog.filter((d) => d.value >= 10000);
+  const billsUnder10k = cashDenominationsCatalog.filter(
+    (d) => d.value >= 1000 && d.value < 10000
+  );
+  const coins = cashDenominationsCatalog.filter((d) => d.value < 1000);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Resumen de arqueo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-slate-700/65 to-slate-950 border border-slate-600/50">
-          <div className="text-xs text-gray-400">Teórico en Efectivo</div>
-          <div className="text-lg font-mono text-gray-200 mt-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+          <div className="text-xs text-purple-600 font-medium">
+            Teórico en Efectivo
+          </div>
+          <div className="text-lg font-semibold text-purple-900 mt-1">
             {formatCurrency(theoreticalCash)}
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-gradient-to-br from-blue-900/40 to-slate-950 border border-blue-500/50">
-          <div className="text-xs text-gray-400">Físico Contado</div>
-          <div className="text-lg font-mono text-blue-300 mt-1">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="text-xs text-blue-600 font-medium">Físico Contado</div>
+          <div className="text-lg font-semibold text-blue-900 mt-1">
             {formatCurrency(totalPhysical)}
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-gradient-to-br from-slate-700/65 to-slate-950 border border-slate-600/50">
-          <div className="text-xs text-gray-400">Diferencia</div>
+        <div
+          className={`border rounded-lg p-3 ${
+            difference === 0
+              ? "bg-green-50 border-green-200"
+              : difference > 0
+              ? "bg-blue-50 border-blue-200"
+              : "bg-red-50 border-red-200"
+          }`}
+        >
           <div
-            className={`text-lg font-mono mt-1 ${
+            className={`text-xs font-medium ${
               difference === 0
-                ? "text-green-400"
+                ? "text-green-600"
                 : difference > 0
-                ? "text-blue-400"
-                : "text-red-400"
+                ? "text-blue-600"
+                : "text-red-600"
+            }`}
+          >
+            Diferencia
+          </div>
+          <div
+            className={`text-lg font-semibold mt-1 ${
+              difference === 0
+                ? "text-green-900"
+                : difference > 0
+                ? "text-blue-900"
+                : "text-red-900"
             }`}
           >
             {formatCurrency(difference)}
@@ -97,127 +122,117 @@ const CashDenominationsForm = ({
         </div>
       </div>
 
-      {/* Formulario de denominaciones */}
-      <div className="p-3 rounded-xl border border-slate-700/90 bg-gradient-to-br from-slate-800/70 to-slate-950">
-        <div className="text-sm font-medium text-indigo-300 mb-3">
-          Conteo de Billetes y Monedas
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {cashDenominationsCatalog.map((denom) => {
-            const quantity = denominations[denom.value] || 0;
-            const subtotal = denom.value * quantity;
-
-            return (
-              <div
-                key={denom.value}
-                className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/50 border border-slate-700/50"
-              >
-                <div className="flex-1">
-                  <div className="text-xs text-gray-400">Denominación</div>
-                  <div className="text-sm font-medium text-gray-200">
-                    {denom.label}
-                  </div>
-                </div>
-
-                <div className="w-20">
-                  <div className="text-xs text-gray-400 text-center">Cant.</div>
-                  <input
-                    type="number"
-                    min="0"
-                    value={quantity}
-                    onChange={(e) =>
-                      handleDenominationChange(denom.value, e.target.value)
-                    }
-                    className="w-full rounded border border-slate-700/90 bg-slate-900/95 px-2 py-1 text-gray-200 text-sm text-center focus:outline-2 focus:outline-blue-500/80 focus:outline-offset-0"
-                  />
-                </div>
-
-                <div className="w-28 text-right">
-                  <div className="text-xs text-gray-400">Subtotal</div>
-                  <div className="text-sm font-mono text-gray-200">
-                    {formatCurrency(subtotal)}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Total físico */}
-        <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-300">
-            Total Físico Contado:
-          </span>
-          <span className="text-lg font-mono text-blue-300">
-            {formatCurrency(totalPhysical)}
-          </span>
+      {/* Instrucciones */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-start gap-2">
+          <Icon name="FaInfoCircle" className="text-blue-600 text-base mt-0.5" />
+          <div className="text-sm text-blue-900">
+            Ingrese la cantidad de billetes y monedas contados físicamente en la
+            caja. El sistema calculará automáticamente el total y la diferencia.
+          </div>
         </div>
       </div>
 
-      {/* Notas de cierre */}
-      <div className="flex flex-col gap-1 text-sm">
-        <label className="text-xs text-gray-300 flex items-center gap-1.5">
-          <Icon name="file-text" className="text-gray-400" />
-          Notas de Cierre
-        </label>
-        <textarea
-          value={closingNotes}
-          onChange={(e) => setClosingNotes(e.target.value)}
-          placeholder="Observaciones sobre el cierre y arqueo..."
-          rows={3}
-          className="resize-vertical min-h-[70px] rounded-lg border border-slate-700/90 bg-slate-900/95 px-2 py-1.5 text-gray-200 text-sm focus:outline-2 focus:outline-blue-500/80 focus:outline-offset-0"
-        />
-        <span className="text-xs text-gray-400">
-          Incluya cualquier diferencia detectada y su justificación
-        </span>
-      </div>
-
-      {/* Alerta si hay diferencia */}
-      {difference !== 0 && (
-        <div
-          className={`p-3 rounded-lg border ${
-            difference > 0
-              ? "bg-blue-900/12 border-blue-500/40 text-blue-300"
-              : "bg-red-900/12 border-red-500/40 text-red-300"
-          } text-sm`}
-        >
-          <div className="flex items-start gap-2">
-            <Icon
-              name="alert-circle"
-              className={difference > 0 ? "text-blue-400" : "text-red-400"}
-            />
-            <div>
-              <div className="font-medium">
-                {difference > 0 ? "Sobrante detectado" : "Faltante detectado"}
+      {/* Billetes mayores a $10.000 */}
+      {billsOver10k.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+            Billetes mayores a $10.000
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {billsOver10k.map((denom) => (
+              <div key={denom.value} className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">
+                  {denom.label}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={denominations[denom.value] || 0}
+                  onChange={(e) =>
+                    handleDenominationChange(denom.value, e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <div className="text-xs text-gray-600">
+                  = {formatCurrency(denom.value * (denominations[denom.value] || 0))}
+                </div>
               </div>
-              <div className="text-xs mt-1 opacity-90">
-                {difference > 0
-                  ? "Hay más efectivo del esperado. Verifique el conteo y registre la justificación en las notas."
-                  : "Hay menos efectivo del esperado. Verifique el conteo y registre la justificación en las notas."}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Botones */}
-      <div className="flex justify-end gap-2 pt-3 border-t border-slate-800/90">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-transparent text-gray-200 border border-slate-700/80 rounded-full text-sm hover:bg-slate-800/50 transition-colors"
-        >
-          <Icon name="x" />
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          className="flex items-center justify-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-slate-900 border border-green-600/80 rounded-full text-sm font-medium hover:shadow-lg transition-all"
-        >
-          <Icon name="check" />
-          Cerrar Sesión
-        </button>
+      {/* Billetes menores a $10.000 */}
+      {billsUnder10k.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">
+            Billetes menores a $10.000
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {billsUnder10k.map((denom) => (
+              <div key={denom.value} className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">
+                  {denom.label}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={denominations[denom.value] || 0}
+                  onChange={(e) =>
+                    handleDenominationChange(denom.value, e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <div className="text-xs text-gray-600">
+                  = {formatCurrency(denom.value * (denominations[denom.value] || 0))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Monedas */}
+      {coins.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Monedas</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {coins.map((denom) => (
+              <div key={denom.value} className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">
+                  {denom.label}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={denominations[denom.value] || 0}
+                  onChange={(e) =>
+                    handleDenominationChange(denom.value, e.target.value)
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <div className="text-xs text-gray-600">
+                  = {formatCurrency(denom.value * (denominations[denom.value] || 0))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notas de cierre */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          Notas de Cierre (opcional)
+        </label>
+        <textarea
+          value={closingNotes}
+          onChange={(e) => setClosingNotes(e.target.value)}
+          rows={3}
+          placeholder="Ingrese cualquier observación relevante sobre el cierre de caja..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        />
       </div>
     </form>
   );

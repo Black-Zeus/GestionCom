@@ -1,7 +1,18 @@
 import React, { useState } from "react";
 import { Icon } from "@components/ui/icon/iconManager";
+import { formatCurrency } from "@/utils/formats";
 
-const OpenSessionModal = ({ registers, currentUser, currentBranch, onSave, onCancel }) => {
+/**
+ * OpenSessionModal
+ * Modal para abrir nueva sesión de caja - estilos corregidos (tema claro)
+ */
+const OpenSessionModal = ({
+  registers,
+  currentUser,
+  currentBranch,
+  onSave,
+  onCancel,
+}) => {
   const [formData, setFormData] = useState({
     cash_register_id: "",
     cash_register_code: "",
@@ -40,8 +51,8 @@ const OpenSessionModal = ({ registers, currentUser, currentBranch, onSave, onCan
       newErrors.cash_register_id = "Debe seleccionar una caja registradora";
     }
 
-    if (!formData.opening_amount || parseFloat(formData.opening_amount) <= 0) {
-      newErrors.opening_amount = "El monto de apertura debe ser mayor a cero";
+    if (!formData.opening_amount || parseFloat(formData.opening_amount) < 0) {
+      newErrors.opening_amount = "El monto de apertura no puede ser negativo";
     }
 
     setErrors(newErrors);
@@ -62,7 +73,7 @@ const OpenSessionModal = ({ registers, currentUser, currentBranch, onSave, onCan
       cash_register_name: formData.cash_register_name,
       cashier_user_id: currentUser.id,
       cashier_name: currentUser.full_name,
-      supervisor_user_id: 20, // Supervisor por defecto
+      supervisor_user_id: 20,
       supervisor_name: "Supervisor General",
       opening_amount: parseFloat(formData.opening_amount),
       opening_datetime: new Date().toISOString(),
@@ -72,135 +83,170 @@ const OpenSessionModal = ({ registers, currentUser, currentBranch, onSave, onCan
     onSave(sessionData);
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-    }).format(value || 0);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Información de contexto */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 p-3 rounded-xl border border-slate-700/90 bg-gradient-to-br from-slate-800/70 to-slate-950">
-        <div>
-          <div className="text-xs text-gray-400">Sucursal</div>
-          <div className="text-sm font-medium text-gray-200 mt-0.5">
-            {currentBranch.branch_name}
+      <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">
+          Contexto de la apertura
+        </h3>
+        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div>
+            <span className="text-xs text-gray-600">Sucursal</span>
+            <div className="font-medium text-gray-900 mt-1">
+              {currentBranch.branch_name}
+            </div>
+            <div className="text-xs text-gray-500 font-mono">
+              {currentBranch.branch_code}
+            </div>
           </div>
-          <div className="text-xs text-gray-500 font-mono">
-            {currentBranch.branch_code}
+          <div>
+            <span className="text-xs text-gray-600">Cajero</span>
+            <div className="font-medium text-gray-900 mt-1">
+              {currentUser.full_name}
+            </div>
+            <div className="text-xs text-gray-500">
+              Usuario: {currentUser.username}
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="text-xs text-gray-400">Cajero</div>
-          <div className="text-sm font-medium text-gray-200 mt-0.5">
-            {currentUser.full_name}
-          </div>
-          <div className="text-xs text-gray-500">Usuario: {currentUser.username}</div>
         </div>
       </div>
 
-      {/* Selección de caja */}
-      <div className="flex flex-col gap-1 text-sm">
-        <label className="text-xs text-gray-300 flex items-center gap-1.5">
-          <Icon name="cash-register" className="text-blue-400" />
-          Caja Registradora *
-        </label>
-        <select
-          value={formData.cash_register_id}
-          onChange={handleRegisterChange}
-          className={`rounded-lg border ${
-            errors.cash_register_id
-              ? "border-red-500/50"
-              : "border-slate-700/90"
-          } bg-slate-900/95 px-2 py-1.5 text-gray-200 text-sm focus:outline-2 focus:outline-blue-500/80 focus:outline-offset-0`}
-        >
-          <option value="">Seleccione una caja...</option>
-          {registers.map((register) => (
-            <option key={register.id} value={register.id}>
-              {register.register_name} ({register.register_code})
-            </option>
-          ))}
-        </select>
-        {errors.cash_register_id && (
-          <span className="text-xs text-red-400 flex items-center gap-1">
-            <Icon name="alert-circle" />
-            {errors.cash_register_id}
-          </span>
-        )}
-      </div>
+      {/* Datos de apertura */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">
+          Datos de la apertura
+        </h3>
 
-      {/* Monto de apertura */}
-      <div className="flex flex-col gap-1 text-sm">
-        <label className="text-xs text-gray-300 flex items-center gap-1.5">
-          <Icon name="dollar-sign" className="text-green-400" />
-          Monto de Apertura (CLP) *
-        </label>
-        <div
-          className={`flex items-center rounded-lg border ${
-            errors.opening_amount ? "border-red-500/50" : "border-slate-700/90"
-          } bg-slate-900/95 overflow-hidden`}
-        >
-          <span className="px-2 py-1.5 text-sm text-gray-400 border-r border-slate-700/90">
-            $
-          </span>
-          <input
-            type="number"
-            value={formData.opening_amount}
-            onChange={(e) => handleInputChange("opening_amount", e.target.value)}
-            placeholder="0"
-            min="0"
-            step="100"
-            className="border-none rounded-none bg-transparent px-2 py-1.5 text-gray-200 text-sm focus:outline-none flex-1"
-          />
+        <div className="space-y-4">
+          {/* Selección de caja */}
+          <div>
+            <label
+              htmlFor="cash_register_id"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Caja Registradora *
+            </label>
+            <select
+              id="cash_register_id"
+              value={formData.cash_register_id}
+              onChange={handleRegisterChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.cash_register_id
+                  ? "border-red-300"
+                  : "border-gray-300"
+              }`}
+            >
+              <option value="">Seleccione una caja...</option>
+              {registers.map((register) => (
+                <option key={register.id} value={register.id}>
+                  {register.register_code} - {register.register_name}
+                </option>
+              ))}
+            </select>
+            {errors.cash_register_id && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <Icon name="FaExclamationCircle" className="text-sm" />
+                {errors.cash_register_id}
+              </p>
+            )}
+          </div>
+
+          {/* Monto de apertura */}
+          <div>
+            <label
+              htmlFor="opening_amount"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Monto de Apertura (CLP) *
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                $
+              </span>
+              <input
+                type="number"
+                id="opening_amount"
+                value={formData.opening_amount}
+                onChange={(e) =>
+                  handleInputChange("opening_amount", e.target.value)
+                }
+                placeholder="0"
+                min="0"
+                step="100"
+                className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.opening_amount
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
+              />
+            </div>
+            {formData.opening_amount && (
+              <p className="mt-1 text-xs text-gray-600">
+                {formatCurrency(parseFloat(formData.opening_amount))}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Monto inicial entregado para vueltos y gastos menores. Puede ser 0 o
+              superior.
+            </p>
+            {errors.opening_amount && (
+              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                <Icon name="FaExclamationCircle" className="text-sm" />
+                {errors.opening_amount}
+              </p>
+            )}
+          </div>
+
+          {/* Notas de apertura */}
+          <div>
+            <label
+              htmlFor="opening_notes"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Notas de Apertura (opcional)
+            </label>
+            <textarea
+              id="opening_notes"
+              value={formData.opening_notes}
+              onChange={(e) =>
+                handleInputChange("opening_notes", e.target.value)
+              }
+              placeholder="Observaciones adicionales sobre la apertura..."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Información adicional sobre esta apertura de sesión
+            </p>
+          </div>
         </div>
-        {formData.opening_amount && (
-          <span className="text-xs text-gray-400">
-            {formatCurrency(parseFloat(formData.opening_amount))}
-          </span>
-        )}
-        {errors.opening_amount && (
-          <span className="text-xs text-red-400 flex items-center gap-1">
-            <Icon name="alert-circle" />
-            {errors.opening_amount}
-          </span>
-        )}
       </div>
 
-      {/* Notas de apertura */}
-      <div className="flex flex-col gap-1 text-sm">
-        <label className="text-xs text-gray-300 flex items-center gap-1.5">
-          <Icon name="file-text" className="text-gray-400" />
-          Notas de Apertura
-        </label>
-        <textarea
-          value={formData.opening_notes}
-          onChange={(e) => handleInputChange("opening_notes", e.target.value)}
-          placeholder="Observaciones adicionales sobre la apertura..."
-          rows={3}
-          className="resize-vertical min-h-[70px] rounded-lg border border-slate-700/90 bg-slate-900/95 px-2 py-1.5 text-gray-200 text-sm focus:outline-2 focus:outline-blue-500/80 focus:outline-offset-0"
-        />
-        <span className="text-xs text-gray-400">
-          Información adicional sobre esta apertura de sesión
-        </span>
+      {/* Información adicional */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-xs text-blue-900">
+          <strong>Regla de operación:</strong> Por cada caja y usuario solo se
+          permite una sesión en estado <strong>Abierta</strong>. Para volver a
+          abrir la misma caja, la sesión anterior debe estar en estado{" "}
+          <strong>Cerrada</strong> o <strong>Arqueada</strong>.
+        </p>
       </div>
 
       {/* Botones */}
-      <div className="flex justify-end gap-2 pt-2 border-t border-slate-800/90">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-transparent text-gray-200 border border-slate-700/80 rounded-full text-sm hover:bg-slate-800/50 transition-colors"
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <Icon name="x" />
           Cancelar
         </button>
         <button
           type="submit"
-          className="flex items-center justify-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-green-500 to-blue-500 text-slate-900 border border-green-600/80 rounded-full text-sm font-medium hover:shadow-lg transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          <Icon name="check" />
+          <Icon name="FaCheck" />
           Abrir Sesión
         </button>
       </div>

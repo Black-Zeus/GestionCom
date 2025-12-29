@@ -1,0 +1,103 @@
+{
+  "funds": [
+    { "fund_id": 1, "fund_code": "CC-SCL-01", "fund_name": "Caja Chica Santiago" },
+    { "fund_id": 2, "fund_code": "CC-LRY-01", "fund_name": "Caja Chica Liray" },
+    { "fund_id": 3, "fund_code": "CC-LAB-01", "fund_name": "Caja Chica Laboratorio" }
+  ],
+  "statuses": [
+    { "status_id": 1, "status_label": "Pendiente" },
+    { "status_id": 2, "status_label": "Aprobado" },
+    { "status_id": 3, "status_label": "Rechazado" }
+  ],
+  "categories": [
+    { "category_id": 10, "category_name": "Transporte" },
+    { "category_id": 11, "category_name": "Insumos" },
+    { "category_id": 12, "category_name": "Mantenimiento" },
+    { "category_id": 13, "category_name": "Servicios" },
+    { "category_id": 14, "category_name": "Viáticos" }
+  ],
+  "pettyCashExpenses": [
+    {
+      "expense_id": 1001,
+      "expense_code": "EXP-1001",
+      "fund_code": "CC-SCL-01",
+      "category_name": "Transporte",
+      "provider_name": "Copec",
+      "expense_amount": 28900,
+      "expense_date": "2025-12-02",
+      "status_id": 2,
+      "status_label": "Aprobado",
+      "has_receipt": true,
+      "document_no": "BOL-778812",
+      "expense_description": "Combustible para traslado a bodega."
+    },
+    {
+      "expense_id": 1002,
+      "expense_code": "EXP-1002",
+      "fund_code": "CC-SCL-01",
+      "category_name": "Insumos",
+      "provider_name": "Sodimac",
+      "expense_amount": 17450,
+      "expense_date": "2025-12-03",
+      "status_id": 1,
+      "status_label": "Pendiente",
+      "has_receipt": false,
+      "document_no": "BOL-55190",
+      "expense_description": "Materiales menores para mantención."
+    },
+    {
+      "expense_id": 1003,
+      "expense_code": "EXP-1003",
+      "fund_code": "CC-LRY-01",
+      "category_name": "Mantenimiento",
+      "provider_name": "ServiTech",
+      "expense_amount": 62000,
+      "expense_date": "2025-12-06",
+      "status_id": 2,
+      "status_label": "Aprobado",
+      "has_receipt": true,
+      "document_no": "FAC-000129",
+      "expense_description": "Reparación menor en workstation."
+    },
+    {
+      "expense_id": 1004,
+      "expense_code": "EXP-1004",
+      "fund_code": "CC-LAB-01",
+      "category_name": "Servicios",
+      "provider_name": "Entel",
+      "expense_amount": 19990,
+      "expense_date": "2025-12-08",
+      "status_id": 3,
+      "status_label": "Rechazado",
+      "has_receipt": true,
+      "document_no": "FAC-ENT-8841",
+      "expense_description": "Servicio no asociado a OT autorizada."
+    }
+  ],
+  "pettyCashReplenishments": [
+    {
+      "replenishment_id": 7001,
+      "replenishment_code": "REP-7001",
+      "fund_code": "CC-SCL-01",
+      "replenishment_amount": 150000,
+      "replenishment_date": "2025-12-01",
+      "status_label": "Confirmada",
+      "has_receipt": true,
+      "document_no": "TRX-991772",
+      "source_name": "Tesorería",
+      "replenishment_description": "Reposición mensual caja chica."
+    },
+    {
+      "replenishment_id": 7002,
+      "replenishment_code": "REP-7002",
+      "fund_code": "CC-LRY-01",
+      "replenishment_amount": 80000,
+      "replenishment_date": "2025-12-05",
+      "status_label": "Confirmada",
+      "has_receipt": true,
+      "document_no": "TRX-992104",
+      "source_name": "Tesorería",
+      "replenishment_description": "Reposición por gastos operativos."
+    }
+  ]
+}

@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GestionCom • Content</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <!-- CONTENT ONLY -->
+    <main class="content-shell" aria-label="Contenido principal">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-left">
+          <div class="breadcrumb" aria-label="Breadcrumb">
+            <span class="crumb">Finanzas</span>
+            <span class="sep">›</span>
+            <span class="crumb">Gastos</span>
+            <span class="sep">›</span>
+            <span class="crumb is-current">Operativos</span>
+          </div>
+
+          <div class="header-title">
+            <h1>Gastos Operativos</h1>
+            <p class="muted">
+              Ruta: <code>finance/expenses</code>
+              <span class="dot">•</span>
+              <span id="envBadge" class="badge">UI Vanilla</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <button id="btnNew" class="btn btn-primary" type="button">
+            <span class="btn-ic">＋</span>
+            Nuevo gasto
+          </button>
+        </div>
+      </header>
+
+      <!-- Toolbar -->
+      <section class="toolbar" aria-label="Barra de herramientas">
+        <div class="toolbar-left">
+          <div class="input-wrap">
+            <span class="input-ic">⌕</span>
+            <input id="q" class="input" type="search" placeholder="Buscar por folio, proveedor, glosa..." autocomplete="off" />
+          </div>
+
+          <select id="status" class="select" aria-label="Estado">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Aprobado">Aprobado</option>
+            <option value="Rechazado">Rechazado</option>
+            <option value="Anulado">Anulado</option>
+          </select>
+
+          <select id="period" class="select" aria-label="Periodo">
+            <option value="">Periodo</option>
+            <option value="thisMonth">Mes actual</option>
+            <option value="lastMonth">Mes anterior</option>
+            <option value="thisYear">Año actual</option>
+          </select>
+
+          <button id="btnClear" class="btn btn-ghost" type="button">Limpiar</button>
+        </div>
+
+        <div class="toolbar-right">
+          <button id="btnExport" class="btn btn-ghost" type="button">Exportar</button>
+        </div>
+      </section>
+
+      <!-- KPIs -->
+      <section class="kpi-grid" aria-label="Indicadores">
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div class="kpi-label">Total</div>
+            <div class="chip chip-neutral" id="kpiTotalCount">0</div>
+          </div>
+          <div class="kpi-value" id="kpiTotalAmount">$0</div>
+          <div class="kpi-sub muted">Suma de montos filtrados</div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div class="kpi-label">Pendientes</div>
+            <div class="chip chip-warn" id="kpiPendingCount">0</div>
+          </div>
+          <div class="kpi-value" id="kpiPendingAmount">$0</div>
+          <div class="kpi-sub muted">Requieren acción</div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div class="kpi-label">Aprobados</div>
+            <div class="chip chip-ok" id="kpiApprovedCount">0</div>
+          </div>
+          <div class="kpi-value" id="kpiApprovedAmount">$0</div>
+          <div class="kpi-sub muted">Listos para pago/contabilización</div>
+        </article>
+
+        <article class="card kpi">
+          <div class="kpi-top">
+            <div class="kpi-label">Rechazados</div>
+            <div class="chip chip-bad" id="kpiRejectedCount">0</div>
+          </div>
+          <div class="kpi-value" id="kpiRejectedAmount">$0</div>
+          <div class="kpi-sub muted">No continúan el flujo</div>
+        </article>
+      </section>
+
+      <!-- Table -->
+      <section class="card table-card" aria-label="Listado">
+        <div class="table-head">
+          <div class="table-title">
+            <h2>Listado</h2>
+            <p class="muted"><span id="rowsCount">0</span> registros</p>
+          </div>
+
+          <div class="table-actions">
+            <button id="btnRefresh" class="btn btn-ghost" type="button">Actualizar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" role="region" aria-label="Tabla de gastos" tabindex="0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Folio</th>
+                <th>Fecha</th>
+                <th>Proveedor</th>
+                <th>Glosa</th>
+                <th class="ta-r">Monto</th>
+                <th>Estado</th>
+                <th class="ta-r">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="table-foot">
+          <div class="muted">
+            Página <span id="pageNow">1</span> / <span id="pageTotal">1</span>
+          </div>
+          <div class="pager">
+            <button id="btnPrev" class="btn btn-ghost" type="button">Anterior</button>
+            <button id="btnNext" class="btn btn-ghost" type="button">Siguiente</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODALS -->
+    <div id="backdrop" class="backdrop hidden" aria-hidden="true"></div>
+
+    <!-- View -->
+    <section id="modalView" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="viewTitle">
+      <div class="modal-surface">
+        <div class="modal-head">
+          <div>
+            <h3 id="viewTitle">Detalle</h3>
+            <p class="muted" id="viewSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalView" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field">
+              <label>Folio</label>
+              <div class="readonly" id="vFolio">—</div>
+            </div>
+            <div class="field">
+              <label>Fecha</label>
+              <div class="readonly" id="vFecha">—</div>
+            </div>
+            <div class="field">
+              <label>Proveedor</label>
+              <div class="readonly" id="vProveedor">—</div>
+            </div>
+            <div class="field">
+              <label>Estado</label>
+              <div class="readonly" id="vEstado">—</div>
+            </div>
+            <div class="field col-span-2">
+              <label>Glosa</label>
+              <div class="readonly" id="vGlosa">—</div>
+            </div>
+            <div class="field col-span-2">
+              <label>Monto</label>
+              <div class="readonly" id="vMonto">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="modalView" type="button">Cerrar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Confirm (approve/reject/reverse) -->
+    <section id="modalConfirm" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-surface">
+        <div class="modal-head">
+          <div>
+            <h3 id="confirmTitle">Confirmación</h3>
+            <p class="muted" id="confirmSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalConfirm" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="callout" id="confirmCallout">
+            <div class="callout-ic">!</div>
+            <div>
+              <div class="callout-title" id="confirmMsg">—</div>
+              <div class="callout-sub muted" id="confirmHint">Esta acción registrará el evento en el flujo.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="modalConfirm" type="button">Cancelar</button>
+          <button id="btnConfirmDo" class="btn btn-primary" type="button">Confirmar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Edit / New (placeholder funcional) -->
+    <section id="modalEdit" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <div class="modal-surface">
+        <div class="modal-head">
+          <div>
+            <h3 id="editTitle">Gasto</h3>
+            <p class="muted" id="editSubtitle">Crear / Editar</p>
+          </div>
+          <button class="icon-btn" data-close="modalEdit" aria-label="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field">
+              <label for="eFecha">Fecha</label>
+              <input id="eFecha" class="input" type="date" />
+            </div>
+            <div class="field">
+              <label for="eProveedor">Proveedor</label>
+              <input id="eProveedor" class="input" type="text" placeholder="Razón social" />
+            </div>
+            <div class="field col-span-2">
+              <label for="eGlosa">Glosa</label>
+              <input id="eGlosa" class="input" type="text" placeholder="Detalle breve" />
+            </div>
+            <div class="field col-span-2">
+              <label for="eMonto">Monto</label>
+              <input id="eMonto" class="input" type="number" min="0" step="1" placeholder="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn btn-ghost" data-close="modalEdit" type="button">Cancelar</button>
+          <button id="btnSave" class="btn btn-primary" type="button">Guardar</button>
+        </div>
+      </div>
+    </section>
+
+    <script src="script.js"></script>
+  </body>
+</html>

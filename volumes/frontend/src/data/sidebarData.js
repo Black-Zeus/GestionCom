@@ -299,32 +299,11 @@ export const sidebarNavData = {
                                 permissionKey: "suppliers.contacts.manager"
                             },
                             {
-                                id: "productos-proveedor",
-                                text: "Productos por Proveedor",
-                                icon: "📦",
-                                path: "/suppliers/products",
-                                permissionKey: "suppliers.products.manager"
-                            },
-                            {
-                                id: "ordenes-compra",
-                                text: "Órdenes de Compra",
-                                icon: "📄",
-                                path: "/suppliers/purchase-orders",
-                                permissionKey: "suppliers.purchaseOrders.manager"
-                            },
-                            {
                                 id: "historial-compras-proveedor",
                                 text: "Historial de Compras",
                                 icon: "📊",
                                 path: "/suppliers/purchase-history",
                                 permissionKey: "suppliers.purchaseHistory.view"
-                            },
-                            {
-                                id: "evaluacion-proveedores",
-                                text: "Evaluación de Proveedores",
-                                icon: "⭐",
-                                path: "/suppliers/evaluation",
-                                permissionKey: "suppliers.evaluation.manager"
                             },
                             {
                                 id: "cuentas-por-pagar-proveedor",

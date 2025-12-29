@@ -1,0 +1,502 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GestionCom • suppliers/purchase-history</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-left">
+          <div class="breadcrumb">
+            <span class="crumb">Proveedores</span>
+            <span class="sep">›</span>
+            <span class="crumb is-current">Historial de Compras</span>
+          </div>
+
+          <div class="header-title">
+            <h1>Historial de Compras</h1>
+            <p class="muted">
+              Ruta: <code>suppliers/purchase-history</code>
+              <span class="dot">•</span>
+              Workflow: <strong>Pendiente</strong> / <strong>Aprobado</strong> / <strong>Rechazado</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btnNew" class="btn btn-primary">
+            <span class="btn-ic">＋</span>
+            Nueva compra
+          </button>
+          <button id="btnReload" class="btn btn-ghost" title="Recargar data.json">
+            <span class="btn-ic">⟳</span>
+            Recargar
+          </button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total compras</div>
+            <div class="kpi-value" id="kpiTotal">—</div>
+            <div class="kpi-sub muted" id="kpiTotalSub">Según filtros actuales</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Pendientes</div>
+            <div class="kpi-value" id="kpiPending">—</div>
+            <div class="kpi-sub muted">Por validar</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Aprobadas</div>
+            <div class="kpi-value" id="kpiApproved">—</div>
+            <div class="kpi-sub muted">Finalizadas</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Rechazadas</div>
+            <div class="kpi-value" id="kpiRejected">—</div>
+            <div class="kpi-sub muted">Finalizadas</div>
+          </div>
+
+          <div class="kpi-card kpi-accent">
+            <div class="kpi-label">Neto monto</div>
+            <div class="kpi-value" id="kpiNetAmount">—</div>
+            <div class="kpi-sub muted" id="kpiAvgTicket">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Filtros</h2>
+            <p class="muted">Búsqueda + rango de fechas + estado + tipo + proveedor + centro de costo + toggles</p>
+          </div>
+
+          <div class="card-actions">
+            <button id="btnClearFilters" class="btn btn-ghost">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="field">
+              <label for="filterTerm">Búsqueda</label>
+              <input id="filterTerm" type="text" placeholder="Código, documento, proveedor, notas…" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateFrom">Desde</label>
+              <input id="filterDateFrom" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateTo">Hasta</label>
+              <input id="filterDateTo" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterStatus">Estado</label>
+              <select id="filterStatus">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCategory">Tipo</label>
+              <select id="filterCategory">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterSupplier">Proveedor</label>
+              <select id="filterSupplier">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCostCenter">Centro de costo</label>
+              <select id="filterCostCenter">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCurrency">Moneda</label>
+              <select id="filterCurrency">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="toggles">
+              <label class="toggle">
+                <input id="toggleCreditOnly" type="checkbox" />
+                <span>Solo crédito</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleWithDocument" type="checkbox" />
+                <span>Solo con documento</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleRecurring" type="checkbox" />
+                <span>Solo recurrentes</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleWithNotes" type="checkbox" />
+                <span>Solo con notas</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Compras</h2>
+            <p class="muted">
+              Mostrando <strong id="lblCount">0</strong> resultados
+            </p>
+          </div>
+
+          <div class="table-controls">
+            <div class="field inline">
+              <label for="sortBy">Orden</label>
+              <select id="sortBy">
+                <option value="date_desc">Fecha ↓</option>
+                <option value="date_asc">Fecha ↑</option>
+                <option value="amount_desc">Monto ↓</option>
+                <option value="amount_asc">Monto ↑</option>
+              </select>
+            </div>
+
+            <div class="field inline">
+              <label for="pageSize">Paginación</label>
+              <select id="pageSize">
+                <option value="10">10 / pág</option>
+                <option value="15">15 / pág</option>
+                <option value="20">20 / pág</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Código</th>
+                  <th>Documento</th>
+                  <th>Proveedor</th>
+                  <th>Tipo</th>
+                  <th>Estado</th>
+                  <th>Centro costo</th>
+                  <th>Moneda</th>
+                  <th class="right">Total</th>
+                  <th>Flags</th>
+                  <th class="center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="muted" id="lblPageInfo">—</div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+
+          <div id="emptyState" class="empty hidden">
+            <div class="empty-ic">🧾</div>
+            <div class="empty-title">Sin resultados</div>
+            <div class="empty-sub muted">Ajusta filtros o crea una nueva compra.</div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        GestionCom • Proveedores → Historial de Compras • Vanilla template (sin dependencias)
+      </footer>
+    </div>
+
+    <!-- Modal: Edit -->
+    <div id="modalEdit" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalEdit"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalEditTitle">Editar compra</h3>
+            <p class="muted" id="modalEditSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalEdit" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form id="editForm" class="form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="editCode">Código</label>
+                <input id="editCode" type="text" placeholder="AUTOGENERADO" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editDate">Fecha</label>
+                <input id="editDate" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="editSupplier">Proveedor</label>
+                <select id="editSupplier"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCategory">Tipo</label>
+                <select id="editCategory"></select>
+              </div>
+
+              <div class="field">
+                <label for="editStatus">Estado</label>
+                <select id="editStatus"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCostCenter">Centro de costo</label>
+                <select id="editCostCenter"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCurrency">Moneda</label>
+                <select id="editCurrency"></select>
+              </div>
+
+              <div class="field">
+                <label for="editPaymentMethod">Método pago</label>
+                <select id="editPaymentMethod"></select>
+              </div>
+
+              <div class="field">
+                <label for="editDocument">Documento</label>
+                <input id="editDocument" type="text" placeholder="Ej: FAC-10293" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editSubtotal">Subtotal</label>
+                <input id="editSubtotal" type="number" inputmode="decimal" step="0.01" placeholder="0" />
+              </div>
+
+              <div class="field">
+                <label for="editTax">Impuesto</label>
+                <input id="editTax" type="number" inputmode="decimal" step="0.01" placeholder="0" />
+              </div>
+
+              <div class="field">
+                <label for="editTotal">Total</label>
+                <input id="editTotal" type="number" inputmode="decimal" step="0.01" placeholder="0" />
+              </div>
+
+              <div class="field span-2">
+                <label for="editNotes">Notas</label>
+                <textarea id="editNotes" rows="3" placeholder="Observaciones, referencias internas, justificación…"></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <label class="toggle">
+                    <input id="editIsCredit" type="checkbox" />
+                    <span>Crédito</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editRecurring" type="checkbox" />
+                    <span>Recurrente</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editHasDocument" type="checkbox" />
+                    <span>Con documento</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-errors hidden" id="editErrors"></div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="editMeta">—</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" type="button" data-close="modalEdit">Cancelar</button>
+            <button id="btnSave" class="btn btn-primary" type="button">
+              <span class="btn-ic">💾</span>
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View (misma estructura, solo lectura) -->
+    <div id="modalView" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalView"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalViewTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalViewTitle">Ver compra</h3>
+            <p class="muted" id="modalViewSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalView" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form id="viewForm" class="form is-readonly">
+            <div class="form-grid">
+              <div class="field">
+                <label for="viewCode">Código</label>
+                <input id="viewCode" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewDate">Fecha</label>
+                <input id="viewDate" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewSupplier">Proveedor</label>
+                <input id="viewSupplier" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewCategory">Tipo</label>
+                <input id="viewCategory" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewStatus">Estado</label>
+                <input id="viewStatus" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewCostCenter">Centro de costo</label>
+                <input id="viewCostCenter" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewCurrency">Moneda</label>
+                <input id="viewCurrency" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewPaymentMethod">Método pago</label>
+                <input id="viewPaymentMethod" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewDocument">Documento</label>
+                <input id="viewDocument" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewSubtotal">Subtotal</label>
+                <input id="viewSubtotal" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewTax">Impuesto</label>
+                <input id="viewTax" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewTotal">Total</label>
+                <input id="viewTotal" type="text" readonly />
+              </div>
+
+              <div class="field span-2">
+                <label for="viewNotes">Notas</label>
+                <textarea id="viewNotes" rows="3" readonly></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <label class="toggle">
+                    <input id="viewIsCredit" type="checkbox" disabled />
+                    <span>Crédito</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="viewRecurring" type="checkbox" disabled />
+                    <span>Recurrente</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="viewHasDocument" type="checkbox" disabled />
+                    <span>Con documento</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="viewMeta">—</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" type="button" data-close="modalView">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Confirm approve/reject -->
+    <div id="modalConfirm" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalConfirm"></div>
+      <div class="modal-panel modal-sm" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalConfirmTitle">Confirmación</h3>
+            <p class="muted" id="modalConfirmSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalConfirm" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="confirm-box">
+            <div class="confirm-ic" id="confirmIcon">?</div>
+            <div>
+              <div class="confirm-title" id="confirmTitle">—</div>
+              <div class="muted confirm-sub" id="confirmText">—</div>
+            </div>
+          </div>
+          <div class="muted small" id="confirmHint">
+            Al confirmar, Aprobar/Rechazar quedarán deshabilitados y se habilitará “Reversar (⟲)”.
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted">Acción no reversible sin “Reversar”.</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" type="button" data-close="modalConfirm">Cancelar</button>
+            <button id="btnConfirmDo" class="btn btn-primary" type="button">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

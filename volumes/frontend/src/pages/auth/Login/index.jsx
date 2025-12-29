@@ -24,7 +24,7 @@ const Login = () => {
   const [error, setError] = useState(null);
   const [credentials, setCredentialsState] = useState({
     username: isDevelopment ? "admin.demo" : "",
-    password: isDevelopment ? "admin123" : "",
+    password: isDevelopment ? "admin.demo1" : "",
     remember: false,
   });
 

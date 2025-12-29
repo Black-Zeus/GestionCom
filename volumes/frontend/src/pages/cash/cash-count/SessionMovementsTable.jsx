@@ -1,88 +1,73 @@
 import React from "react";
 import { Icon } from "@components/ui/icon/iconManager";
+import { formatCurrency, formatDateTime } from "@/utils/formats";
 
+/**
+ * SessionMovementsTable
+ * Tabla de movimientos de una sesión con estilos corregidos (tema claro)
+ */
 const SessionMovementsTable = ({ movements, paymentMethods }) => {
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: "CLP",
-    }).format(amount);
-  };
-
-  const formatDateTime = (datetime) => {
-    return new Date(datetime).toLocaleString("es-CL", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-  };
-
   const getMovementTypeColor = (type) => {
     const colors = {
-      OPENING: "text-blue-400",
-      SALE: "text-green-400",
-      REFUND: "text-orange-400",
-      PETTY_CASH: "text-red-400",
-      WITHDRAWAL: "text-red-400",
-      DEPOSIT: "text-green-400",
+      OPENING: "text-blue-600",
+      SALE: "text-green-600",
+      REFUND: "text-orange-600",
+      PETTY_CASH: "text-red-600",
+      WITHDRAWAL: "text-red-600",
+      DEPOSIT: "text-green-600",
     };
-    return colors[type] || "text-gray-400";
+    return colors[type] || "text-gray-900";
   };
 
   if (movements.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-400 text-sm">
-        <Icon name="inbox" className="mx-auto mb-2 text-3xl opacity-50" />
-        <p>No hay movimientos registrados en esta sesión</p>
+      <div className="text-center py-12">
+        <Icon name="FaInbox" className="mx-auto text-4xl text-gray-400 mb-3" />
+        <p className="text-sm text-gray-600">
+          No hay movimientos registrados en esta sesión
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto max-h-[380px]">
-      <table className="w-full border-collapse text-xs">
-        <thead className="sticky top-0 bg-gradient-to-r from-slate-900/95 to-blue-900/50 z-10">
+    <div className="overflow-x-auto max-h-[400px]">
+      <table className="w-full">
+        <thead className="sticky top-0 bg-gray-50 border-b-2 border-gray-200">
           <tr>
-            <th className="text-left p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
               Fecha/Hora
             </th>
-            <th className="text-left p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
               Tipo
             </th>
-            <th className="text-left p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
               Documento
             </th>
-            <th className="text-left p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
               Método Pago
             </th>
-            <th className="text-left p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
               Descripción
             </th>
-            <th className="text-right p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
               Recibido
             </th>
-            <th className="text-right p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
               Vuelto
             </th>
-            <th className="text-right p-2 font-medium text-gray-300 whitespace-nowrap border-b border-slate-700/50">
+            <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase">
               Monto
             </th>
           </tr>
         </thead>
-        <tbody>
-          {movements.map((movement, index) => (
-            <tr
-              key={movement.id}
-              className={`
-                ${index % 2 === 0 ? "bg-slate-900/98" : "bg-slate-900/92"}
-                hover:bg-blue-900/35 transition-colors
-              `}
-            >
-              <td className="p-1.5 border-b border-slate-800/90">
-                <span className="text-gray-400">
-                  {formatDateTime(movement.created_at)}
-                </span>
+        <tbody className="divide-y divide-gray-100">
+          {movements.map((movement) => (
+            <tr key={movement.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3 text-sm text-gray-600">
+                {formatDateTime(movement.created_at)}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90">
+              <td className="px-4 py-3 text-sm">
                 <span
                   className={`font-medium ${getMovementTypeColor(
                     movement.movement_type
@@ -91,45 +76,41 @@ const SessionMovementsTable = ({ movements, paymentMethods }) => {
                   {movement.movement_type_label}
                 </span>
               </td>
-              <td className="p-1.5 border-b border-slate-800/90">
+              <td className="px-4 py-3 text-sm">
                 {movement.reference_number ? (
-                  <span className="font-mono text-gray-300">
+                  <span className="font-mono text-gray-900">
                     {movement.reference_number}
                   </span>
                 ) : (
-                  <span className="text-gray-500">-</span>
+                  <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90">
-                <span className="text-gray-300">
-                  {movement.payment_method_name}
-                </span>
+              <td className="px-4 py-3 text-sm text-gray-900">
+                {movement.payment_method_name}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90">
-                <span className="text-gray-400">{movement.description}</span>
+              <td className="px-4 py-3 text-sm text-gray-600">
+                {movement.description}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90 text-right font-mono">
+              <td className="px-4 py-3 text-sm text-right text-gray-900">
                 {movement.received_amount > 0 ? (
-                  <span className="text-gray-300">
-                    {formatCurrency(movement.received_amount)}
-                  </span>
+                  formatCurrency(movement.received_amount)
                 ) : (
-                  <span className="text-gray-500">-</span>
+                  <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90 text-right font-mono">
+              <td className="px-4 py-3 text-sm text-right">
                 {movement.change_amount > 0 ? (
-                  <span className="text-orange-400">
+                  <span className="text-orange-600">
                     {formatCurrency(movement.change_amount)}
                   </span>
                 ) : (
-                  <span className="text-gray-500">-</span>
+                  <span className="text-gray-400">-</span>
                 )}
               </td>
-              <td className="p-1.5 border-b border-slate-800/90 text-right font-mono">
+              <td className="px-4 py-3 text-sm text-right font-semibold">
                 <span
                   className={
-                    movement.amount >= 0 ? "text-green-400" : "text-red-400"
+                    movement.amount >= 0 ? "text-green-600" : "text-red-600"
                   }
                 >
                   {formatCurrency(movement.amount)}
@@ -138,20 +119,20 @@ const SessionMovementsTable = ({ movements, paymentMethods }) => {
             </tr>
           ))}
         </tbody>
-        <tfoot className="sticky bottom-0 bg-gradient-to-r from-slate-900/95 to-blue-900/50">
+        <tfoot className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200">
           <tr>
             <td
               colSpan="7"
-              className="p-2 border-t border-slate-700/50 text-right font-medium text-gray-300"
+              className="px-4 py-3 text-right text-sm font-medium text-gray-700"
             >
               Total:
             </td>
-            <td className="p-2 border-t border-slate-700/50 text-right font-mono font-medium">
+            <td className="px-4 py-3 text-sm text-right font-bold">
               <span
                 className={
                   movements.reduce((sum, m) => sum + m.amount, 0) >= 0
-                    ? "text-green-400"
-                    : "text-red-400"
+                    ? "text-green-600"
+                    : "text-red-600"
                 }
               >
                 {formatCurrency(

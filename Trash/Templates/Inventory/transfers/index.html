@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GestionCom • stock/transfers</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Header -->
+      <header class="page-header">
+        <div>
+          <div class="breadcrumb">
+            <span class="crumb">Productos</span>
+            <span class="sep">›</span>
+            <span class="crumb">Gestión de Stock</span>
+            <span class="sep">›</span>
+            <span class="crumb is-current">Transferencias</span>
+          </div>
+
+          <div class="header-title">
+            <h1>Transferencias de Stock</h1>
+            <p class="muted">
+              Ruta: <code>stock/transfers</code>
+              <span class="dot">•</span>
+              Workflow:
+              <strong>Pendiente envío</strong> / <strong>Enviado</strong> / <strong>Aceptado</strong> /
+              <strong>Parcial</strong> / <strong>Rechazado</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btnNew" class="btn btn-primary">
+            <span class="btn-ic">＋</span>
+            Nuevo ticket
+          </button>
+          <button id="btnReload" class="btn btn-ghost" title="Recargar data.json">
+            <span class="btn-ic">⟳</span>
+            Recargar
+          </button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total tickets</div>
+            <div class="kpi-value" id="kpiTotal">—</div>
+            <div class="kpi-sub muted" id="kpiTotalSub">Según filtros actuales</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Pendiente envío</div>
+            <div class="kpi-value" id="kpiPendingSend">—</div>
+            <div class="kpi-sub muted">Tickets sin despacho</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Pendiente recepción</div>
+            <div class="kpi-value" id="kpiPendingReceive">—</div>
+            <div class="kpi-sub muted">Enviado, sin cierre</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Finalizados</div>
+            <div class="kpi-value" id="kpiFinal">—</div>
+            <div class="kpi-sub muted">Aceptado / Parcial / Rechazado</div>
+          </div>
+
+          <div class="kpi-card kpi-accent">
+            <div class="kpi-label">Neto unidades recibidas</div>
+            <div class="kpi-value" id="kpiNetUnits">—</div>
+            <div class="kpi-sub muted" id="kpiUnitsSub">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Filtros</h2>
+            <p class="muted">Búsqueda + rango de fechas + estado + motivo + bodegas + centro de costo + toggles</p>
+          </div>
+
+          <div class="card-actions">
+            <button id="btnClearFilters" class="btn btn-ghost">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="field">
+              <label for="filterTerm">Búsqueda</label>
+              <input id="filterTerm" type="text" placeholder="Ticket, bodega, producto, usuario, notas, referencia…" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateFrom">Desde</label>
+              <input id="filterDateFrom" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateTo">Hasta</label>
+              <input id="filterDateTo" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterStatus">Estado</label>
+              <select id="filterStatus">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterReason">Motivo</label>
+              <select id="filterReason">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterSourceWh">Origen</label>
+              <select id="filterSourceWh">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterTargetWh">Destino</label>
+              <select id="filterTargetWh">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCostCenter">Centro de costo</label>
+              <select id="filterCostCenter">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="toggles">
+              <label class="toggle">
+                <input id="toggleUrgent" type="checkbox" />
+                <span>Solo urgentes</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleDiff" type="checkbox" />
+                <span>Solo con diferencias</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleRejected" type="checkbox" />
+                <span>Solo rechazados</span>
+              </label>
+
+              <label class="toggle">
+                <input id="togglePartial" type="checkbox" />
+                <span>Solo parciales</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Tickets</h2>
+            <p class="muted">Mostrando <strong id="lblCount">0</strong> resultados</p>
+          </div>
+
+          <div class="table-controls">
+            <div class="field inline">
+              <label for="sortBy">Orden</label>
+              <select id="sortBy">
+                <option value="date_desc">Fecha ↓</option>
+                <option value="date_asc">Fecha ↑</option>
+                <option value="sent_desc">Enviado ↓</option>
+                <option value="sent_asc">Enviado ↑</option>
+                <option value="diff_desc">Diferencia ↓</option>
+                <option value="diff_asc">Diferencia ↑</option>
+              </select>
+            </div>
+
+            <div class="field inline">
+              <label for="pageSize">Paginación</label>
+              <select id="pageSize">
+                <option value="10">10 / pág</option>
+                <option value="15">15 / pág</option>
+                <option value="20">20 / pág</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Ticket</th>
+                  <th>Estado</th>
+                  <th>Origen</th>
+                  <th>Destino</th>
+                  <th class="right">Ítems</th>
+                  <th class="right">Req</th>
+                  <th class="right">Enviado</th>
+                  <th class="right">Recibido</th>
+                  <th>Motivo</th>
+                  <th>Solicitado por</th>
+                  <th class="center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="muted" id="lblPageInfo">—</div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+
+          <div id="emptyState" class="empty hidden">
+            <div class="empty-ic">📦</div>
+            <div class="empty-title">Sin resultados</div>
+            <div class="empty-sub muted">Ajusta filtros o crea un nuevo ticket de transferencia.</div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        GestionCom • Productos → Gestión de Stock → Transferencias • Vanilla template (sin dependencias)
+      </footer>
+    </div>
+
+    <!-- Modal: Edit -->
+    <div id="modalEdit" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalEdit"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalEditTitle">Editar ticket</h3>
+            <p class="muted" id="modalEditSub">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalEdit" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field">
+              <label for="editCode">Código</label>
+              <input id="editCode" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="editDate">Fecha</label>
+              <input id="editDate" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="editStatus">Estado</label>
+              <select id="editStatus"></select>
+            </div>
+
+            <div class="field">
+              <label for="editReason">Motivo</label>
+              <select id="editReason"></select>
+            </div>
+
+            <div class="field">
+              <label for="editCostCenter">Centro de costo</label>
+              <select id="editCostCenter"></select>
+            </div>
+
+            <div class="field">
+              <label for="editRequestedBy">Solicitado por</label>
+              <select id="editRequestedBy"></select>
+            </div>
+
+            <div class="field">
+              <label for="editSourceWh">Origen</label>
+              <select id="editSourceWh"></select>
+            </div>
+
+            <div class="field">
+              <label for="editTargetWh">Destino</label>
+              <select id="editTargetWh"></select>
+            </div>
+
+            <div class="field">
+              <label for="editReference">Referencia</label>
+              <input id="editReference" type="text" placeholder="TK-12345 (opcional)" />
+            </div>
+
+            <div class="field">
+              <label for="editUrgent">Urgente</label>
+              <label class="toggle toggle-inline">
+                <input id="editUrgent" type="checkbox" />
+                <span>Marcar como urgente</span>
+              </label>
+            </div>
+
+            <div class="field span-2">
+              <label for="editNotes">Notas</label>
+              <textarea id="editNotes" placeholder="Observaciones del ticket…"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="editSentBy">Enviado por</label>
+              <input id="editSentBy" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="editSentAt">Enviado el</label>
+              <input id="editSentAt" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="editReceivedBy">Recibido por</label>
+              <input id="editReceivedBy" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="editReceivedAt">Recibido el</label>
+              <input id="editReceivedAt" type="text" readonly />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-head">
+            <div>
+              <h4>Líneas</h4>
+              <p class="muted">Solicitado vs Enviado (ajustable antes de enviar). La recepción se gestiona desde “Recepcionar”.</p>
+            </div>
+            <div class="section-actions">
+              <button id="btnAddLine" class="btn btn-ghost">
+                <span class="btn-ic">＋</span>
+                Agregar línea
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table table-lines">
+              <thead>
+                <tr>
+                  <th style="min-width: 280px">Producto/Variante</th>
+                  <th class="right" style="width: 120px">Req</th>
+                  <th class="right" style="width: 120px">Enviado</th>
+                  <th style="width: 140px">Lote</th>
+                  <th style="min-width: 200px">Notas</th>
+                  <th class="center" style="width: 64px">—</th>
+                </tr>
+              </thead>
+              <tbody id="editLinesBody"></tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="msg-panel">
+            <div class="msg-head">
+              <div>
+                <h4>Mensajes del ticket</h4>
+                <p class="muted small">Comentarios y trazabilidad (cabecera y/o líneas).</p>
+              </div>
+              <div class="muted small" id="editMsgCount">—</div>
+            </div>
+
+            <div class="msg-list" id="editMsgList"></div>
+
+            <div class="msg-compose">
+              <div class="field">
+                <label for="editNewMsg">Nuevo mensaje</label>
+                <textarea id="editNewMsg" placeholder="Agregar comentario…"></textarea>
+              </div>
+              <button id="btnAddMsg" class="btn btn-primary">
+                <span class="btn-ic">✉</span>
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="muted small" id="editHint">—</div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" data-close="modalEdit">Cancelar</button>
+            <button id="btnSave" class="btn btn-primary">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View -->
+    <div id="modalView" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalView"></div>
+      <div class="modal-panel readonly" role="dialog" aria-modal="true" aria-labelledby="modalViewTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalViewTitle">Ver ticket</h3>
+            <p class="muted" id="modalViewSub">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalView" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="field">
+              <label for="viewCode">Código</label>
+              <input id="viewCode" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewDate">Fecha</label>
+              <input id="viewDate" type="date" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewStatus">Estado</label>
+              <select id="viewStatus"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewReason">Motivo</label>
+              <select id="viewReason"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewCostCenter">Centro de costo</label>
+              <select id="viewCostCenter"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewRequestedBy">Solicitado por</label>
+              <select id="viewRequestedBy"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewSourceWh">Origen</label>
+              <select id="viewSourceWh"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewTargetWh">Destino</label>
+              <select id="viewTargetWh"></select>
+            </div>
+
+            <div class="field">
+              <label for="viewReference">Referencia</label>
+              <input id="viewReference" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewUrgent">Urgente</label>
+              <label class="toggle toggle-inline">
+                <input id="viewUrgent" type="checkbox" />
+                <span>Marcado como urgente</span>
+              </label>
+            </div>
+
+            <div class="field span-2">
+              <label for="viewNotes">Notas</label>
+              <textarea id="viewNotes" readonly></textarea>
+            </div>
+
+            <div class="field">
+              <label for="viewSentBy">Enviado por</label>
+              <input id="viewSentBy" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewSentAt">Enviado el</label>
+              <input id="viewSentAt" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewReceivedBy">Recibido por</label>
+              <input id="viewReceivedBy" type="text" readonly />
+            </div>
+
+            <div class="field">
+              <label for="viewReceivedAt">Recibido el</label>
+              <input id="viewReceivedAt" type="text" readonly />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="section-head">
+            <div>
+              <h4>Líneas</h4>
+              <p class="muted">Solo lectura (estructura idéntica a edición).</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table table-lines">
+              <thead>
+                <tr>
+                  <th style="min-width: 280px">Producto/Variante</th>
+                  <th class="right" style="width: 120px">Req</th>
+                  <th class="right" style="width: 120px">Enviado</th>
+                  <th class="right" style="width: 120px">Recibido</th>
+                  <th style="width: 140px">Lote</th>
+                  <th style="min-width: 200px">Notas</th>
+                </tr>
+              </thead>
+              <tbody id="viewLinesBody"></tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="msg-panel">
+            <div class="msg-head">
+              <div>
+                <h4>Mensajes del ticket</h4>
+                <p class="muted small">Solo lectura.</p>
+              </div>
+              <div class="muted small" id="viewMsgCount">—</div>
+            </div>
+
+            <div class="msg-list" id="viewMsgList"></div>
+
+            <div class="msg-compose">
+              <div class="field">
+                <label for="viewNewMsg">Nuevo mensaje</label>
+                <textarea id="viewNewMsg" placeholder="(Deshabilitado en modo Ver)"></textarea>
+              </div>
+              <button class="btn btn-primary" disabled>
+                <span class="btn-ic">✉</span>
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="muted small" id="viewHint">—</div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" data-close="modalView">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Confirm -->
+    <div id="modalConfirm" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalConfirm"></div>
+      <div class="modal-panel modal-panel-sm" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalConfirmTitle">Confirmación</h3>
+            <p class="muted" id="modalConfirmSub">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalConfirm" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert">
+            <div class="alert-ic" id="confirmIcon">⚠</div>
+            <div>
+              <div class="alert-title" id="confirmTitle">—</div>
+              <div class="alert-sub muted" id="confirmBody">—</div>
+            </div>
+          </div>
+
+          <div class="field" style="margin-top: 12px">
+            <label for="confirmReason">Mensaje / motivo (opcional)</label>
+            <textarea id="confirmReason" placeholder="Ej: diferencias detectadas, observaciones de despacho, etc…"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="muted small" id="confirmHint">—</div>
+          <div class="modal-actions">
+            <button class="btn btn-ghost" data-close="modalConfirm">Cancelar</button>
+            <button id="btnConfirm" class="btn btn-primary">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Recepción parcial -->
+    <div id="modalReceive" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalReceive"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalReceiveTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalReceiveTitle">Recepcionar parcial</h3>
+            <p class="muted" id="modalReceiveSub">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalReceive" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="alert">
+            <div class="alert-ic">≋</div>
+            <div>
+              <div class="alert-title">Definir cantidades recibidas por línea</div>
+              <div class="alert-sub muted">Rango válido: 0 … Enviado. Si todas las líneas quedan en 0, el ticket quedará Rechazado.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="table-wrap">
+            <table class="table table-lines">
+              <thead>
+                <tr>
+                  <th style="min-width: 300px">Producto/Variante</th>
+                  <th class="right" style="width: 120px">Enviado</th>
+                  <th class="right" style="width: 140px">Recibido (input)</th>
+                </tr>
+              </thead>
+              <tbody id="receiveLinesBody"></tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="field">
+            <label for="receiveNote">Mensaje / observación (opcional)</label>
+            <textarea id="receiveNote" placeholder="Ej: faltantes, daños, lote incorrecto, etc…"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="muted small" id="receiveHint">—</div>
+          <div class="modal-actions">
+            <button id="btnReceiveFillAll" class="btn btn-ghost" title="Copiar Enviado → Recibido">
+              <span class="btn-ic">≈</span>
+              Recepcionar total
+            </button>
+            <button class="btn btn-ghost" data-close="modalReceive">Cancelar</button>
+            <button id="btnReceiveConfirm" class="btn btn-primary">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

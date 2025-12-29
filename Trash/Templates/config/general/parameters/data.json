@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": "1",
+      "folio": "G-1021",
+      "fecha": "2025-12-03",
+      "proveedor": "Transporte Andino SpA",
+      "glosa": "Flete interno",
+      "monto": 185000,
+      "estado": "Pendiente"
+    },
+    {
+      "id": "2",
+      "folio": "G-1022",
+      "fecha": "2025-12-04",
+      "proveedor": "Servicios Eléctricos Norte Ltda.",
+      "glosa": "Mantención tablero",
+      "monto": 320000,
+      "estado": "Aprobado"
+    },
+    {
+      "id": "3",
+      "folio": "G-1023",
+      "fecha": "2025-11-28",
+      "proveedor": "Suministros Oficina Chile",
+      "glosa": "Insumos administrativos",
+      "monto": 89000,
+      "estado": "Rechazado"
+    },
+    {
+      "id": "4",
+      "folio": "G-1024",
+      "fecha": "2025-12-01",
+      "proveedor": "Aseo Industrial Sur",
+      "glosa": "Servicio mensual",
+      "monto": 210000,
+      "estado": "Pendiente"
+    }
+  ]
+}

@@ -1,0 +1,364 @@
+{
+  "module": "stock",
+  "submodule": "transfers",
+  "route": "stock/transfers",
+  "meta": {
+    "currency": "CLP",
+    "unit_label": "un",
+    "timezone": "America/Santiago",
+    "seed_note": "Dataset demo para probar filtros, KPIs, workflow (envío/aceptación/rechazo/parcial) y reversa."
+  },
+  "users": [
+    { "id": 1, "display_name": "Camila Rojas", "role": "Bodega Origen", "is_active": true },
+    { "id": 2, "display_name": "Matías Fuentes", "role": "Bodega Destino", "is_active": true },
+    { "id": 3, "display_name": "Valentina Sáez", "role": "Operador Inventario", "is_active": true },
+    { "id": 4, "display_name": "Sebastián López", "role": "Supervisor Inventario", "is_active": true },
+    { "id": 5, "display_name": "Andrea Palma", "role": "Compras", "is_active": true },
+    { "id": 6, "display_name": "Rodrigo Vera", "role": "Administración", "is_active": true }
+  ],
+  "warehouses": [
+    { "id": 10, "warehouse_code": "BOD-CL-SCL", "warehouse_name": "Bodega Santiago", "site": "Santiago", "is_active": true },
+    { "id": 11, "warehouse_code": "BOD-CL-VAP", "warehouse_name": "Bodega Valparaíso", "site": "Valparaíso", "is_active": true },
+    { "id": 12, "warehouse_code": "BOD-CL-CON", "warehouse_name": "Bodega Concepción", "site": "Concepción", "is_active": true },
+    { "id": 13, "warehouse_code": "BOD-CL-LAB", "warehouse_name": "Bodega Laboratorio", "site": "Lab", "is_active": true }
+  ],
+  "cost_centers": [
+    { "id": 100, "cost_center_code": "CC-ADM", "cost_center_name": "Administración", "is_active": true },
+    { "id": 101, "cost_center_code": "CC-OPS", "cost_center_name": "Operaciones", "is_active": true },
+    { "id": 102, "cost_center_code": "CC-IT", "cost_center_name": "TI & Soporte", "is_active": true },
+    { "id": 103, "cost_center_code": "CC-LAB", "cost_center_name": "Laboratorio", "is_active": true }
+  ],
+  "transfer_statuses": [
+    { "id": 200, "status_code": "PENDING_SEND", "status_label": "Pendiente envío", "is_final": false, "sort_order": 10 },
+    { "id": 201, "status_code": "SENT", "status_label": "Enviado", "is_final": false, "sort_order": 20 },
+    { "id": 202, "status_code": "RECEIVED_FULL", "status_label": "Aceptado", "is_final": true, "sort_order": 30 },
+    { "id": 203, "status_code": "RECEIVED_PARTIAL", "status_label": "Parcial", "is_final": true, "sort_order": 31 },
+    { "id": 204, "status_code": "REJECTED", "status_label": "Rechazado", "is_final": true, "sort_order": 40 }
+  ],
+  "transfer_reasons": [
+    { "id": 300, "reason_code": "RESTOCK", "reason_label": "Reposición de stock" },
+    { "id": 301, "reason_code": "PROJECT", "reason_label": "Proyecto / despliegue" },
+    { "id": 302, "reason_code": "RMA", "reason_label": "Devolución / RMA" },
+    { "id": 303, "reason_code": "REBALANCE", "reason_label": "Rebalanceo entre bodegas" },
+    { "id": 304, "reason_code": "LAB", "reason_label": "Pruebas laboratorio" }
+  ],
+  "products": [
+    { "id": 400, "product_sku": "CAB-CAT6", "product_name": "Cable UTP Cat6", "category": "Redes", "is_active": true },
+    { "id": 401, "product_sku": "SW-24P", "product_name": "Switch 24 Puertos", "category": "Redes", "is_active": true },
+    { "id": 402, "product_sku": "AP-AX", "product_name": "Access Point WiFi 6", "category": "Redes", "is_active": true },
+    { "id": 403, "product_sku": "SSD-1TB", "product_name": "SSD NVMe 1TB", "category": "Hardware", "is_active": true },
+    { "id": 404, "product_sku": "RAM-16G", "product_name": "Memoria RAM 16GB", "category": "Hardware", "is_active": true },
+    { "id": 405, "product_sku": "MON-24", "product_name": "Monitor 24''", "category": "Periféricos", "is_active": true },
+    { "id": 406, "product_sku": "MSE-WL", "product_name": "Mouse Inalámbrico", "category": "Periféricos", "is_active": true }
+  ],
+  "product_variants": [
+    { "id": 500, "product_id": 400, "variant_sku": "CAB-CAT6-1M", "variant_name": "1 metro", "uom": "un", "is_active": true },
+    { "id": 501, "product_id": 400, "variant_sku": "CAB-CAT6-3M", "variant_name": "3 metros", "uom": "un", "is_active": true },
+    { "id": 502, "product_id": 401, "variant_sku": "SW-24P-G1", "variant_name": "Gigabit", "uom": "un", "is_active": true },
+    { "id": 503, "product_id": 402, "variant_sku": "AP-AX-INT", "variant_name": "Interior", "uom": "un", "is_active": true },
+    { "id": 504, "product_id": 403, "variant_sku": "SSD-1TB-G4", "variant_name": "PCIe Gen4", "uom": "un", "is_active": true },
+    { "id": 505, "product_id": 404, "variant_sku": "RAM-16G-DDR4", "variant_name": "DDR4", "uom": "un", "is_active": true },
+    { "id": 506, "product_id": 405, "variant_sku": "MON-24-FHD", "variant_name": "FHD", "uom": "un", "is_active": true },
+    { "id": 507, "product_id": 406, "variant_sku": "MSE-WL-BLK", "variant_name": "Negro", "uom": "un", "is_active": true }
+  ],
+
+  "stock_transfers": [
+    {
+      "id": 1,
+      "transfer_code": "TRF-00001",
+      "transfer_date": "2025-12-02T00:00:00Z",
+      "status_id": 200,
+      "reason_id": 303,
+      "cost_center_id": 101,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 11,
+      "requested_by_user_id": 3,
+      "sent_by_user_id": null,
+      "sent_at": null,
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "TICKET",
+      "reference_code": "INC-9812",
+      "notes": "Rebalanceo de periféricos para atención terreno.",
+      "is_urgent": false
+    },
+    {
+      "id": 2,
+      "transfer_code": "TRF-00002",
+      "transfer_date": "2025-12-03T00:00:00Z",
+      "status_id": 201,
+      "reason_id": 300,
+      "cost_center_id": 102,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 12,
+      "requested_by_user_id": 4,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-03T15:10:00Z",
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "REQ",
+      "reference_code": "REQ-4451",
+      "notes": "Reposición para stock mínimo Concepción.",
+      "is_urgent": true
+    },
+    {
+      "id": 3,
+      "transfer_code": "TRF-00003",
+      "transfer_date": "2025-12-04T00:00:00Z",
+      "status_id": 202,
+      "reason_id": 301,
+      "cost_center_id": 102,
+      "source_warehouse_id": 11,
+      "target_warehouse_id": 10,
+      "requested_by_user_id": 6,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-04T13:55:00Z",
+      "received_by_user_id": 2,
+      "received_at": "2025-12-05T10:22:00Z",
+      "reference_type": "PROJECT",
+      "reference_code": "DEP-AX-120",
+      "notes": "Equipamiento WiFi para despliegue en oficina central.",
+      "is_urgent": false
+    },
+    {
+      "id": 4,
+      "transfer_code": "TRF-00004",
+      "transfer_date": "2025-12-05T00:00:00Z",
+      "status_id": 203,
+      "reason_id": 303,
+      "cost_center_id": 101,
+      "source_warehouse_id": 12,
+      "target_warehouse_id": 10,
+      "requested_by_user_id": 3,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-05T14:20:00Z",
+      "received_by_user_id": 4,
+      "received_at": "2025-12-06T11:05:00Z",
+      "reference_type": "TICKET",
+      "reference_code": "INC-9920",
+      "notes": "Recepción parcial por faltante de SSD.",
+      "is_urgent": false
+    },
+    {
+      "id": 5,
+      "transfer_code": "TRF-00005",
+      "transfer_date": "2025-12-06T00:00:00Z",
+      "status_id": 204,
+      "reason_id": 302,
+      "cost_center_id": 100,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 13,
+      "requested_by_user_id": 5,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-06T09:40:00Z",
+      "received_by_user_id": 2,
+      "received_at": "2025-12-06T17:10:00Z",
+      "reference_type": "RMA",
+      "reference_code": "RMA-2311",
+      "notes": "Rechazado en laboratorio por lote incorrecto.",
+      "is_urgent": true
+    },
+    {
+      "id": 6,
+      "transfer_code": "TRF-00006",
+      "transfer_date": "2025-12-07T00:00:00Z",
+      "status_id": 200,
+      "reason_id": 300,
+      "cost_center_id": 101,
+      "source_warehouse_id": 11,
+      "target_warehouse_id": 10,
+      "requested_by_user_id": 6,
+      "sent_by_user_id": null,
+      "sent_at": null,
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "REQ",
+      "reference_code": "REQ-4502",
+      "notes": "Reposición de cables.",
+      "is_urgent": false
+    },
+    {
+      "id": 7,
+      "transfer_code": "TRF-00007",
+      "transfer_date": "2025-12-08T00:00:00Z",
+      "status_id": 201,
+      "reason_id": 304,
+      "cost_center_id": 103,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 13,
+      "requested_by_user_id": 4,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-08T12:05:00Z",
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "LAB",
+      "reference_code": "LAB-TRIAL-88",
+      "notes": "Material para pruebas laboratorio.",
+      "is_urgent": false
+    },
+    {
+      "id": 8,
+      "transfer_code": "TRF-00008",
+      "transfer_date": "2025-12-09T00:00:00Z",
+      "status_id": 202,
+      "reason_id": 300,
+      "cost_center_id": 101,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 11,
+      "requested_by_user_id": 3,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-09T10:30:00Z",
+      "received_by_user_id": 2,
+      "received_at": "2025-12-09T17:45:00Z",
+      "reference_type": "REQ",
+      "reference_code": "REQ-4580",
+      "notes": "Reposición: mouse y monitores.",
+      "is_urgent": false
+    },
+    {
+      "id": 9,
+      "transfer_code": "TRF-00009",
+      "transfer_date": "2025-12-10T00:00:00Z",
+      "status_id": 203,
+      "reason_id": 301,
+      "cost_center_id": 102,
+      "source_warehouse_id": 11,
+      "target_warehouse_id": 12,
+      "requested_by_user_id": 6,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-10T14:00:00Z",
+      "received_by_user_id": 2,
+      "received_at": "2025-12-11T09:35:00Z",
+      "reference_type": "PROJECT",
+      "reference_code": "NET-ROLL-19",
+      "notes": "Parcial: faltante de cable por rotura de stock.",
+      "is_urgent": true
+    },
+    {
+      "id": 10,
+      "transfer_code": "TRF-00010",
+      "transfer_date": "2025-12-11T00:00:00Z",
+      "status_id": 204,
+      "reason_id": 303,
+      "cost_center_id": 101,
+      "source_warehouse_id": 12,
+      "target_warehouse_id": 10,
+      "requested_by_user_id": 3,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-11T11:15:00Z",
+      "received_by_user_id": 4,
+      "received_at": "2025-12-11T16:10:00Z",
+      "reference_type": "TICKET",
+      "reference_code": "INC-10021",
+      "notes": "Rechazado: embalaje dañado, se solicita reenvío.",
+      "is_urgent": false
+    },
+    {
+      "id": 11,
+      "transfer_code": "TRF-00011",
+      "transfer_date": "2025-12-12T00:00:00Z",
+      "status_id": 200,
+      "reason_id": 301,
+      "cost_center_id": 102,
+      "source_warehouse_id": 10,
+      "target_warehouse_id": 12,
+      "requested_by_user_id": 4,
+      "sent_by_user_id": null,
+      "sent_at": null,
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "PROJECT",
+      "reference_code": "DEP-EDGE-02",
+      "notes": "Pendiente: validar cantidades de RAM/SSD antes de despacho.",
+      "is_urgent": true
+    },
+    {
+      "id": 12,
+      "transfer_code": "TRF-00012",
+      "transfer_date": "2025-12-13T00:00:00Z",
+      "status_id": 201,
+      "reason_id": 300,
+      "cost_center_id": 101,
+      "source_warehouse_id": 11,
+      "target_warehouse_id": 10,
+      "requested_by_user_id": 6,
+      "sent_by_user_id": 1,
+      "sent_at": "2025-12-13T09:05:00Z",
+      "received_by_user_id": null,
+      "received_at": null,
+      "reference_type": "REQ",
+      "reference_code": "REQ-4702",
+      "notes": "Pendiente de recepción en Santiago.",
+      "is_urgent": false
+    }
+  ],
+
+  "stock_transfer_lines": [
+    { "id": 1001, "transfer_id": 1, "product_variant_id": 507, "qty_requested": 10, "qty_sent": 0, "qty_received": 0, "lot_code": "LOT-MSE-771", "line_notes": "Preferencia color negro" },
+    { "id": 1002, "transfer_id": 1, "product_variant_id": 506, "qty_requested": 2, "qty_sent": 0, "qty_received": 0, "lot_code": "LOT-MON-114", "line_notes": "" },
+
+    { "id": 1003, "transfer_id": 2, "product_variant_id": 500, "qty_requested": 50, "qty_sent": 50, "qty_received": 0, "lot_code": "LOT-CAT6-900", "line_notes": "Cables para racks" },
+    { "id": 1004, "transfer_id": 2, "product_variant_id": 503, "qty_requested": 6, "qty_sent": 6, "qty_received": 0, "lot_code": "LOT-AP-AX-33", "line_notes": "" },
+
+    { "id": 1005, "transfer_id": 3, "product_variant_id": 503, "qty_requested": 4, "qty_sent": 4, "qty_received": 4, "lot_code": "LOT-AP-AX-28", "line_notes": "Montaje interior" },
+    { "id": 1006, "transfer_id": 3, "product_variant_id": 502, "qty_requested": 1, "qty_sent": 1, "qty_received": 1, "lot_code": "LOT-SW-24P-77", "line_notes": "" },
+
+    { "id": 1007, "transfer_id": 4, "product_variant_id": 504, "qty_requested": 4, "qty_sent": 4, "qty_received": 3, "lot_code": "LOT-SSD-1TB-14", "line_notes": "Faltó 1 unidad" },
+    { "id": 1008, "transfer_id": 4, "product_variant_id": 505, "qty_requested": 6, "qty_sent": 6, "qty_received": 6, "lot_code": "LOT-RAM-16-51", "line_notes": "" },
+
+    { "id": 1009, "transfer_id": 5, "product_variant_id": 504, "qty_requested": 2, "qty_sent": 2, "qty_received": 0, "lot_code": "LOT-SSD-1TB-09", "line_notes": "Lote no corresponde a lo solicitado" },
+    { "id": 1010, "transfer_id": 5, "product_variant_id": 505, "qty_requested": 2, "qty_sent": 2, "qty_received": 0, "lot_code": "LOT-RAM-16-49", "line_notes": "" },
+
+    { "id": 1011, "transfer_id": 6, "product_variant_id": 501, "qty_requested": 20, "qty_sent": 0, "qty_received": 0, "lot_code": "LOT-CAT6-3M-12", "line_notes": "Cables 3m" },
+
+    { "id": 1012, "transfer_id": 7, "product_variant_id": 504, "qty_requested": 3, "qty_sent": 3, "qty_received": 0, "lot_code": "LOT-SSD-1TB-21", "line_notes": "Pruebas rendimiento" },
+    { "id": 1013, "transfer_id": 7, "product_variant_id": 505, "qty_requested": 6, "qty_sent": 6, "qty_received": 0, "lot_code": "LOT-RAM-16-62", "line_notes": "" },
+
+    { "id": 1014, "transfer_id": 8, "product_variant_id": 507, "qty_requested": 12, "qty_sent": 12, "qty_received": 12, "lot_code": "LOT-MSE-800", "line_notes": "" },
+    { "id": 1015, "transfer_id": 8, "product_variant_id": 506, "qty_requested": 3, "qty_sent": 3, "qty_received": 3, "lot_code": "LOT-MON-121", "line_notes": "FHD" },
+
+    { "id": 1016, "transfer_id": 9, "product_variant_id": 500, "qty_requested": 60, "qty_sent": 50, "qty_received": 40, "lot_code": "LOT-CAT6-905", "line_notes": "Se recepciona parcial por faltante" },
+    { "id": 1017, "transfer_id": 9, "product_variant_id": 502, "qty_requested": 1, "qty_sent": 1, "qty_received": 1, "lot_code": "LOT-SW-24P-88", "line_notes": "" },
+
+    { "id": 1018, "transfer_id": 10, "product_variant_id": 503, "qty_requested": 2, "qty_sent": 2, "qty_received": 0, "lot_code": "LOT-AP-AX-30", "line_notes": "Embalaje dañado, no se acepta" },
+
+    { "id": 1019, "transfer_id": 11, "product_variant_id": 504, "qty_requested": 5, "qty_sent": 0, "qty_received": 0, "lot_code": "LOT-SSD-1TB-25", "line_notes": "Validar stock antes de despacho" },
+    { "id": 1020, "transfer_id": 11, "product_variant_id": 505, "qty_requested": 10, "qty_sent": 0, "qty_received": 0, "lot_code": "LOT-RAM-16-70", "line_notes": "" },
+
+    { "id": 1021, "transfer_id": 12, "product_variant_id": 501, "qty_requested": 30, "qty_sent": 30, "qty_received": 0, "lot_code": "LOT-CAT6-3M-19", "line_notes": "" },
+    { "id": 1022, "transfer_id": 12, "product_variant_id": 507, "qty_requested": 8, "qty_sent": 8, "qty_received": 0, "lot_code": "LOT-MSE-811", "line_notes": "" }
+  ],
+
+  "stock_transfer_messages": [
+    { "id": 2001, "transfer_id": 1, "scope": "HEADER", "line_id": null, "message_type": "NOTE", "message_text": "Se solicita rebalanceo para stock de terreno.", "created_at": "2025-12-02T09:15:00Z", "created_by_user_id": 3 },
+    { "id": 2002, "transfer_id": 2, "scope": "HEADER", "line_id": null, "message_type": "NOTE", "message_text": "Urgente por stock mínimo. Priorizar despacho hoy.", "created_at": "2025-12-03T08:20:00Z", "created_by_user_id": 4 },
+    { "id": 2003, "transfer_id": 2, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-03T15:10:00Z", "created_by_user_id": 1 },
+
+    { "id": 2004, "transfer_id": 3, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-04T13:55:00Z", "created_by_user_id": 1 },
+    { "id": 2005, "transfer_id": 3, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción total confirmada.", "created_at": "2025-12-05T10:22:00Z", "created_by_user_id": 2 },
+
+    { "id": 2006, "transfer_id": 4, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-05T14:20:00Z", "created_by_user_id": 1 },
+    { "id": 2007, "transfer_id": 4, "scope": "LINE", "line_id": 1007, "message_type": "NOTE", "message_text": "Se recepciona 3/4 SSD. Falta 1 unidad.", "created_at": "2025-12-06T11:01:00Z", "created_by_user_id": 4 },
+    { "id": 2008, "transfer_id": 4, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción parcial confirmada.", "created_at": "2025-12-06T11:05:00Z", "created_by_user_id": 4 },
+
+    { "id": 2009, "transfer_id": 5, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-06T09:40:00Z", "created_by_user_id": 1 },
+    { "id": 2010, "transfer_id": 5, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción rechazada. Lote incorrecto.", "created_at": "2025-12-06T17:10:00Z", "created_by_user_id": 2 },
+
+    { "id": 2011, "transfer_id": 7, "scope": "HEADER", "line_id": null, "message_type": "NOTE", "message_text": "Material requerido para pruebas de laboratorio (benchmark).", "created_at": "2025-12-08T09:10:00Z", "created_by_user_id": 4 },
+    { "id": 2012, "transfer_id": 7, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-08T12:05:00Z", "created_by_user_id": 1 },
+
+    { "id": 2013, "transfer_id": 8, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-09T10:30:00Z", "created_by_user_id": 1 },
+    { "id": 2014, "transfer_id": 8, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción total confirmada.", "created_at": "2025-12-09T17:45:00Z", "created_by_user_id": 2 },
+
+    { "id": 2015, "transfer_id": 9, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-10T14:00:00Z", "created_by_user_id": 1 },
+    { "id": 2016, "transfer_id": 9, "scope": "LINE", "line_id": 1016, "message_type": "NOTE", "message_text": "Recepción parcial por faltante de 10 cables (stock insuficiente).", "created_at": "2025-12-11T09:32:00Z", "created_by_user_id": 2 },
+    { "id": 2017, "transfer_id": 9, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción parcial confirmada.", "created_at": "2025-12-11T09:35:00Z", "created_by_user_id": 2 },
+
+    { "id": 2018, "transfer_id": 10, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-11T11:15:00Z", "created_by_user_id": 1 },
+    { "id": 2019, "transfer_id": 10, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Recepción rechazada. Embalaje dañado.", "created_at": "2025-12-11T16:10:00Z", "created_by_user_id": 4 },
+
+    { "id": 2020, "transfer_id": 11, "scope": "HEADER", "line_id": null, "message_type": "NOTE", "message_text": "Pendiente validar stock real antes de despachar.", "created_at": "2025-12-12T08:45:00Z", "created_by_user_id": 4 },
+
+    { "id": 2021, "transfer_id": 12, "scope": "HEADER", "line_id": null, "message_type": "WORKFLOW", "message_text": "Despacho confirmado.", "created_at": "2025-12-13T09:05:00Z", "created_by_user_id": 1 }
+  ]
+}

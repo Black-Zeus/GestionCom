@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Finanzas · Gastos Operativos</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar__row">
+      <div class="topbar__left">
+        <div class="brand">
+          <div class="brand__logo">GC</div>
+          <div class="brand__meta">
+            <div class="brand__title">GestionCom</div>
+            <div class="brand__subtitle">Finanzas · Gastos Operativos</div>
+          </div>
+        </div>
+
+        <nav class="breadcrumb" aria-label="breadcrumb">
+          <a href="#" class="breadcrumb__link">Finanzas</a>
+          <span class="breadcrumb__sep">/</span>
+          <span class="breadcrumb__current">Gastos Operativos</span>
+          <span class="breadcrumb__path">(<code>finance/expenses</code>)</span>
+        </nav>
+      </div>
+
+      <div class="topbar__right">
+        <button class="btn btn--ghost" id="btnRefresh" type="button">Actualizar</button>
+        <button class="btn btn--primary" id="btnNewExpense" type="button">+ Nuevo gasto</button>
+        <button class="btn btn--secondary" id="btnNewReplenishment" type="button">+ Reposición</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page">
+    <!-- KPI -->
+    <section class="kpis" aria-label="KPIs">
+      <div class="kpi">
+        <div class="kpi__label">Total gastos</div>
+        <div class="kpi__value" id="kpiTotalExpenses">$0</div>
+        <div class="kpi__hint" id="kpiTotalExpensesHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Aprobados</div>
+        <div class="kpi__value kpi__value--ok" id="kpiApproved">$0</div>
+        <div class="kpi__hint" id="kpiApprovedHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Pendientes</div>
+        <div class="kpi__value kpi__value--warn" id="kpiPending">$0</div>
+        <div class="kpi__hint" id="kpiPendingHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Reposiciones</div>
+        <div class="kpi__value kpi__value--info" id="kpiReplenishments">$0</div>
+        <div class="kpi__hint" id="kpiReplenishmentsHint">—</div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi__label">Saldo neto</div>
+        <div class="kpi__value" id="kpiNet">$0</div>
+        <div class="kpi__hint" id="kpiNetHint">Reposiciones − Gastos</div>
+      </div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="card" aria-label="Filtros">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Filtros</h2>
+          <p class="card__subtitle">Filtra por texto, fechas, estado, categoría y fondo/caja chica.</p>
+        </div>
+        <div class="card__actions">
+          <button class="btn btn--ghost" id="btnResetFilters" type="button">Limpiar</button>
+          <button class="btn btn--primary" id="btnApplyFilters" type="button">Aplicar</button>
+        </div>
+      </div>
+
+      <div class="card__body">
+        <form class="filters" id="filtersForm">
+          <div class="field">
+            <label class="label" for="q">Búsqueda</label>
+            <input class="input" id="q" name="q" placeholder="Ej: proveedor, documento, glosa, código…" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="dateFrom">Desde</label>
+            <input class="input" id="dateFrom" name="dateFrom" type="date" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="dateTo">Hasta</label>
+            <input class="input" id="dateTo" name="dateTo" type="date" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="status">Estado</label>
+            <select class="select" id="status" name="status">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="category">Categoría</label>
+            <select class="select" id="category" name="category">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="fund">Fondo</label>
+            <select class="select" id="fund" name="fund">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="field field--inline">
+            <label class="checkbox">
+              <input type="checkbox" id="onlyWithReceipt" name="onlyWithReceipt" />
+              <span>Solo con comprobante</span>
+            </label>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Tabla -->
+    <section class="card" aria-label="Listado">
+      <div class="card__header">
+        <div>
+          <h2 class="card__title">Movimientos</h2>
+          <p class="card__subtitle">
+            Se listan gastos (egresos) y reposiciones (ingresos). Acciones: ver detalle, editar (solo si no está finalizado), aprobar/rechazar (con confirmación) y reversar.
+          </p>
+        </div>
+
+        <div class="card__actions">
+          <div class="chip" id="resultsCount">0 resultados</div>
+          <select class="select select--compact" id="sortBy" aria-label="Orden">
+            <option value="date_desc">Fecha ↓</option>
+            <option value="date_asc">Fecha ↑</option>
+            <option value="amount_desc">Monto ↓</option>
+            <option value="amount_asc">Monto ↑</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card__body card__body--flush">
+        <div class="table-wrap">
+          <table class="table" id="movementsTable">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Código</th>
+                <th>Fondo</th>
+                <th>Categoría</th>
+                <th>Proveedor</th>
+                <th class="th-right">Monto</th>
+                <th>Estado</th>
+                <th>Comprobante</th>
+                <th class="th-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="movementsTbody"></tbody>
+          </table>
+        </div>
+
+        <div class="table-footer">
+          <div class="muted" id="tableSummary">—</div>
+          <div class="pager">
+            <button class="btn btn--ghost btn--sm" id="btnPrev" type="button">Anterior</button>
+            <div class="pager__info" id="pageInfo">1 / 1</div>
+            <button class="btn btn--ghost btn--sm" id="btnNext" type="button">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Crear/Editar -->
+  <div class="modal" id="editModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="editModal"></div>
+    <div class="modal__panel" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="editModalTitle">Nuevo movimiento</div>
+          <div class="modal__subtitle" id="editModalSubtitle">Complete los campos requeridos.</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="editModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <form id="editForm" class="form-grid">
+          <input type="hidden" id="editMode" value="expense" />
+          <input type="hidden" id="editId" value="" />
+
+          <div class="field">
+            <label class="label" for="editType">Tipo</label>
+            <select class="select" id="editType">
+              <option value="expense">Gasto (egreso)</option>
+              <option value="replenishment">Reposición (ingreso)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="editDate">Fecha</label>
+            <input class="input" id="editDate" type="date" required />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editFund">Fondo</label>
+            <select class="select" id="editFund" required></select>
+          </div>
+
+          <div class="field" id="editCategoryField">
+            <label class="label" for="editCategory">Categoría</label>
+            <select class="select" id="editCategory"></select>
+          </div>
+
+          <div class="field" id="editProviderField">
+            <label class="label" for="editProvider">Proveedor</label>
+            <input class="input" id="editProvider" placeholder="Nombre proveedor" />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editAmount">Monto</label>
+            <input class="input" id="editAmount" type="number" min="0" step="0.01" required />
+          </div>
+
+          <div class="field">
+            <label class="label" for="editDoc">Documento</label>
+            <input class="input" id="editDoc" placeholder="N° boleta/factura/transferencia" />
+          </div>
+
+          <div class="field field--full">
+            <label class="label" for="editDesc">Descripción</label>
+            <textarea class="textarea" id="editDesc" rows="3" placeholder="Glosa / detalle del movimiento"></textarea>
+          </div>
+
+          <div class="field field--inline" id="editReceiptField">
+            <label class="checkbox">
+              <input type="checkbox" id="editHasReceipt" />
+              <span>Posee comprobante</span>
+            </label>
+          </div>
+
+          <div class="field" id="editStatusField">
+            <label class="label" for="editStatus">Estado</label>
+            <select class="select" id="editStatus"></select>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="editModalHint">Los cambios se mantienen en memoria (demo).</div>
+        <div class="modal__footerActions">
+          <button class="btn btn--ghost" type="button" data-close="editModal">Cancelar</button>
+          <button class="btn btn--primary" id="btnSave" type="button">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Detalle (VIEW con misma estructura que EDIT) -->
+  <div class="modal" id="detailModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="detailModal"></div>
+    <div class="modal__panel" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="detailTitle">Detalle</div>
+          <div class="modal__subtitle" id="detailSubtitle">—</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="detailModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <!-- Formulario SOLO LECTURA, misma grilla que Edit -->
+        <form class="form-grid view-form" id="viewForm">
+          <input type="hidden" id="viewMode" value="expense" />
+
+          <div class="field">
+            <label class="label" for="viewType">Tipo</label>
+            <select class="select" id="viewType" disabled>
+              <option value="expense">Gasto (egreso)</option>
+              <option value="replenishment">Reposición (ingreso)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewDate">Fecha</label>
+            <input class="input" id="viewDate" type="date" disabled />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewFund">Fondo</label>
+            <select class="select" id="viewFund" disabled></select>
+          </div>
+
+          <div class="field" id="viewCategoryField">
+            <label class="label" for="viewCategory">Categoría</label>
+            <select class="select" id="viewCategory" disabled></select>
+          </div>
+
+          <div class="field" id="viewProviderField">
+            <label class="label" for="viewProvider">Proveedor/Origen</label>
+            <input class="input" id="viewProvider" disabled />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewAmount">Monto</label>
+            <input class="input" id="viewAmount" type="number" disabled />
+          </div>
+
+          <div class="field">
+            <label class="label" for="viewDoc">Documento</label>
+            <input class="input" id="viewDoc" disabled />
+          </div>
+
+          <div class="field field--full">
+            <label class="label" for="viewDesc">Descripción</label>
+            <textarea class="textarea" id="viewDesc" rows="3" disabled></textarea>
+          </div>
+
+          <div class="field field--inline" id="viewReceiptField">
+            <label class="checkbox">
+              <input type="checkbox" id="viewHasReceipt" disabled />
+              <span>Posee comprobante</span>
+            </label>
+          </div>
+
+          <div class="field" id="viewStatusField">
+            <label class="label" for="viewStatus">Estado</label>
+            <select class="select" id="viewStatus" disabled></select>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="detailHint">Vista de solo lectura.</div>
+        <div class="modal__footerActions">
+          <button class="btn btn--ghost" type="button" data-close="detailModal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal: Confirmación Aprobar/Rechazar -->
+  <div class="modal" id="confirmModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal__backdrop" data-close="confirmModal"></div>
+    <div class="modal__panel" role="document">
+      <div class="modal__header">
+        <div>
+          <div class="modal__title" id="confirmTitle">Confirmación</div>
+          <div class="modal__subtitle" id="confirmSubtitle">—</div>
+        </div>
+        <button class="iconbtn" type="button" data-close="confirmModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <div class="confirm-box">
+          <div class="confirm-box__msg" id="confirmMessage">¿Desea confirmar la acción?</div>
+          <div class="confirm-box__meta" id="confirmMeta">—</div>
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <div class="muted" id="confirmHint">
+          Al confirmar, Aprobar/Rechazar quedarán deshabilitados y se habilitará “Reversar”.
+        </div>
+        <div class="modal__footerActions">
+          <button class="btn btn--ghost" type="button" data-close="confirmModal">Cancelar</button>
+          <button class="btn btn--primary" id="btnConfirmYes" type="button">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

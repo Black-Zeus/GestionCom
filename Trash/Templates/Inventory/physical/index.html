@@ -1,0 +1,505 @@
+<!-- index.html -->
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GestionCom • inventory/physical-counts</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-left">
+          <div class="breadcrumb">
+            <span class="crumb">Inventario</span>
+            <span class="sep">›</span>
+            <span class="crumb">Control</span>
+            <span class="sep">›</span>
+            <span class="crumb is-current">Inventario Físico</span>
+          </div>
+
+          <div class="header-title">
+            <h1>Inventario Físico</h1>
+            <p class="muted">
+              Ruta: <code>inventory/physical-counts</code>
+              <span class="dot">•</span>
+              Workflow: <strong>Pendiente</strong> / <strong>Aprobado</strong> / <strong>Rechazado</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btnNew" class="btn btn-primary">
+            <span class="btn-ic">＋</span>
+            Nuevo conteo
+          </button>
+          <button id="btnReload" class="btn btn-ghost" title="Recargar data.json">
+            <span class="btn-ic">⟳</span>
+            Recargar
+          </button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total conteos</div>
+            <div class="kpi-value" id="kpiTotal">—</div>
+            <div class="kpi-sub muted" id="kpiTotalSub">Según filtros actuales</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Pendientes</div>
+            <div class="kpi-value" id="kpiPending">—</div>
+            <div class="kpi-sub muted">Abiertos</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Aprobados</div>
+            <div class="kpi-value" id="kpiApproved">—</div>
+            <div class="kpi-sub muted">Finalizados</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Rechazados</div>
+            <div class="kpi-value" id="kpiRejected">—</div>
+            <div class="kpi-sub muted">Finalizados</div>
+          </div>
+
+          <div class="kpi-card kpi-accent">
+            <div class="kpi-label">Neto diferencia</div>
+            <div class="kpi-value" id="kpiNetDiff">—</div>
+            <div class="kpi-sub muted" id="kpiAbsDiff">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Filtros</h2>
+            <p class="muted">Búsqueda + rango de fechas + estado + tipo + bodega + categoría + centro de costo + toggles</p>
+          </div>
+
+          <div class="card-actions">
+            <button id="btnClearFilters" class="btn btn-ghost">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="field">
+              <label for="filterTerm">Búsqueda</label>
+              <input id="filterTerm" type="text" placeholder="Código, bodega, notas, tipo…" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateFrom">Desde</label>
+              <input id="filterDateFrom" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateTo">Hasta</label>
+              <input id="filterDateTo" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterStatus">Estado</label>
+              <select id="filterStatus">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterType">Tipo de conteo</label>
+              <select id="filterType">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterWarehouse">Bodega</label>
+              <select id="filterWarehouse">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCategory">Categoría</label>
+              <select id="filterCategory">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCostCenter">Centro de costo</label>
+              <select id="filterCostCenter">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="toggles">
+              <label class="toggle">
+                <input id="toggleOnlyWithDiff" type="checkbox" />
+                <span>Solo con diferencias</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleUrgent" type="checkbox" />
+                <span>Solo urgentes</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleAudit" type="checkbox" />
+                <span>Requiere auditoría</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleHighDiscrepancy" type="checkbox" />
+                <span>Discrepancia alta</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Conteos</h2>
+            <p class="muted">
+              Mostrando <strong id="lblCount">0</strong> resultados
+            </p>
+          </div>
+
+          <div class="table-controls">
+            <div class="field inline">
+              <label for="sortBy">Orden</label>
+              <select id="sortBy">
+                <option value="date_desc">Fecha ↓</option>
+                <option value="date_asc">Fecha ↑</option>
+                <option value="diff_abs_desc">Dif. abs ↓</option>
+                <option value="diff_abs_asc">Dif. abs ↑</option>
+                <option value="diff_net_desc">Dif. neta ↓</option>
+                <option value="diff_net_asc">Dif. neta ↑</option>
+                <option value="acc_desc">Exactitud ↓</option>
+                <option value="acc_asc">Exactitud ↑</option>
+              </select>
+            </div>
+
+            <div class="field inline">
+              <label for="pageSize">Paginación</label>
+              <select id="pageSize">
+                <option value="10">10 / pág</option>
+                <option value="15">15 / pág</option>
+                <option value="20">20 / pág</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Código</th>
+                  <th>Bodega</th>
+                  <th>Tipo</th>
+                  <th>Estado</th>
+                  <th class="right">Ítems</th>
+                  <th class="right">Dif. neta</th>
+                  <th class="right">Dif. abs</th>
+                  <th class="right">Exactitud</th>
+                  <th class="center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <!-- rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="muted" id="lblPageInfo">—</div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+
+          <div id="emptyState" class="empty hidden">
+            <div class="empty-ic">🧾</div>
+            <div class="empty-title">Sin resultados</div>
+            <div class="empty-sub muted">Ajusta filtros o crea un nuevo conteo.</div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        GestionCom • Inventario → Control → Inventario Físico • Vanilla template (sin dependencias)
+      </footer>
+    </div>
+
+    <!-- Modal: Edit -->
+    <div id="modalEdit" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalEdit"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalEditTitle">Editar conteo</h3>
+            <p class="muted" id="modalEditSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalEdit" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form id="editForm" class="form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="editCode">Código</label>
+                <input id="editCode" type="text" placeholder="AUTOGENERADO" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editDate">Fecha</label>
+                <input id="editDate" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="editWarehouse">Bodega</label>
+                <select id="editWarehouse"></select>
+              </div>
+
+              <div class="field">
+                <label for="editStatus">Estado</label>
+                <select id="editStatus"></select>
+              </div>
+
+              <div class="field">
+                <label for="editType">Tipo de conteo</label>
+                <select id="editType"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCategory">Categoría</label>
+                <select id="editCategory"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCostCenter">Centro de costo</label>
+                <select id="editCostCenter"></select>
+              </div>
+
+              <div class="field span-2">
+                <label for="editNotes">Notas</label>
+                <textarea id="editNotes" rows="3" placeholder="Observaciones, cobertura, justificación…"></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <label class="toggle">
+                    <input id="editUrgent" type="checkbox" />
+                    <span>Urgente</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editAudit" type="checkbox" />
+                    <span>Requiere auditoría</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="subhead">
+                <div>
+                  <h4>Líneas</h4>
+                  <p class="muted">Variante + stock sistema + conteo físico. La diferencia se calcula automáticamente.</p>
+                </div>
+                <div class="subactions">
+                  <button id="btnAddLine" type="button" class="btn btn-ghost">
+                    <span class="btn-ic">＋</span> Agregar línea
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrap inner">
+                <table class="table table-lines">
+                  <thead>
+                    <tr>
+                      <th>Variante</th>
+                      <th class="right">Stock sistema</th>
+                      <th class="right">Conteo físico</th>
+                      <th class="right">Diferencia</th>
+                      <th>Lote</th>
+                      <th>Vence</th>
+                      <th class="center">Quitar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="linesBody">
+                    <!-- line rows -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="form-errors hidden" id="editErrors"></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="editMeta">—</div>
+          <div class="right">
+            <button class="btn btn-ghost" data-close="modalEdit" type="button">Cancelar</button>
+            <button id="btnSave" class="btn btn-primary" type="submit" form="editForm">Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View (misma estructura, solo lectura) -->
+    <div id="modalView" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalView"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalViewTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalViewTitle">Ver conteo</h3>
+            <p class="muted" id="modalViewSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalView" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form class="form">
+            <div class="form-grid readonly">
+              <div class="field">
+                <label for="viewCode">Código</label>
+                <input id="viewCode" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewDate">Fecha</label>
+                <input id="viewDate" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewWarehouse">Bodega</label>
+                <input id="viewWarehouse" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewStatus">Estado</label>
+                <input id="viewStatus" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewType">Tipo de conteo</label>
+                <input id="viewType" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewCategory">Categoría</label>
+                <input id="viewCategory" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label for="viewCostCenter">Centro de costo</label>
+                <input id="viewCostCenter" type="text" readonly />
+              </div>
+
+              <div class="field span-2">
+                <label for="viewNotes">Notas</label>
+                <textarea id="viewNotes" rows="3" readonly></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <label class="toggle">
+                    <input id="viewUrgentChk" type="checkbox" disabled />
+                    <span>Urgente</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="viewAuditChk" type="checkbox" disabled />
+                    <span>Requiere auditoría</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <div class="subhead">
+                <div>
+                  <h4>Líneas</h4>
+                  <p class="muted">Detalle de variantes y cantidades del inventario físico.</p>
+                </div>
+              </div>
+
+              <div class="table-wrap inner">
+                <table class="table table-lines">
+                  <thead>
+                    <tr>
+                      <th>Variante</th>
+                      <th class="right">Stock sistema</th>
+                      <th class="right">Conteo físico</th>
+                      <th class="right">Diferencia</th>
+                      <th>Lote</th>
+                      <th>Vence</th>
+                    </tr>
+                  </thead>
+                  <tbody id="viewLinesBody">
+                    <!-- line rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="viewMeta">—</div>
+          <div class="right">
+            <button class="btn btn-ghost" data-close="modalView" type="button">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Confirm approve/reject -->
+    <div id="modalConfirm" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalConfirm"></div>
+      <div class="modal-panel modal-sm" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalConfirmTitle">Confirmación</h3>
+            <p class="muted" id="modalConfirmSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalConfirm" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="confirm-box">
+            <div class="confirm-ic" id="confirmIcon">!</div>
+            <div>
+              <div class="confirm-msg" id="confirmMsg">—</div>
+              <div class="muted confirm-sub" id="confirmSub">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="confirmMeta">—</div>
+          <div class="right">
+            <button class="btn btn-ghost" data-close="modalConfirm" type="button">Cancelar</button>
+            <button id="btnConfirmYes" class="btn btn-danger" type="button">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

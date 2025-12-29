@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GestionCom • suppliers/contacts</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Header -->
+      <header class="page-header">
+        <div class="header-left">
+          <div class="breadcrumb">
+            <span class="crumb">Proveedores</span>
+            <span class="sep">›</span>
+            <span class="crumb is-current">Contactos</span>
+          </div>
+
+          <div class="header-title">
+            <h1>Contactos de Proveedores</h1>
+            <p class="muted">
+              Ruta: <code>suppliers/contacts</code>
+              <span class="dot">•</span>
+              Workflow: <strong>Pendiente</strong> / <strong>Aprobado</strong> / <strong>Rechazado</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btnNew" class="btn btn-primary">
+            <span class="btn-ic">＋</span>
+            Nuevo contacto
+          </button>
+          <button id="btnReload" class="btn btn-ghost" title="Recargar data.json">
+            <span class="btn-ic">⟳</span>
+            Recargar
+          </button>
+        </div>
+      </header>
+
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total contactos</div>
+            <div class="kpi-value" id="kpiTotal">—</div>
+            <div class="kpi-sub muted" id="kpiTotalSub">Según filtros actuales</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Pendientes</div>
+            <div class="kpi-value" id="kpiPending">—</div>
+            <div class="kpi-sub muted">Por validar</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Aprobados</div>
+            <div class="kpi-value" id="kpiApproved">—</div>
+            <div class="kpi-sub muted">Finalizados</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Rechazados</div>
+            <div class="kpi-value" id="kpiRejected">—</div>
+            <div class="kpi-sub muted">Finalizados</div>
+          </div>
+
+          <div class="kpi-card kpi-accent">
+            <div class="kpi-label">Neto activos</div>
+            <div class="kpi-value" id="kpiNetActive">—</div>
+            <div class="kpi-sub muted" id="kpiNetActiveSub">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Filtros</h2>
+            <p class="muted">Búsqueda + rango de fechas + estado + tipo + proveedor + centro de costo + toggles</p>
+          </div>
+
+          <div class="card-actions">
+            <button id="btnClearFilters" class="btn btn-ghost">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="filters-grid">
+            <div class="field">
+              <label for="filterTerm">Búsqueda</label>
+              <input
+                id="filterTerm"
+                type="text"
+                placeholder="Nombre, email, teléfono, proveedor, cargo, notas…"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="field">
+              <label for="filterDateFrom">Desde</label>
+              <input id="filterDateFrom" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterDateTo">Hasta</label>
+              <input id="filterDateTo" type="date" />
+            </div>
+
+            <div class="field">
+              <label for="filterStatus">Estado</label>
+              <select id="filterStatus">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterType">Tipo</label>
+              <select id="filterType">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCategory">Categoría</label>
+              <select id="filterCategory">
+                <option value="">Todas</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterSupplier">Proveedor</label>
+              <select id="filterSupplier">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="filterCostCenter">Centro de costo</label>
+              <select id="filterCostCenter">
+                <option value="">Todos</option>
+              </select>
+            </div>
+
+            <div class="toggles">
+              <label class="toggle">
+                <input id="togglePrimaryOnly" type="checkbox" />
+                <span>Solo principales</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleActiveOnly" type="checkbox" />
+                <span>Solo activos</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleWithEmail" type="checkbox" />
+                <span>Solo con email</span>
+              </label>
+
+              <label class="toggle">
+                <input id="toggleDoNotContact" type="checkbox" />
+                <span>No contactar</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Table -->
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Contactos</h2>
+            <p class="muted">
+              Mostrando <strong id="lblCount">0</strong> resultados
+            </p>
+          </div>
+
+          <div class="table-controls">
+            <div class="field inline">
+              <label for="sortBy">Orden</label>
+              <select id="sortBy">
+                <option value="date_desc">Fecha ↓</option>
+                <option value="date_asc">Fecha ↑</option>
+                <option value="name_asc">Nombre ↑</option>
+                <option value="name_desc">Nombre ↓</option>
+                <option value="supplier_asc">Proveedor ↑</option>
+                <option value="supplier_desc">Proveedor ↓</option>
+              </select>
+            </div>
+
+            <div class="field inline">
+              <label for="pageSize">Paginación</label>
+              <select id="pageSize">
+                <option value="10">10 / pág</option>
+                <option value="15">15 / pág</option>
+                <option value="20">20 / pág</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Proveedor</th>
+                  <th>Contacto</th>
+                  <th>Tipo</th>
+                  <th>Categoría</th>
+                  <th>Estado</th>
+                  <th>Canales</th>
+                  <th class="center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-foot">
+            <div class="muted" id="lblPageInfo">—</div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+
+          <div id="emptyState" class="empty hidden">
+            <div class="empty-ic">👤</div>
+            <div class="empty-title">Sin resultados</div>
+            <div class="empty-sub muted">Ajusta filtros o crea un nuevo contacto.</div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer muted">
+        GestionCom • Proveedores → Contactos • Vanilla template (sin dependencias)
+      </footer>
+    </div>
+
+    <!-- Modal: Edit -->
+    <div id="modalEdit" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalEdit"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalEditTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalEditTitle">Editar contacto</h3>
+            <p class="muted" id="modalEditSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalEdit" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <form id="editForm" class="form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="editSupplier">Proveedor</label>
+                <select id="editSupplier"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCreatedAt">Fecha (alta)</label>
+                <input id="editCreatedAt" type="datetime-local" />
+              </div>
+
+              <div class="field">
+                <label for="editFullName">Nombre completo</label>
+                <input id="editFullName" type="text" placeholder="Ej: María Pérez" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editPosition">Cargo</label>
+                <input id="editPosition" type="text" placeholder="Ej: Ejecutiva Comercial" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editType">Tipo</label>
+                <select id="editType"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCategory">Categoría</label>
+                <select id="editCategory"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCostCenter">Centro de costo</label>
+                <select id="editCostCenter"></select>
+              </div>
+
+              <div class="field">
+                <label for="editStatus">Estado (workflow)</label>
+                <select id="editStatus" disabled></select>
+                <div class="help muted">El estado se gestiona por Aprobar/Rechazar/Reversar.</div>
+              </div>
+
+              <div class="field">
+                <label for="editEmail">Email</label>
+                <input id="editEmail" type="email" placeholder="nombre@dominio.cl" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editPhone">Teléfono</label>
+                <input id="editPhone" type="text" placeholder="+56 9 1234 5678" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="editCountry">País</label>
+                <select id="editCountry"></select>
+              </div>
+
+              <div class="field">
+                <label for="editCity">Ciudad</label>
+                <input id="editCity" type="text" placeholder="Ej: Santiago" autocomplete="off" />
+              </div>
+
+              <div class="field span-2">
+                <label for="editAddress">Dirección</label>
+                <input id="editAddress" type="text" placeholder="Ej: Av. Principal 123" autocomplete="off" />
+              </div>
+
+              <div class="field span-2">
+                <label for="editNotes">Notas</label>
+                <textarea id="editNotes" rows="3" placeholder="Observaciones, disponibilidad, restricciones…"></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <label class="toggle">
+                    <input id="editIsPrimary" type="checkbox" />
+                    <span>Principal</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editIsActive" type="checkbox" />
+                    <span>Activo</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editPrefersEmail" type="checkbox" />
+                    <span>Prefiere email</span>
+                  </label>
+                  <label class="toggle">
+                    <input id="editDoNotContact" type="checkbox" />
+                    <span>No contactar</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-errors hidden" id="editErrors"></div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="editMeta">—</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" data-close="modalEdit">Cancelar</button>
+            <button id="btnSave" class="btn btn-primary">
+              <span class="btn-ic">💾</span>
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View -->
+    <div id="modalView" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalView"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalViewTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalViewTitle">Ver contacto</h3>
+            <p class="muted" id="modalViewSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalView" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form is-readonly" id="viewForm">
+            <div class="form-grid">
+              <div class="field">
+                <label>Proveedor</label>
+                <input id="viewSupplier" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Fecha (alta)</label>
+                <input id="viewCreatedAt" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Nombre completo</label>
+                <input id="viewFullName" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Cargo</label>
+                <input id="viewPosition" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Tipo</label>
+                <input id="viewType" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Categoría</label>
+                <input id="viewCategory" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Centro de costo</label>
+                <input id="viewCostCenter" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Estado</label>
+                <input id="viewStatus" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Email</label>
+                <input id="viewEmail" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Teléfono</label>
+                <input id="viewPhone" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>País</label>
+                <input id="viewCountry" type="text" readonly />
+              </div>
+
+              <div class="field">
+                <label>Ciudad</label>
+                <input id="viewCity" type="text" readonly />
+              </div>
+
+              <div class="field span-2">
+                <label>Dirección</label>
+                <input id="viewAddress" type="text" readonly />
+              </div>
+
+              <div class="field span-2">
+                <label>Notas</label>
+                <textarea id="viewNotes" rows="3" readonly></textarea>
+              </div>
+
+              <div class="field span-2">
+                <div class="inline-split">
+                  <span class="chip" id="viewFlagPrimary">—</span>
+                  <span class="chip" id="viewFlagActive">—</span>
+                  <span class="chip" id="viewFlagPrefersEmail">—</span>
+                  <span class="chip" id="viewFlagDoNotContact">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="viewMeta">—</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" data-close="modalView">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Confirm -->
+    <div id="modalConfirm" class="modal hidden" aria-hidden="true">
+      <div class="modal-backdrop" data-close="modalConfirm"></div>
+      <div class="modal-panel modal-sm" role="dialog" aria-modal="true" aria-labelledby="modalConfirmTitle">
+        <div class="modal-head">
+          <div>
+            <h3 id="modalConfirmTitle">Confirmación</h3>
+            <p class="muted" id="modalConfirmSubtitle">—</p>
+          </div>
+          <button class="icon-btn" data-close="modalConfirm" title="Cerrar">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="confirm-box">
+            <div class="confirm-ic" id="confirmIcon">?</div>
+            <div>
+              <div class="confirm-title" id="confirmTitle">—</div>
+              <div class="confirm-sub muted" id="confirmSub">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <div class="left muted" id="confirmMeta">—</div>
+          <div class="right-actions">
+            <button class="btn btn-ghost" data-close="modalConfirm">Cancelar</button>
+            <button id="btnConfirmOk" class="btn btn-primary">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

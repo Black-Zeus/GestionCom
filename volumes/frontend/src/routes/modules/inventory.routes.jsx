@@ -83,27 +83,9 @@ export const inventoryRoutes = [
         requiresAuth: true
     },
     {
-        path: '/suppliers/products',
-        component: SupplierProductsPage,
-        title: 'Productos por Proveedor',
-        requiresAuth: true
-    },
-    {
-        path: '/suppliers/purchase-orders',
-        component: PurchaseOrdersPage,
-        title: 'Órdenes de Compra',
-        requiresAuth: true
-    },
-    {
         path: '/suppliers/purchase-history',
         component: SupplierPurchaseHistoryPage,
         title: 'Historial de Compras',
-        requiresAuth: true
-    },
-    {
-        path: '/suppliers/evaluation',
-        component: SupplierEvaluationPage,
-        title: 'Evaluación de Proveedores',
         requiresAuth: true
     },
     {
