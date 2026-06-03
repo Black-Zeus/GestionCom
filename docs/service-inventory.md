@@ -18,17 +18,32 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 | `nginx` | Core | Reverse proxy de entrada | Mantener |
 | `frontend` | Core | Interfaz web | Mantener |
 | `backend-api` | Core | API principal de negocio, auth, usuarios y datos | Mantener |
-| `backend-docs` | Review | API documental y carga de archivos | Validar necesidad |
-| `backend-tasks` | Review | API HTTP para tareas/colas | Validar necesidad o fusion |
-| `backend-worker` | Core/Review | Worker Celery general | Mantener si hay jobs reales |
-| `worker-notifications` | Review | Worker Celery para notificaciones | Validar si hay dominio de notificaciones |
-| `backend-beat` | Review | Scheduler Celery Beat | Mantener solo si existen tareas periodicas |
+| `backend-docs` | Review | API documental y acceso a MinIO | Validar si debe ser servicio separado |
+| `backend-tasks` | Review | API HTTP para tareas/colas | Mantener si orquesta respaldos/jobs |
+| `backend-worker` | Core/Review | Worker Celery general | Mantener para trabajos async |
+| `worker-notifications` | Review | Worker Celery para notificaciones | Diferir hasta confirmar canal |
+| `backend-beat` | Review | Scheduler Celery Beat | Mantener si hay respaldos programados |
 | `mariadb` | Dependency | Base de datos transaccional | Mantener |
 | `redis` | Dependency | Cache, sesiones, rate limit y backend Celery | Mantener |
-| `rabbitmq` | Dependency | Broker de mensajeria Celery | Mantener si Celery sigue separado |
+| `rabbitmq` | Dependency/Review | Broker de mensajeria Celery | Mantener si Celery se conserva |
 | `minio` | Dependency/Review | Almacenamiento S3 compatible | Mantener si docs/adjuntos aplica |
 | `mailpit` | Tool | Captura de emails en dev | Mantener solo dev/QA |
 | `redisinsight` | Tool | UI para inspeccionar Redis | Mantener bajo perfil `tools` |
+
+## Notas de intencion funcional
+
+Estas notas vienen de la definicion funcional actual y ayudan a separar intencion valida de implementacion posiblemente sobredimensionada.
+
+| Servicio | Intencion declarada | Lectura actual |
+|---|---|---|
+| `backend-docs` | Generar una API para consumir MinIO | Valido si hay documentos/adjuntos en MVP; revisar si requiere servicio separado o puede vivir en `backend-api`. Evitar nombre publico `/api/docs` si puede confundirse con documentacion OpenAPI. Preferir `/api/documents` o `/api/files`. |
+| `backend-tasks` | Gestionar tareas asincronas y respaldos programados | Valido como API de orquestacion si expone estado, historial, disparo manual o administracion de jobs. |
+| `backend-worker` | Procesar trabajos en segundo plano/async | Valido si Celery se conserva. Es el ejecutor real de trabajos. |
+| `worker-notifications` | Canal Celery para notificaciones | Diferir. Puede no ser necesario si las notificaciones iniciales se resuelven con SSE desde `backend-api` o con eventos simples. |
+| `backend-beat` | No recordado inicialmente | Corresponde a scheduler de tareas periodicas Celery. Cobra sentido para respaldos programados, limpiezas o jobs recurrentes. |
+| `rabbitmq` | No recordado inicialmente | Corresponde al broker de mensajes para Celery. No programa tareas; transporta trabajos hacia workers. |
+
+Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-tasks` como API de administracion de jobs, mantener `backend-beat` solo si respaldos programados entran al demo viable, y diferir `worker-notifications`. Para archivos, decidir si MinIO se consume desde un modulo de `backend-api` antes de sostener `backend-docs` como servicio independiente.
 
 ## Servicios
 
@@ -70,9 +85,11 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** `minio`, `redis`.
 
-**Observacion:** El servicio esta en compose y tiene healthcheck, pero el proxy dev tiene comentado el bloque `/api/documents/`. Si el frontend no consume documentos todavia, puede ser funcionalidad futura o arrastre legacy.
+**Intencion funcional:** Se penso como una API para consumir MinIO desde el sistema. La idea funcional es valida para documentos, adjuntos, respaldos o reportes.
 
-**Criterio de permanencia:** Review. Mantener si existe dominio documental real: adjuntos, facturas, respaldos, reportes o archivos de productos. Si no hay flujo funcional, dejar fuera de dependencias core o moverlo a perfil.
+**Observacion:** El servicio esta en compose y tiene healthcheck, pero el proxy dev tiene comentado el bloque `/api/documents/`. Si el frontend no consume documentos todavia, puede ser funcionalidad futura o arrastre legacy. Tambien hay que evitar exponerlo como `/api/docs` si eso puede confundirse con la documentacion de APIs; una ruta publica mas clara seria `/api/documents` o `/api/files`.
+
+**Criterio de permanencia:** Review. Mantener como servicio separado solo si el dominio documental justifica aislamiento. Si el objetivo es apenas consumir MinIO para adjuntos simples, puede implementarse como modulo dentro de `backend-api` y dejar `backend-docs` fuera del compose base.
 
 ### `backend-tasks`
 
@@ -82,9 +99,11 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** `redis`, `rabbitmq`, `mariadb`.
 
-**Observacion:** Existe junto a workers Celery. Puede ser util como API de orquestacion de trabajos, pero tambien puede ser duplicacion si `backend-api` puede disparar jobs directamente al broker.
+**Intencion funcional:** Se penso para generar tareas asincronas y manejar procesos como respaldos programados.
 
-**Criterio de permanencia:** Review. Decidir si sera una API real de orquestacion o si se fusiona en `backend-api` y se conserva solo `backend-worker`.
+**Observacion:** Existe junto a workers Celery. Puede ser util como API de orquestacion de trabajos, especialmente si debe exponer estado, historial, cancelacion, reintentos, programacion manual o disparo administrativo. Tambien puede ser duplicacion si `backend-api` solo necesita encolar un job simple.
+
+**Criterio de permanencia:** Review con tendencia a mantener si entran respaldos/jobs al MVP. Decidir si sera una API real de orquestacion o si se fusiona en `backend-api` y se conserva solo `backend-worker`.
 
 ### `backend-worker`
 
@@ -94,7 +113,9 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** `redis`, `rabbitmq`, `mariadb`.
 
-**Criterio de permanencia:** Mantener si existen tareas asincronas reales: procesos largos, reportes, cierres, sincronizaciones, jobs de inventario o integraciones. Si no hay jobs reales, puede pausarse temporalmente.
+**Intencion funcional:** Procesar trabajos en segundo plano o asincronos.
+
+**Criterio de permanencia:** Mantener si se confirma Celery para tareas asincronas. Es el componente que realmente ejecuta procesos largos, reportes, cierres, sincronizaciones, backups o integraciones.
 
 ### `worker-notifications`
 
@@ -104,9 +125,11 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** `redis`, `rabbitmq`, `backend-worker`.
 
-**Observacion:** Es una separacion valida cuando notificaciones tienen volumen, SLA o retries propios. Si solo existe una tarea demo, puede ser premature split.
+**Intencion funcional:** Se penso como canal de Celery para notificaciones. Aun no esta confirmado si se necesita ese canal; una alternativa para eventos de UI es SSE.
 
-**Criterio de permanencia:** Review. Mantener si hay roadmap concreto de emails, alertas, recordatorios, webhooks o notificaciones internas. Si no, fusionar con `backend-worker` o mover a perfil.
+**Observacion:** Es una separacion valida cuando notificaciones tienen volumen, SLA o retries propios. Si solo existe una tarea demo, puede ser premature split. SSE no reemplaza todos los casos de notificacion asincrona, pero puede cubrir eventos live hacia frontend sin sostener un worker separado al inicio.
+
+**Criterio de permanencia:** Review con tendencia a diferir. Mantener si hay roadmap concreto de emails, alertas, recordatorios, webhooks o notificaciones internas con procesamiento propio. Si no, fusionar con `backend-worker`, mover a perfil o retirar del compose base.
 
 ### `backend-beat`
 
@@ -116,9 +139,11 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** `redis`, `rabbitmq`, `backend-worker`.
 
-**Observacion:** Actualmente debe validarse si existen tareas periodicas de negocio. Si no hay schedules reales, consume stack y dependencias sin aportar funcionalidad visible.
+**Intencion funcional:** No estaba recordado al revisar, pero tecnicamente corresponde al scheduler de Celery. Es el componente que dispara tareas periodicas; por ejemplo respaldos programados.
 
-**Criterio de permanencia:** Review. Mantener solo si hay jobs periodicos definidos: expiraciones, limpieza, reportes programados, conciliaciones, cierres, recordatorios o auditorias.
+**Observacion:** Actualmente debe validarse si existen tareas periodicas de negocio. Si no hay schedules reales, consume stack y dependencias sin aportar funcionalidad visible. Si respaldos programados entran al MVP o demo viable, `backend-beat` vuelve a tener justificacion clara.
+
+**Criterio de permanencia:** Review. Mantener solo si hay jobs periodicos definidos: backups, expiraciones, limpieza, reportes programados, conciliaciones, cierres, recordatorios o auditorias.
 
 ### `mariadb`
 
@@ -148,7 +173,9 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 **Dependencias:** Ninguna aplicativa.
 
-**Criterio de permanencia:** Mantener si se confirma arquitectura asincrona con Celery. Si se elimina Celery o se simplifica a Redis Queue, revisar.
+**Intencion funcional:** No estaba recordado al revisar, pero su rol tecnico es ser broker de mensajes para Celery. Recibe trabajos desde APIs/schedulers y los entrega a workers. No agenda tareas por si mismo; esa funcion es de `backend-beat`.
+
+**Criterio de permanencia:** Review con tendencia a mantener si se confirma Celery. Si se elimina Celery o se decide simplificar temporalmente usando Redis como broker/backend, revisar.
 
 ### `minio`
 
@@ -182,8 +209,9 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 
 ## Decisiones pendientes
 
-1. Confirmar si `backend-docs` es parte del MVP o si debe moverse a perfil hasta que exista flujo documental real.
-2. Confirmar si `backend-tasks` debe ser API independiente o si sus rutas deben fusionarse en `backend-api`.
-3. Confirmar si `worker-notifications` necesita cola dedicada o puede vivir dentro de `backend-worker`.
-4. Confirmar si `backend-beat` tiene tareas periodicas reales; si no, dejarlo inactivo hasta necesitar schedules.
-5. Revisar `scripts/nginx/nginx.dev.conf`: si docs/tasks se mantienen, decidir rutas proxy definitivas para `/api/documents/` y `/api/tasks/`.
+1. Decidir si MinIO se expone mediante `backend-docs` o mediante un modulo de `backend-api`. Evitar ruta publica `/api/docs` si puede confundirse con Swagger/OpenAPI; preferir `/api/documents` o `/api/files`.
+2. Decidir si `backend-tasks` sera API independiente de administracion de jobs o si `backend-api` encolara tareas directamente.
+3. Confirmar si respaldos programados entran al demo viable. Si entran, `backend-beat` y `backend-worker` tienen justificacion clara.
+4. Confirmar si Celery se mantiene como arquitectura async. Si se mantiene, `rabbitmq` tiene sentido como broker; si no, revisar simplificacion.
+5. Diferir `worker-notifications` hasta confirmar necesidad de canal dedicado. Para eventos live hacia frontend, evaluar SSE desde `backend-api`.
+6. Revisar `scripts/nginx/nginx.dev.conf`: si docs/tasks se mantienen, decidir rutas proxy definitivas para `/api/documents/` y `/api/tasks/`.
