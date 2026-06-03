@@ -43,6 +43,43 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 - Mantener Tailwind y su configuracion.
 - Priorizar carga lazy, bundles livianos y evitar introducir dependencias pesadas sin necesidad.
 - El modo claro/oscuro debe respetarse en layout, header, footer, side menu, modales y contenido.
+- Cuando se cree una pagina nueva, debe componetizarse en archivos separados. Evitar paginas monoliticas que mezclen layout, estado, secciones, formularios, tablas, modales y utilidades en un solo archivo.
+- Para paginas frontend, separar al menos:
+  - pagina contenedora
+  - secciones visuales principales
+  - formularios o paneles de accion
+  - componentes reutilizables del dominio
+  - hooks, servicios o helpers cuando existan reglas de estado o transformacion de datos
+- Mantener los componentes cerca del dominio que los consume, salvo que sean reutilizables por varios dominios; en ese caso deben vivir en una carpeta comun del sistema.
+
+## Nomenclatura
+
+- Frontend:
+  - Componentes, paginas, layouts y providers: `PascalCase`, por ejemplo `SalesSummaryCard.jsx`, `CashOpeningPage.jsx`.
+  - Hooks: `camelCase` con prefijo `use`, por ejemplo `useCashSession.js`.
+  - Funciones, variables, stores, servicios y helpers: `camelCase`, por ejemplo `formatCurrency`, `cashService.js`.
+  - Carpetas de dominio o feature: `kebab-case`, por ejemplo `sales-history`, `cash-opening`.
+  - Constantes globales: `SCREAMING_SNAKE_CASE`, por ejemplo `DEFAULT_PAGE_SIZE`.
+- Backend:
+  - Archivos, modulos, rutas, servicios, schemas y modelos Python: `snake_case`, por ejemplo `user_service.py`, `accounts_receivable.py`.
+  - Clases y modelos declarativos: `PascalCase`, por ejemplo `UserSession`, `WarehouseZone`.
+  - Funciones, variables y metodos: `snake_case`, por ejemplo `get_user_permissions`.
+  - Constantes: `SCREAMING_SNAKE_CASE`, por ejemplo `ACCESS_TOKEN_EXPIRE_MINUTES`.
+- Worker y tareas:
+  - Archivos de tareas, servicios y procesos: `snake_case`, por ejemplo `stock_alert_tasks.py`.
+  - Nombres de funciones de tarea: `snake_case` con verbo de accion, por ejemplo `send_pending_notifications`.
+  - Clases: `PascalCase`.
+  - Constantes: `SCREAMING_SNAKE_CASE`.
+- Docker, scripts y configuracion operativa:
+  - Archivos shell y scripts operativos: `snake_case` o `kebab-case`, manteniendo el estilo existente del directorio.
+  - Variables de ambiente: `SCREAMING_SNAKE_CASE`.
+  - Servicios Docker Compose: `kebab-case`, por ejemplo `backend-api`, `backend-worker`.
+- Base de datos:
+  - Tablas, columnas, vistas, rutinas y scopes SQL: `snake_case`.
+  - Migraciones SQL: usar exclusivamente el formato definido en la seccion "Migraciones SQL".
+- Documentacion:
+  - Archivos Markdown de guias y dominios: `kebab-case`, salvo archivos convencionales como `README.md` o `AGENTS.md`.
+  - Titulos visibles en documentos: texto natural en espanol, sin forzar el estilo del nombre de archivo.
 
 ## Backend E Infraestructura
 
@@ -53,6 +90,10 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 ## Migraciones SQL
 
 - Los scripts SQL de `scripts/mariadb/entrypoint` deben nombrarse con el formato `YYYYMMDD_HHMM_{scope}.sql`.
+- No modificar archivos SQL ya creados. Todo cambio posterior de schema, seed, vistas, rutinas o datos debe quedar en un nuevo script incremental.
+- Si el cambio requiere ajustar datos existentes, generar un script de normalizacion o migracion de datos junto al `ALTER` correspondiente, ya sea en el mismo incremental si es pequeno y claro, o en un archivo `data_` separado.
+- Los archivos base historicos deben conservarse como trazabilidad del estado original; no corregirlos retroactivamente salvo instruccion explicita del usuario.
+- En entornos con base ya levantada, aplicar el incremental explicitamente y validar con consultas de verificacion.
 - No usar prefijos numericos simples como `01_`, `02_` o similares para nuevas migraciones.
 - La hora `HHMM` define el orden de ejecucion lexicografico; si se agregan varias migraciones en la misma fecha, avanzar en incrementos de 1 minuto: `1300`, `1301`, `1302`, etc.
 - Separar las migraciones por dominio y tipo de contenido. Usar prefijos de scope como `schema_`, `alter_`, `seed_`, `views_`, `routines_` y `data_` segun corresponda.
