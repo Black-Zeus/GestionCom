@@ -11,16 +11,29 @@ fi
 # ======================
 # Validación de variables de entorno
 # ======================
+if [ -n "$MINIO_ROOT_USER_FILE" ] && [ -f "$MINIO_ROOT_USER_FILE" ]; then
+    MINIO_ROOT_USER="$(cat "$MINIO_ROOT_USER_FILE")"
+    export MINIO_ROOT_USER
+fi
+
+if [ -n "$MINIO_ROOT_PASSWORD_FILE" ] && [ -f "$MINIO_ROOT_PASSWORD_FILE" ]; then
+    MINIO_ROOT_PASSWORD="$(cat "$MINIO_ROOT_PASSWORD_FILE")"
+    export MINIO_ROOT_PASSWORD
+fi
+
 if [ -z "$MINIO_ROOT_USER" ] || [ -z "$MINIO_ROOT_PASSWORD" ]; then
     echo "Las variables MINIO_ROOT_USER o MINIO_ROOT_PASSWORD no están definidas. Abortando."
     exit 1
 fi
 
+MINIO_PORT="${MINIO_PORT:-9000}"
+MINIO_CONSOLE_PORT="${MINIO_CONSOLE_PORT:-9001}"
+
 # ======================
 # Iniciar MinIO en segundo plano
 # ======================
 echo "Iniciando MinIO en segundo plano..."
-minio server /data --console-address ":9001" &
+minio server /data --address ":${MINIO_PORT}" --console-address ":${MINIO_CONSOLE_PORT}" &
 
 # ======================
 # Esperar hasta que MinIO esté disponible
@@ -29,7 +42,7 @@ echo "Esperando a que MinIO esté disponible..."
 max_retries=30
 retry_count=0
 
-until curl -s http://localhost:9000/minio/health/live; do
+until curl -s "http://localhost:${MINIO_PORT}/minio/health/live"; do
     sleep 2
     retry_count=$((retry_count + 1))
     if [ $retry_count -eq $max_retries ]; then
@@ -42,7 +55,7 @@ done
 # Configurar MinIO Client (mc)
 # ======================
 echo "Configurando MinIO Client (mc)..."
-mc alias set local http://localhost:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD
+mc alias set local "http://localhost:${MINIO_PORT}" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 
 # ======================
 # Crear Buckets desde buckets.txt

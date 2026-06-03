@@ -62,12 +62,23 @@ env.zip
 !**/.env.template
 
 # Secretos reales separados de los .env de servicios
-secrets/
+secrets/*
 .secrets/
 **/secrets/
 **/.secrets/
 *.secret
 *.secrets
+!secrets/
+!secrets/README.md
+!secrets/dev/
+secrets/dev/*
+!secrets/dev/.gitkeep
+!secrets/qa/
+secrets/qa/*
+!secrets/qa/.gitkeep
+!secrets/prd/
+secrets/prd/*
+!secrets/prd/.gitkeep
 
 # =========================
 # LOGS Y DATOS TEMPORALES

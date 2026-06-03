@@ -1,10 +1,22 @@
 from minio import Minio
 import os
 
+
+def read_secret(name, default=None):
+    file_path = os.getenv(f"{name}_FILE")
+    if file_path:
+        try:
+            with open(file_path, "r", encoding="utf-8") as secret_file:
+                return secret_file.read().strip()
+        except OSError:
+            pass
+    return os.getenv(name, default)
+
+
 def get_minio_client():
-    minio_host = os.getenv("MINIO_HOST").replace("http://", "")
-    minio_access_key = os.getenv("MINIO_ACCESS_KEY")
-    minio_secret_key = os.getenv("MINIO_SECRET_KEY")
+    minio_host = os.getenv("MINIO_HOST", "http://minio:9000").replace("http://", "")
+    minio_access_key = read_secret("MINIO_ACCESS_KEY")
+    minio_secret_key = read_secret("MINIO_SECRET_KEY")
     
     return Minio(
         minio_host,

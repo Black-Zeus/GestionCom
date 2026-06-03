@@ -9,6 +9,18 @@ from dotenv import load_dotenv
 # Cargar variables del archivo .env
 load_dotenv()
 
+
+def read_secret(name: str, default: Optional[str] = None) -> Optional[str]:
+    file_path = os.getenv(f"{name}_FILE")
+    if file_path:
+        try:
+            with open(file_path, "r", encoding="utf-8") as secret_file:
+                return secret_file.read().strip()
+        except OSError:
+            pass
+    return os.getenv(name, default)
+
+
 class Settings:
     """Configuración centralizada de la aplicación."""
     
@@ -16,7 +28,7 @@ class Settings:
     APP_NAME: str = "API de Conectividad con la Base de Datos del Sistema"
     API_VERSION: str = os.getenv("API_VERSION", "1.0.0")
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    SECRET_KEY: str = os.getenv("JWT_SECRET_SYSTEM", "default_secret_key")
+    SECRET_KEY: str = read_secret("JWT_SECRET_SYSTEM", "default_secret_key")
     
     # ====== API Configuration ======
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
@@ -27,13 +39,13 @@ class Settings:
     MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
     MYSQL_PORT: int = int(os.getenv("MYSQL_PORT") or "3306")
     MYSQL_USER: str = os.getenv("MYSQL_USER")
-    MYSQL_PASSWORD: str = os.getenv("MYSQL_PASSWORD")
+    MYSQL_PASSWORD: str = read_secret("MYSQL_PASSWORD")
     MYSQL_DATABASE: str = os.getenv("MYSQL_DATABASE")
     
     # ====== Redis ======
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT") or "6379")
-    REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
+    REDIS_PASSWORD: Optional[str] = read_secret("REDIS_PASSWORD")
     REDIS_DB: int = int(os.getenv("REDIS_DB") or "0")
     REDIS_MAX_CONNECTIONS: int = int(os.getenv("REDIS_MAX_CONNECTIONS") or "10")
     REDIS_CONNECTION_TIMEOUT: int = int(os.getenv("REDIS_CONNECTION_TIMEOUT") or "5")
@@ -41,7 +53,7 @@ class Settings:
     
     # ====== JWT Configuration ======
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
-    JWT_SECRET_SYSTEM: str = os.getenv("JWT_SECRET_SYSTEM", "default_secret_key_change_in_production")
+    JWT_SECRET_SYSTEM: str = read_secret("JWT_SECRET_SYSTEM", "default_secret_key_change_in_production")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES") or "30")
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS") or "7")
     

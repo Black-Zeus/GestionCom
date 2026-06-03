@@ -1,11 +1,12 @@
 from celery import Celery
 import os
+from celery_settings import get_broker_url, get_result_backend
 
 # Configuración de Celery
 celery_app = Celery(
     "beat",
-    broker=os.getenv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672"),
-    backend=os.getenv("CELERY_BACKEND", "redis://localhost:6379/1")
+    broker=get_broker_url(),
+    backend=get_result_backend()
 )
 
 # Configuración de Celery Beat

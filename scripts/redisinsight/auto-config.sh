@@ -1,10 +1,12 @@
 #!/bin/bash
 # scripts/redisinsight/auto-config.sh
 
-# Crear directorio de configuración
 mkdir -p /db
 
-# Configuración de conexión automática para RedisInsight
+if [ -n "$REDIS_PASSWORD_FILE" ] && [ -f "$REDIS_PASSWORD_FILE" ]; then
+  REDIS_PASSWORD="$(cat "$REDIS_PASSWORD_FILE")"
+fi
+
 cat > /db/redisinsight.db.json << EOF
 {
   "connections": [
@@ -21,5 +23,4 @@ cat > /db/redisinsight.db.json << EOF
 }
 EOF
 
-# Iniciar RedisInsight
 exec /usr/src/app/redisinsight
