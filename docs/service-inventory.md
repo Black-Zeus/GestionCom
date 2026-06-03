@@ -21,7 +21,7 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 | `backend-docs` | Review | API documental y acceso a MinIO | Validar si debe ser servicio separado |
 | `backend-tasks` | Review | API HTTP para tareas/colas | Mantener si orquesta respaldos/jobs |
 | `backend-worker` | Core/Review | Worker Celery general | Mantener para trabajos async |
-| `worker-notifications` | Review | Worker Celery para notificaciones | Diferir hasta confirmar canal |
+| `worker-notifications` | Review | Worker Celery para notificaciones | Activar cuando el canal lo justifique |
 | `backend-beat` | Review | Scheduler Celery Beat | Mantener si hay respaldos programados |
 | `mariadb` | Dependency | Base de datos transaccional | Mantener |
 | `redis` | Dependency | Cache, sesiones, rate limit y backend Celery | Mantener |
@@ -36,14 +36,14 @@ Estas notas vienen de la definicion funcional actual y ayudan a separar intencio
 
 | Servicio | Intencion declarada | Lectura actual |
 |---|---|---|
-| `backend-docs` | Generar una API para consumir MinIO | Valido si hay documentos/adjuntos en MVP; revisar si requiere servicio separado o puede vivir en `backend-api`. Evitar nombre publico `/api/docs` si puede confundirse con documentacion OpenAPI. Preferir `/api/documents` o `/api/files`. |
+| `backend-docs` | Generar una API para consumir MinIO | Valido si documentos, adjuntos, respaldos o reportes son capacidades del producto; revisar si requiere servicio separado o puede vivir en `backend-api`. Evitar nombre publico `/api/docs` si puede confundirse con documentacion OpenAPI. Preferir `/api/documents` o `/api/files`. |
 | `backend-tasks` | Gestionar tareas asincronas y respaldos programados | Valido como API de orquestacion si expone estado, historial, disparo manual o administracion de jobs. |
 | `backend-worker` | Procesar trabajos en segundo plano/async | Valido si Celery se conserva. Es el ejecutor real de trabajos. |
-| `worker-notifications` | Canal Celery para notificaciones | Diferir. Puede no ser necesario si las notificaciones iniciales se resuelven con SSE desde `backend-api` o con eventos simples. |
+| `worker-notifications` | Canal Celery para notificaciones | Activar cuando exista necesidad de procesamiento independiente, retries, auditoria o volumen propio. Para eventos live de interfaz, SSE desde `backend-api` puede cubrir parte de la experiencia sin worker dedicado. |
 | `backend-beat` | No recordado inicialmente | Corresponde a scheduler de tareas periodicas Celery. Cobra sentido para respaldos programados, limpiezas o jobs recurrentes. |
 | `rabbitmq` | No recordado inicialmente | Corresponde al broker de mensajes para Celery. No programa tareas; transporta trabajos hacia workers. |
 
-Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-tasks` como API de administracion de jobs, mantener `backend-beat` solo si respaldos programados entran al demo viable, y diferir `worker-notifications`. Para archivos, decidir si MinIO se consume desde un modulo de `backend-api` antes de sostener `backend-docs` como servicio independiente.
+Recomendacion de producto: conservar capacidades cuando tengan responsabilidad clara, valor funcional y costo operativo justificable. `backend-worker` sostiene ejecucion asincrona; `backend-tasks` debe existir si administra jobs como recurso del producto; `backend-beat` aplica cuando hay tareas periodicas gestionadas; `worker-notifications` debe activarse cuando notificaciones requieran canal propio. Para archivos, decidir si MinIO se consume desde un modulo de `backend-api` antes de sostener `backend-docs` como servicio independiente.
 
 ## Servicios
 
@@ -103,7 +103,7 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 **Observacion:** Existe junto a workers Celery. Puede ser util como API de orquestacion de trabajos, especialmente si debe exponer estado, historial, cancelacion, reintentos, programacion manual o disparo administrativo. Tambien puede ser duplicacion si `backend-api` solo necesita encolar un job simple.
 
-**Criterio de permanencia:** Review con tendencia a mantener si entran respaldos/jobs al MVP. Decidir si sera una API real de orquestacion o si se fusiona en `backend-api` y se conserva solo `backend-worker`.
+**Criterio de permanencia:** Review con tendencia a mantener si los respaldos/jobs son capacidad administrable del producto. Decidir si sera una API real de orquestacion o si `backend-api` encolara trabajos directamente y se conservara solo `backend-worker`.
 
 ### `backend-worker`
 
@@ -127,9 +127,9 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 **Intencion funcional:** Se penso como canal de Celery para notificaciones. Aun no esta confirmado si se necesita ese canal; una alternativa para eventos de UI es SSE.
 
-**Observacion:** Es una separacion valida cuando notificaciones tienen volumen, SLA o retries propios. Si solo existe una tarea demo, puede ser premature split. SSE no reemplaza todos los casos de notificacion asincrona, pero puede cubrir eventos live hacia frontend sin sostener un worker separado al inicio.
+**Observacion:** Es una separacion valida cuando notificaciones tienen volumen, SLA, auditoria o retries propios. Si las notificaciones aun no son una capacidad de producto independiente, puede ser un split prematuro. SSE no reemplaza todos los casos de notificacion asincrona, pero puede cubrir eventos live hacia frontend sin sostener un worker separado.
 
-**Criterio de permanencia:** Review con tendencia a diferir. Mantener si hay roadmap concreto de emails, alertas, recordatorios, webhooks o notificaciones internas con procesamiento propio. Si no, fusionar con `backend-worker`, mover a perfil o retirar del compose base.
+**Criterio de permanencia:** Review. Mantener si hay capacidad concreta de emails, alertas, recordatorios, webhooks o notificaciones internas con procesamiento propio. Si no, fusionar con `backend-worker`, mover a perfil operativo o retirar del compose base.
 
 ### `backend-beat`
 
@@ -141,7 +141,7 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 **Intencion funcional:** No estaba recordado al revisar, pero tecnicamente corresponde al scheduler de Celery. Es el componente que dispara tareas periodicas; por ejemplo respaldos programados.
 
-**Observacion:** Actualmente debe validarse si existen tareas periodicas de negocio. Si no hay schedules reales, consume stack y dependencias sin aportar funcionalidad visible. Si respaldos programados entran al MVP o demo viable, `backend-beat` vuelve a tener justificacion clara.
+**Observacion:** Actualmente debe validarse si existen tareas periodicas de negocio. Si no hay schedules reales, consume stack y dependencias sin aportar funcionalidad visible. Si respaldos programados son una capacidad del producto, `backend-beat` tiene justificacion clara.
 
 **Criterio de permanencia:** Review. Mantener solo si hay jobs periodicos definidos: backups, expiraciones, limpieza, reportes programados, conciliaciones, cierres, recordatorios o auditorias.
 
@@ -175,7 +175,7 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 **Intencion funcional:** No estaba recordado al revisar, pero su rol tecnico es ser broker de mensajes para Celery. Recibe trabajos desde APIs/schedulers y los entrega a workers. No agenda tareas por si mismo; esa funcion es de `backend-beat`.
 
-**Criterio de permanencia:** Review con tendencia a mantener si se confirma Celery. Si se elimina Celery o se decide simplificar temporalmente usando Redis como broker/backend, revisar.
+**Criterio de permanencia:** Review con tendencia a mantener si se confirma Celery. Si la arquitectura async del producto se resuelve con otro broker o con Redis como broker/backend, revisar.
 
 ### `minio`
 
@@ -185,7 +185,7 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 **Dependencias:** Ninguna aplicativa.
 
-**Criterio de permanencia:** Review. Mantener si `backend-docs` o flujos de archivos son parte del MVP. Si no, mover a perfil o retirar temporalmente.
+**Criterio de permanencia:** Review. Mantener si `backend-docs` o flujos de archivos son capacidad del producto. Si no, mover a perfil operativo o retirar del compose base hasta que exista responsabilidad funcional.
 
 ### `mailpit`
 
@@ -211,7 +211,7 @@ Recomendacion preliminar para MVP: mantener `backend-worker`, evaluar `backend-t
 
 1. Decidir si MinIO se expone mediante `backend-docs` o mediante un modulo de `backend-api`. Evitar ruta publica `/api/docs` si puede confundirse con Swagger/OpenAPI; preferir `/api/documents` o `/api/files`.
 2. Decidir si `backend-tasks` sera API independiente de administracion de jobs o si `backend-api` encolara tareas directamente.
-3. Confirmar si respaldos programados entran al demo viable. Si entran, `backend-beat` y `backend-worker` tienen justificacion clara.
+3. Confirmar si respaldos programados son capacidad del producto. Si lo son, `backend-beat` y `backend-worker` tienen justificacion clara.
 4. Confirmar si Celery se mantiene como arquitectura async. Si se mantiene, `rabbitmq` tiene sentido como broker; si no, revisar simplificacion.
-5. Diferir `worker-notifications` hasta confirmar necesidad de canal dedicado. Para eventos live hacia frontend, evaluar SSE desde `backend-api`.
+5. Activar `worker-notifications` cuando exista necesidad de canal dedicado. Para eventos live hacia frontend, evaluar SSE desde `backend-api`.
 6. Revisar `scripts/nginx/nginx.dev.conf`: si docs/tasks se mantienen, decidir rutas proxy definitivas para `/api/documents/` y `/api/tasks/`.
