@@ -49,3 +49,14 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 - Evitar cambios de infraestructura que puedan borrar datos o alterar ambientes sin confirmacion del usuario.
 - Para cambios en Docker Compose, revisar que variables de ambiente requeridas existan o queden documentadas.
 - Para servicios backend, mantener imports y rutas consistentes con la estructura local del servicio.
+
+## Migraciones SQL
+
+- Los scripts SQL de `scripts/mariadb/entrypoint` deben nombrarse con el formato `YYYYMMDD_HHMM_{scope}.sql`.
+- No usar prefijos numericos simples como `01_`, `02_` o similares para nuevas migraciones.
+- La hora `HHMM` define el orden de ejecucion lexicografico; si se agregan varias migraciones en la misma fecha, avanzar en incrementos de 1 minuto: `1300`, `1301`, `1302`, etc.
+- Separar las migraciones por dominio y tipo de contenido. Usar prefijos de scope como `schema_`, `alter_`, `seed_`, `views_`, `routines_` y `data_` segun corresponda.
+- No mezclar creacion de tablas, seeds, vistas y rutinas en un mismo archivo salvo que sea una excepcion pequena y justificada.
+- Preferir migraciones por scope funcional cuando haya dependencias entre tablas del mismo dominio, por ejemplo `users`, `inventory`, `sales`, `cash_registers`, `accounts_receivable`, antes que un archivo por tabla.
+- Mantener cada archivo idealmente bajo 350 lineas. Si supera ese tamano, dividirlo por subdominio o por tipo de objeto.
+- Mantener scopes en `snake_case`, descriptivos y estables.
