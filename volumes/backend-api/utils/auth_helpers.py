@@ -127,20 +127,24 @@ class AuthHelper:
             await self._clear_failed_attempts(client_ip, username)
 
             # Respuesta exitosa
+            user_info = {
+                "id": user_data["id"],
+                "username": user_data["username"],
+                "email": user_data["email"],
+                "full_name": user_data.get("full_name", user_data["username"]),
+                "name": user_data.get("full_name", user_data["username"]),
+                "is_active": user_data["is_active"],
+                "roles": user_data.get("roles", ["user"]),
+                "permissions": user_data.get("permissions", [])
+            }
+
             response_data = {
                 "access_token": tokens["access_token"],
                 "refresh_token": tokens["refresh_token"],
                 "token_type": "Bearer",
                 "expires_in": tokens["expires_in"],
-                "user_info": {
-                    "id": user_data["id"],
-                    "username": user_data["username"],
-                    "email": user_data["email"],
-                    "full_name": user_data.get("full_name", user_data["username"]),
-                    "is_active": user_data["is_active"],
-                    "roles": user_data.get("roles", ["user"]),
-                    "permissions": user_data.get("permissions", [])
-                },
+                "user": user_info,
+                "user_info": user_info,
                 "session_info": {
                     "session_id": tokens["session_id"],
                     "login_at": datetime.now(timezone.utc).isoformat(),

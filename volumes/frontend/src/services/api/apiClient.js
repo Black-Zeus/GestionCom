@@ -31,12 +31,18 @@ const refreshSession = async () => {
 
   const response = await axios.post(
     `${resolveApiUrl()}/auth/refresh`,
-    { refreshToken },
-    { withCredentials: true }
+    null,
+    {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${refreshToken}`,
+      },
+    }
   );
 
-  const accessToken = response.data?.accessToken || response.data?.token;
-  const nextRefreshToken = response.data?.refreshToken || refreshToken;
+  const data = response.data?.data || response.data;
+  const accessToken = data?.accessToken || data?.token || data?.access_token;
+  const nextRefreshToken = data?.refreshToken || data?.refresh_token || refreshToken;
 
   if (!accessToken) {
     throw new Error('Refresh response without access token');

@@ -22,6 +22,7 @@ const Login = () => {
     const credentials = {
       username: formData.get('username'),
       password: formData.get('password'),
+      remember_me: formData.get('remember_me') === 'on',
     };
 
     try {
@@ -75,7 +76,7 @@ const Login = () => {
         </div>
         <div className="flex items-center justify-between text-sm">
           <label className="inline-flex items-center gap-2 text-slate-600 dark:text-slate-300">
-            <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-blue-600" />
+            <input name="remember_me" type="checkbox" className="h-4 w-4 rounded border-slate-300 text-blue-600" />
             Recordar sesion
           </label>
           <button type="button" onClick={() => navigate('/forgot-password')} className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">

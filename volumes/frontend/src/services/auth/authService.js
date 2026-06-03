@@ -2,7 +2,7 @@ import apiClient from '@/services/api/apiClient';
 
 const normalizeAuthPayload = (payload = {}) => {
   const data = payload.data || payload;
-  const user = data.user || data.profile || null;
+  const user = data.user || data.user_info || data.profile || null;
   const accessToken = data.accessToken || data.token || data.access_token || null;
   const refreshToken = data.refreshToken || data.refresh_token || null;
 
@@ -24,7 +24,8 @@ export const authService = {
   },
 
   async getCurrentUser() {
-    const response = await apiClient.get('/auth/me');
-    return response.data?.user || response.data;
+    const response = await apiClient.get('/users/me/profile');
+    const data = response.data?.data || response.data;
+    return data?.user || data?.profile || data;
   },
 };

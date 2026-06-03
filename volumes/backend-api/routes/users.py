@@ -28,7 +28,7 @@ from core.response import ResponseManager
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 
 # Utils imports
-from utils.permissions_utils import require_permission
+from utils.permissions_utils import get_current_user, require_permission
 from utils.profile_helpers import ProfileHelper 
 
 # ==========================================
@@ -738,7 +738,7 @@ async def toggle_user_activation(
 @router.get("/me/profile", response_class=JSONResponse)
 async def get_my_profile(
     request: Request = None,
-    user: dict = Depends(require_read_permission)
+    user: dict = Depends(get_current_user)
 ):
     """Obtener mi perfil completo - Siempre permitido para usuarios autenticados"""
     
