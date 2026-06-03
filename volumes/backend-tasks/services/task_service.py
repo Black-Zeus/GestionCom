@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 # Diccionario que simula el almacenamiento de tareas
 tasks = {
@@ -15,3 +16,6 @@ def create_task(task_name: str):
     new_task_id = str(uuid.uuid4())[:8]  # Genera un ID único
     tasks[new_task_id] = "Pendiente"
     return new_task_id
+
+def get_current_timestamp():
+    return datetime.now(timezone.utc).isoformat()
