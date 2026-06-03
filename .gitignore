@@ -61,6 +61,14 @@ env.zip
 !**/.env.example
 !**/.env.template
 
+# Secretos reales separados de los .env de servicios
+secrets/
+.secrets/
+**/secrets/
+**/.secrets/
+*.secret
+*.secrets
+
 # =========================
 # LOGS Y DATOS TEMPORALES
 # =========================
