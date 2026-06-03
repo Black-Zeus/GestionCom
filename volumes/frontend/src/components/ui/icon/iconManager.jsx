@@ -57,6 +57,7 @@ import {
   FaPrint,
   FaReceipt,
   FaFileLines,
+  FaFileInvoice,
 
   // Gráficos / Estadísticas
   FaChartLine,
@@ -288,6 +289,10 @@ const ICON_REGISTRY = {
 
   "file-text": FaFileLines, // solicitado en logs (equivalente razonable)
   fileText: FaFileLines,
+
+  FaFileInvoice,
+  fileInvoice: FaFileInvoice,
+  invoice: FaFileInvoice,
 
   FaPrint,
   print: FaPrint,

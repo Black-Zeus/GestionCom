@@ -1,102 +1,48 @@
-/**
- * AppRouter.jsx - Router principal simplificado
- * Usa tu Layout existente solo para rutas privadas
- */
+import { Suspense, lazy } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import ModuleSpinner from '@/components/common/loading/ModuleSpinner';
+import AppLayout from '@/layouts/AppLayout';
+import { navigablePages } from '@/data/modules';
+import RequireAuth from './guards/RequireAuth';
 
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+const Login = lazy(() => import('@/pages/auth/Login'));
+const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
+const UnderConstruction = lazy(() => import('@/pages/modules/UnderConstruction'));
+const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
 
-// Tu Layout existente
-import Layout from "@/components/layout";
+const Page = ({ children }) => (
+  <Suspense fallback={<ModuleSpinner />}>
+    {children}
+  </Suspense>
+);
 
-// Guards
-import ProtectedRoute from "./guards/ProtectedRoute";
-import PublicRoute from "./guards/PublicRoute";
+const AppRouter = () => (
+  <Routes>
+    <Route path="/login" element={<Page><Login /></Page>} />
+    <Route path="/forgot-password" element={<Page><ForgotPassword /></Page>} />
+    <Route path="/reset-password" element={<Page><ResetPassword /></Page>} />
 
-// Lazy Wrapper
-import LazyWrapper from "./LazyWrapper";
-
-// Rutas organizadas
-import { allRoutes } from "./modules";
-
-// Páginas de error
-import NotFoundPage from "@/pages/errorPages/NotFoundPage";
-import ServerErrorPage from "@/pages/errorPages/ServerErrorPage";
-import ForbiddenPage from "@/pages/errorPages/ForbiddenPage";
-
-const AppRouter = () => {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Mapear todas las rutas */}
-        {allRoutes.map((route) => {
-          const {
-            path,
-            component: Component,
-            isPublic,
-            requiresAuth,
-            roles,
-            ...routeProps
-          } = route;
-
-          // Determinar el elemento base
-          let routeElement = (
-            <LazyWrapper>
-              <Component {...routeProps} />
-            </LazyWrapper>
-          );
-
-          // Aplicar guards según el tipo de ruta
-          if (isPublic) {
-            // Rutas públicas (login, etc.) - SIN Layout
-            routeElement = <PublicRoute>{routeElement}</PublicRoute>;
-          } else {
-            // Rutas privadas - CON Layout
-            routeElement = (
-              <ProtectedRoute requiredRoles={roles}>
-                <Layout>{routeElement}</Layout>
-              </ProtectedRoute>
-            );
-          }
-
-          return <Route key={path} path={path} element={routeElement} />;
-        })}
-
-        {/* ================================ */}
-        {/* RUTAS DE ERROR */}
-        {/* ================================ */}
-        <Route
-          path="/forbidden"
-          element={
-            <LazyWrapper>
-              <ForbiddenPage />
-            </LazyWrapper>
-          }
-        />
-
-        <Route
-          path="/server-error"
-          element={
-            <LazyWrapper>
-              <ServerErrorPage />
-            </LazyWrapper>
-          }
-        />
-
-        {/* ================================ */}
-        {/* 404 - DEBE IR AL FINAL */}
-        {/* ================================ */}
-        <Route
-          path="*"
-          element={
-            <LazyWrapper>
-              <NotFoundPage />
-            </LazyWrapper>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
-  );
-};
+    <Route element={<RequireAuth />}>
+      <Route element={<AppLayout />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        {navigablePages.map((module) => (
+          <Route
+            key={module.id}
+            path={module.path.replace(/^\//, '')}
+            element={<Page><UnderConstruction /></Page>}
+          />
+        ))}
+        <Route path="error/301" element={<Page><ErrorPage code="301" /></Page>} />
+        <Route path="error/302" element={<Page><ErrorPage code="302" /></Page>} />
+        <Route path="error/400" element={<Page><ErrorPage code="400" /></Page>} />
+        <Route path="error/401" element={<Page><ErrorPage code="401" /></Page>} />
+        <Route path="error/403" element={<Page><ErrorPage code="403" /></Page>} />
+        <Route path="error/500" element={<Page><ErrorPage code="500" /></Page>} />
+        <Route path="*" element={<Page><ErrorPage code="404" /></Page>} />
+      </Route>
+    </Route>
+  </Routes>
+);
 
 export default AppRouter;
