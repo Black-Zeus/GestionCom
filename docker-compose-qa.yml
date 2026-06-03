@@ -17,7 +17,10 @@ services:
       - backend-tasks
       - backend-worker
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./logs/nginx:/var/log/nginx # Opcional: logging del reverse proxy
     environment:
@@ -56,7 +59,10 @@ services:
       dockerfile: docker/dockerfile.backend-api
     image: ${PROJECT_NAME}/backend-api:qa.v0.1
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - backend-api-qa:/app  # Volumen nombrado para QA
       - ./logs/backend-api:/var/log/app  # Mantén los logs como bind mount para depuración
@@ -93,7 +99,10 @@ services:
       dockerfile: docker/dockerfile.backend-docs
     image: ${PROJECT_NAME}/backend-docs:qa.v0.1
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - backend-docs-qa:/app
       - ./logs/backend-docs:/var/log/app
@@ -130,7 +139,10 @@ services:
       dockerfile: docker/dockerfile.backend-tasks
     image: ${PROJECT_NAME}/backend-tasks:qa.v0.1
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - backend-tasks-qa:/app
       - ./logs/backend-tasks:/var/log/app
@@ -168,7 +180,10 @@ services:
       dockerfile: docker/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-worker:qa.v0.1
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - backend-worker-qa:/app
       - ./logs/backend-worker:/var/log/app
@@ -204,7 +219,10 @@ services:
       dockerfile: docker/dockerfile.minio
     image: ${PROJECT_NAME}/minio:qa.v0.1
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - minio-qa:/data
       - ./logs/minio:/var/log/minio
@@ -248,7 +266,10 @@ services:
     expose:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - mariadb-qa:/var/lib/mysql
       - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d
@@ -256,6 +277,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       #MYSQL_USER: ${MYSQL_USER}
       #MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     restart: unless-stopped
@@ -286,7 +309,10 @@ services:
       - "${RABBITMQ_PORT}"  # Habilita la comunicación interna entre contenedores
       - "${RABBITMQ_UI_PORT}:${RABBITMQ_UI_PORT}"  # Publica la interfaz de administración en el host
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - rabbitmq-qa:/var/lib/rabbitmq
       - ./logs/rabbitmq:/var/log/rabbitmq
@@ -322,7 +348,10 @@ services:
     expose:
       - "${REDIS_PORT}"
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - redis-qa:/data
       - ./logs/redis:/var/log/redis
@@ -352,8 +381,13 @@ services:
     container_name: ${PROJECT_NAME}-redisinsight
     ports:
       - "${REDIS_PORT_PANEL}:${REDIS_PORT_PANEL}"
+    profiles:
+      - tools
     labels:
-      - stack=inventario
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: tools
+      service.lifecycle: support
     volumes:
       - ./volumes/redisinsight/data:/db
     restart: unless-stopped
@@ -379,8 +413,13 @@ services:
 networks:
   internal:
     driver: bridge
+    name: ${PROJECT_NAME}_internal
+    ipam:
+      config:
+        - subnet: ${INTERNAL_SUBNET}
   external:
     driver: bridge
+    name: ${PROJECT_NAME}_external
     ipam:
       config:
         - subnet: ${EXTERNAL_SUBNET}

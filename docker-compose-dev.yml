@@ -11,7 +11,10 @@ services:
         - NGINX_PORT_INTERNAL=${NGINX_PORT_INTERNAL}
     image: ${PROJECT_NAME}/nginx:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     depends_on:
       frontend:
         condition: service_started # Cambiar a service_started
@@ -71,7 +74,10 @@ services:
         - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
     image: ${PROJECT_NAME}/frontend:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/frontend:/app
       - /app/node_modules
@@ -133,7 +139,10 @@ services:
         - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-api:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-api:/app
       - ./logs/backend-api:/var/log/app
@@ -188,7 +197,10 @@ services:
         - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-docs:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-docs:/app
       - ./logs/backend-docs:/var/log/app
@@ -243,7 +255,10 @@ services:
         - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
     image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-tasks:/app
       - ./logs/backend-tasks:/var/log/app
@@ -298,7 +313,10 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-worker:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-worker:/var/log/app
@@ -354,7 +372,10 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/worker-notifications:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-notification:/var/log/app
@@ -410,7 +431,10 @@ services:
       dockerfile: docker/dev/dockerfile.backend-worker
     image: ${PROJECT_NAME}/backend-beat:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
     volumes:
       - ./volumes/backend-worker:/app
       - ./logs/backend-beats:/var/log/app
@@ -464,7 +488,10 @@ services:
         - MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT}
     image: ${PROJECT_NAME}/minio:dev.v0.1
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - ./volumes/minio:/data
       - ./logs/minio:/var/log/minio
@@ -515,7 +542,10 @@ services:
       - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
       - "${MAILPIT_UI_PORT}:${MAILPIT_UI_PORT}"
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: tools
+      service.lifecycle: support
     volumes:
       - ./volumes/mailpit:/data
       - ./logs/mailpit:/var/log/mailpit
@@ -569,7 +599,10 @@ services:
     ports:
       - "${MYSQL_PORT}:${MYSQL_PORT}"
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - ./volumes/mariadb/db:/var/lib/mysql
       - ./logs/mariadb:/var/log/mysql
@@ -577,6 +610,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_INITDB_SKIP_TZINFO: 1
     restart: unless-stopped
     logging:
@@ -624,7 +659,10 @@ services:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_UI_PORT}:15672"
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       #- rabbitmq_data:/var/lib/rabbitmq
       - ./logs/rabbitmq:/var/log/rabbitmq
@@ -681,7 +719,10 @@ services:
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
     labels:
-      - stack=${PROJECT_NAME}
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: dependency
+      service.lifecycle: stateful
     volumes:
       - ./volumes/redis/data:/data
       - ./logs/redis:/var/log/redis
@@ -735,8 +776,13 @@ services:
       dockerfile: docker/dev/dockerfile.redisinsight
     image: ${PROJECT_NAME}/redisinsight:dev.v0.1
     container_name: ${PROJECT_NAME}-redisinsight
+    profiles:
+      - tools
     labels:
-      - stack=${PROJECT_NAME} # ← Falta label
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: tools
+      service.lifecycle: support
     ports:
       - "${REDIS_PORT_PANEL}:5540"
     volumes:
@@ -783,7 +829,7 @@ networks:
     name: ${PROJECT_NAME}_internal
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: ${INTERNAL_SUBNET}
   external:
     driver: bridge
     name: ${PROJECT_NAME}_external
