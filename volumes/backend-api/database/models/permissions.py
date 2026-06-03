@@ -19,7 +19,7 @@ class Permission(BaseModel):
         String(100),
         nullable=False,
         unique=True,
-        comment="Código único del permiso (ej: PRODUCTS.CREATE, INVENTORY.VIEW)"
+        comment="Codigo unico del permiso (ej: PRODUCTS_CREATE, INVENTORY_VIEW)"
     )
     
     permission_name = Column(
@@ -66,10 +66,10 @@ class Permission(BaseModel):
         
         permission_code = permission_code.strip().upper()
         
-        # Formato: GRUPO.ACCION (ej: PRODUCTS.CREATE, INVENTORY.VIEW)
+        # Formato usado por el backend: GRUPO_ACCION (ej: PRODUCTS_CREATE).
         import re
-        if not re.match(r'^[A-Z0-9_]+\.[A-Z0-9_]+$', permission_code):
-            raise ValueError("Código debe tener formato GRUPO.ACCION")
+        if not re.match(r'^[A-Z0-9]+(?:_[A-Z0-9]+)+$', permission_code):
+            raise ValueError("Codigo debe tener formato GRUPO_ACCION")
         
         if len(permission_code) < 5:
             raise ValueError("Código debe tener al menos 5 caracteres")

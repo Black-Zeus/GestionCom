@@ -2,13 +2,13 @@
 volumes/backend-api/database/models/users.py
 Modelo SQLAlchemy para la tabla users
 """
-from sqlalchemy import Column, String, Boolean, CHAR, Index, DateTime
+from sqlalchemy import Column, String, Boolean, Index, DateTime
 from sqlalchemy.orm import validates
 from sqlalchemy.sql import func
 from datetime import datetime
-import hashlib
 import secrets
 import re
+import bcrypt
 
 from .base import BaseModel, CommonValidators
 from sqlalchemy.orm import relationship
@@ -36,9 +36,9 @@ class User(BaseModel):
     )
     
     password_hash = Column(
-        CHAR(64),
+        String(255),
         nullable=False,
-        comment="Hash SHA-256 de la contraseña"
+        comment="Hash bcrypt de la contrasena"
     )
     
     secret = Column(
@@ -201,20 +201,23 @@ class User(BaseModel):
     
     @validates('password_hash')
     def validate_password_hash(self, key, password_hash):
-        """Validar hash de contraseña"""
+        """Validar hash de contrasena bcrypt o hash legacy SHA-256."""
         if not password_hash:
-            raise ValueError("Hash de contraseña es requerido")
-        
-        # Debe ser exactamente 64 caracteres (SHA-256)
-        if len(password_hash) != 64:
-            raise ValueError("Hash de contraseña debe tener exactamente 64 caracteres")
-        
-        # Solo caracteres hexadecimales
-        if not re.match(r'^[a-f0-9]{64}$', password_hash.lower()):
-            raise ValueError("Hash de contraseña debe ser hexadecimal válido")
-        
-        return password_hash.lower()
-    
+            raise ValueError("Hash de contrasena es requerido")
+
+        password_hash = password_hash.strip()
+
+        if len(password_hash) > 255:
+            raise ValueError("Hash de contrasena no puede tener mas de 255 caracteres")
+
+        is_bcrypt = re.match(r'^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$', password_hash)
+        is_legacy_sha256 = re.match(r'^[a-fA-F0-9]{64}$', password_hash)
+
+        if not is_bcrypt and not is_legacy_sha256:
+            raise ValueError("Hash de contrasena debe ser bcrypt o SHA-256 legacy valido")
+
+        return password_hash
+
     @validates('secret')
     def validate_secret(self, key, secret):
         """Validar secret JWT"""
@@ -363,30 +366,27 @@ class User(BaseModel):
     # MÉTODOS DE RELACIONES
     
     def set_password(self, password: str) -> None:
-        """Establecer contraseña hasheada"""
+        """Establecer contrasena hasheada."""
         if not password:
-            raise ValueError("Contraseña no puede estar vacía")
-        
+            raise ValueError("Contrasena no puede estar vacia")
+
         if len(password) < 8:
-            raise ValueError("Contraseña debe tener al menos 8 caracteres")
-        
-        # Generar hash SHA-256
-        password_bytes = password.encode('utf-8')
-        hash_object = hashlib.sha256(password_bytes)
-        self.password_hash = hash_object.hexdigest()
+            raise ValueError("Contrasena debe tener al menos 8 caracteres")
+
+        salt = bcrypt.gensalt(rounds=12)
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
         self.password_changed_at = datetime.utcnow()
-    
+
     def verify_password(self, password: str) -> bool:
-        """Verificar contraseña"""
+        """Verificar contrasena contra hash bcrypt."""
         if not password or not self.password_hash:
             return False
-        
-        password_bytes = password.encode('utf-8')
-        hash_object = hashlib.sha256(password_bytes)
-        password_hash = hash_object.hexdigest()
-        
-        return password_hash == self.password_hash
-    
+
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+        except ValueError:
+            return False
+
     def generate_secret(self) -> str:
         """Generar nuevo secret JWT"""
         self.secret = secrets.token_hex(32)  # 64 caracteres hex
