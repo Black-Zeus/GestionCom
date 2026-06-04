@@ -2,17 +2,22 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService } from '@/services/auth/authService';
 import { tokenStorage } from '@/services/api/tokenStorage';
+import { appConfig } from '@/config/appConfig';
 
 const demoUser = {
   id: 'demo-admin',
   name: 'Administrador Demo',
-  email: 'admin.demo@gescom.local',
+  email: appConfig.demoEmail,
   profile: 'Administrador',
+  roles: [],
+  permissions: [],
   authorizedLocations: ['Casa Matriz', 'Sucursal Centro', 'Sucursal Online'],
   authorizedCashRegisters: ['Caja Principal', 'Caja 2', 'Caja Web'],
 };
 
-const canUseDemoSession = () => import.meta.env.DEV && import.meta.env.VITE_AUTH_DEMO_MODE !== 'false';
+const canUseDemoSession = () => import.meta.env.DEV && import.meta.env.VITE_AUTH_DEMO_MODE === 'true';
+
+const normalizePermission = (permission) => permission?.toString().trim().toUpperCase();
 
 export const useAuthStore = create(
   persist(
@@ -24,6 +29,26 @@ export const useAuthStore = create(
       error: null,
       isDemoSession: false,
       isAuthenticated: Boolean(tokenStorage.getAccessToken()),
+      hasRole(role) {
+        const normalizedRole = normalizePermission(role);
+        return Boolean(normalizedRole && get().user?.roles?.some((userRole) => normalizePermission(userRole) === normalizedRole));
+      },
+
+      hasPermission(permission) {
+        const normalizedPermission = normalizePermission(permission);
+        return Boolean(
+          normalizedPermission
+            && get().user?.permissions?.some((userPermission) => normalizePermission(userPermission) === normalizedPermission)
+        );
+      },
+
+      hasAnyPermission(permissions = []) {
+        return permissions.some((permission) => get().hasPermission(permission));
+      },
+
+      hasAllPermissions(permissions = []) {
+        return permissions.every((permission) => get().hasPermission(permission));
+      },
 
       async login(credentials) {
         set({ status: 'loading', error: null });
@@ -83,6 +108,25 @@ export const useAuthStore = create(
         }
       },
 
+      async syncSession() {
+        if (get().isDemoSession) return get();
+
+        const session = await authService.syncSession();
+        tokenStorage.setTokens(session);
+
+        set({
+          user: session.user,
+          accessToken: session.accessToken,
+          refreshToken: session.refreshToken,
+          status: 'authenticated',
+          error: null,
+          isDemoSession: false,
+          isAuthenticated: true,
+        });
+
+        return session;
+      },
+
       async logout() {
         const isDemoSession = get().isDemoSession;
 
@@ -111,7 +155,7 @@ export const useAuthStore = create(
       },
     }),
     {
-      name: 'gescom.auth',
+      name: appConfig.storageKey('auth'),
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

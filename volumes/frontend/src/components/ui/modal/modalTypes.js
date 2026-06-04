@@ -146,7 +146,7 @@ export const MODAL_CLASSES = {
   // Modal principal
   modal: {
     //base: 'relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200 border border-gray-200 dark:border-gray-700',
-    base: 'relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200 min-h-[120px]',
+    base: 'relative flex max-h-[calc(100vh-2rem)] min-h-[120px] transform flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200',
     enter: 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
     enterActive: 'opacity-100 translate-y-0 sm:scale-100',
     exit: 'opacity-100 translate-y-0 sm:scale-100',

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { appConfig } from '@/config/appConfig';
 
 const defaultLocations = ['Casa Matriz', 'Sucursal Centro', 'Sucursal Online'];
 const defaultCashRegisters = ['Caja Principal', 'Caja 2', 'Caja Web'];
@@ -36,7 +37,7 @@ export const useSessionStore = create(
       },
     }),
     {
-      name: 'gescom.session',
+      name: appConfig.storageKey('session'),
     }
   )
 );

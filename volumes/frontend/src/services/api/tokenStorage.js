@@ -1,5 +1,7 @@
-const ACCESS_TOKEN_KEY = 'gescom.accessToken';
-const REFRESH_TOKEN_KEY = 'gescom.refreshToken';
+import { appConfig } from '@/config/appConfig';
+
+const ACCESS_TOKEN_KEY = appConfig.storageKey('accessToken');
+const REFRESH_TOKEN_KEY = appConfig.storageKey('refreshToken');
 
 const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
 

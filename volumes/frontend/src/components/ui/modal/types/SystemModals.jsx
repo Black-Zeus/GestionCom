@@ -184,6 +184,8 @@ export const renderCustomModal = ({
   type = 'custom',
   title = 'Modal Personalizado',
   content,
+  contentComponent: ContentComponent,
+  contentProps = {},
   children,
   size = 'medium',
   showHeader = true,
@@ -196,7 +198,9 @@ export const renderCustomModal = ({
   ...customProps
 }) => {
   // Contenido del cuerpo
-  const bodyContent = content || children || (
+  const bodyContent = ContentComponent ? (
+    <ContentComponent onClose={onClose} {...contentProps} />
+  ) : content || children || (
     <CustomContent
       title="¡Modal Completamente Personalizable!"
       subtitle="Este modal demuestra las capacidades de personalización del sistema"

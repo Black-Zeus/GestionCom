@@ -1,22 +1,25 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+/* eslint-disable react/prop-types, react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useMemo } from 'react';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 
 const ThemeContext = createContext(null);
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const theme = usePreferencesStore((state) => state.theme);
+  const setTheme = usePreferencesStore((state) => state.setTheme);
+  const toggleTheme = usePreferencesStore((state) => state.toggleTheme);
 
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
   }, [theme]);
 
   const value = useMemo(() => ({
     theme,
     isDark: theme === 'dark',
-    toggleTheme: () => setTheme((current) => (current === 'dark' ? 'light' : 'dark')),
+    toggleTheme,
     setTheme,
-  }), [theme]);
+  }), [theme, toggleTheme, setTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

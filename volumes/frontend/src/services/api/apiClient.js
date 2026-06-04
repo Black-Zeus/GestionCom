@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { tokenStorage } from './tokenStorage';
+import { appConfig } from '@/config/appConfig';
 
 const resolveApiUrl = () => {
   const configuredUrl = import.meta.env.VITE_FRONTEND_API_URL;
@@ -14,7 +15,7 @@ const resolveApiUrl = () => {
 const apiClient = axios.create({
   baseURL: resolveApiUrl(),
   timeout: 30000,
-  withCredentials: true,
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -33,7 +34,7 @@ const refreshSession = async () => {
     `${resolveApiUrl()}/auth/refresh`,
     null,
     {
-      withCredentials: true,
+      withCredentials: false,
       headers: {
         Authorization: `Bearer ${refreshToken}`,
       },
@@ -86,7 +87,7 @@ apiClient.interceptors.response.use(
       return apiClient(originalRequest);
     } catch (refreshError) {
       tokenStorage.clearTokens();
-      window.dispatchEvent(new CustomEvent('gescom:session-expired'));
+      window.dispatchEvent(new CustomEvent(appConfig.eventName('session-expired')));
 
       return Promise.reject(refreshError);
     }

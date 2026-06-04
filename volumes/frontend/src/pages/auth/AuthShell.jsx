@@ -1,9 +1,10 @@
 import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/components/theme/ThemeProvider';
+import { appConfig } from '@/config/appConfig';
 
 const AuthShell = ({ title, subtitle, children }) => {
   const { isDark, toggleTheme } = useTheme();
-  const appName = import.meta.env.VITE_FRONTEND_NAME || 'GesCom';
+  const appName = appConfig.name;
   const appVersion = import.meta.env.VITE_FRONTEND_VERSION || '1.0.0';
   const appEnv = (import.meta.env.VITE_FRONTEND_ENV || '').toUpperCase();
   const showEnvBadge = ['DEV', 'QA'].includes(appEnv);
@@ -15,8 +16,8 @@ const AuthShell = ({ title, subtitle, children }) => {
         <div className="flex items-center gap-3">
           <img src="/assets/logo.png" alt="Logo del aplicativo" loading="eager" decoding="async" className="h-14 w-14 rounded-md object-contain" />
           <div>
-            <div className="text-sm font-semibold">GesCom</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Sistema de inventarios y gestion comercial</div>
+            <div className="text-sm font-semibold">{appName}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">Sistema de inventarios y gestión comercial</div>
           </div>
         </div>
         <button

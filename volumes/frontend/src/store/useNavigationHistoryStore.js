@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { appConfig } from '@/config/appConfig';
 
 const MAX_HISTORY_ITEMS = 10;
 
@@ -34,7 +35,7 @@ export const useNavigationHistoryStore = create(
       },
     }),
     {
-      name: 'gescom.navigation-history',
+      name: appConfig.storageKey('navigation-history'),
     }
   )
 );

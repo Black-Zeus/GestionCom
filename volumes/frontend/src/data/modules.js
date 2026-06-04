@@ -30,6 +30,7 @@ export const moduleGroups = [
     id: 'home',
     label: 'Inicio',
     icon: Home,
+    permissions: ['HOME_VISIBLE'],
     items: [
       { id: 'dashboard', label: 'Dashboard principal', path: '/dashboard', icon: Gauge, weight: 10 },
       { id: 'notifications', label: 'Centro de notificaciones', path: '/notifications', icon: Bell, weight: 20 },
@@ -39,6 +40,7 @@ export const moduleGroups = [
     id: 'sales',
     label: 'Ventas',
     icon: ShoppingCart,
+    permissions: ['SALES_VISIBLE'],
     items: [
       { id: 'new-sale', label: 'Nueva venta', path: '/sales/new', icon: ShoppingCart, weight: 10 },
       { id: 'cash-pos', label: 'Cobro en caja POS', path: '/cash/pos', icon: CreditCard, weight: 20 },
@@ -50,6 +52,7 @@ export const moduleGroups = [
     id: 'customers',
     label: 'Clientes',
     icon: Users,
+    permissions: ['CUSTOMERS_VISIBLE'],
     items: [
       { id: 'customers', label: 'Clientes', path: '/customers', icon: Users, weight: 10 },
       { id: 'account-status', label: 'Estado de cuenta', path: '/customers/account-status', icon: FileText, weight: 20 },
@@ -62,6 +65,7 @@ export const moduleGroups = [
     id: 'cash',
     label: 'Caja',
     icon: WalletCards,
+    permissions: ['CASH_VISIBLE'],
     items: [
       { id: 'cash-opening', label: 'Apertura / cierre de caja', path: '/cash/opening', icon: Store, weight: 10 },
       { id: 'cash-count', label: 'Arqueo de caja', path: '/cash/count', icon: WalletCards, weight: 20 },
@@ -73,6 +77,7 @@ export const moduleGroups = [
     id: 'inventory',
     label: 'Inventario',
     icon: Package,
+    permissions: ['INVENTORY_VISIBLE'],
     items: [
       { id: 'products', label: 'Productos', path: '/products', icon: Package, weight: 10 },
       { id: 'stock-movements', label: 'Movimientos de stock', path: '/stock/movements', icon: Boxes, weight: 20 },
@@ -88,6 +93,7 @@ export const moduleGroups = [
     id: 'suppliers',
     label: 'Proveedores',
     icon: Truck,
+    permissions: ['SUPPLIERS_VISIBLE'],
     items: [
       { id: 'suppliers', label: 'Proveedores', path: '/suppliers', icon: Truck, weight: 10 },
       { id: 'purchase-orders', label: 'Ordenes de compra', path: '/suppliers/purchase-orders', icon: ClipboardList, weight: 20 },
@@ -101,6 +107,7 @@ export const moduleGroups = [
     id: 'finance',
     label: 'Finanzas',
     icon: CircleDollarSign,
+    permissions: ['FINANCE_VISIBLE'],
     items: [
       { id: 'expenses', label: 'Gastos operativos', path: '/finance/expenses', icon: Receipt, weight: 10 },
       { id: 'additional-income', label: 'Ingresos adicionales', path: '/finance/additional-income', icon: BadgeDollarSign, weight: 20 },
@@ -112,6 +119,7 @@ export const moduleGroups = [
     id: 'documents',
     label: 'Documentos',
     icon: FileText,
+    permissions: ['DOCUMENTS_VISIBLE'],
     items: [
       { id: 'commercial-documents', label: 'Documentos comerciales', path: '/documents/commercial', icon: FileText, weight: 10 },
       { id: 'returns', label: 'Devoluciones', path: '/returns', icon: Receipt, weight: 20 },
@@ -124,6 +132,7 @@ export const moduleGroups = [
     id: 'metrics',
     label: 'Metricas',
     icon: LineChart,
+    permissions: ['METRICS_VISIBLE'],
     items: [
       { id: 'sales-metrics', label: 'Metricas de ventas', path: '/metrics/sales', icon: LineChart, weight: 10 },
       { id: 'inventory-metrics', label: 'Metricas de inventario', path: '/metrics/inventory', icon: Boxes, weight: 20 },
@@ -135,6 +144,7 @@ export const moduleGroups = [
     id: 'management-reports',
     label: 'Reportes Gestion',
     icon: BarChart3,
+    permissions: ['REPORTS_VISIBLE'],
     items: [
       { id: 'daily-sales', label: 'Ventas diarias', path: '/reports/daily-sales', icon: BarChart3, weight: 10 },
       { id: 'sales-by-seller', label: 'Ventas por vendedor', path: '/reports/sales-by-seller', icon: BarChart3, weight: 20 },
@@ -148,6 +158,7 @@ export const moduleGroups = [
     id: 'audit-reports',
     label: 'Reportes Auditoria',
     icon: FileSearch,
+    permissions: ['AUDIT_VISIBLE'],
     items: [
       { id: 'financial-audit', label: 'Auditoria financiera', path: '/reports/financial/financial-audit', icon: Shield, weight: 10 },
       { id: 'system-audit-report', label: 'Auditoria del sistema', path: '/reports/audit/system', icon: FileSearch, weight: 20 },
@@ -158,6 +169,7 @@ export const moduleGroups = [
     id: 'settings',
     label: 'Configuracion',
     icon: Settings,
+    permissions: ['SETTINGS_VISIBLE'],
     items: [
       { id: 'company-config', label: 'Configuracion de empresa', path: '/config/company', icon: Building2, weight: 10 },
       { id: 'system-parameters', label: 'Parametros del sistema', path: '/config/system-parameters', icon: Settings, weight: 20 },
@@ -172,21 +184,37 @@ export const moduleGroups = [
     id: 'admin',
     label: 'Administracion',
     icon: Shield,
+    permissions: ['ADMIN_VISIBLE'],
     items: [
-      { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users, weight: 10 },
-      { id: 'roles', label: 'Roles', path: '/admin/roles', icon: Shield, weight: 20 },
+      { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users, weight: 10, permissions: ['USER_READ', 'USER_MANAGER'] },
+      { id: 'roles', label: 'Roles', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
       { id: 'warehouses', label: 'Bodegas', path: '/admin/warehouses', icon: Store, weight: 30 },
       { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40 },
       { id: 'petty-cash-admin', label: 'Administracion de caja chica', path: '/admin/cash-petty', icon: WalletCards, weight: 50 },
-      { id: 'menu-config', label: 'Configuracion de menu', path: '/admin/menu', icon: Settings, weight: 60 },
+      { id: 'menu-config', label: 'Configuracion de menu', path: '/admin/menu', icon: Settings, weight: 60, permissions: ['MENU_VISIBLE'] },
     ],
   },
 ];
 
+export const getMenuItemPermissionCode = (item) => (
+  item.accessPermission
+  || `${item.id.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase()}_ACCESS`
+);
+
+export const getMenuItemPermissions = (group, item) => (
+  item.permissions?.length ? item.permissions : [getMenuItemPermissionCode(item)]
+);
+
 export const flatModules = moduleGroups.flatMap((group) =>
   [...group.items]
     .sort((left, right) => left.weight - right.weight)
-    .map((item) => ({ ...item, group: group.label, groupId: group.id }))
+    .map((item) => ({
+      ...item,
+      group: group.label,
+      groupId: group.id,
+      visibilityPermissions: group.permissions || [],
+      permissions: getMenuItemPermissions(group, item),
+    }))
 );
 
 export const systemPages = [

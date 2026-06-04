@@ -23,6 +23,11 @@ export const authService = {
     await apiClient.post('/auth/logout');
   },
 
+  async syncSession() {
+    const response = await apiClient.post('/auth/sync-session');
+    return normalizeAuthPayload(response.data);
+  },
+
   async getCurrentUser() {
     const response = await apiClient.get('/users/me/profile');
     const data = response.data?.data || response.data;

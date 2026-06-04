@@ -38,6 +38,9 @@ const ALL_MODAL_RENDERERS = {
   ...systemModalRenderers
 };
 
+let bodyScrollLockCount = 0;
+let bodyScrollSnapshot = null;
+
 // ====================================
 // HOOK PARA FOCUS MANAGEMENT
 // ====================================
@@ -112,13 +115,38 @@ const useBodyScrollLock = (isOpen) => {
   useEffect(() => {
     if (!isOpen) return;
 
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    document.body.style.overflow = 'hidden';
+    if (bodyScrollLockCount === 0) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      const computedBodyStyle = window.getComputedStyle(document.body);
+
+      bodyScrollSnapshot = {
+        bodyOverflow: document.body.style.overflow,
+        bodyPaddingRight: document.body.style.paddingRight,
+        htmlOverflow: document.documentElement.style.overflow,
+      };
+
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+
+      if (scrollbarWidth > 0) {
+        const currentPadding = Number.parseFloat(computedBodyStyle.paddingRight) || 0;
+        document.body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
+      }
+    }
+
+    bodyScrollLockCount += 1;
     document.body.classList.add(MODAL_CONFIG.bodyClass);
 
     return () => {
-      document.body.style.overflow = originalStyle;
-      document.body.classList.remove(MODAL_CONFIG.bodyClass);
+      bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+
+      if (bodyScrollLockCount === 0 && bodyScrollSnapshot) {
+        document.body.style.overflow = bodyScrollSnapshot.bodyOverflow;
+        document.body.style.paddingRight = bodyScrollSnapshot.bodyPaddingRight;
+        document.documentElement.style.overflow = bodyScrollSnapshot.htmlOverflow;
+        document.body.classList.remove(MODAL_CONFIG.bodyClass);
+        bodyScrollSnapshot = null;
+      }
     };
   }, [isOpen]);
 };
@@ -406,7 +434,7 @@ const modalElement = (
         )}
         
         {/* Contenido dinámico según el tipo */}
-        <div id={`modal-body-${uniqueId.current}`}>
+        <div id={`modal-body-${uniqueId.current}`} className="flex-1 overflow-y-auto">
           {modalContent}
         </div>
       </div>
