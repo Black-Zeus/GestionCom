@@ -328,11 +328,10 @@ API_VERSION_HEADER = "X-API-Version"  # Header para versión de API
 PRIVATE_ROUTES = [
     # Gestión de usuarios - requiere autenticación
     "/users",
+    "/roles",
     
     # Operaciones de autenticación que requieren token válido
     "/auth/logout",                 # Logout requiere token activo para invalidar
-    "/auth/validate-token",         # Validación requiere el token a verificar
-    "/auth/refresh",                # Refresh requiere refresh token válido
     "/auth/change-password",
 
     # Módulos de negocio que requieren autenticación
@@ -343,4 +342,12 @@ PRIVATE_ROUTES = [
 
 # Flag para indicar si ResponseManager está disponible
 # Permite fallback a respuestas básicas si hay problemas
+SELF_AUTH_ROUTES = [
+    "/auth/login",
+    "/auth/refresh",
+    "/auth/validate-token",
+    "/auth/forgot-password",
+    "/auth/reset-password",
+]
+
 RESPONSE_MANAGER_AVAILABLE = True

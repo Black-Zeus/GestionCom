@@ -34,6 +34,10 @@ class Settings:
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT") or "8000")
     API_PREFIX: str = os.getenv("API_PREFIX", "/api/v1")
+    CORS_ALLOWED_ORIGINS: str = os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost,http://localhost:80,http://localhost:5173,http://127.0.0.1,http://127.0.0.1:5173"
+    )
     
     # ====== Base de datos (MySQL/MariaDB) ======
     MYSQL_HOST: str = os.getenv("MYSQL_HOST", "localhost")
@@ -109,6 +113,15 @@ class Settings:
         """Retorna True si está en modo producción."""
         return self.ENVIRONMENT.lower() in ["production", "prod"]
     
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        """Lista de origenes permitidos para CORS."""
+        return [
+            origin.strip().rstrip("/")
+            for origin in self.CORS_ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
+
     @property
     def database_url(self) -> str:
         """Genera la URL de conexión a la base de datos."""

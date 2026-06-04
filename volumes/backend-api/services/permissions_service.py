@@ -2,8 +2,9 @@
 volumes/backend-api/services/permissions_service.py
 Servicio centralizado de permisos y roles - USANDO ORM Y LÓGICA SEPARADA
 """
+from datetime import datetime, timezone
 from typing import List, Dict
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from database.database import db_manager
 from utils.log_helper import setup_logger
 
@@ -54,7 +55,9 @@ class PermissionsService:
             ).where(
                 and_(
                     UserRole.user_id == user_id,
-                    Role.is_active == True
+                    UserRole.deleted_at.is_(None),
+                    Role.is_active == True,
+                    Role.deleted_at.is_(None)
                 )
             )
             
@@ -79,7 +82,10 @@ class PermissionsService:
             ).where(
                 and_(
                     UserPermission.user_id == user_id,
+                    UserPermission.deleted_at.is_(None),
                     Permission.is_active == True,
+                    Permission.deleted_at.is_(None),
+                    or_(UserPermission.expires_at.is_(None), UserPermission.expires_at > datetime.now(timezone.utc)),
                     UserPermission.permission_type == 'GRANT'
                 )
             )
@@ -113,8 +119,12 @@ class PermissionsService:
             ).where(
                 and_(
                     UserRole.user_id == user_id,
+                    UserRole.deleted_at.is_(None),
                     Role.is_active == True,
-                    Permission.is_active == True
+                    Role.deleted_at.is_(None),
+                    RolePermission.deleted_at.is_(None),
+                    Permission.is_active == True,
+                    Permission.deleted_at.is_(None)
                 )
             ).distinct()
             

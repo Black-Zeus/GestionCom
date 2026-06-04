@@ -391,6 +391,20 @@ class UserRoleRemoval(BaseModel):
     reason: Optional[str] = Field(None, max_length=500, description="Razón de la remoción")
 
 
+class UserRolesUpdate(BaseModel):
+    """Schema para reemplazar roles asignados a un usuario"""
+    role_ids: List[int] = Field(default_factory=list, description="IDs de roles que quedaran asignados")
+    reason: str = Field(..., min_length=3, max_length=500, description="Motivo obligatorio del cambio")
+
+    @field_validator('role_ids')
+    @classmethod
+    def validate_role_ids(cls, v):
+        role_ids = list(dict.fromkeys(v or []))
+        if any(role_id <= 0 for role_id in role_ids):
+            raise ValueError("Todos los roles deben tener ID positivo")
+        return role_ids
+
+
 # ==========================================
 # PERMISSION ASSIGNMENT SCHEMAS
 # ==========================================

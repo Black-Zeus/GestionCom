@@ -312,7 +312,7 @@ class AdminChangePasswordRequest(BaseModel):
     target_user_id: int = Field(..., gt=0, description="ID del usuario objetivo")
     new_password: str = Field(..., min_length=8, description="Nueva contraseña")
     confirm_password: str = Field(..., min_length=8, description="Confirmación de nueva contraseña")
-    reason: Optional[str] = Field(None, max_length=500, description="Razón del cambio (opcional)")
+    reason: str = Field(..., min_length=3, max_length=500, description="Glosa obligatoria para auditoria")
 
     model_config = ConfigDict(
         json_schema_extra={

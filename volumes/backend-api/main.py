@@ -90,7 +90,7 @@ app.openapi = customize_openapi
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Cambiar en producción
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -122,6 +122,11 @@ ROUTERS_TO_LOAD = [
         "name": "auth",
         "prefix": "/auth", 
         "tags": ["Authentication"]
+    },
+    {
+        "name": "roles",
+        "prefix": "/roles",
+        "tags": ["Roles"]
     },
     {
         "name": "warehouses",

@@ -30,7 +30,8 @@ from utils.auth_helpers import (
 )
 
 # Import para validación de usuario autenticado
-from utils.permissions_utils import get_current_user
+from utils.permissions_utils import get_current_user, require_permission
+from utils.audit_utils import record_audit_log
 
 
 
@@ -50,6 +51,10 @@ router = APIRouter(
         500: {"description": "Error interno del servidor"}
     }
 )
+
+
+async def require_user_manager_permission(request: Request) -> dict:
+    return await require_permission("USER", ["MANAGER"], request)
 
 # Inicializar helper de autenticación
 auth_helper = AuthHelper()
@@ -188,6 +193,87 @@ async def refresh_token(request: Request):
             request=request
         )
 
+@router.post("/sync-session", response_class=JSONResponse)
+async def sync_session(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Emitir una nueva sesion con roles y permisos actualizados sin cerrar al usuario."""
+
+    try:
+        user_id = current_user.get("user_id")
+        if not user_id:
+            return ResponseManager.error(
+                message="Sesion invalida",
+                status_code=HTTPStatus.UNAUTHORIZED,
+                error_code=ErrorCode.AUTH_TOKEN_INVALID,
+                details="El token actual no contiene identificador de usuario",
+                request=request
+            )
+
+        try:
+            from cache.services.user_cache import invalidate_user_permissions
+            await invalidate_user_permissions(user_id)
+        except Exception as cache_error:
+            logger.warning(f"No fue posible invalidar cache de permisos para sync usuario {user_id}: {cache_error}")
+
+        user_data = await auth_helper._get_user_data_for_refresh(user_id)
+        if not user_data:
+            return ResponseManager.error(
+                message="Usuario no disponible para sincronizar sesion",
+                status_code=HTTPStatus.UNAUTHORIZED,
+                error_code=ErrorCode.AUTH_USER_INACTIVE,
+                request=request
+            )
+
+        client_ip = get_client_ip(request)
+        user_agent = request.headers.get('user-agent', 'unknown')
+        user_secret = await auth_helper._get_or_create_user_secret(user_id)
+        tokens = await auth_helper._generate_refresh_tokens(
+            user_data=user_data,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            user_secret=user_secret
+        )
+
+        user_info = {
+            "id": user_data["id"],
+            "username": user_data["username"],
+            "email": user_data["email"],
+            "full_name": user_data.get("full_name", user_data["username"]),
+            "name": user_data.get("full_name", user_data["username"]),
+            "is_active": user_data["is_active"],
+            "roles": user_data.get("roles", []),
+            "permissions": user_data.get("permissions", []),
+        }
+
+        response_data = {
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
+            "token_type": "bearer",
+            "expires_in": tokens.get("expires_in", settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60),
+            "session_id": tokens.get("session_id"),
+            "synced_at": datetime.now(timezone.utc).isoformat(),
+            "user": user_info,
+        }
+
+        logger.info(f"Sesion sincronizada para usuario: {user_data['username']} (ID: {user_id})")
+
+        return ResponseManager.success(
+            data=response_data,
+            message="Sesion sincronizada exitosamente",
+            request=request
+        )
+
+    except Exception as e:
+        logger.error(f"Error sincronizando sesion: {e}")
+        return ResponseManager.internal_server_error(
+            message="Error durante sincronizacion de sesion",
+            details=str(e),
+            request=request
+        )
+
+
 @router.post("/logout", response_class=JSONResponse)
 async def logout(request: Request):
     """Cerrar sesión y revocar tokens del usuario"""
@@ -313,14 +399,35 @@ async def change_password(
                     request=request
                 )
 
+            changed_at = datetime.now(timezone.utc)
+            old_password_set = bool(user.password_hash)
+
             # Actualizar contraseña en BD
             await db.execute(
                 update(User)
                 .where(User.id == user_id)
                 .values(
                     password_hash=new_password_hash,
-                    updated_at=datetime.now(timezone.utc)
+                    password_changed_at=changed_at,
+                    updated_at=changed_at
                 )
+            )
+            await record_audit_log(
+                db,
+                table_name="users",
+                record_id=user_id,
+                action_type="UPDATE",
+                user_id=user_id,
+                changed_fields=["password_hash", "password_changed_at"],
+                old_values={
+                    "password_set": old_password_set,
+                },
+                new_values={
+                    "password_set": True,
+                    "password_changed_at": changed_at.isoformat(),
+                    "changed_by": "self",
+                },
+                request=request,
             )
             await db.commit()
             
@@ -328,7 +435,7 @@ async def change_password(
                 "user_id": user_id,
                 "username": username,
                 "password_changed": True,
-                "changed_at": datetime.now(timezone.utc).isoformat(),
+                "changed_at": changed_at.isoformat(),
                 "tokens_invalidated": False,
                 "changed_by": "self",
                 "message": "Contraseña cambiada exitosamente. Su sesión actual permanece activa."
@@ -354,25 +461,13 @@ async def change_password(
 async def admin_change_password(
     admin_password_data: AdminChangePasswordRequest,
     request: Request,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_user_manager_permission)
 ):
-    """Cambiar contraseña de cualquier usuario (solo administradores)"""
+    """Cambiar contrasena de un usuario con permiso USER_MANAGER."""
     
     try:
         admin_username = current_user.get("username", "unknown")
         admin_user_id = current_user.get("user_id")
-        admin_roles = current_user.get("roles", [])
-        
-        # Verificar que el usuario actual es administrador
-        if "ADMIN" not in admin_roles:
-            logger.warning(f"Intento de cambio de contraseña admin por usuario no autorizado: {admin_username}")
-            return ResponseManager.error(
-                message="Acceso denegado",
-                status_code=HTTPStatus.FORBIDDEN,
-                error_code=ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
-                details="Se requieren permisos de administrador",
-                request=request
-            )
         
         logger.info(f"Cambio de contraseña admin por: {admin_username} para usuario ID: {admin_password_data.target_user_id}")
         
@@ -388,7 +483,7 @@ async def admin_change_password(
         
         from database import get_async_session
         from database.models.users import User
-        from sqlalchemy import select, update
+        from sqlalchemy import select
         from core.password_manager import hash_user_password
         
         async for db in get_async_session():
@@ -406,17 +501,31 @@ async def admin_change_password(
                     request=request
                 )
             
-            # Generar hash de nueva contraseña
             new_password_hash = hash_user_password(admin_password_data.new_password)
+            changed_at = datetime.now(timezone.utc)
             
-            # Actualizar contraseña
-            await db.execute(
-                update(User)
-                .where(User.id == admin_password_data.target_user_id)
-                .values(
-                    password_hash=new_password_hash,
-                    updated_at=datetime.now(timezone.utc)
-                )
+            old_password_set = bool(target_user.password_hash)
+            target_username = target_user.username
+            target_user.password_hash = new_password_hash
+            target_user.password_changed_at = changed_at
+            target_user.updated_at = changed_at
+
+            await record_audit_log(
+                db,
+                table_name="users",
+                record_id=target_user.id,
+                action_type="UPDATE",
+                user_id=admin_user_id,
+                changed_fields=["password_hash", "password_changed_at"],
+                old_values={
+                    "password_set": old_password_set,
+                },
+                new_values={
+                    "password_set": True,
+                    "password_changed_at": changed_at.isoformat(),
+                    "reason": admin_password_data.reason,
+                },
+                request=request,
             )
             await db.commit()
             
@@ -424,7 +533,7 @@ async def admin_change_password(
             try:
                 from cache.services.user_cache import invalidate_user_secret
                 await invalidate_user_secret(admin_password_data.target_user_id)
-                logger.info(f"Tokens invalidados para usuario: {target_user.username}")
+                logger.info(f"Tokens invalidados para usuario: {target_username}")
                 tokens_invalidated = True
             except ImportError:
                 logger.warning("Cache no disponible - tokens no invalidados")
@@ -432,22 +541,22 @@ async def admin_change_password(
             
             result = {
                 "target_user_id": admin_password_data.target_user_id,
-                "target_username": target_user.username,
+                "target_username": target_username,
                 "password_changed": True,
-                "changed_at": datetime.now(timezone.utc).isoformat(),
+                "changed_at": changed_at.isoformat(),
                 "changed_by": "admin",
                 "admin_user_id": admin_user_id,
                 "admin_username": admin_username,
                 "tokens_invalidated": tokens_invalidated,
-                "reason": admin_password_data.reason or "Password reset by administrator",
-                "message": f"Contraseña cambiada exitosamente para usuario: {target_user.username}. Todas las sesiones del usuario han sido cerradas."
+                "reason": admin_password_data.reason,
+                "message": f"Contraseña cambiada exitosamente para usuario: {target_username}. Todas las sesiones del usuario han sido cerradas."
             }
             
             # Log de auditoría crítico
             logger.info(
                 f"ADMIN_PASSWORD_CHANGE - Admin: {admin_username} (ID: {admin_user_id}) "
-                f"cambió contraseña de usuario: {target_user.username} (ID: {admin_password_data.target_user_id}) "
-                f"- Razón: {admin_password_data.reason or 'No especificada'}"
+                f"cambió contraseña de usuario: {target_username} (ID: {admin_password_data.target_user_id}) "
+                f"- Razón: {admin_password_data.reason}"
             )
             
             return ResponseManager.success(

@@ -8,19 +8,25 @@ from utils.log_helper import setup_logger
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Request, Depends, Query, Path
+from fastapi import APIRouter, Body, Request, Depends, Query, Path
 from fastapi.responses import JSONResponse
-from sqlalchemy import select, and_, func, or_
+from sqlalchemy import delete, select, and_, func, or_
 
 # Database imports
 from database.database import db_manager
+from database.models.roles import Role
+from database.models.permissions import Permission
+from database.models.role_permissions import RolePermission
+from database.models.user_roles import UserRole
+from database.models.user_permissions import PermissionType, UserPermission
 from database.models.users import User
 
 # Schema imports
 from database.schemas.user import (
     UserCreate,
     UserUpdate,
-    UserActivationToggle
+    UserActivationToggle,
+    UserRolesUpdate
 )
 
 # Core imports
@@ -30,6 +36,8 @@ from core.constants import ErrorCode, ErrorType, HTTPStatus
 # Utils imports
 from utils.permissions_utils import get_current_user, require_permission
 from utils.profile_helpers import ProfileHelper 
+from utils.audit_utils import record_audit_log
+from core.password_manager import PasswordManager
 
 # ==========================================
 # CONFIGURACIÓN DEL ROUTER
@@ -83,6 +91,7 @@ def user_to_dict(user: User, include_sensitive: bool = False) -> dict:
         "has_petty_cash_access": user.has_petty_cash_access,
         #"is_recently_active": user.is_recently_active,
         "is_recently_active": user.has_recent_login,
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
         # Arrays vacíos preparados para futuro módulo de permisos
         "roles": [],
         "permissions": [],
@@ -92,7 +101,6 @@ def user_to_dict(user: User, include_sensitive: bool = False) -> dict:
     
     if include_sensitive:
         base_dict.update({
-            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
             "last_login_ip": user.last_login_ip,
             "password_changed_at": user.password_changed_at.isoformat() if user.password_changed_at else None,
             "password_age_days": user.password_age_days,
@@ -100,6 +108,18 @@ def user_to_dict(user: User, include_sensitive: bool = False) -> dict:
         })
     
     return base_dict
+
+
+def permission_to_dict(permission: Permission, assigned: bool = False) -> dict:
+    return {
+        "id": permission.id,
+        "permission_code": permission.permission_code,
+        "permission_name": permission.permission_name,
+        "permission_group": permission.permission_group,
+        "permission_description": permission.permission_description,
+        "is_active": permission.is_active,
+        "assigned": assigned,
+    }
 
 async def get_profile(session, user_id: int, requesting_user_id: int, is_own_profile: bool = False) -> dict:
     """
@@ -215,6 +235,8 @@ async def list_users(
     skip: int = Query(0, ge=0, description="Elementos a saltar"),
     limit: int = Query(100, ge=1, le=1000, description="Límite de elementos"),
     active_only: bool = Query(True, description="Solo usuarios activos"),
+    status: Optional[str] = Query(None, description="Estado: all, active o inactive"),
+    role_code: Optional[str] = Query(None, description="Filtrar por codigo de rol"),
     search: Optional[str] = Query(None, description="Buscar por username, nombre o email"),
     has_recent_login: Optional[bool] = Query(None, description="Filtrar por login reciente")
 ):
@@ -225,8 +247,23 @@ async def list_users(
             # Construir query base
             stmt = select(User).where(User.deleted_at.is_(None))
             
-            if active_only:
+            normalized_status = status.lower() if status else None
+            if normalized_status == "active":
                 stmt = stmt.where(User.is_active == True)
+            elif normalized_status == "inactive":
+                stmt = stmt.where(User.is_active == False)
+            elif not normalized_status and active_only:
+                stmt = stmt.where(User.is_active == True)
+
+            if role_code:
+                normalized_role_code = role_code.strip().upper()
+                stmt = stmt.join(UserRole, UserRole.user_id == User.id).join(Role, Role.id == UserRole.role_id).where(
+                    and_(
+                        Role.role_code == normalized_role_code,
+                        Role.is_active == True,
+                        Role.deleted_at.is_(None)
+                    )
+                )
             
             # Filtro de búsqueda
             if search:
@@ -254,16 +291,29 @@ async def list_users(
                     )
             
             # Aplicar paginación y ordenamiento
+            total_stmt = select(func.count()).select_from(stmt.subquery())
+            total_found = (await session.execute(total_stmt)).scalar() or 0
+
             stmt = stmt.order_by(User.username).offset(skip).limit(limit)
             
             result = await session.execute(stmt)
             users = result.scalars().all()
             
             # Convertir a diccionarios (sin información sensible para listado)
-            user_data = [user_to_dict(user, include_sensitive=False) for user in users]
+            user_data = []
+            for listed_user in users:
+                listed_user_data = user_to_dict(listed_user, include_sensitive=False)
+                roles_and_permissions = await ProfileHelper.get_user_roles_and_permissions(session, listed_user.id)
+                listed_user_data.update({
+                    "roles": roles_and_permissions.get("role_codes", []),
+                    "role_names": roles_and_permissions.get("role_names", []),
+                    "role_details": roles_and_permissions.get("role_details", []),
+                    "role_count": roles_and_permissions.get("role_count", 0),
+                    "permission_count": roles_and_permissions.get("permission_count", 0),
+                })
+                user_data.append(listed_user_data)
             
             # Estadísticas básicas
-            total_found = len(user_data)
             active_count = sum(1 for u in user_data if u["is_active"])
             recent_login_count = sum(1 for u in user_data if u["is_recently_active"])
             
@@ -274,12 +324,15 @@ async def list_users(
                 "recent_login_count": recent_login_count,
                 "filters_applied": {
                     "active_only": active_only,
+                    "status": normalized_status,
+                    "role_code": role_code,
                     "search": search,
                     "has_recent_login": has_recent_login
                 },
                 "pagination": {
                     "skip": skip,
-                    "limit": limit
+                    "limit": limit,
+                    "has_more": (skip + limit) < total_found
                 }
             }
             
@@ -350,6 +403,8 @@ async def create_user(
                 )
             
             # Crear el usuario (sin contraseña - se asigna después)
+            password_hash = PasswordManager.hash_password(user_data.password)
+
             new_user = User(
                 username=user_data.username.lower(),
                 email=user_data.email.lower(),
@@ -359,7 +414,7 @@ async def create_user(
                 is_active=True,  # Por defecto activo
                 petty_cash_limit=user_data.petty_cash_limit,
                 # Campos requeridos temporales (se actualizarán en auth)
-                password_hash="0" * 64,  # Hash temporal - se actualiza en auth
+                password_hash=password_hash,
                 password_changed_at=datetime.now(timezone.utc)
             )
             
@@ -367,16 +422,46 @@ async def create_user(
             new_user.generate_secret()
             
             session.add(new_user)
+            await session.flush()
+            await record_audit_log(
+                session,
+                table_name="users",
+                record_id=new_user.id,
+                action_type="INSERT",
+                user_id=user.get("user_id"),
+                changed_fields=[
+                    "username",
+                    "email",
+                    "first_name",
+                    "last_name",
+                    "phone",
+                    "is_active",
+                    "petty_cash_limit",
+                    "password_hash",
+                ],
+                old_values=None,
+                new_values={
+                    "username": new_user.username,
+                    "email": new_user.email,
+                    "first_name": new_user.first_name,
+                    "last_name": new_user.last_name,
+                    "phone": new_user.phone,
+                    "is_active": new_user.is_active,
+                    "petty_cash_limit": str(new_user.petty_cash_limit) if new_user.petty_cash_limit is not None else None,
+                    "password_set": True,
+                },
+                request=request,
+            )
             await session.commit()
             await session.refresh(new_user)
             
             user_dict = user_to_dict(new_user, include_sensitive=True)
             
-            logger.info(f"Usuario {user['username']} creó usuario: {new_user.username} (sin contraseña)")
+            logger.info(f"Usuario {user['username']} creó usuario: {new_user.username}")
             
             return ResponseManager.success(
                 data=user_dict,
-                message=f"Usuario '{new_user.username}' creado exitosamente. Contraseña pendiente de asignación.",
+                message=f"Usuario '{new_user.username}' creado exitosamente.",
                 request=request
             )
         
@@ -495,19 +580,28 @@ async def update_user(
                     request=request
                 )
             
+            old_values = {
+                "first_name": target_user.first_name,
+                "last_name": target_user.last_name,
+                "phone": target_user.phone,
+                "email": target_user.email,
+                "is_active": target_user.is_active,
+                "petty_cash_limit": str(target_user.petty_cash_limit) if target_user.petty_cash_limit is not None else None,
+            }
+
             # Aplicar actualizaciones según permisos
             updated_fields = []
             
             # Campos que el usuario puede editar de sí mismo
-            if user_data.first_name is not None:
+            if user_data.first_name is not None and user_data.first_name != target_user.first_name:
                 target_user.first_name = user_data.first_name
                 updated_fields.append("first_name")
             
-            if user_data.last_name is not None:
+            if user_data.last_name is not None and user_data.last_name != target_user.last_name:
                 target_user.last_name = user_data.last_name
                 updated_fields.append("last_name")
             
-            if user_data.phone is not None:
+            if user_data.phone is not None and user_data.phone != target_user.phone:
                 target_user.phone = user_data.phone
                 updated_fields.append("phone")
             
@@ -537,7 +631,7 @@ async def update_user(
             
             # Campos que solo admin/manager puede editar - CORREGIDO
             if is_admin or is_manager:
-                if user_data.is_active is not None:
+                if user_data.is_active is not None and user_data.is_active != target_user.is_active:
                     # Evitar auto-desactivación
                     if user['user_id'] == user_id and user_data.is_active == False:
                         return ResponseManager.error(
@@ -551,7 +645,7 @@ async def update_user(
                     target_user.is_active = user_data.is_active
                     updated_fields.append("is_active")
                 
-                if user_data.petty_cash_limit is not None:
+                if user_data.petty_cash_limit is not None and user_data.petty_cash_limit != target_user.petty_cash_limit:
                     target_user.petty_cash_limit = user_data.petty_cash_limit
                     updated_fields.append("petty_cash_limit")
             else:
@@ -567,6 +661,26 @@ async def update_user(
             
             # Actualizar timestamp (automático por BaseModel)
             # target_user.updated_at se actualiza automáticamente
+            if updated_fields:
+                new_values = {
+                    "first_name": target_user.first_name,
+                    "last_name": target_user.last_name,
+                    "phone": target_user.phone,
+                    "email": target_user.email,
+                    "is_active": target_user.is_active,
+                    "petty_cash_limit": str(target_user.petty_cash_limit) if target_user.petty_cash_limit is not None else None,
+                }
+                await record_audit_log(
+                    session,
+                    table_name="users",
+                    record_id=target_user.id,
+                    action_type="UPDATE",
+                    user_id=user.get("user_id"),
+                    changed_fields=updated_fields,
+                    old_values={field: old_values.get(field) for field in updated_fields},
+                    new_values={field: new_values.get(field) for field in updated_fields},
+                    request=request,
+                )
             
             await session.commit()
             await session.refresh(target_user)
@@ -662,6 +776,581 @@ async def delete_user(
 # ENDPOINTS DE ACTIVACIÓN/DESACTIVACIÓN
 # ==========================================
 
+def role_assignment_to_dict(role: Role, assigned_at=None, assigned_by_user_id=None) -> dict:
+    return {
+        "id": role.id,
+        "role_code": role.role_code,
+        "role_name": role.role_name,
+        "role_description": role.role_description,
+        "is_system_role": role.is_system_role,
+        "is_active": role.is_active,
+        "assigned_at": assigned_at.isoformat() if assigned_at else None,
+        "assigned_by_user_id": assigned_by_user_id,
+    }
+
+
+@router.get("/{user_id}/roles", response_class=JSONResponse)
+async def get_user_roles(
+    user_id: int = Path(..., description="ID del usuario"),
+    request: Request = None,
+    user: dict = Depends(require_manager_permission)
+):
+    """Obtener roles asignados a un usuario."""
+    try:
+        async with db_manager.get_async_session() as session:
+            target_result = await session.execute(
+                select(User).where(
+                    and_(
+                        User.id == user_id,
+                        User.deleted_at.is_(None)
+                    )
+                )
+            )
+            target_user = target_result.scalar_one_or_none()
+
+            if not target_user:
+                return ResponseManager.error(
+                    message=f"Usuario no encontrado: {user_id}",
+                    status_code=HTTPStatus.NOT_FOUND,
+                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request
+                )
+
+            assigned_result = await session.execute(
+                select(Role, UserRole.assigned_at, UserRole.assigned_by_user_id)
+                .join(UserRole, UserRole.role_id == Role.id)
+                .where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        Role.deleted_at.is_(None)
+                    )
+                )
+                .order_by(Role.role_name)
+            )
+            assigned_roles = [
+                role_assignment_to_dict(role, assigned_at, assigned_by_user_id)
+                for role, assigned_at, assigned_by_user_id in assigned_result.all()
+            ]
+
+            available_result = await session.execute(
+                select(Role)
+                .where(
+                    and_(
+                        Role.is_active == True,
+                        Role.deleted_at.is_(None)
+                    )
+                )
+                .order_by(Role.role_name)
+            )
+            available_roles = [
+                role_assignment_to_dict(role)
+                for role in available_result.scalars().all()
+            ]
+
+            return ResponseManager.success(
+                data={
+                    "user": user_to_dict(target_user, include_sensitive=False),
+                    "assigned_roles": assigned_roles,
+                    "available_roles": available_roles,
+                },
+                message="Roles de usuario obtenidos",
+                request=request
+            )
+
+    except Exception as e:
+        logger.error(f"Error al obtener roles usuario {user_id}: {e}")
+        return ResponseManager.internal_server_error(
+            message="Error al obtener roles del usuario",
+            details=str(e),
+            request=request
+        )
+
+
+@router.put("/{user_id}/roles", response_class=JSONResponse)
+async def update_user_roles(
+    roles_data: UserRolesUpdate,
+    user_id: int = Path(..., description="ID del usuario"),
+    request: Request = None,
+    user: dict = Depends(require_manager_permission)
+):
+    """Reemplazar roles asignados a un usuario."""
+    try:
+        async with db_manager.get_async_session() as session:
+            target_result = await session.execute(
+                select(User).where(
+                    and_(
+                        User.id == user_id,
+                        User.deleted_at.is_(None)
+                    )
+                )
+            )
+            target_user = target_result.scalar_one_or_none()
+
+            if not target_user:
+                return ResponseManager.error(
+                    message=f"Usuario no encontrado: {user_id}",
+                    status_code=HTTPStatus.NOT_FOUND,
+                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request
+                )
+
+            if user.get("user_id") == user_id:
+                return ResponseManager.error(
+                    message="No puedes modificar tus propios roles",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.BUSINESS_RULE_VIOLATION,
+                    error_type=ErrorType.BUSINESS_ERROR,
+                    request=request
+                )
+
+            requested_role_ids = list(dict.fromkeys(roles_data.role_ids or []))
+            if requested_role_ids:
+                roles_result = await session.execute(
+                    select(Role).where(
+                        and_(
+                            Role.id.in_(requested_role_ids),
+                            Role.is_active == True,
+                            Role.deleted_at.is_(None)
+                        )
+                    )
+                )
+                requested_roles = roles_result.scalars().all()
+            else:
+                requested_roles = []
+
+            if len(requested_roles) != len(requested_role_ids):
+                found_ids = {role.id for role in requested_roles}
+                missing_ids = [role_id for role_id in requested_role_ids if role_id not in found_ids]
+                return ResponseManager.error(
+                    message="Uno o mas roles no existen o estan inactivos",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                    error_type=ErrorType.VALIDATION_ERROR,
+                    details={"missing_role_ids": missing_ids},
+                    request=request
+                )
+
+            requested_role_codes = {role.role_code for role in requested_roles}
+            if "SUPER_ADMIN" in requested_role_codes and target_user.username != "root":
+                return ResponseManager.error(
+                    message="El perfil Super Admin esta reservado para el usuario root",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.BUSINESS_RULE_VIOLATION,
+                    error_type=ErrorType.BUSINESS_ERROR,
+                    request=request
+                )
+
+            current_result = await session.execute(
+                select(Role)
+                .join(UserRole, UserRole.role_id == Role.id)
+                .where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        Role.deleted_at.is_(None)
+                    )
+                )
+            )
+            current_roles = current_result.scalars().all()
+            current_role_ids = {role.id for role in current_roles}
+            requested_role_ids_set = set(requested_role_ids)
+
+            if current_role_ids == requested_role_ids_set:
+                return ResponseManager.success(
+                    data={
+                        "user_id": user_id,
+                        "roles_changed": False,
+                        "assigned_roles": [
+                            role_assignment_to_dict(role)
+                            for role in sorted(current_roles, key=lambda item: item.role_name)
+                        ],
+                    },
+                    message="Roles sin cambios",
+                    request=request
+                )
+
+            old_role_codes = sorted(role.role_code for role in current_roles)
+            new_role_codes = sorted(role.role_code for role in requested_roles)
+
+            if target_user.username == "root" and "SUPER_ADMIN" in old_role_codes and "SUPER_ADMIN" not in new_role_codes:
+                return ResponseManager.error(
+                    message="No es posible remover el perfil Super Admin del usuario root",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.BUSINESS_RULE_VIOLATION,
+                    error_type=ErrorType.BUSINESS_ERROR,
+                    request=request
+                )
+
+            await session.execute(delete(UserRole).where(UserRole.user_id == user_id))
+            assigned_at = datetime.now(timezone.utc)
+            for role in requested_roles:
+                session.add(UserRole(
+                    user_id=user_id,
+                    role_id=role.id,
+                    assigned_by_user_id=user.get("user_id"),
+                    assigned_at=assigned_at
+                ))
+
+            await record_audit_log(
+                session,
+                table_name="user_roles",
+                record_id=user_id,
+                action_type="UPDATE",
+                user_id=user.get("user_id"),
+                changed_fields=["roles"],
+                old_values={
+                    "role_codes": old_role_codes,
+                },
+                new_values={
+                    "role_codes": new_role_codes,
+                    "reason": roles_data.reason,
+                },
+                request=request,
+            )
+            await session.commit()
+
+            try:
+                from cache.services.user_cache import invalidate_user_permissions
+                await invalidate_user_permissions(user_id)
+            except Exception as cache_error:
+                logger.warning(f"No fue posible invalidar cache de permisos para usuario {user_id}: {cache_error}")
+
+            return ResponseManager.success(
+                data={
+                    "user_id": user_id,
+                    "roles_changed": True,
+                    "old_roles": old_role_codes,
+                    "new_roles": new_role_codes,
+                    "assigned_roles": [
+                        role_assignment_to_dict(role)
+                        for role in sorted(requested_roles, key=lambda item: item.role_name)
+                    ],
+                    "session_sync_required": True,
+                },
+                message="Roles de usuario actualizados",
+                request=request
+            )
+
+    except Exception as e:
+        logger.error(f"Error al actualizar roles usuario {user_id}: {e}")
+        return ResponseManager.internal_server_error(
+            message="Error al actualizar roles del usuario",
+            details=str(e),
+            request=request
+        )
+
+
+@router.get("/{user_id}/permissions", response_class=JSONResponse)
+async def get_user_permissions_matrix(
+    request: Request,
+    user_id: int = Path(..., description="ID del usuario"),
+    user: dict = Depends(require_manager_permission)
+):
+    """Obtener matriz de permisos disponibles, heredados por roles y especiales del usuario."""
+    try:
+        async with db_manager.get_async_session() as session:
+            target_result = await session.execute(
+                select(User).where(
+                    and_(
+                        User.id == user_id,
+                        User.deleted_at.is_(None)
+                    )
+                )
+            )
+            target_user = target_result.scalar_one_or_none()
+
+            if not target_user:
+                return ResponseManager.error(
+                    message=f"Usuario no encontrado: {user_id}",
+                    status_code=HTTPStatus.NOT_FOUND,
+                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request
+                )
+
+            now_utc = datetime.now(timezone.utc)
+
+            inherited_result = await session.execute(
+                select(Permission)
+                .select_from(UserRole)
+                .join(Role, UserRole.role_id == Role.id)
+                .join(RolePermission, Role.id == RolePermission.role_id)
+                .join(Permission, RolePermission.permission_id == Permission.id)
+                .where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        UserRole.deleted_at.is_(None),
+                        Role.is_active == True,
+                        Role.deleted_at.is_(None),
+                        RolePermission.deleted_at.is_(None),
+                        Permission.is_active == True,
+                        Permission.deleted_at.is_(None)
+                    )
+                )
+                .distinct()
+            )
+            inherited_permissions = inherited_result.scalars().all()
+            inherited_ids = {permission.id for permission in inherited_permissions}
+
+            direct_result = await session.execute(
+                select(Permission)
+                .select_from(UserPermission)
+                .join(Permission, UserPermission.permission_id == Permission.id)
+                .where(
+                    and_(
+                        UserPermission.user_id == user_id,
+                        UserPermission.deleted_at.is_(None),
+                        UserPermission.permission_type == PermissionType.GRANT,
+                        or_(UserPermission.expires_at.is_(None), UserPermission.expires_at > now_utc),
+                        Permission.is_active == True,
+                        Permission.deleted_at.is_(None)
+                    )
+                )
+            )
+            direct_permissions = direct_result.scalars().all()
+            direct_ids = {permission.id for permission in direct_permissions}
+            special_direct_ids = direct_ids - inherited_ids
+            effective_ids = inherited_ids | direct_ids
+
+            permissions_result = await session.execute(
+                select(Permission)
+                .where(
+                    and_(
+                        Permission.is_active == True,
+                        Permission.deleted_at.is_(None)
+                    )
+                )
+                .order_by(Permission.permission_group, Permission.permission_code)
+            )
+            permissions = [
+                {
+                    **permission_to_dict(permission, assigned=permission.id in effective_ids),
+                    "inherited": permission.id in inherited_ids,
+                    "direct": permission.id in special_direct_ids,
+                    "editable": permission.id not in inherited_ids,
+                }
+                for permission in permissions_result.scalars().all()
+            ]
+
+            return ResponseManager.success(
+                data={
+                    "user": user_to_dict(target_user, include_sensitive=False),
+                    "permissions": permissions,
+                    "inherited_permission_ids": sorted(inherited_ids),
+                    "direct_permission_ids": sorted(special_direct_ids),
+                    "effective_permission_ids": sorted(effective_ids),
+                    "mode": "grant_only",
+                },
+                message="Permisos especiales de usuario obtenidos",
+                request=request
+            )
+
+    except Exception as e:
+        logger.error(f"Error al obtener permisos usuario {user_id}: {e}")
+        return ResponseManager.internal_server_error(
+            message="Error al obtener permisos del usuario",
+            details=str(e),
+            request=request
+        )
+
+
+@router.put("/{user_id}/permissions", response_class=JSONResponse)
+async def update_user_permissions_matrix(
+    request: Request,
+    user_id: int = Path(..., description="ID del usuario"),
+    payload: dict = Body(...),
+    user: dict = Depends(require_manager_permission)
+):
+    """Reemplazar permisos especiales directos del usuario. Solo soporta GRANT para evitar choques de precedencia."""
+    try:
+        permission_ids = list(dict.fromkeys(payload.get("permission_ids") or []))
+        reason = (payload.get("reason") or "").strip()
+
+        if len(reason) < 3:
+            return ResponseManager.error(
+                message="Debes indicar un motivo del cambio",
+                status_code=HTTPStatus.BAD_REQUEST,
+                error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                error_type=ErrorType.VALIDATION_ERROR,
+                request=request
+            )
+
+        if any(not isinstance(permission_id, int) or permission_id <= 0 for permission_id in permission_ids):
+            return ResponseManager.error(
+                message="Todos los permisos deben tener ID positivo",
+                status_code=HTTPStatus.BAD_REQUEST,
+                error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                error_type=ErrorType.VALIDATION_ERROR,
+                request=request
+            )
+
+        async with db_manager.get_async_session() as session:
+            target_result = await session.execute(
+                select(User).where(
+                    and_(
+                        User.id == user_id,
+                        User.deleted_at.is_(None)
+                    )
+                )
+            )
+            target_user = target_result.scalar_one_or_none()
+
+            if not target_user:
+                return ResponseManager.error(
+                    message=f"Usuario no encontrado: {user_id}",
+                    status_code=HTTPStatus.NOT_FOUND,
+                    error_code=ErrorCode.RESOURCE_NOT_FOUND,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request
+                )
+
+            inherited_result = await session.execute(
+                select(Permission.id)
+                .select_from(UserRole)
+                .join(Role, UserRole.role_id == Role.id)
+                .join(RolePermission, Role.id == RolePermission.role_id)
+                .join(Permission, RolePermission.permission_id == Permission.id)
+                .where(
+                    and_(
+                        UserRole.user_id == user_id,
+                        UserRole.deleted_at.is_(None),
+                        Role.is_active == True,
+                        Role.deleted_at.is_(None),
+                        RolePermission.deleted_at.is_(None),
+                        Permission.is_active == True,
+                        Permission.deleted_at.is_(None)
+                    )
+                )
+                .distinct()
+            )
+            inherited_ids = {row[0] for row in inherited_result.all()}
+            redundant_ids = sorted(set(permission_ids) & inherited_ids)
+
+            if redundant_ids:
+                return ResponseManager.error(
+                    message="No es necesario asignar como especial un permiso ya heredado por roles",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.BUSINESS_RULE_VIOLATION,
+                    error_type=ErrorType.BUSINESS_ERROR,
+                    details={"inherited_permission_ids": redundant_ids},
+                    request=request
+                )
+
+            if permission_ids:
+                permissions_result = await session.execute(
+                    select(Permission).where(
+                        and_(
+                            Permission.id.in_(permission_ids),
+                            Permission.is_active == True,
+                            Permission.deleted_at.is_(None)
+                        )
+                    )
+                )
+                requested_permissions = permissions_result.scalars().all()
+            else:
+                requested_permissions = []
+
+            if len(requested_permissions) != len(permission_ids):
+                found_ids = {permission.id for permission in requested_permissions}
+                missing_ids = [permission_id for permission_id in permission_ids if permission_id not in found_ids]
+                return ResponseManager.error(
+                    message="Uno o mas permisos no existen o estan inactivos",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                    error_type=ErrorType.VALIDATION_ERROR,
+                    details={"missing_permission_ids": missing_ids},
+                    request=request
+                )
+
+            current_result = await session.execute(
+                select(Permission)
+                .join(UserPermission, UserPermission.permission_id == Permission.id)
+                .where(
+                    and_(
+                        UserPermission.user_id == user_id,
+                        UserPermission.deleted_at.is_(None),
+                        UserPermission.permission_type == PermissionType.GRANT
+                    )
+                )
+            )
+            current_permissions = current_result.scalars().all()
+            current_ids = {permission.id for permission in current_permissions}
+            current_special_ids = current_ids - inherited_ids
+            requested_ids = set(permission_ids)
+
+            if current_special_ids == requested_ids:
+                return ResponseManager.success(
+                    data={
+                        "user_id": user_id,
+                        "permissions_changed": False,
+                        "direct_permission_ids": sorted(current_special_ids),
+                    },
+                    message="Permisos especiales sin cambios",
+                    request=request
+                )
+
+            old_permission_codes = sorted(permission.permission_code for permission in current_permissions)
+            new_permission_codes = sorted(permission.permission_code for permission in requested_permissions)
+
+            await session.execute(delete(UserPermission).where(UserPermission.user_id == user_id))
+            granted_at = datetime.now(timezone.utc)
+            for permission in requested_permissions:
+                session.add(UserPermission(
+                    user_id=user_id,
+                    permission_id=permission.id,
+                    permission_type=PermissionType.GRANT,
+                    granted_by_user_id=user.get("user_id"),
+                    granted_at=granted_at
+                ))
+
+            await record_audit_log(
+                session,
+                table_name="user_permissions",
+                record_id=user_id,
+                action_type="UPDATE",
+                user_id=user.get("user_id"),
+                changed_fields=["direct_permissions"],
+                old_values={
+                    "permission_codes": old_permission_codes,
+                },
+                new_values={
+                    "permission_codes": new_permission_codes,
+                    "mode": "grant_only",
+                    "reason": reason,
+                },
+                request=request,
+            )
+            await session.commit()
+
+            try:
+                from cache.services.user_cache import invalidate_user_permissions
+                await invalidate_user_permissions(user_id)
+            except Exception as cache_error:
+                logger.warning(f"No fue posible invalidar cache de permisos para usuario {user_id}: {cache_error}")
+
+            return ResponseManager.success(
+                data={
+                    "user_id": user_id,
+                    "permissions_changed": True,
+                    "old_permissions": old_permission_codes,
+                    "new_permissions": new_permission_codes,
+                    "direct_permission_ids": sorted(requested_ids),
+                    "session_sync_required": True,
+                },
+                message="Permisos especiales de usuario actualizados",
+                request=request
+            )
+
+    except Exception as e:
+        logger.error(f"Error al actualizar permisos usuario {user_id}: {e}")
+        return ResponseManager.internal_server_error(
+            message="Error al actualizar permisos del usuario",
+            details=str(e),
+            request=request
+        )
+
+
 @router.put("/{user_id}/toggle-activation", response_class=JSONResponse)
 async def toggle_user_activation(
     activation_data: UserActivationToggle,
@@ -706,6 +1395,22 @@ async def toggle_user_activation(
             # Actualizar estado
             old_status = target_user.is_active
             target_user.is_active = activation_data.is_active
+            await record_audit_log(
+                session,
+                table_name="users",
+                record_id=target_user.id,
+                action_type="UPDATE",
+                user_id=user.get("user_id"),
+                changed_fields=["is_active"],
+                old_values={
+                    "is_active": old_status,
+                },
+                new_values={
+                    "is_active": activation_data.is_active,
+                    "reason": activation_data.reason or None,
+                },
+                request=request,
+            )
             
             await session.commit()
             await session.refresh(target_user)

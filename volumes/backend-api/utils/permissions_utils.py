@@ -146,26 +146,10 @@ async def require_permission(module: str, actions, request: Request) -> dict:
     if isinstance(actions, str):
         actions = [actions]
     
-    # ==========================================
-    # BYPASS PARA ADMINISTRADORES
-    # ==========================================
-    user_roles = user_payload.get("roles", [])
+    user_roles = [str(role).upper() for role in user_payload.get("roles", [])]
     username = user_payload.get("username", "unknown")
     user_id = user_payload.get("user_id", "unknown")
-    
-    # Si el usuario tiene rol ADMIN, bypass completo
-    if "ADMIN" in user_roles:
-        logger.info(
-            f"ACCESO ADMIN BYPASS - Usuario: {username} (ID: {user_id}) "
-            f"accedió como ADMIN a {module} en {request.method} {request.url.path} "
-            f"- IP: {get_client_ip(request)}"
-        )
-        return user_payload
-    
-    # ==========================================
-    # VERIFICACIÓN ESTÁNDAR DE PERMISOS
-    # ==========================================
-    user_permissions = user_payload.get("permissions", [])
+    user_permissions = [str(permission).upper() for permission in user_payload.get("permissions", [])]
     
     # Crear lista de permisos válidos para este módulo y acciones
     valid_permissions = []
@@ -224,27 +208,8 @@ def is_admin_user(user_payload: dict) -> bool:
     Returns:
         bool: True si es administrador
     """
-    user_roles = user_payload.get("roles", [])
+    user_roles = [str(role).upper() for role in user_payload.get("roles", [])]
     return "ADMIN" in user_roles
-
-
-def has_admin_bypass(user_payload: dict, log_action: str = None) -> bool:
-    """
-    Verificar si el usuario puede hacer bypass como admin
-    
-    Args:
-        user_payload: Payload del JWT
-        log_action: Acción para logging (opcional)
-        
-    Returns:
-        bool: True si puede hacer bypass
-    """
-    if is_admin_user(user_payload):
-        if log_action:
-            username = user_payload.get("username", "unknown")
-            logger.info(f"ADMIN BYPASS - {username} ejecutó: {log_action}")
-        return True
-    return False
 
 
 # ==========================================
@@ -297,8 +262,7 @@ async def require_admin_only(request: Request) -> dict:
 
 async def require_admin_or_permission(module: str, actions, request: Request) -> dict:
     """
-    Dependency que permite acceso con rol ADMIN O permisos específicos
-    Útil cuando quieres ser explícito sobre el bypass de admin
+    Compatibilidad: valida permisos específicos sin bypass implícito por rol.
     
     Args:
         module: Nombre del módulo
@@ -308,11 +272,4 @@ async def require_admin_or_permission(module: str, actions, request: Request) ->
     Returns:
         dict: Payload del usuario autenticado
     """
-    user_payload = await get_current_user(request)
-    
-    # Si es admin, bypass automático
-    if is_admin_user(user_payload):
-        return user_payload
-    
-    # Si no es admin, verificar permisos específicos
     return await require_permission(module, actions, request)
