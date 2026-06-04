@@ -33,4 +33,13 @@ export const authService = {
     const data = response.data?.data || response.data;
     return data?.user || data?.profile || data;
   },
+
+  async changePassword(payload) {
+    const response = await apiClient.put('/auth/change-password', {
+      current_password: payload.current_password,
+      new_password: payload.new_password,
+      confirm_password: payload.confirm_password,
+    });
+    return response.data?.data || response.data;
+  },
 };
