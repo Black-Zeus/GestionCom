@@ -579,6 +579,20 @@ async def update_role_permissions_matrix(
             except Exception as cache_error:
                 logger.warning(f"No fue posible invalidar cache por cambio de permisos del rol {role_id}: {cache_error}")
 
+            try:
+                from services.event_publisher import queue_role_permissions_refresh
+                queue_role_permissions_refresh(
+                    [role.role_code],
+                    reason="role_permissions_updated",
+                    payload={
+                        "role_id": role_id,
+                        "role_code": role.role_code,
+                        "changed_by_user_id": user.get("user_id"),
+                    },
+                )
+            except Exception as event_error:
+                logger.warning(f"No fue posible publicar refresco SSE por permisos del rol {role_id}: {event_error}")
+
             return ResponseManager.success(
                 data={
                     "role_id": role_id,

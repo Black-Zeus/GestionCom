@@ -1016,6 +1016,18 @@ async def update_user_roles(
             except Exception as cache_error:
                 logger.warning(f"No fue posible invalidar cache de permisos para usuario {user_id}: {cache_error}")
 
+            try:
+                from services.event_publisher import queue_permissions_refresh
+                queue_permissions_refresh(
+                    [user_id],
+                    reason="user_roles_updated",
+                    payload={
+                        "changed_by_user_id": user.get("user_id"),
+                    },
+                )
+            except Exception as event_error:
+                logger.warning(f"No fue posible publicar refresco SSE por roles de usuario {user_id}: {event_error}")
+
             return ResponseManager.success(
                 data={
                     "user_id": user_id,
@@ -1328,6 +1340,18 @@ async def update_user_permissions_matrix(
                 await invalidate_user_permissions(user_id)
             except Exception as cache_error:
                 logger.warning(f"No fue posible invalidar cache de permisos para usuario {user_id}: {cache_error}")
+
+            try:
+                from services.event_publisher import queue_permissions_refresh
+                queue_permissions_refresh(
+                    [user_id],
+                    reason="user_permissions_updated",
+                    payload={
+                        "changed_by_user_id": user.get("user_id"),
+                    },
+                )
+            except Exception as event_error:
+                logger.warning(f"No fue posible publicar refresco SSE por permisos de usuario {user_id}: {event_error}")
 
             return ResponseManager.success(
                 data={

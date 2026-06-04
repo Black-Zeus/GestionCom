@@ -117,6 +117,8 @@ async def validate_token(token_data: TokenValidateRequest, request: Request):
         response_dict.update({
             "user_id": payload.get("user_id"),
             "username": payload.get("username"),
+            "roles": payload.get("roles", []),
+            "permissions": payload.get("permissions", []),
             "expires_at": payload.get("exp")
         })
     
