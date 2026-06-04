@@ -4,6 +4,7 @@ Endpoints para gestión de menús personalizados por usuario
 Favoritos, menús recientes y construcción de menús jerárquicos
 """
 from datetime import datetime, timezone, timedelta
+from types import SimpleNamespace
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Request, Depends, Query, Path
@@ -15,6 +16,8 @@ from database.database import db_manager
 from database.models.menu_items import MenuItem
 from database.models.user_menu_favorites import UserMenuFavorite
 from database.models.menu_access_log import MenuAccessLog
+from database.models.permissions import Permission
+from database.models.menu_item_permissions import MenuItemPermission
 
 # Schema imports
 from database.schemas.user_menu_favorites import (
@@ -31,7 +34,7 @@ from core.constants import ErrorCode, ErrorType
 from services.menu_service import MenuService
 
 # Utils imports
-from utils.permissions_utils import require_permission
+from utils.permissions_utils import get_current_user, require_permission
 from utils.menu_helpers import find_menu_by_code, get_menu_children
 from utils.log_helper import setup_logger
 
@@ -42,7 +45,6 @@ from utils.log_helper import setup_logger
 logger = setup_logger(__name__)
 
 router = APIRouter(
-    prefix="/user-menus",
     tags=["User Menus"],
     responses={
         401: {"description": "Token inválido o expirado"},
@@ -59,7 +61,7 @@ router = APIRouter(
 
 async def require_user_access(request: Request) -> dict:
     """Usuario autenticado (acceso a sus propios menús)"""
-    return await require_permission("USER", ["READ"], request)
+    return await get_current_user(request)
 
 async def require_admin_access(request: Request) -> dict:
     """Acceso de administrador para operaciones masivas"""
@@ -96,7 +98,7 @@ def favorite_to_dict(favorite: UserMenuFavorite, include_menu: bool = False) -> 
     
     return result
 
-def build_user_menu_hierarchy(session, user_permissions: List[str], favorites_dict: Dict[int, UserMenuFavorite] = None) -> List[Dict[str, Any]]:
+def build_user_menu_hierarchy_legacy(session, user_permissions: List[str], favorites_dict: Dict[int, UserMenuFavorite] = None) -> List[Dict[str, Any]]:
     """Construir jerarquía de menús para usuario con favoritos marcados"""
     
     def build_tree(parent_id: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -140,6 +142,142 @@ def build_user_menu_hierarchy(session, user_permissions: List[str], favorites_di
         return tree
     
     return build_tree()
+
+
+async def build_user_menu_hierarchy(
+    session,
+    user_permissions: List[str],
+    favorites_dict: Dict[int, UserMenuFavorite] = None,
+    max_depth: Optional[int] = None,
+    user_roles: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
+    """Construir jerarquia de menus visible para el usuario autenticado."""
+    permission_set = {str(permission).upper() for permission in user_permissions or []}
+    role_set = {str(role).upper() for role in user_roles or []}
+    has_full_access = bool(role_set.intersection({"ADMIN", "SUPER_ADMIN"}))
+
+    menu_stmt = (
+        select(MenuItem, Permission.permission_code)
+        .outerjoin(Permission, MenuItem.required_permission_id == Permission.id)
+        .where(
+            MenuItem.deleted_at.is_(None),
+            MenuItem.is_active == True,
+            MenuItem.is_visible == True,
+        )
+        .order_by(MenuItem.menu_level, MenuItem.sort_order, MenuItem.menu_name)
+    )
+    menu_result = await session.execute(menu_stmt)
+    rows = menu_result.all()
+
+    menus = []
+    required_permission_by_menu_id = {}
+    for menu, required_permission_code in rows:
+        menus.append(menu)
+        if required_permission_code:
+            required_permission_by_menu_id[menu.id] = required_permission_code.upper()
+
+    menu_ids = [menu.id for menu in menus]
+    relation_permissions: Dict[int, Dict[str, List[str]]] = {}
+    if menu_ids:
+        relation_stmt = (
+            select(
+                MenuItemPermission.menu_item_id,
+                MenuItemPermission.permission_type,
+                Permission.permission_code,
+            )
+            .join(Permission, MenuItemPermission.permission_id == Permission.id)
+            .where(
+                MenuItemPermission.menu_item_id.in_(menu_ids),
+                Permission.is_active == True,
+            )
+        )
+        relation_result = await session.execute(relation_stmt)
+        for menu_id, permission_type, permission_code in relation_result.all():
+            relation_type = getattr(permission_type, "value", permission_type)
+            relation_type = str(relation_type or "ALTERNATIVE").upper()
+            if relation_type not in {"REQUIRED", "ALTERNATIVE", "EXCLUDE"}:
+                relation_type = "ALTERNATIVE"
+
+            permission_bucket = relation_permissions.setdefault(
+                menu_id,
+                {"REQUIRED": [], "ALTERNATIVE": [], "EXCLUDE": []},
+            )
+            permission_bucket[relation_type].append(permission_code.upper())
+
+    children_by_parent: Dict[Optional[int], List[MenuItem]] = {}
+    for menu in menus:
+        children_by_parent.setdefault(menu.parent_id, []).append(menu)
+
+    def menu_has_access(menu: MenuItem) -> bool:
+        if has_full_access:
+            return True
+
+        relations = relation_permissions.get(menu.id, {})
+        exclude_permissions = relations.get("EXCLUDE", [])
+        if any(permission in permission_set for permission in exclude_permissions):
+            return False
+
+        required_permissions = list(relations.get("REQUIRED", []))
+        required_permission = required_permission_by_menu_id.get(menu.id)
+        if required_permission:
+            required_permissions.append(required_permission)
+
+        if required_permissions and not all(permission in permission_set for permission in required_permissions):
+            return False
+
+        alternative_permissions = list(relations.get("ALTERNATIVE", []))
+        if menu.alternative_permissions:
+            alternative_permissions.extend(str(permission).upper() for permission in menu.alternative_permissions)
+
+        if alternative_permissions and not any(permission in permission_set for permission in alternative_permissions):
+            return False
+
+        return True
+
+    def build_node(menu: MenuItem, depth: int) -> Optional[Dict[str, Any]]:
+        if max_depth is not None and depth > max_depth:
+            return None
+
+        children = []
+        for child in children_by_parent.get(menu.id, []):
+            child_node = build_node(child, depth + 1)
+            if child_node:
+                children.append(child_node)
+
+        own_access = menu_has_access(menu)
+        if not own_access and not children:
+            return None
+
+        favorite = favorites_dict.get(menu.id) if favorites_dict else None
+        node = {
+            "id": menu.id,
+            "code": menu.menu_code,
+            "name": menu.menu_name,
+            "description": menu.menu_description,
+            "icon_name": menu.icon_name,
+            "icon_color": menu.icon_color,
+            "url": menu.menu_url,
+            "type": menu.menu_type.value,
+            "level": menu.menu_level,
+            "sort_order": menu.sort_order,
+            "target_window": menu.target_window.value if menu.target_window else "SELF",
+            "is_favorite": bool(favorite),
+            "children": children,
+        }
+
+        if favorite:
+            node["favorite_order"] = favorite.favorite_order
+            node["favorited_at"] = favorite.created_at
+
+        return node
+
+    tree = []
+    for root in children_by_parent.get(None, []):
+        root_node = build_node(root, 1)
+        if root_node:
+            tree.append(root_node)
+
+    return tree
 
 # ==========================================
 # ENDPOINTS - FAVORITOS
@@ -584,21 +722,32 @@ async def get_user_menu_hierarchy(
             # Obtener favoritos del usuario si se solicita
             favorites_dict = {}
             if include_favorites:
-                fav_stmt = select(UserMenuFavorite).where(
+                fav_stmt = select(
+                    UserMenuFavorite.menu_item_id,
+                    UserMenuFavorite.favorite_order,
+                    UserMenuFavorite.created_at,
+                ).where(
                     UserMenuFavorite.user_id == user_id
                 )
                 fav_result = await session.execute(fav_stmt)
-                favorites = fav_result.scalars().all()
-                favorites_dict = {fav.menu_item_id: fav for fav in favorites}
+                favorites_dict = {
+                    fav.menu_item_id: SimpleNamespace(
+                        menu_item_id=fav.menu_item_id,
+                        favorite_order=fav.favorite_order,
+                        created_at=fav.created_at,
+                    )
+                    for fav in fav_result.all()
+                }
             
-            # TODO: Obtener permisos del usuario
-            user_permissions = []  # Placeholder
+            user_permissions = user.get("permissions", [])
             
             # Construir jerarquía
-            hierarchy = build_user_menu_hierarchy(
+            hierarchy = await build_user_menu_hierarchy(
                 session=session,
                 user_permissions=user_permissions,
-                favorites_dict=favorites_dict if include_favorites else None
+                favorites_dict=favorites_dict if include_favorites else None,
+                max_depth=max_depth,
+                user_roles=user.get("roles", []),
             )
             
             logger.info(f"Usuario {user['username']} obtuvo jerarquía personalizada")

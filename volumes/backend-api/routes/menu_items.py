@@ -44,7 +44,6 @@ from utils.log_helper import setup_logger
 logger = setup_logger(__name__)
 
 router = APIRouter(
-    prefix="/menu-items",
     tags=["Menu Items"],
     responses={
         401: {"description": "Token inválido o expirado"},
@@ -132,7 +131,7 @@ async def list_menus(
     """Listar menús con filtros"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Obtener menús
@@ -192,7 +191,7 @@ async def get_menu_tree(
     """Obtener árbol jerárquico de menús"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Obtener árbol
@@ -231,7 +230,7 @@ async def get_menu(
     """Obtener menú por ID"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             menu = service.get_menu_by_id(menu_id)
@@ -269,7 +268,7 @@ async def create_menu(
     """Crear nuevo menú"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Crear menú
@@ -308,7 +307,7 @@ async def update_menu(
     """Actualizar menú existente"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Actualizar menú
@@ -347,7 +346,7 @@ async def delete_menu(
     """Eliminar menú"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Eliminar menú
@@ -395,7 +394,7 @@ async def move_menu(
     """Mover menú a nueva posición jerárquica"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Mover menú
@@ -438,7 +437,7 @@ async def reorder_children(
     """Reordenar menús hijos"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Reordenar hijos
@@ -483,7 +482,7 @@ async def normalize_orders(
     """Normalizar órdenes de menús"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Normalizar órdenes
@@ -524,7 +523,7 @@ async def toggle_menu_status(
     """Activar/desactivar menú"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Obtener y actualizar menú
@@ -568,7 +567,7 @@ async def bulk_toggle_status(
     """Activar/desactivar menús en lote"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             # Operación masiva
@@ -643,7 +642,7 @@ async def get_menu_by_code(
     """Obtener menú por código"""
     
     try:
-        async with db_manager.get_async_session() as session:
+        async with db_manager.get_session() as session:
             service = MenuService(session)
             
             menu = service.get_menu_by_code(menu_code)

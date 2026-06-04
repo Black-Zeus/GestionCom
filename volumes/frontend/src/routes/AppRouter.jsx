@@ -89,7 +89,7 @@ const AppRouter = () => (
         <Route path="error/401" element={<Page><ErrorPage code="401" /></Page>} />
         <Route path="error/403" element={<Page><ErrorPage code="403" /></Page>} />
         <Route path="error/500" element={<Page><ErrorPage code="500" /></Page>} />
-        <Route path="*" element={<Page><ErrorPage code="404" /></Page>} />
+        <Route path="*" element={<Page><UnderConstruction /></Page>} />
       </Route>
     </Route>
   </Routes>

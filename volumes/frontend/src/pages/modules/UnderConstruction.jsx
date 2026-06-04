@@ -1,10 +1,13 @@
 import { Construction } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { navigablePages } from '@/data/modules';
+import { useMenuStore } from '@/store/useMenuStore';
 
 const UnderConstruction = () => {
   const location = useLocation();
-  const module = navigablePages.find((item) => item.path === location.pathname);
+  const dbPages = useMenuStore((state) => state.pages);
+  const module = dbPages.find((item) => item.path === location.pathname)
+    || navigablePages.find((item) => item.path === location.pathname);
   const moduleName = module?.label || 'Modulo';
 
   return (

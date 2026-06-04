@@ -11,11 +11,13 @@ import {
   Sun,
   UserCircle,
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { getMenuItemPermissions, moduleGroups, navigablePages } from '@/data/modules';
+import { getMenuItemPermissions, moduleGroups as fallbackModuleGroups, navigablePages as fallbackNavigablePages } from '@/data/modules';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useMenuStore } from '@/store/useMenuStore';
 import { useNavigationHistoryStore } from '@/store/useNavigationHistoryStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { appConfig } from '@/config/appConfig';
@@ -32,6 +34,64 @@ const getCompactNavigationLabel = (label) => {
 const getCleanDisplayName = (value) => (
   String(value || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
 );
+
+const iconAliases = {
+  'add-circle': LucideIcons.CirclePlus,
+  'admin': LucideIcons.Shield,
+  'archive': LucideIcons.Archive,
+  'bank-card': LucideIcons.CreditCard,
+  'bar-chart': LucideIcons.BarChart3,
+  'calculator': LucideIcons.Calculator,
+  'credit-card': LucideIcons.CreditCard,
+  'dashboard': LucideIcons.Gauge,
+  'database': LucideIcons.Database,
+  'exchange': LucideIcons.RefreshCw,
+  'file-chart': LucideIcons.ChartNoAxesColumn,
+  'file-list-3': LucideIcons.FileText,
+  'file-search': LucideIcons.FileSearch,
+  'file-text': LucideIcons.FileText,
+  'folder': LucideIcons.Folder,
+  'home': LucideIcons.Home,
+  'list-check': LucideIcons.ListChecks,
+  'lock': LucideIcons.Lock,
+  'lock-unlock': LucideIcons.LockOpen,
+  'money-dollar-circle': LucideIcons.CircleDollarSign,
+  'price-tag': LucideIcons.Tag,
+  'price-tag-3': LucideIcons.Tags,
+  'product-hunt': LucideIcons.Package,
+  'qr-code': LucideIcons.QrCode,
+  'refund': LucideIcons.Receipt,
+  'safe': LucideIcons.WalletCards,
+  'search': LucideIcons.Search,
+  'settings': LucideIcons.Settings,
+  'shield-user': LucideIcons.Shield,
+  'shopping-cart': LucideIcons.ShoppingCart,
+  'shopping-bag': LucideIcons.ShoppingBag,
+  'team': LucideIcons.Users,
+  'truck': LucideIcons.Truck,
+  'user': LucideIcons.User,
+  'user-3': LucideIcons.Users,
+  'wallet-3': LucideIcons.WalletCards,
+};
+
+const resolveMenuIcon = (iconName, fallback = LucideIcons.Circle) => {
+  const normalized = String(iconName || '')
+    .trim()
+    .replace(/-line$/, '')
+    .replace(/-fill$/, '')
+    .toLowerCase();
+
+  if (!normalized) return fallback;
+  if (iconAliases[normalized]) return iconAliases[normalized];
+
+  const pascalName = normalized
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
+  return LucideIcons[pascalName] || fallback;
+};
 
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -58,10 +118,17 @@ const AppLayout = () => {
   const initializeFromUser = useSessionStore((state) => state.initializeFromUser);
   const navigationHistory = useNavigationHistoryStore((state) => state.items);
   const addNavigationVisit = useNavigationHistoryStore((state) => state.addVisit);
+  const dbMenuGroups = useMenuStore((state) => state.groups);
+  const dbMenuPages = useMenuStore((state) => state.pages);
+  const fetchMenu = useMenuStore((state) => state.fetchMenu);
+  const clearMenu = useMenuStore((state) => state.clearMenu);
 
   const sidebarWidth = collapsed ? 'w-20' : 'w-72';
+  const usingDatabaseMenu = dbMenuGroups.length > 0;
+  const moduleGroups = usingDatabaseMenu ? dbMenuGroups : fallbackModuleGroups;
+  const navigablePages = usingDatabaseMenu ? dbMenuPages : fallbackNavigablePages;
   const activeModule = navigablePages.find((module) => module.path === location.pathname);
-  const activeGroupId = activeModule?.groupId || moduleGroups[0]?.id;
+  const activeGroupId = activeModule?.groupId || moduleGroups[0]?.id || fallbackModuleGroups[0]?.id;
   const [openGroupId, setOpenGroupId] = useState(activeGroupId);
   const topNavigationHistory = navigationHistory.slice(-5);
   const appDisplayName = appConfig.name;
@@ -90,6 +157,15 @@ const AppLayout = () => {
       initializeFromUser(user);
     }
   }, [initializeFromUser, user]);
+
+  useEffect(() => {
+    if (!user || isDemoSession) {
+      clearMenu();
+      return;
+    }
+
+    fetchMenu().catch(() => {});
+  }, [clearMenu, fetchMenu, isDemoSession, user]);
 
   useEffect(() => {
     setOpenGroupId(activeGroupId);
@@ -204,6 +280,8 @@ const AppLayout = () => {
   };
 
   const canViewMenuItem = (group, item) => {
+    if (usingDatabaseMenu) return true;
+
     const permissions = getMenuItemPermissions(group, item);
 
     return (
@@ -214,6 +292,8 @@ const AppLayout = () => {
   };
 
   const canViewMenuGroup = (group) => (
+    usingDatabaseMenu
+    ||
     isDemoSession
     || !group.permissions?.length
     || hasAnyPermission(group.permissions)
@@ -251,7 +331,7 @@ const AppLayout = () => {
         <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
           <div className="space-y-1">
             {moduleGroups.map((group) => {
-              const GroupIcon = group.icon;
+              const GroupIcon = group.icon || resolveMenuIcon(group.iconName, LucideIcons.Folder);
               if (!canViewMenuGroup(group)) return null;
 
               const sortedItems = [...group.items]
@@ -299,7 +379,7 @@ const AppLayout = () => {
                     <div className="min-h-0">
                       <div className="mt-1 space-y-1 border-l border-slate-200 pl-3 dark:border-white/10">
                       {sortedItems.map((item) => {
-                  const Icon = item.icon;
+                  const Icon = item.icon || resolveMenuIcon(item.iconName, LucideIcons.Circle);
                   return (
                     <NavLink
                       key={item.id}
