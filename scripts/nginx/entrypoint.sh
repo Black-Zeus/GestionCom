@@ -15,7 +15,7 @@ fi
 
 # Reemplaza las variables de entorno en la plantilla
 echo "Generando configuración de NGINX desde la plantilla..."
-envsubst '$PROJECT_NAME $FRONTEND_PORT_INTERNAL $BACKEND_API_PORT_INTERNAL $DOCS_API_PORT_INTERNAL $TASKS_API_PORT_INTERNAL' \
+envsubst '$PROJECT_NAME $FRONTEND_PORT_INTERNAL $BACKEND_API_PORT_INTERNAL $DOCS_API_PORT_INTERNAL $TASKS_API_PORT_INTERNAL $EVENTS_ORCHESTRATOR_PORT_INTERNAL' \
   < "$TEMPLATE_FILE" > "$CONFIG_FILE"
 
 echo "Configuración generada en $CONFIG_FILE:"

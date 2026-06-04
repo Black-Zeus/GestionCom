@@ -68,6 +68,8 @@ services:
         condition: service_healthy
       backend-api:
         condition: service_healthy
+      events-orchestrator:
+        condition: service_healthy
     volumes:
       - nginx_logs:/var/log/nginx
       - ./Shared/nginx:/shared
@@ -76,6 +78,7 @@ services:
       PROJECT_NAME: ${PROJECT_NAME}
       FRONTEND_PORT_INTERNAL: ${FRONTEND_PORT_INTERNAL}
       BACKEND_API_PORT_INTERNAL: ${BACKEND_API_PORT_INTERNAL}
+      EVENTS_ORCHESTRATOR_PORT_INTERNAL: ${EVENTS_ORCHESTRATOR_PORT_INTERNAL}
     ports:
       - "${NGINX_PORT}:${NGINX_PORT_INTERNAL}"
     networks:
@@ -166,6 +169,7 @@ services:
       - ./volumes/backend-api/.env
     environment:
       <<: *timezone-env
+      EVENTS_PUBLISH_TOKEN: ${EVENTS_PUBLISH_TOKEN}
     secrets:
       - backend_api_secret_key
       - mysql_password
@@ -174,6 +178,48 @@ services:
     deploy: *deploy-medium
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${BACKEND_API_PORT_INTERNAL}/health/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  events-orchestrator:
+    <<: *runtime-defaults
+    container_name: ${PROJECT_NAME}-events-orchestrator
+    build:
+      context: .
+      dockerfile: docker/dev/dockerfile.events-orchestrator
+    image: ${PROJECT_NAME}/events-orchestrator:dev.v0.1
+    labels:
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
+    volumes:
+      - ./volumes/events-orchestrator:/app
+      - events_orchestrator_logs:/var/log/app
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend-api:
+        condition: service_healthy
+    expose:
+      - "${EVENTS_ORCHESTRATOR_PORT_INTERNAL}"
+    command: uvicorn main:app --host ${EVENTS_ORCHESTRATOR_HOST} --port ${EVENTS_ORCHESTRATOR_PORT_INTERNAL} --reload --no-access-log
+    networks:
+      - ${INTERNAL_NETWORK}
+    env_file:
+      - ./volumes/events-orchestrator/.env
+    environment:
+      <<: *timezone-env
+      ENVIRONMENT: ${ENV}
+      EVENTS_PUBLISH_TOKEN: ${EVENTS_PUBLISH_TOKEN}
+    secrets:
+      - redis_password
+    logging: *default-logging
+    deploy: *deploy-small
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${EVENTS_ORCHESTRATOR_PORT_INTERNAL}/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -484,6 +530,7 @@ volumes:
   nginx_logs:
   frontend_logs:
   backend_api_logs:
+  events_orchestrator_logs:
   backend_worker_logs:
   backend_beat_logs:
   minio_logs:

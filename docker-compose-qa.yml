@@ -16,6 +16,7 @@ services:
       - backend-docs
       - backend-tasks
       - backend-worker
+      - events-orchestrator
     labels:
       stack: ${PROJECT_NAME}
       env: ${ENV}
@@ -27,6 +28,7 @@ services:
       - PROJECT_NAME=${PROJECT_NAME}
       - FRONTEND_PORT_INTERNAL=${FRONTEND_PORT_INTERNAL}
       - BACKEND_API_PORT_INTERNAL=${BACKEND_API_PORT_INTERNAL}
+      - EVENTS_ORCHESTRATOR_PORT_INTERNAL=${EVENTS_ORCHESTRATOR_PORT_INTERNAL}
       - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
       - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
       - VITE_FRONTEND_ENV=${ENV}
@@ -80,6 +82,8 @@ services:
       - ${INTERNAL_NETWORK}
     env_file:
       - ./volumes/backend-api/.env
+    environment:
+      - EVENTS_PUBLISH_TOKEN=${EVENTS_PUBLISH_TOKEN}
     deploy:
       resources:
         limits:
@@ -92,6 +96,47 @@ services:
   # =========================
   # BACKEND DOCS - Generación de Documentos
   # =========================
+  events-orchestrator:
+    container_name: ${PROJECT_NAME}-events-orchestrator
+    build:
+      context: .
+      dockerfile: docker/dockerfile.events-orchestrator
+    image: ${PROJECT_NAME}/events-orchestrator:qa.v0.1
+    labels:
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: core
+      service.lifecycle: runtime
+    volumes:
+      - events-orchestrator-qa:/app
+      - ./logs/events-orchestrator:/var/log/app
+    depends_on:
+      - redis
+      - backend-api
+    expose:
+      - ${EVENTS_ORCHESTRATOR_PORT_INTERNAL}
+    command: uvicorn main:app --host ${EVENTS_ORCHESTRATOR_HOST} --port ${EVENTS_ORCHESTRATOR_PORT_INTERNAL} --no-access-log
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - ${INTERNAL_NETWORK}
+    env_file:
+      - ./volumes/events-orchestrator/.env
+    environment:
+      - ENVIRONMENT=${ENV}
+      - EVENTS_PUBLISH_TOKEN=${EVENTS_PUBLISH_TOKEN}
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
   backend-docs:
     container_name: ${PROJECT_NAME}-backend-docs
     build:
@@ -429,6 +474,7 @@ networks:
 # =========================
 volumes:
   backend-api-qa:
+  events-orchestrator-qa:
   backend-docs-qa:
   backend-tasks-qa:
   backend-worker-qa:
