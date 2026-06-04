@@ -9,6 +9,9 @@ x-runtime: &runtime-defaults
   security_opt:
     - no-new-privileges:true
 
+x-timezone-env: &timezone-env
+  TZ: ${TZ:-America/Santiago}
+
 x-deploy-tiny: &deploy-tiny
   resources:
     limits:
@@ -65,19 +68,14 @@ services:
         condition: service_healthy
       backend-api:
         condition: service_healthy
-      backend-docs:
-        condition: service_healthy
-      backend-tasks:
-        condition: service_healthy
     volumes:
       - nginx_logs:/var/log/nginx
       - ./Shared/nginx:/shared
     environment:
+      <<: *timezone-env
       PROJECT_NAME: ${PROJECT_NAME}
       FRONTEND_PORT_INTERNAL: ${FRONTEND_PORT_INTERNAL}
       BACKEND_API_PORT_INTERNAL: ${BACKEND_API_PORT_INTERNAL}
-      DOCS_API_PORT_INTERNAL: ${DOCS_API_PORT_INTERNAL}
-      TASKS_API_PORT_INTERNAL: ${TASKS_API_PORT_INTERNAL}
     ports:
       - "${NGINX_PORT}:${NGINX_PORT_INTERNAL}"
     networks:
@@ -117,11 +115,8 @@ services:
     depends_on:
       backend-api:
         condition: service_healthy
-      backend-docs:
-        condition: service_healthy
-      backend-tasks:
-        condition: service_healthy
     environment:
+      <<: *timezone-env
       ENV: ${ENV}
       NODE_ENV: development
     networks:
@@ -131,7 +126,7 @@ services:
     logging: *default-logging
     deploy: *deploy-medium
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${FRONTEND_PORT_INTERNAL}/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:${FRONTEND_PORT_INTERNAL}/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -160,6 +155,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     ports:
       - "${BACKEND_API_PORT}:${BACKEND_API_PORT_INTERNAL}"
     command: uvicorn main:app --host ${BACKEND_API_HOST} --port ${BACKEND_API_PORT_INTERNAL} --reload
@@ -167,6 +164,8 @@ services:
       - ${INTERNAL_NETWORK}
     env_file:
       - ./volumes/backend-api/.env
+    environment:
+      <<: *timezone-env
     secrets:
       - backend_api_secret_key
       - mysql_password
@@ -174,90 +173,7 @@ services:
     logging: *default-logging
     deploy: *deploy-medium
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${BACKEND_API_PORT_INTERNAL}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  backend-docs:
-    <<: *runtime-defaults
-    container_name: ${PROJECT_NAME}-backend-docs
-    build:
-      context: .
-      dockerfile: docker/dev/dockerfile.backend-docs
-      args:
-        - DOCS_API_PORT_INTERNAL=${DOCS_API_PORT_INTERNAL}
-    image: ${PROJECT_NAME}/backend-docs:dev.v0.1
-    labels:
-      stack: ${PROJECT_NAME}
-      env: ${ENV}
-      service.group: core
-      service.lifecycle: runtime
-    volumes:
-      - ./volumes/backend-docs:/app
-      - backend_docs_logs:/var/log/app
-      - ./Shared/backend-docs:/shared
-    networks:
-      - ${INTERNAL_NETWORK}
-    depends_on:
-      minio:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "${DOCS_API_PORT}:${DOCS_API_PORT_INTERNAL}"
-    command: uvicorn main:app --host ${DOCS_API_HOST} --port ${DOCS_API_PORT_INTERNAL} --reload
-    env_file:
-      - ./volumes/backend-docs/.env
-    secrets:
-      - minio_root_user
-      - minio_root_password
-    logging: *default-logging
-    deploy: *deploy-small
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${DOCS_API_PORT_INTERNAL}/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-  backend-tasks:
-    <<: *runtime-defaults
-    container_name: ${PROJECT_NAME}-backend-tasks
-    build:
-      context: .
-      dockerfile: docker/dev/dockerfile.backend-tasks
-      args:
-        - TASKS_API_PORT_INTERNAL=${TASKS_API_PORT_INTERNAL}
-    image: ${PROJECT_NAME}/backend-tasks:dev.v0.1
-    labels:
-      stack: ${PROJECT_NAME}
-      env: ${ENV}
-      service.group: core
-      service.lifecycle: runtime
-    volumes:
-      - ./volumes/backend-tasks:/app
-      - backend_tasks_logs:/var/log/app
-      - ./Shared/backend-tasks:/shared
-    networks:
-      - ${INTERNAL_NETWORK}
-    depends_on:
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      mariadb:
-        condition: service_healthy
-    ports:
-      - "${TASKS_API_PORT}:${TASKS_API_PORT_INTERNAL}"
-    command: uvicorn main:app --host ${TASKS_API_HOST} --port ${TASKS_API_PORT_INTERNAL} --reload
-    env_file:
-      - ./volumes/backend-tasks/.env
-    logging: *default-logging
-    deploy: *deploy-small
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${TASKS_API_PORT_INTERNAL}/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${BACKEND_API_PORT_INTERNAL}/health/', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -284,16 +200,14 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       mariadb:
         condition: service_healthy
     command: ["celery", "-A", "tasks", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=${WORKER_QUEUES}", "--concurrency=${WORKER_CONCURRENCY}"]
     env_file:
       - ./volumes/backend-worker/.env
+    environment:
+      <<: *timezone-env
     secrets:
-      - rabbitmq_default_user
-      - rabbitmq_default_pass
       - redis_password
     logging: *default-logging
     deploy: *deploy-medium
@@ -304,50 +218,11 @@ services:
       retries: 3
       start_period: 60s
 
-  worker-notifications:
-    <<: *runtime-defaults
-    container_name: ${PROJECT_NAME}-worker-notifications
-    build:
-      context: .
-      dockerfile: docker/dev/dockerfile.backend-worker
-    image: ${PROJECT_NAME}/worker-notifications:dev.v0.1
-    labels:
-      stack: ${PROJECT_NAME}
-      env: ${ENV}
-      service.group: core
-      service.lifecycle: runtime
-    volumes:
-      - ./volumes/backend-worker:/app
-      - backend_notifications_logs:/var/log/app
-      - ./Shared/worker-notifications:/shared
-    networks:
-      - ${INTERNAL_NETWORK}
-    depends_on:
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      backend-worker:
-        condition: service_healthy
-    command: ["celery", "-A", "notifications", "worker", "--loglevel=${WORKER_LOG_LEVEL}", "--queues=notifications", "--concurrency=2"]
-    env_file:
-      - ./volumes/backend-worker/.env
-    secrets:
-      - rabbitmq_default_user
-      - rabbitmq_default_pass
-      - redis_password
-    logging: *default-logging
-    deploy: *deploy-small
-    healthcheck:
-      test: ["CMD", "celery", "-A", "notifications", "inspect", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
   backend-beat:
     <<: *runtime-defaults
     container_name: ${PROJECT_NAME}-backend-beat
+    profiles:
+      - scheduler
     build:
       context: .
       dockerfile: docker/dev/dockerfile.backend-worker
@@ -355,7 +230,7 @@ services:
     labels:
       stack: ${PROJECT_NAME}
       env: ${ENV}
-      service.group: core
+      service.group: scheduler
       service.lifecycle: runtime
     volumes:
       - ./volumes/backend-worker:/app
@@ -367,16 +242,14 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       backend-worker:
         condition: service_healthy
     command: ["celery", "-A", "beat", "beat", "--loglevel=${WORKER_LOG_LEVEL}", "--pidfile=/var/lib/celerybeat/celerybeat.pid", "--schedule=/var/lib/celerybeat/celerybeat-schedule"]
     env_file:
       - ./volumes/backend-worker/.env
+    environment:
+      <<: *timezone-env
     secrets:
-      - rabbitmq_default_user
-      - rabbitmq_default_pass
       - redis_password
     logging: *default-logging
     deploy: *deploy-small
@@ -404,6 +277,7 @@ services:
       - "${MINIO_PORT}:${MINIO_PORT}"
       - "${MINIO_CONSOLE_PORT}:${MINIO_CONSOLE_PORT}"
     environment:
+      <<: *timezone-env
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
       MINIO_PORT: ${MINIO_PORT}
@@ -426,6 +300,8 @@ services:
   mailpit:
     <<: *runtime-defaults
     container_name: ${PROJECT_NAME}-mailpit
+    profiles:
+      - tools
     image: axllent/mailpit:v1.28
     ports:
       - "${MAILPIT_SMTP_PORT}:${MAILPIT_SMTP_PORT}"
@@ -440,6 +316,7 @@ services:
       - mailpit_logs:/var/log/mailpit
       - ./Shared/mailpit:/shared
     environment:
+      <<: *timezone-env
       MP_STORAGE: ${MAILPIT_STORAGE}
       MP_UI_COLOR: ${MAILPIT_UI_COLOR}
       MP_LOGGING: "true"
@@ -477,6 +354,7 @@ services:
       - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d:ro
       - ./Shared/mariadb:/shared
     environment:
+      <<: *timezone-env
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -495,46 +373,6 @@ services:
       timeout: 10s
       start_period: 60s
     deploy: *deploy-db
-
-  rabbitmq:
-    <<: *runtime-defaults
-    image: rabbitmq:4.1.6-management-alpine
-    container_name: ${PROJECT_NAME}-rabbitmq
-    ports:
-      - "${RABBITMQ_PORT}:5672"
-      - "${RABBITMQ_UI_PORT}:15672"
-    labels:
-      stack: ${PROJECT_NAME}
-      env: ${ENV}
-      service.group: dependency
-      service.lifecycle: stateful
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-      - rabbitmq_logs:/var/log/rabbitmq
-      - ./Shared/rabbitmq:/shared
-    environment:
-      RABBITMQ_DEFAULT_USER_FILE: /run/secrets/rabbitmq_default_user
-      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbitmq_default_pass
-      RABBITMQ_ERLANG_COOKIE_FILE: /run/secrets/rabbitmq_erlang_cookie
-      RABBITMQ_NODENAME: rabbit@rabbitmq
-      RABBITMQ_CONFIG_FILE: /var/lib/rabbitmq/rabbitmq
-      RABBITMQ_MNESIA_DIR: /var/lib/rabbitmq/mnesia
-      RABBITMQ_LOG_BASE: /var/log/rabbitmq
-    secrets:
-      - rabbitmq_default_user
-      - rabbitmq_default_pass
-      - rabbitmq_erlang_cookie
-    logging: *default-logging
-    networks:
-      - ${INTERNAL_NETWORK}
-    user: "999:999"
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 30s
-      retries: 5
-      timeout: 10s
-      start_period: 40s
-    deploy: *deploy-medium
 
   redis:
     <<: *runtime-defaults
@@ -559,6 +397,8 @@ services:
       - ./Shared/redis:/shared
     secrets:
       - redis_password
+    environment:
+      <<: *timezone-env
     logging: *default-logging
     networks:
       - ${INTERNAL_NETWORK}
@@ -594,6 +434,7 @@ services:
       redis:
         condition: service_healthy
     environment:
+      <<: *timezone-env
       REDIS_PASSWORD_FILE: /run/secrets/redis_password
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -637,32 +478,21 @@ secrets:
     file: ${MINIO_ROOT_USER_FILE:-./secrets/dev/minio_root_user.txt}
   minio_root_password:
     file: ${MINIO_ROOT_PASSWORD_FILE:-./secrets/dev/minio_root_password.txt}
-  rabbitmq_default_user:
-    file: ${RABBITMQ_DEFAULT_USER_FILE:-./secrets/dev/rabbitmq_default_user.txt}
-  rabbitmq_default_pass:
-    file: ${RABBITMQ_DEFAULT_PASS_FILE:-./secrets/dev/rabbitmq_default_pass.txt}
-  rabbitmq_erlang_cookie:
-    file: ${RABBITMQ_ERLANG_COOKIE_FILE:-./secrets/dev/rabbitmq_erlang_cookie.txt}
 
 volumes:
   frontend_node_modules:
   nginx_logs:
   frontend_logs:
   backend_api_logs:
-  backend_docs_logs:
-  backend_tasks_logs:
   backend_worker_logs:
-  backend_notifications_logs:
   backend_beat_logs:
   minio_logs:
   mailpit_logs:
   mariadb_logs:
-  rabbitmq_logs:
   redis_logs:
   minio_data:
   mailpit_data:
   mariadb_data:
-  rabbitmq_data:
   redis_data:
   redisinsight_data:
   celerybeat_data:

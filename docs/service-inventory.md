@@ -18,16 +18,16 @@ Fuente actual: `docker-compose-dev.yml`, `scripts/nginx/nginx.dev.conf` y archiv
 | `nginx` | Core | Reverse proxy de entrada | Mantener |
 | `frontend` | Core | Interfaz web | Mantener |
 | `backend-api` | Core | API principal de negocio, auth, usuarios y datos | Mantener |
-| `backend-docs` | Review | API documental y acceso a MinIO | Validar si debe ser servicio separado |
-| `backend-tasks` | Review | API HTTP para tareas/colas | Mantener si orquesta respaldos/jobs |
-| `backend-worker` | Core/Review | Worker Celery general | Mantener para trabajos async |
-| `worker-notifications` | Review | Worker Celery para notificaciones | Activar cuando el canal lo justifique |
-| `backend-beat` | Review | Scheduler Celery Beat | Mantener si hay respaldos programados |
+| `backend-docs` | Retirar/Fusionar | API documental y acceso a MinIO | Fusionar en `backend-api` |
+| `backend-tasks` | Retirar/Fusionar | API HTTP para tareas/colas | Fusionar en `backend-api` |
+| `backend-worker` | Core | Worker Celery general | Mantener para trabajos async |
+| `worker-notifications` | Retirar | Worker Celery para notificaciones | Eliminar hasta necesidad real |
+| `backend-beat` | Tool/Scheduler | Scheduler Celery Beat | Mover a perfil `scheduler` |
 | `mariadb` | Dependency | Base de datos transaccional | Mantener |
 | `redis` | Dependency | Cache, sesiones, rate limit y backend Celery | Mantener |
-| `rabbitmq` | Dependency/Review | Broker de mensajeria Celery | Mantener si Celery se conserva |
+| `rabbitmq` | Retirar | Broker de mensajeria Celery | Reemplazar por Redis como broker |
 | `minio` | Dependency/Review | Almacenamiento S3 compatible | Mantener si docs/adjuntos aplica |
-| `mailpit` | Tool | Captura de emails en dev | Mantener solo dev/QA |
+| `mailpit` | Tool | Captura de emails en dev/QA | Mover a perfil `tools` |
 | `redisinsight` | Tool | UI para inspeccionar Redis | Mantener bajo perfil `tools` |
 
 ## Notas de intencion funcional
@@ -43,7 +43,25 @@ Estas notas vienen de la definicion funcional actual y ayudan a separar intencio
 | `backend-beat` | No recordado inicialmente | Corresponde a scheduler de tareas periodicas Celery. Cobra sentido para respaldos programados, limpiezas o jobs recurrentes. |
 | `rabbitmq` | No recordado inicialmente | Corresponde al broker de mensajes para Celery. No programa tareas; transporta trabajos hacia workers. |
 
-Recomendacion de producto: conservar capacidades cuando tengan responsabilidad clara, valor funcional y costo operativo justificable. `backend-worker` sostiene ejecucion asincrona; `backend-tasks` debe existir si administra jobs como recurso del producto; `backend-beat` aplica cuando hay tareas periodicas gestionadas; `worker-notifications` debe activarse cuando notificaciones requieran canal propio. Para archivos, decidir si MinIO se consume desde un modulo de `backend-api` antes de sostener `backend-docs` como servicio independiente.
+Recomendacion de producto: conservar capacidades cuando tengan responsabilidad clara, valor funcional y costo operativo justificable. `backend-worker` sostiene ejecucion asincrona; `backend-api` administra y encola jobs como recurso del producto; `backend-beat` aplica cuando hay tareas periodicas gestionadas; `worker-notifications` debe activarse cuando notificaciones requieran canal propio. Para archivos, MinIO se consume desde un modulo de `backend-api` antes de sostener un servicio documental independiente.
+
+## Decisiones tomadas
+
+| Servicio | Decision | Impacto esperado |
+|---|---|---|
+| `rabbitmq` | Retirar del stack y usar Redis como broker/backend Celery por simplicidad. | Menos infraestructura, menos secretos, menos healthchecks y menor costo operativo. |
+| `backend-docs` | Fusionar capacidad documental en `backend-api`. | MinIO sigue como almacenamiento, pero la API de archivos vive en el backend principal. |
+| `backend-tasks` | Fusionar orquestacion de tareas en `backend-api`. | `backend-api` expone/dispara jobs; `backend-worker` ejecuta. |
+| `worker-notifications` | Eliminar hasta que exista necesidad real de canal dedicado. | Evita un worker sin responsabilidad funcional clara. |
+| `backend-beat` | Mantener fuera del compose base y activar via perfil `scheduler`. | Soporta tareas periodicas cuando el producto lo requiera sin cargar el stack diario. |
+| `mailpit` | Mantener solo como herramienta dev/QA bajo perfil `tools`. | Evita servicios auxiliares en el runtime base. |
+| `redisinsight` | Mantener bajo perfil `tools`. | Disponible para inspeccion sin formar parte del flujo normal. |
+
+Stack base objetivo: `nginx`, `frontend`, `backend-api`, `backend-worker`, `mariadb`, `redis`, `minio`.
+
+Perfiles objetivo: `scheduler` para `backend-beat`; `tools` para `mailpit` y `redisinsight`.
+
+Estado dev aplicado: `docker-compose-dev.yml` queda simplificado al stack base objetivo. `backend-beat` vive bajo perfil `scheduler`; `mailpit` y `redisinsight` viven bajo perfil `tools`. `rabbitmq`, `backend-docs`, `backend-tasks` y `worker-notifications` salen del compose dev base.
 
 ## Servicios
 
@@ -51,9 +69,9 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Funcionalidad:** Reverse proxy de entrada para el stack.
 
-**Descripcion:** Expone el puerto publico del ambiente y enruta trafico hacia el frontend y APIs internas. En `docker-compose-dev.yml` depende de `frontend`, `backend-api`, `backend-docs` y `backend-tasks`.
+**Descripcion:** Expone el puerto publico del ambiente y enruta trafico hacia el frontend y APIs internas. En el stack objetivo dependera de `frontend` y `backend-api`.
 
-**Estado actual:** En `scripts/nginx/nginx.dev.conf`, `/api/` apunta al `backend-api`; los bloques especificos para `/api/documents/` y `/api/tasks/` estan comentados. Esto deja a `backend-docs` y `backend-tasks` levantados, pero no necesariamente publicados por el proxy dev.
+**Estado actual:** En `scripts/nginx/nginx.dev.conf`, `/api/` apunta al `backend-api`. Como `backend-docs` y `backend-tasks` se fusionan en `backend-api`, el proxy dev queda simplificado hacia una unica API principal.
 
 **Criterio de permanencia:** Mantener. Es pieza necesaria para validar proxy, permisos, CORS, rutas publicas y comportamiento por ambiente.
 
@@ -63,7 +81,7 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Descripcion:** Servicio Node/Vite/React en desarrollo. Consume backend via variables `VITE_*` y monta codigo fuente desde `volumes/frontend`.
 
-**Dependencias:** `backend-api`, `backend-docs`, `backend-tasks` por healthcheck en compose.
+**Dependencias:** En el stack objetivo debe depender de `backend-api`. La UI consumira archivos y tareas a traves de rutas del backend principal.
 
 **Criterio de permanencia:** Mantener. Es core del producto.
 
@@ -71,9 +89,9 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Funcionalidad:** API principal de negocio y seguridad.
 
-**Descripcion:** FastAPI principal. Carga routers de `health`, `auth`, `users`, `warehouses`, `system`, `menu-items` y `user-menus`. Tiene middleware de trace y auth, usa MariaDB y Redis, y valida secretos por archivo.
+**Descripcion:** FastAPI principal. Carga routers de `health`, `auth`, `users`, `warehouses`, `system`, `menu-items` y `user-menus`. Tiene middleware de trace y auth, usa MariaDB y Redis, y valida secretos por archivo. En el stack objetivo tambien concentra rutas de archivos/MinIO y orquestacion de jobs.
 
-**Dependencias:** `mariadb`, `redis`.
+**Dependencias:** `mariadb`, `redis`, `minio` si se habilitan archivos/documentos.
 
 **Criterio de permanencia:** Mantener. Es core de auth, users, permisos y datos.
 
@@ -89,7 +107,7 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Observacion:** El servicio esta en compose y tiene healthcheck, pero el proxy dev tiene comentado el bloque `/api/documents/`. Si el frontend no consume documentos todavia, puede ser funcionalidad futura o arrastre legacy. Tambien hay que evitar exponerlo como `/api/docs` si eso puede confundirse con la documentacion de APIs; una ruta publica mas clara seria `/api/documents` o `/api/files`.
 
-**Criterio de permanencia:** Review. Mantener como servicio separado solo si el dominio documental justifica aislamiento. Si el objetivo es apenas consumir MinIO para adjuntos simples, puede implementarse como modulo dentro de `backend-api` y dejar `backend-docs` fuera del compose base.
+**Criterio de permanencia:** Retirar como contenedor separado. Fusionar la capacidad documental en `backend-api` y mantener MinIO como dependencia de almacenamiento.
 
 ### `backend-tasks`
 
@@ -97,25 +115,25 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Descripcion:** FastAPI separada para gestionar tareas y colas. Expone rutas bajo `/tasks` y healthcheck `/health`.
 
-**Dependencias:** `redis`, `rabbitmq`, `mariadb`.
+**Dependencias:** En el compose dev simplificado ya no corre como contenedor separado. Sus capacidades se fusionan en `backend-api`, que depende de `redis`, `mariadb` y, cuando aplique, `minio`.
 
 **Intencion funcional:** Se penso para generar tareas asincronas y manejar procesos como respaldos programados.
 
 **Observacion:** Existe junto a workers Celery. Puede ser util como API de orquestacion de trabajos, especialmente si debe exponer estado, historial, cancelacion, reintentos, programacion manual o disparo administrativo. Tambien puede ser duplicacion si `backend-api` solo necesita encolar un job simple.
 
-**Criterio de permanencia:** Review con tendencia a mantener si los respaldos/jobs son capacidad administrable del producto. Decidir si sera una API real de orquestacion o si `backend-api` encolara trabajos directamente y se conservara solo `backend-worker`.
+**Criterio de permanencia:** Retirar como contenedor separado. Fusionar orquestacion de tareas en `backend-api`; conservar `backend-worker` como ejecutor.
 
 ### `backend-worker`
 
 **Funcionalidad:** Worker Celery general.
 
-**Descripcion:** Procesa cola `default` usando modulo `tasks`. Se conecta a RabbitMQ como broker y Redis como result backend.
+**Descripcion:** Procesa cola `default` usando modulo `tasks`. En el stack objetivo usara Redis como broker y backend de resultados para mantener simple la infraestructura.
 
-**Dependencias:** `redis`, `rabbitmq`, `mariadb`.
+**Dependencias:** `redis`, `mariadb`.
 
 **Intencion funcional:** Procesar trabajos en segundo plano o asincronos.
 
-**Criterio de permanencia:** Mantener si se confirma Celery para tareas asincronas. Es el componente que realmente ejecuta procesos largos, reportes, cierres, sincronizaciones, backups o integraciones.
+**Criterio de permanencia:** Mantener. Es el componente que realmente ejecuta procesos largos, reportes, cierres, sincronizaciones, backups o integraciones.
 
 ### `worker-notifications`
 
@@ -123,13 +141,13 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Descripcion:** Procesa cola `notifications` usando modulo `notifications`.
 
-**Dependencias:** `redis`, `rabbitmq`, `backend-worker`.
+**Dependencias:** Retirado del compose dev base. Si se reactiva como worker dedicado, debe depender de `redis` y del canal de notificaciones definido.
 
 **Intencion funcional:** Se penso como canal de Celery para notificaciones. Aun no esta confirmado si se necesita ese canal; una alternativa para eventos de UI es SSE.
 
 **Observacion:** Es una separacion valida cuando notificaciones tienen volumen, SLA, auditoria o retries propios. Si las notificaciones aun no son una capacidad de producto independiente, puede ser un split prematuro. SSE no reemplaza todos los casos de notificacion asincrona, pero puede cubrir eventos live hacia frontend sin sostener un worker separado.
 
-**Criterio de permanencia:** Review. Mantener si hay capacidad concreta de emails, alertas, recordatorios, webhooks o notificaciones internas con procesamiento propio. Si no, fusionar con `backend-worker`, mover a perfil operativo o retirar del compose base.
+**Criterio de permanencia:** Retirar del stack actual. Reincorporar solo cuando exista necesidad real de canal dedicado de notificaciones.
 
 ### `backend-beat`
 
@@ -137,13 +155,13 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Descripcion:** Ejecuta tareas periodicas y persiste schedule en volumen Docker `celerybeat_data`.
 
-**Dependencias:** `redis`, `rabbitmq`, `backend-worker`.
+**Dependencias:** `redis`, `backend-worker`.
 
 **Intencion funcional:** No estaba recordado al revisar, pero tecnicamente corresponde al scheduler de Celery. Es el componente que dispara tareas periodicas; por ejemplo respaldos programados.
 
 **Observacion:** Actualmente debe validarse si existen tareas periodicas de negocio. Si no hay schedules reales, consume stack y dependencias sin aportar funcionalidad visible. Si respaldos programados son una capacidad del producto, `backend-beat` tiene justificacion clara.
 
-**Criterio de permanencia:** Review. Mantener solo si hay jobs periodicos definidos: backups, expiraciones, limpieza, reportes programados, conciliaciones, cierres, recordatorios o auditorias.
+**Criterio de permanencia:** Mover a perfil `scheduler`. Mantener disponible para jobs periodicos definidos: backups, expiraciones, limpieza, reportes programados, conciliaciones, cierres, recordatorios o auditorias.
 
 ### `mariadb`
 
@@ -169,13 +187,13 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Funcionalidad:** Broker de mensajeria.
 
-**Descripcion:** RabbitMQ management Alpine, con persistencia y credenciales por secrets. Alimenta Celery workers.
+**Descripcion:** RabbitMQ management Alpine, con persistencia y credenciales por secrets. Fue evaluado como broker Celery, pero la decision actual es usar Redis por simplicidad operativa.
 
 **Dependencias:** Ninguna aplicativa.
 
 **Intencion funcional:** No estaba recordado al revisar, pero su rol tecnico es ser broker de mensajes para Celery. Recibe trabajos desde APIs/schedulers y los entrega a workers. No agenda tareas por si mismo; esa funcion es de `backend-beat`.
 
-**Criterio de permanencia:** Review con tendencia a mantener si se confirma Celery. Si la arquitectura async del producto se resuelve con otro broker o con Redis como broker/backend, revisar.
+**Criterio de permanencia:** Retirar. La decision de producto es usar Redis como broker/backend de Celery por simplicidad operativa.
 
 ### `minio`
 
@@ -195,7 +213,7 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 **Dependencias:** Ninguna aplicativa.
 
-**Criterio de permanencia:** Mantener en dev y posiblemente QA. No debe formar parte de PRD.
+**Criterio de permanencia:** Mover a perfil `tools` para dev/QA. No debe formar parte de PRD.
 
 ### `redisinsight`
 
@@ -209,9 +227,9 @@ Recomendacion de producto: conservar capacidades cuando tengan responsabilidad c
 
 ## Decisiones pendientes
 
-1. Decidir si MinIO se expone mediante `backend-docs` o mediante un modulo de `backend-api`. Evitar ruta publica `/api/docs` si puede confundirse con Swagger/OpenAPI; preferir `/api/documents` o `/api/files`.
-2. Decidir si `backend-tasks` sera API independiente de administracion de jobs o si `backend-api` encolara tareas directamente.
-3. Confirmar si respaldos programados son capacidad del producto. Si lo son, `backend-beat` y `backend-worker` tienen justificacion clara.
-4. Confirmar si Celery se mantiene como arquitectura async. Si se mantiene, `rabbitmq` tiene sentido como broker; si no, revisar simplificacion.
-5. Activar `worker-notifications` cuando exista necesidad de canal dedicado. Para eventos live hacia frontend, evaluar SSE desde `backend-api`.
-6. Revisar `scripts/nginx/nginx.dev.conf`: si docs/tasks se mantienen, decidir rutas proxy definitivas para `/api/documents/` y `/api/tasks/`.
+1. Fusionar rutas/capacidades de `backend-docs` en `backend-api` usando una ruta publica como `/api/documents` o `/api/files`.
+2. Fusionar rutas/capacidades de `backend-tasks` en `backend-api`; el backend principal debe encolar trabajos para `backend-worker`.
+3. Fusionar rutas/capacidades de `backend-docs` y `backend-tasks` en codigo de `backend-api`.
+4. Definir contratos HTTP para archivos y jobs dentro de `backend-api`.
+5. Activar `backend-beat` bajo perfil `scheduler` solo cuando existan schedules reales.
+6. Reincorporar `worker-notifications` solo si aparece necesidad funcional de canal dedicado.

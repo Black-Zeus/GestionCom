@@ -25,6 +25,9 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 
 - El agente puede revisar estado, diff, log y archivos versionados cuando sea necesario.
 - El agente solo debe generar commits cuando el usuario lo pida explicitamente.
+- Una solicitud anterior de generar commits no autoriza commits futuros. Cada commit requiere una peticion explicita y vigente para el cambio actual.
+- Si el usuario pide modificar archivos, documentar, validar o avanzar trabajo, eso no implica permiso para commitear.
+- Antes de crear un commit, confirmar que la peticion explicita de commit existe en el mensaje actual o en una instruccion directa no ambigua del usuario para esa tanda de cambios.
 - El agente no debe ejecutar `git pull` salvo que el usuario lo pida explicitamente.
 - El agente no debe ejecutar `git push` salvo que el usuario lo pida explicitamente.
 - No usar comandos destructivos como `git reset --hard`, `git checkout --` o equivalentes para descartar cambios, salvo solicitud explicita del usuario.
@@ -43,6 +46,7 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 - Mantener Tailwind y su configuracion.
 - Priorizar carga lazy, bundles livianos y evitar introducir dependencias pesadas sin necesidad.
 - El modo claro/oscuro debe respetarse en layout, header, footer, side menu, modales y contenido.
+- Al abrir modales, la pagina de fondo no debe hacer scroll. Si el contenido excede la altura disponible, el scroll debe ocurrir dentro del modal.
 - Cuando se cree una pagina nueva, debe componetizarse en archivos separados. Evitar paginas monoliticas que mezclen layout, estado, secciones, formularios, tablas, modales y utilidades en un solo archivo.
 - Para paginas frontend, separar al menos:
   - pagina contenedora
@@ -95,7 +99,7 @@ Reglas y politicas para agentes que trabajen en este repositorio.
 - Los archivos base historicos deben conservarse como trazabilidad del estado original; no corregirlos retroactivamente salvo instruccion explicita del usuario.
 - En entornos con base ya levantada, aplicar el incremental explicitamente y validar con consultas de verificacion.
 - No usar prefijos numericos simples como `01_`, `02_` o similares para nuevas migraciones.
-- La hora `HHMM` define el orden de ejecucion lexicografico; si se agregan varias migraciones en la misma fecha, avanzar en incrementos de 1 minuto: `1300`, `1301`, `1302`, etc.
+- La hora `HHMM` debe corresponder a la fecha y hora reales de creacion del script. No usar incrementos artificiales de 1 minuto para ordenar archivos.
 - Separar las migraciones por dominio y tipo de contenido. Usar prefijos de scope como `schema_`, `alter_`, `seed_`, `views_`, `routines_` y `data_` segun corresponda.
 - No mezclar creacion de tablas, seeds, vistas y rutinas en un mismo archivo salvo que sea una excepcion pequena y justificada.
 - Preferir migraciones por scope funcional cuando haya dependencias entre tablas del mismo dominio, por ejemplo `users`, `inventory`, `sales`, `cash_registers`, `accounts_receivable`, antes que un archivo por tabla.

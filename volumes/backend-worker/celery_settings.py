@@ -14,15 +14,11 @@ def read_secret(name, default=None):
 
 
 def get_broker_url():
-    configured_url = os.getenv("RABBITMQ_URL")
+    configured_url = os.getenv("CELERY_BROKER_URL")
     if configured_url:
         return configured_url
 
-    user = quote(read_secret("RABBITMQ_DEFAULT_USER", "guest"))
-    password = quote(read_secret("RABBITMQ_DEFAULT_PASS", "guest"))
-    host = os.getenv("RABBITMQ_HOST", "localhost")
-    port = os.getenv("RABBITMQ_PORT", "5672")
-    return f"amqp://{user}:{password}@{host}:{port}"
+    return get_redis_url(os.getenv("CELERY_BROKER_DB", "1"))
 
 
 def get_result_backend():
@@ -30,9 +26,12 @@ def get_result_backend():
     if configured_backend:
         return configured_backend
 
+    return get_redis_url(os.getenv("CELERY_BACKEND_DB", "2"))
+
+
+def get_redis_url(db):
     password = read_secret("REDIS_PASSWORD")
     host = os.getenv("REDIS_HOST", "localhost")
     port = os.getenv("REDIS_PORT", "6379")
-    db = os.getenv("REDIS_DB", "1")
     auth = f":{quote(password)}@" if password else ""
     return f"redis://{auth}{host}:{port}/{db}"

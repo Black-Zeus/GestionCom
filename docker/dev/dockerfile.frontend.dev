@@ -4,6 +4,9 @@ FROM node:24-alpine
 # Argumento para el puerto (configurable en build time)
 ARG FRONTEND_PORT_INTERNAL=3000
 
+# Zona horaria del contenedor (TZ se inyecta desde compose)
+RUN apk add --no-cache tzdata
+
 # Usar el usuario node que ya existe en la imagen (UID 1000)
 # En node:24-alpine ya existe el usuario 'node' con UID 1000
 
