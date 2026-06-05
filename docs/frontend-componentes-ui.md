@@ -4,6 +4,10 @@
 
 Las nuevas secciones frontend deben reutilizar los componentes comunes existentes antes de crear controles propios. Esto mantiene coherencia visual, evita duplicacion y reduce regresiones entre mantenedores.
 
+La composicion visual de mantenedores debe respetar la [guia visual de mantenedores](frontend-guia-visual-mantenedores.md).
+
+Los iconos deben respetar la guia de [iconografia UI](frontend-iconografia-ui.md). Para una misma accion se debe reutilizar el mismo icono en todos los mantenedores.
+
 Si una pagina contiene mas de un mantenedor interno, debe usar `ModuleTabs` para separar las vistas. No crear selectores de pestanas locales.
 
 Todas las tablas de datos deben usar `DataTable` con `DataTablePagination` en el `footer`, salvo que se solicite expresamente que esa tabla no lleve paginador.
@@ -15,6 +19,7 @@ Todas las tablas de datos deben usar `DataTable` con `DataTablePagination` en el
 - `DataTablePagination`: paginacion comun para tablas con colecciones medianas o grandes.
 - `FilterBar`: barra comun para busqueda, filtros y acciones de refrescar/limpiar.
 - `KpiBar`: resumen superior de indicadores filtrables o informativos.
+- `StatusBadge`: pill comun para estados persistentes como activo, inactivo, suspendido o informativo.
 - `ActionButton`: boton primario para acciones principales como crear un registro.
 - `RowActionButton`: boton iconografico para acciones por fila como editar, activar/desactivar o eliminar.
 - `BottomActionBar`: barra inferior fija para pantallas de edicion/asignacion con cambios pendientes y acciones de guardar/cancelar.
@@ -49,6 +54,7 @@ Pantallas de permisos/asignaciones:
 - `volumes/frontend/src/components/common/data/DataTablePagination.jsx`
 - `volumes/frontend/src/components/common/data/FilterBar.jsx`
 - `volumes/frontend/src/components/common/data/KpiBar.jsx`
+- `volumes/frontend/src/components/common/data/StatusBadge.jsx`
 - `volumes/frontend/src/components/common/actions/ActionButton.jsx`
 - `volumes/frontend/src/components/common/actions/BottomActionBar.jsx`
 - `volumes/frontend/src/components/common/forms/SimpleFormContent.jsx`
