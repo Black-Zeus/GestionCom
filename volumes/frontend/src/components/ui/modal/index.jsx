@@ -4,6 +4,8 @@
 * Exporta toda la funcionalidad de forma organizada
 */
 
+import React from 'react';
+
 // ====================================
 // IMPORTS PRINCIPALES
 // ====================================
@@ -39,12 +41,8 @@ import {
  getDefaultTitle
 } from './modalTypes.js';
 
-// Renderers por tipo
-import { basicModalRenderers } from './types/BasicModals.jsx';
-import { interactiveModalRenderers } from './types/InteractiveModals.jsx';
-import { dataModalRenderers } from './types/DataModals.jsx';
-import { mediaModalRenderers } from './types/MediaModals.jsx';
-import { systemModalRenderers } from './types/SystemModals.jsx';
+import logger from '@/utils/logger';
+const modalLog = logger.scope("modal");
 
 // ====================================
 // LAZY INITIALIZATION
@@ -90,7 +88,7 @@ export const setupModalSystem = (config = {}) => {
  const stats = initializeModalSystem(config);
  
  // Auto-cleanup en desarrollo
- if (process.env.NODE_ENV === 'development') {
+ if (import.meta.env.DEV) {
    window.ModalManager = ModalManager;
    window.modalState = modalState;
  }
@@ -195,19 +193,19 @@ export const getModalSystemStatus = () => {
 * Debug del sistema (solo desarrollo)
 */
 export const debugModalSystem = () => {
- if (process.env.NODE_ENV !== 'development') {
-   console.warn('debugModalSystem solo disponible en desarrollo');
+ if (!import.meta.env.DEV) {
+   modalLog.warn('debugModalSystem solo disponible en desarrollo');
    return;
  }
  
  ensureSystemReady();
  
  const status = getModalSystemStatus();
- console.group('🔍 Modal System Debug');
- //console.log('Estado:', status);
- //console.log('Modales activos:', modalState.modals);
- //console.log('Contenedor:', modalState.container);
- //console.groupEnd();
+ modalLog.group('🔍 Modal System Debug');
+ modalLog.log('Estado:', status);
+ modalLog.log('Modales activos:', modalState.modals);
+ modalLog.log('Contenedor:', modalState.container);
+ modalLog.groupEnd();
  
  return status;
 };
@@ -293,7 +291,7 @@ export const ModalProvider = ({ children, config = {} }) => {
    setupModalSystem(config);
    
    return () => {
-     if (process.env.NODE_ENV !== 'production') {
+     if (!import.meta.env.PROD) {
        cleanupModalSystem();
      }
    };
@@ -366,14 +364,7 @@ export {
  // Funciones del sistema
  initializeModalSystem,
  isModalSystemReady,
- cleanupModalSystem,
- 
- // Renderers (para uso avanzado)
- basicModalRenderers,
- interactiveModalRenderers,
- dataModalRenderers,
- mediaModalRenderers,
- systemModalRenderers
+ cleanupModalSystem
 };
 
 // ====================================

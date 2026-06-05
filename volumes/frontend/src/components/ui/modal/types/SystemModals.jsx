@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { MODAL_CLASSES } from '../modalTypes.js';
+import { formatDateTime } from '@/utils/formats';
 
 // Importar componentes específicos
 import { LoadingSpinner } from './system/LoadingSpinner.jsx';
@@ -184,8 +185,6 @@ export const renderCustomModal = ({
   type = 'custom',
   title = 'Modal Personalizado',
   content,
-  contentComponent: ContentComponent,
-  contentProps = {},
   children,
   size = 'medium',
   showHeader = true,
@@ -197,10 +196,10 @@ export const renderCustomModal = ({
   onAction,
   ...customProps
 }) => {
+  const isWideShell = ['clientWide', 'entityWide', 'minuteWide'].includes(size);
+
   // Contenido del cuerpo
-  const bodyContent = ContentComponent ? (
-    <ContentComponent onClose={onClose} {...contentProps} />
-  ) : content || children || (
+  const bodyContent = content || children || (
     <CustomContent
       title="¡Modal Completamente Personalizable!"
       subtitle="Este modal demuestra las capacidades de personalización del sistema"
@@ -246,7 +245,7 @@ export const renderCustomModal = ({
       )}
 
       {/* Body */}
-      <div className={MODAL_CLASSES.bodyContent}>
+      <div className={isWideShell ? 'p-0' : MODAL_CLASSES.bodyContent}>
         {bodyContent}
       </div>
 
@@ -433,7 +432,7 @@ export const renderSystemNotificationModal = ({
               )}
               {showTimestamp && (
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(timestamp).toLocaleString()}
+                  {formatDateTime(timestamp)}
                 </div>
               )}
             </div>

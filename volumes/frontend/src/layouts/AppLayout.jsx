@@ -320,6 +320,20 @@ const AppLayout = () => {
   }, [initializeFromUser, user]);
 
   useEffect(() => {
+    const preloadModalSystem = () => {
+      import('@/components/ui/modal').catch(() => {});
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(preloadModalSystem, { timeout: 2000 });
+      return () => window.cancelIdleCallback?.(idleId);
+    }
+
+    const timer = window.setTimeout(preloadModalSystem, 800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (!user || isDemoSession) {
       clearMenu();
       return;

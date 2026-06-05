@@ -10,6 +10,11 @@ import {
     ChevronRight, Star, Clock, User, Tag, Bookmark,
     ThumbsUp, ThumbsDown, Copy, Share, Download
 } from 'lucide-react';
+import { formatDate } from '@/utils/formats';
+
+
+import logger from '@/utils/logger';
+const modalLog = logger.scope("modal");
 
 // ====================================
 // ICONOS POR CATEGORÍA
@@ -171,7 +176,7 @@ export const HelpCenter = ({
         try {
             await onSearch?.(query);
         } catch (error) {
-            console.error('Error searching:', error);
+            modalLog.error('Error searching:', error);
         } finally {
             setIsSearching(false);
         }
@@ -429,7 +434,7 @@ export const HelpCenter = ({
                                 {article.title}
                             </h4>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {article.date && new Date(article.date).toLocaleDateString()}
+                                {article.date && formatDate(article.date)}
                             </p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-gray-400" />

@@ -107,6 +107,27 @@ export const MODAL_SIZES = {
     width: 'max-w-4xl',
     padding: 'p-8'
   },
+  modalLarge: {
+  width: 'max-w-5xl',
+  padding: 'p-8',
+  maxHeight: 'max-h-[90vh]'
+},
+  clientWide: {
+    width: '!w-[50vw] !max-w-[50vw]',
+    padding: 'p-6'
+  },
+  entityWide: {
+    width: '!w-[calc(100vw-2rem)] !max-w-[calc(100vw-2rem)] lg:!w-[60vw] lg:!max-w-[60vw]',
+    padding: 'p-6'
+  },
+  minuteWide: {
+    width: '!w-[50vw] !max-w-[50vw]',
+    padding: 'p-6'
+  },
+  pdfViewer: {
+    width: '!w-[80vw] !max-w-[80vw]',
+    padding: 'p-6'
+  },
   fullscreen: {
     width: 'max-w-7xl min-h-screen',
     padding: 'p-8',
@@ -146,7 +167,7 @@ export const MODAL_CLASSES = {
   // Modal principal
   modal: {
     //base: 'relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200 border border-gray-200 dark:border-gray-700',
-    base: 'relative flex max-h-[calc(100vh-2rem)] min-h-[120px] transform flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200',
+    base: 'relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-900 shadow-xl transition-all duration-200 min-h-[120px]',
     enter: 'opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95',
     enterActive: 'opacity-100 translate-y-0 sm:scale-100',
     exit: 'opacity-100 translate-y-0 sm:scale-100',
