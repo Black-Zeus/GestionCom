@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -29,13 +30,6 @@ import { appConfig } from '@/config/appConfig';
 import ProductInfoModalContent from '@/components/product/ProductInfoModalContent';
 import { authService } from '@/services/auth/authService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
-
-const getCompactNavigationLabel = (label) => {
-  const words = label.trim().split(/\s+/);
-  if (words.length <= 1) return label;
-  if (['mi', 'mis'].includes(words[0].toLowerCase()) && words[1]) return words[1];
-  return words[0];
-};
 
 const getCleanDisplayName = (value) => (
   String(value || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
@@ -283,7 +277,7 @@ const AppLayout = () => {
   const fetchMenu = useMenuStore((state) => state.fetchMenu);
   const clearMenu = useMenuStore((state) => state.clearMenu);
 
-  const sidebarWidth = collapsed ? 'w-20' : 'w-72';
+  const sidebarWidth = collapsed ? 'w-20' : 'w-80';
   const usingDatabaseMenu = dbMenuGroups.length > 0;
   const moduleGroups = usingDatabaseMenu ? dbMenuGroups : fallbackModuleGroups;
   const navigablePages = usingDatabaseMenu ? dbMenuPages : fallbackNavigablePages;
@@ -566,7 +560,7 @@ const AppLayout = () => {
                     <GroupIcon className={cn('h-4 w-4 shrink-0 transition-colors duration-200', isGroupActive && 'text-blue-600 dark:text-sky-300')} />
                     {!collapsed && (
                       <>
-                        <span className="min-w-0 flex-1 truncate text-left">{group.label}</span>
+                        <span className="min-w-0 flex-1 text-left leading-snug">{group.label}</span>
                         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform duration-200 ease-out', isGroupOpen ? 'rotate-0' : '-rotate-90')} />
                       </>
                     )}
@@ -588,12 +582,12 @@ const AppLayout = () => {
                       to={item.path}
                       title={item.label}
                       className={({ isActive }) => cn(
-                        'flex h-9 items-center gap-3 rounded-md px-3 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white',
+                        'flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white',
                         isActive && 'bg-blue-600 text-white shadow-sm dark:bg-blue-600 dark:text-white'
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      <span className="min-w-0 flex-1 leading-snug">{item.label}</span>
                     </NavLink>
                   );
                       })}
@@ -687,11 +681,11 @@ const AppLayout = () => {
                   title={`Estabas viendo: ${item.tooltip}`}
                   onClick={() => navigate(item.path)}
                   className={cn(
-                    'h-10 max-w-28 truncate border-b-2 border-transparent px-1 text-left text-slate-500 transition-colors hover:text-slate-950 dark:text-slate-400 dark:hover:text-white',
+                    'h-10 max-w-56 truncate border-b-2 border-transparent px-1 text-left text-slate-500 transition-colors hover:text-slate-950 dark:text-slate-400 dark:hover:text-white',
                     item.path === location.pathname && 'border-blue-500 text-blue-700 dark:border-blue-400 dark:text-blue-300'
                   )}
                 >
-                  {getCompactNavigationLabel(item.label)}
+                  {item.label}
                 </button>
               </div>
             ))}

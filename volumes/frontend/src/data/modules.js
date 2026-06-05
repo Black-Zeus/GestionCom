@@ -55,8 +55,8 @@ export const moduleGroups = [
     icon: Users,
     permissions: ['CUSTOMERS_VISIBLE'],
     items: [
-      { id: 'customers', label: 'Clientes', path: '/customers', icon: Users, weight: 10 },
-      { id: 'account-status', label: 'Estado de cuenta', path: '/customers/account-status', icon: FileText, weight: 20 },
+      { id: 'customers', label: 'Listado de clientes', path: '/customers', icon: Users, weight: 10 },
+      { id: 'account-status', label: 'Estado de cuenta de clientes', path: '/customers/account-status', icon: FileText, weight: 20 },
       { id: 'customer-credit', label: 'Creditos y limites', path: '/customers/credit-limits', icon: CreditCard, weight: 30 },
       { id: 'authorized-persons', label: 'Personas autorizadas', path: '/customers/authorized-persons', icon: Shield, weight: 40 },
       { id: 'purchase-history', label: 'Historial de compras', path: '/customers/purchase-history', icon: Receipt, weight: 50 },
@@ -80,7 +80,7 @@ export const moduleGroups = [
     icon: Package,
     permissions: ['INVENTORY_VISIBLE'],
     items: [
-      { id: 'products', label: 'Productos', path: '/products', icon: Package, weight: 10 },
+      { id: 'products', label: 'Catalogo de productos', path: '/products', icon: Package, weight: 10 },
       { id: 'stock-movements', label: 'Movimientos de stock', path: '/stock/movements', icon: Boxes, weight: 20 },
       { id: 'physical-inventory', label: 'Inventario fisico', path: '/stock/physical', icon: ClipboardCheck, weight: 30 },
       { id: 'inventory-adjustments', label: 'Ajustes de inventario', path: '/stock/adjustments', icon: Settings, weight: 40 },
@@ -88,7 +88,7 @@ export const moduleGroups = [
       { id: 'price-lists', label: 'Listas de precios', path: '/price-lists', icon: BadgeDollarSign, weight: 60 },
       { id: 'categories', label: 'Categorias de productos', path: '/categories', icon: Boxes, weight: 70, permissions: ['CATEGORIES_ACCESS', 'PRODUCT_CATEGORIES_MANAGE'] },
       { id: 'product-attributes', label: 'Atributos de productos', path: '/product-attributes', icon: ClipboardList, weight: 75, permissions: ['PRODUCT_ATTRIBUTES_ACCESS', 'PRODUCT_ATTRIBUTES_MANAGE'] },
-      { id: 'barcodes', label: 'Codigos de barra', path: '/barcodes', icon: Receipt, weight: 80 },
+      { id: 'barcodes', label: 'Codigos de barra de productos', path: '/barcodes', icon: Receipt, weight: 80 },
     ],
   },
   {
@@ -97,7 +97,7 @@ export const moduleGroups = [
     icon: Truck,
     permissions: ['SUPPLIERS_VISIBLE'],
     items: [
-      { id: 'suppliers', label: 'Proveedores', path: '/suppliers', icon: Truck, weight: 10 },
+      { id: 'suppliers', label: 'Listado de proveedores', path: '/suppliers', icon: Truck, weight: 10 },
       { id: 'purchase-orders', label: 'Ordenes de compra', path: '/suppliers/purchase-orders', icon: ClipboardList, weight: 20 },
       { id: 'supplier-payable', label: 'Cuentas por pagar proveedor', path: '/suppliers/accounts-payable', icon: FileText, weight: 30 },
       { id: 'supplier-products', label: 'Productos por proveedor', path: '/suppliers/products', icon: Package, weight: 40 },
@@ -124,15 +124,15 @@ export const moduleGroups = [
     permissions: ['DOCUMENTS_VISIBLE'],
     items: [
       { id: 'commercial-documents', label: 'Documentos comerciales', path: '/documents/commercial', icon: FileText, weight: 10 },
-      { id: 'returns', label: 'Devoluciones', path: '/returns', icon: Receipt, weight: 20 },
-      { id: 'credit-notes', label: 'Notas de credito', path: '/returns/credit-notes', icon: FileText, weight: 30 },
-      { id: 'document-series', label: 'Series de documentos', path: '/documents/series', icon: ClipboardList, weight: 40, permissions: ['DOCUMENT_SERIES_ACCESS', 'DOCUMENT_SERIES_MANAGE'] },
+      { id: 'returns', label: 'Devoluciones de ventas', path: '/returns', icon: Receipt, weight: 20 },
+      { id: 'credit-notes', label: 'Notas de credito de ventas', path: '/returns/credit-notes', icon: FileText, weight: 30 },
+      { id: 'document-series', label: 'Tipos y series de documentos', path: '/documents/series', icon: ClipboardList, weight: 40, permissions: ['DOCUMENT_SERIES_ACCESS', 'DOCUMENT_SERIES_MANAGE'] },
       { id: 'document-templates', label: 'Plantillas de documentos', path: '/config/document-templates', icon: FileText, weight: 50 },
     ],
   },
   {
     id: 'metrics',
-    label: 'Metricas',
+    label: 'Metricas e indicadores',
     icon: LineChart,
     permissions: ['METRICS_VISIBLE'],
     items: [
@@ -144,7 +144,7 @@ export const moduleGroups = [
   },
   {
     id: 'management-reports',
-    label: 'Reportes Gestion',
+    label: 'Reportes de gestion',
     icon: BarChart3,
     permissions: ['REPORTS_VISIBLE'],
     items: [
@@ -158,7 +158,7 @@ export const moduleGroups = [
   },
   {
     id: 'audit-reports',
-    label: 'Reportes Auditoria',
+    label: 'Reportes de auditoria',
     icon: FileSearch,
     permissions: ['AUDIT_VISIBLE'],
     items: [
@@ -176,8 +176,8 @@ export const moduleGroups = [
       { id: 'company-config', label: 'Configuracion de empresa', path: '/config/company', icon: Building2, weight: 10 },
       { id: 'system-parameters', label: 'Parametros del sistema', path: '/config/system-parameters', icon: Settings, weight: 20 },
       { id: 'tax-config', label: 'Configuracion de impuestos', path: '/config/taxes', icon: Receipt, weight: 30 },
-      { id: 'payment-methods', label: 'Metodos de pago', path: '/config/payment-methods', icon: CreditCard, weight: 40 },
-      { id: 'measurement-units', label: 'Unidades de medida', path: '/config/measurement-units', icon: Ruler, weight: 50, permissions: ['MEASUREMENT_UNITS_ACCESS', 'MEASUREMENT_UNITS_MANAGE'] },
+      { id: 'payment-methods', label: 'Configuracion de metodos de pago', path: '/config/payment-methods', icon: CreditCard, weight: 40 },
+      { id: 'measurement-units', label: 'Configuracion de unidades de medida', path: '/config/measurement-units', icon: Ruler, weight: 50, permissions: ['MEASUREMENT_UNITS_ACCESS', 'MEASUREMENT_UNITS_MANAGE'] },
       { id: 'system-logs', label: 'Logs del sistema', path: '/config/system-logs', icon: ClipboardList, weight: 60 },
       { id: 'system-audit', label: 'Auditoria del sistema', path: '/config/system-audit', icon: Shield, weight: 70 },
     ],
@@ -188,9 +188,9 @@ export const moduleGroups = [
     icon: Shield,
     permissions: ['ADMIN_VISIBLE'],
     items: [
-      { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users, weight: 10, permissions: ['USER_READ', 'USER_MANAGER'] },
-      { id: 'roles', label: 'Roles', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
-      { id: 'warehouses', label: 'Bodegas', path: '/admin/warehouses', icon: Store, weight: 30, permissions: ['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS'] },
+      { id: 'users', label: 'Administracion de usuarios', path: '/admin/users', icon: Users, weight: 10, permissions: ['USER_READ', 'USER_MANAGER'] },
+      { id: 'roles', label: 'Administracion de roles y permisos', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
+      { id: 'warehouses', label: 'Administracion de bodegas', path: '/admin/warehouses', icon: Store, weight: 30, permissions: ['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS'] },
       { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40, permissions: ['CASH_POS_ADMIN_ACCESS', 'CASH_SETTINGS_MANAGE'] },
       { id: 'petty-cash-admin', label: 'Administracion de caja chica', path: '/admin/cash-petty', icon: WalletCards, weight: 50, permissions: ['PETTY_CASH_ADMIN_ACCESS', 'PETTY_CASH_MANAGE', 'PETTY_CASH_APPROVE'] },
       { id: 'backup', label: 'Backup y restauracion', path: '/admin/backup', icon: Database, weight: 60 },
