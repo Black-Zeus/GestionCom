@@ -14,6 +14,9 @@ En altas de mantenedores, el codigo lo genera siempre el backend dentro de la tr
 - Categorias de caja chica: `PCC_0001`.
 - Metodos de pago nuevos: `PAY_0001`. Los codigos semanticos base como `CASH`, `DEBIT` o `TRANSFER` se mantienen como catalogo funcional seed.
 - Unidades de medida nuevas: `UM_0001`. Las unidades estandar como `UNIT`, `KG`, `LT` o `MT` se mantienen como catalogo funcional seed.
+- Categorias de productos: `CAT_0001`.
+- Grupos, atributos y valores de atributos nuevos: `ATG_0001`, `ATT_0001`, `ATV_0001`. Los codigos seed como `COLOR` o `SIZE` se mantienen como catalogo funcional seed.
+- Series de documentos: `SER_0001`. Los tipos de documento seed mantienen codigos funcionales como `SALE_INVOICE`.
 - Roles custom: `ROLE_0001`.
 
 ## Excepciones

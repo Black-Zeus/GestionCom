@@ -256,6 +256,8 @@ if __name__ == "__main__":
         {"name": "warehouses", "prefix": "/warehouses", "tags": ["Warehouses"]},
         {"name": "payment_methods", "prefix": "/payment-methods", "tags": ["Payment Methods"]},
         {"name": "measurement_units", "prefix": "/measurement-units", "tags": ["Measurement Units"]},
+        {"name": "product_config", "prefix": "/product-config", "tags": ["Product Config"]},
+        {"name": "document_config", "prefix": "/document-config", "tags": ["Document Config"]},
         {"name": "system", "prefix": "/system", "tags": ["System"]}
     ]
     

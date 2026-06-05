@@ -154,6 +154,16 @@ ROUTERS_TO_LOAD = [
         "tags": ["Measurement Units"]
     },
     {
+        "name": "product_config",
+        "prefix": "/product-config",
+        "tags": ["Product Config"]
+    },
+    {
+        "name": "document_config",
+        "prefix": "/document-config",
+        "tags": ["Document Config"]
+    },
+    {
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]

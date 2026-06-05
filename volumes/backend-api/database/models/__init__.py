@@ -19,6 +19,8 @@ from .cash_registers import CashRegister
 from .petty_cash import PettyCashCategory, PettyCashFund, PettyCashFundStatus
 from .payment_methods import PaymentMethod, PaymentMethodType
 from .measurement_units import MeasurementUnit, MeasurementUnitType
+from .product_config import AttributeGroup, AttributeType, AttributeValue, Category, ProductAttribute
+from .document_config import DocumentCategory, DocumentSeries, DocumentType, MovementType
 
 # Modelos de relación (después de los principales)
 from .user_roles import UserRole
@@ -45,6 +47,12 @@ __all_models__ = [
     "PettyCashFund",
     "PaymentMethod",
     "MeasurementUnit",
+    "Category",
+    "AttributeGroup",
+    "ProductAttribute",
+    "AttributeValue",
+    "DocumentType",
+    "DocumentSeries",
 ]
 
 # Modelos de relación
@@ -63,6 +71,9 @@ __all_enums__ = [
     "PettyCashFundStatus",
     "PaymentMethodType",
     "MeasurementUnitType",
+    "AttributeType",
+    "DocumentCategory",
+    "MovementType",
 ]
 
 # Base y utilidades

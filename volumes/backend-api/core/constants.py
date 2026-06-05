@@ -340,6 +340,8 @@ PRIVATE_ROUTES = [
     "/petty-cash-admin",            # Administración de caja chica
     "/payment-methods",             # Mantenedor de metodos de pago
     "/measurement-units",           # Mantenedor de unidades de medida
+    "/product-config",              # Categorias y atributos de productos
+    "/document-config",             # Tipos y series de documentos
     "/menu-items",                  # Gestión de Menus
     "/user-menus",                  # Gestión de Menus del usuario
 ]
