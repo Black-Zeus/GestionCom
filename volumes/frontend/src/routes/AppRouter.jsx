@@ -16,6 +16,8 @@ const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const AdminWarehouses = lazy(() => import('@/pages/admin/AdminWarehouses'));
 const AdminCashPos = lazy(() => import('@/pages/admin/AdminCashPos'));
 const AdminPettyCash = lazy(() => import('@/pages/admin/AdminPettyCash'));
+const AdminPaymentMethods = lazy(() => import('@/pages/admin/AdminPaymentMethods'));
+const AdminMeasurementUnits = lazy(() => import('@/pages/admin/AdminMeasurementUnits'));
 const AdminRolePermissions = lazy(() => import('@/pages/admin/AdminRolePermissions'));
 const AdminUserPermissions = lazy(() => import('@/pages/admin/AdminUserPermissions'));
 const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
@@ -26,6 +28,8 @@ const moduleComponents = {
   warehouses: AdminWarehouses,
   'cash-pos-admin': AdminCashPos,
   'petty-cash-admin': AdminPettyCash,
+  'payment-methods': AdminPaymentMethods,
+  'measurement-units': AdminMeasurementUnits,
 };
 
 const Page = ({ children }) => (

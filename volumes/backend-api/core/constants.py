@@ -338,6 +338,8 @@ PRIVATE_ROUTES = [
     "/warehouses",                  # Gestión de almacenes y bodegas
     "/cash-registers",              # Configuración de cajas POS
     "/petty-cash-admin",            # Administración de caja chica
+    "/payment-methods",             # Mantenedor de metodos de pago
+    "/measurement-units",           # Mantenedor de unidades de medida
     "/menu-items",                  # Gestión de Menus
     "/user-menus",                  # Gestión de Menus del usuario
 ]

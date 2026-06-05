@@ -17,6 +17,8 @@ from .warehouses import Warehouse
 from .warehouse_zones import WarehouseZone
 from .cash_registers import CashRegister
 from .petty_cash import PettyCashCategory, PettyCashFund, PettyCashFundStatus
+from .payment_methods import PaymentMethod, PaymentMethodType
+from .measurement_units import MeasurementUnit, MeasurementUnitType
 
 # Modelos de relación (después de los principales)
 from .user_roles import UserRole
@@ -41,6 +43,8 @@ __all_models__ = [
     "CashRegister",
     "PettyCashCategory",
     "PettyCashFund",
+    "PaymentMethod",
+    "MeasurementUnit",
 ]
 
 # Modelos de relación
@@ -57,6 +61,8 @@ __all_enums__ = [
     "PermissionType", 
     "AccessType",
     "PettyCashFundStatus",
+    "PaymentMethodType",
+    "MeasurementUnitType",
 ]
 
 # Base y utilidades

@@ -254,6 +254,8 @@ if __name__ == "__main__":
         {"name": "users", "prefix": "/users", "tags": ["Users"]},
         {"name": "auth", "prefix": "/auth", "tags": ["Authentication"]},
         {"name": "warehouses", "prefix": "/warehouses", "tags": ["Warehouses"]},
+        {"name": "payment_methods", "prefix": "/payment-methods", "tags": ["Payment Methods"]},
+        {"name": "measurement_units", "prefix": "/measurement-units", "tags": ["Measurement Units"]},
         {"name": "system", "prefix": "/system", "tags": ["System"]}
     ]
     

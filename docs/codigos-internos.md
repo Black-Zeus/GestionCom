@@ -12,6 +12,8 @@ En altas de mantenedores, el codigo lo genera siempre el backend dentro de la tr
 - Cajas POS: `POS_0001`.
 - Fondos de caja chica: `PCF_000001`. Se usa ancho inicial de seis digitos porque puede crecer con usuarios o puntos de operacion.
 - Categorias de caja chica: `PCC_0001`.
+- Metodos de pago nuevos: `PAY_0001`. Los codigos semanticos base como `CASH`, `DEBIT` o `TRANSFER` se mantienen como catalogo funcional seed.
+- Unidades de medida nuevas: `UM_0001`. Las unidades estandar como `UNIT`, `KG`, `LT` o `MT` se mantienen como catalogo funcional seed.
 - Roles custom: `ROLE_0001`.
 
 ## Excepciones

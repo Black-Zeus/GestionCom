@@ -144,6 +144,16 @@ ROUTERS_TO_LOAD = [
         "tags": ["Petty Cash Admin"]
     },
     {
+        "name": "payment_methods",
+        "prefix": "/payment-methods",
+        "tags": ["Payment Methods"]
+    },
+    {
+        "name": "measurement_units",
+        "prefix": "/measurement-units",
+        "tags": ["Measurement Units"]
+    },
+    {
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]
