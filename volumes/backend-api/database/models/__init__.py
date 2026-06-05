@@ -21,6 +21,7 @@ from .payment_methods import PaymentMethod, PaymentMethodType
 from .measurement_units import MeasurementUnit, MeasurementUnitType
 from .product_config import AttributeGroup, AttributeType, AttributeValue, Category, ProductAttribute
 from .document_config import DocumentCategory, DocumentSeries, DocumentType, MovementType
+from .business_foundation import DteCompanyConfig, PriceList, PriceListGroup, PriceListItem, Product, ProductVariant, TaxRate
 
 # Modelos de relación (después de los principales)
 from .user_roles import UserRole
@@ -53,6 +54,13 @@ __all_models__ = [
     "AttributeValue",
     "DocumentType",
     "DocumentSeries",
+    "DteCompanyConfig",
+    "PriceList",
+    "PriceListGroup",
+    "PriceListItem",
+    "Product",
+    "ProductVariant",
+    "TaxRate",
 ]
 
 # Modelos de relación

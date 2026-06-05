@@ -170,10 +170,17 @@ services:
     environment:
       <<: *timezone-env
       EVENTS_PUBLISH_TOKEN: ${EVENTS_PUBLISH_TOKEN}
+      MINIO_HOST: ${MINIO_HOST}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-gestioncom-media}
     secrets:
       - backend_api_secret_key
       - mysql_password
       - redis_password
+      - minio_root_user
+      - minio_root_password
     logging: *default-logging
     deploy: *deploy-medium
     healthcheck:

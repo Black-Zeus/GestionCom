@@ -164,6 +164,31 @@ ROUTERS_TO_LOAD = [
         "tags": ["Document Config"]
     },
     {
+        "name": "business_foundation",
+        "prefix": "/business-foundation",
+        "tags": ["Business Foundation"]
+    },
+    {
+        "name": "admin_maintainers",
+        "prefix": "/admin-maintainers",
+        "tags": ["Admin Maintainers"]
+    },
+    {
+        "name": "notifications",
+        "prefix": "/notifications",
+        "tags": ["Notifications"]
+    },
+    {
+        "name": "profile",
+        "prefix": "/profile",
+        "tags": ["Profile"]
+    },
+    {
+        "name": "global_search",
+        "prefix": "/global-search",
+        "tags": ["Global Search"]
+    },
+    {
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]

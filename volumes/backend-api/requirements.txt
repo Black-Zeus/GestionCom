@@ -45,3 +45,8 @@ typing_extensions==4.12.2 # Extensiones de typing
 
 # Logging
 python-json-logger==3.3.0       # Formateador JSON para logs de Python (logging estructurado)
+
+# Media storage
+python-multipart==0.0.20        # Soporte UploadFile/FormData en FastAPI
+Pillow==11.1.0                  # Sanitizacion y redimensionado de imagenes
+minio==7.2.15                   # Cliente S3 compatible con MinIO

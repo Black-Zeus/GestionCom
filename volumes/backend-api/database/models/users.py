@@ -2,7 +2,7 @@
 volumes/backend-api/database/models/users.py
 Modelo SQLAlchemy para la tabla users
 """
-from sqlalchemy import Column, String, Boolean, Index, DateTime
+from sqlalchemy import BigInteger, Column, String, Boolean, Index, DateTime
 from sqlalchemy.orm import validates
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -104,6 +104,8 @@ class User(BaseModel):
         nullable=True,
         comment="Límite máximo para gastos de caja chica individual"
     )
+
+    avatar_media_asset_id = Column(BigInteger, nullable=True)
     
     # ÍNDICES
     

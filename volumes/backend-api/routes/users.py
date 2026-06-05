@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Body, Request, Depends, Query, Path
 from fastapi.responses import JSONResponse
-from sqlalchemy import delete, select, and_, func, or_
+from sqlalchemy import delete, select, and_, func, or_, text
 
 # Database imports
 from database.database import db_manager
@@ -38,6 +38,7 @@ from utils.permissions_utils import get_current_user, require_permission
 from utils.profile_helpers import ProfileHelper 
 from utils.audit_utils import record_audit_log
 from core.password_manager import PasswordManager
+from services.media_storage import media_storage
 
 # ==========================================
 # CONFIGURACIÓN DEL ROUTER
@@ -209,6 +210,27 @@ async def get_profile(session, user_id: int, requesting_user_id: int, is_own_pro
             "profile_completeness": ProfileHelper.calculate_profile_completeness(target_user),
             "security_score": ProfileHelper.calculate_security_score(target_user, roles_and_permissions),
         }
+
+        avatar_result = await session.execute(
+            text(
+                """
+                SELECT ma.*
+                FROM users u
+                JOIN media_assets ma ON ma.id = u.avatar_media_asset_id
+                WHERE u.id = :user_id AND ma.deleted_at IS NULL
+                """
+            ),
+            {"user_id": user_id},
+        )
+        avatar = avatar_result.mappings().first()
+        if avatar:
+            profile_data["avatar"] = {
+                **{key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in avatar.items()},
+                "full_url": media_storage.presigned_url(avatar["object_key_full"]),
+                "thumb_url": media_storage.presigned_url(avatar["object_key_thumb"]),
+            }
+        else:
+            profile_data["avatar"] = None
         
         logger.info(f"Perfil generado para usuario {user_id} {'(propio)' if is_own_profile else '(por manager)'}")
         

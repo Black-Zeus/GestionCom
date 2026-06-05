@@ -342,6 +342,11 @@ PRIVATE_ROUTES = [
     "/measurement-units",           # Mantenedor de unidades de medida
     "/product-config",              # Categorias y atributos de productos
     "/document-config",             # Tipos y series de documentos
+    "/business-foundation",         # Productos, precios, impuestos y empresa
+    "/admin-maintainers",           # Mantenedores fundacionales no transaccionales
+    "/notifications",               # Centro de notificaciones
+    "/profile",                     # Perfil de usuario y media personal
+    "/global-search",               # Busqueda global federada
     "/menu-items",                  # Gestión de Menus
     "/user-menus",                  # Gestión de Menus del usuario
 ]

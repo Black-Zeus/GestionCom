@@ -8,27 +8,6 @@ from sqlalchemy.orm import validates
 
 from .base import BaseModel, CommonValidators
 
-ALLOWED_CURRENCY_CODES = {
-    "CLP",
-    "USD",
-    "EUR",
-    "ARS",
-    "BRL",
-    "PEN",
-    "COP",
-    "MXN",
-    "UYU",
-    "BOB",
-    "PYG",
-    "GBP",
-    "CAD",
-    "AUD",
-    "CHF",
-    "JPY",
-    "CNY",
-}
-
-
 class PaymentMethodType(enum.Enum):
     """Tipos principales de metodo de pago."""
 
@@ -75,8 +54,8 @@ class PaymentMethod(BaseModel):
         if not currency_code:
             return "CLP"
         normalized_code = currency_code.strip().upper()
-        if normalized_code not in ALLOWED_CURRENCY_CODES:
-            raise ValueError("Moneda no permitida")
+        if len(normalized_code) != 3 or not normalized_code.isalpha():
+            raise ValueError("La moneda debe usar codigo ISO de 3 letras")
         return normalized_code
 
     @validates("default_terms_days")

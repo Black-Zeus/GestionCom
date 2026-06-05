@@ -68,6 +68,15 @@ class Settings:
     # ====== Servicios externos ======
     DOCS_API_URL: Optional[str] = os.getenv("DOCS_API_URL")
     TASKS_API_URL: Optional[str] = os.getenv("TASKS_API_URL")
+
+    # ====== MinIO / Media Storage ======
+    MINIO_HOST: str = os.getenv("MINIO_HOST", "minio")
+    MINIO_PORT: int = int(os.getenv("MINIO_PORT") or "9000")
+    MINIO_ROOT_USER: Optional[str] = read_secret("MINIO_ROOT_USER")
+    MINIO_ROOT_PASSWORD: Optional[str] = read_secret("MINIO_ROOT_PASSWORD")
+    MINIO_MEDIA_BUCKET: str = os.getenv("MINIO_MEDIA_BUCKET", "gestioncom-media")
+    MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    MEDIA_PRESIGNED_EXPIRE_SECONDS: int = int(os.getenv("MEDIA_PRESIGNED_EXPIRE_SECONDS") or "3600")
     
     # ====== Configuraciones adicionales ======
     DEBUG_MODE: bool = os.getenv("BACKEND_API_DEBUG_MODE", "false").lower() == "true"
