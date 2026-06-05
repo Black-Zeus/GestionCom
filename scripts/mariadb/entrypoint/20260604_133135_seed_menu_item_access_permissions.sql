@@ -66,8 +66,7 @@ INSERT INTO permissions (permission_code, permission_name, permission_group, per
 ('ROLES_ACCESS', 'Acceder a Roles', 'ADMIN', 'Permite acceder a la opcion Roles.', TRUE),
 ('WAREHOUSES_ACCESS', 'Acceder a Bodegas', 'ADMIN', 'Permite acceder a la opcion Bodegas.', TRUE),
 ('CASH_POS_ADMIN_ACCESS', 'Acceder a Configuracion de caja POS', 'ADMIN', 'Permite acceder a la opcion Configuracion de caja POS.', TRUE),
-('PETTY_CASH_ADMIN_ACCESS', 'Acceder a Administracion de caja chica', 'ADMIN', 'Permite acceder a la opcion Administracion de caja chica.', TRUE),
-('MENU_CONFIG_ACCESS', 'Acceder a Configuracion de menu', 'ADMIN', 'Permite acceder a la opcion Configuracion de menu.', TRUE)
+('PETTY_CASH_ADMIN_ACCESS', 'Acceder a Administracion de caja chica', 'ADMIN', 'Permite acceder a la opcion Administracion de caja chica.', TRUE)
 ON DUPLICATE KEY UPDATE
   permission_name = VALUES(permission_name),
   permission_group = VALUES(permission_group),

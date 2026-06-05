@@ -3,17 +3,6 @@
 
 SET @system_user_id := (SELECT id FROM users WHERE username = 'root' LIMIT 1);
 
-INSERT IGNORE INTO permissions (permission_code, permission_name, permission_group, permission_description, is_active) VALUES
-('MENU_READ', 'Ver configuracion de menus', 'MENU', 'Permite consultar estructura y configuracion de menus.', TRUE),
-('MENU_WRITE', 'Crear y editar menus', 'MENU', 'Permite crear y modificar menus.', TRUE),
-('MENU_MANAGER', 'Gestionar menus', 'MENU', 'Permite administrar menus, orden y estados.', TRUE);
-
-INSERT IGNORE INTO role_permissions (role_id, permission_id, granted_by_user_id)
-SELECT r.id, p.id, @system_user_id
-FROM roles r
-JOIN permissions p ON p.permission_code IN ('MENU_READ', 'MENU_WRITE', 'MENU_MANAGER')
-WHERE r.role_code IN ('ADMIN', 'SUPER_ADMIN');
-
 UPDATE menu_items
 SET is_active = FALSE, is_visible = FALSE
 WHERE menu_code IN (
@@ -33,7 +22,8 @@ WHERE menu_code IN (
   'reports_divider_1', 'reports_header_financial',
   'administration', 'admin_users', 'admin_roles', 'admin_cash_registers',
   'admin_payment_methods', 'admin_document_series', 'admin_system_features',
-  'admin_audit_log', 'admin_backup', 'admin_menu_config', 'admin_stock_critical'
+  'admin_audit_log', 'admin_backup', 'admin_menu_config', 'admin_stock_critical',
+  'menu_config'
 );
 
 INSERT INTO menu_items (
@@ -146,8 +136,7 @@ INSERT INTO menu_items (
 ((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'admin_roles', 'Roles', 'Roles y permisos', 'shield-user-line', '/admin/roles', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'USER_MANAGER'), TRUE, TRUE, 20, 2, '/admin/roles'),
 ((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'warehouses', 'Bodegas', 'Bodegas y ubicaciones', 'building-line', '/admin/warehouses', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'WAREHOUSES_ACCESS'), TRUE, TRUE, 30, 2, '/admin/warehouses'),
 ((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'cash_pos_admin', 'Configuracion de caja POS', 'Configuracion de caja POS', 'credit-card-line', '/admin/cash-pos', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'CASH_POS_ADMIN_ACCESS'), TRUE, TRUE, 40, 2, '/admin/cash-pos'),
-((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'petty_cash_admin', 'Administracion de caja chica', 'Administracion de caja chica', 'wallet-3-line', '/admin/cash-petty', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'PETTY_CASH_ADMIN_ACCESS'), TRUE, TRUE, 50, 2, '/admin/cash-petty'),
-((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'menu_config', 'Configuracion de menu', 'Configuracion de menu', 'settings-line', '/admin/menu', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'MENU_READ'), TRUE, TRUE, 60, 2, '/admin/menu')
+((SELECT id FROM menu_items WHERE menu_code = 'administration'), 'petty_cash_admin', 'Administracion de caja chica', 'Administracion de caja chica', 'wallet-3-line', '/admin/cash-petty', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'PETTY_CASH_ADMIN_ACCESS'), TRUE, TRUE, 50, 2, '/admin/cash-petty')
 ON DUPLICATE KEY UPDATE
   parent_id = VALUES(parent_id),
   menu_name = VALUES(menu_name),

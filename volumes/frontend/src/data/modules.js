@@ -191,7 +191,6 @@ export const moduleGroups = [
       { id: 'warehouses', label: 'Bodegas', path: '/admin/warehouses', icon: Store, weight: 30 },
       { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40 },
       { id: 'petty-cash-admin', label: 'Administracion de caja chica', path: '/admin/cash-petty', icon: WalletCards, weight: 50 },
-      { id: 'menu-config', label: 'Configuracion de menu', path: '/admin/menu', icon: Settings, weight: 60, permissions: ['MENU_VISIBLE'] },
     ],
   },
 ];
