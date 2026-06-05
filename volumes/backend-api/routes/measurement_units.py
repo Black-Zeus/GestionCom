@@ -39,7 +39,7 @@ def _has_any_permission(user: dict, permissions: list[str]) -> bool:
 
 async def require_measurement_unit_read(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["MEASUREMENT_UNITS_ACCESS", "MEASUREMENT_UNITS_MANAGE", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["MEASUREMENT_UNITS_ACCESS", "MEASUREMENT_UNITS_MANAGE"]):
         return user
 
     logger.warning(
@@ -65,7 +65,7 @@ async def require_measurement_unit_read(request: Request) -> dict:
 
 async def require_measurement_unit_write(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["MEASUREMENT_UNITS_MANAGE", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["MEASUREMENT_UNITS_MANAGE"]):
         return user
 
     logger.warning(

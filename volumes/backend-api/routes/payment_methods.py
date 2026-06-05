@@ -38,7 +38,7 @@ def _has_any_permission(user: dict, permissions: list[str]) -> bool:
 
 async def require_payment_method_read(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["PAYMENT_METHODS_ACCESS", "PAYMENT_METHODS_MANAGE", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["PAYMENT_METHODS_ACCESS", "PAYMENT_METHODS_MANAGE"]):
         return user
 
     logger.warning(
@@ -64,7 +64,7 @@ async def require_payment_method_read(request: Request) -> dict:
 
 async def require_payment_method_write(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["PAYMENT_METHODS_MANAGE", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["PAYMENT_METHODS_MANAGE"]):
         return user
 
     logger.warning(

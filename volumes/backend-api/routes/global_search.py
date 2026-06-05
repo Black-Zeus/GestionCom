@@ -47,7 +47,7 @@ async def global_search(
     term = f"%{q.strip()}%"
     results = []
     async with db_manager.get_async_session() as session:
-        if _has_any_permission(user, ["PRODUCTS_ACCESS", "PRODUCTS_MANAGE", "SYSTEM_CONFIG"]):
+        if _has_any_permission(user, ["PRODUCTS_ACCESS", "PRODUCTS_MANAGE"]):
             rows = await session.execute(
                 text(
                     """
@@ -91,7 +91,7 @@ async def global_search(
                     "Inventario >> Catalogo de productos",
                 ))
 
-        if _has_any_permission(user, ["FOUNDATION_MAINTAINERS_ACCESS", "FOUNDATION_MAINTAINERS_MANAGE", "SYSTEM_CONFIG"]):
+        if _has_any_permission(user, ["FOUNDATION_MAINTAINERS_ACCESS", "FOUNDATION_MAINTAINERS_MANAGE"]):
             rows = await session.execute(
                 text(
                     """
@@ -106,7 +106,7 @@ async def global_search(
                 {"term": term, "limit": limit},
             )
             for row in rows.mappings().all():
-                results.append(_result("Cliente", row["commercial_name"] or row["legal_name"], f"{row['customer_code']} / {row['tax_id']}", _deep_path("/customers", tab="customers", search=row["customer_code"], open="edit", id=row["id"]), "Users", {"email": row["email"]}, "Clientes", "Clientes >> Listado de clientes"))
+                results.append(_result("Cliente", row["commercial_name"] or row["legal_name"], f"{row['customer_code']} / {row['tax_id']}", f"/customers/edit/{row['customer_code']}", "Users", {"email": row["email"]}, "Clientes", "Clientes >> Listado de clientes"))
 
             rows = await session.execute(
                 text(
@@ -150,7 +150,7 @@ async def global_search(
             for row in rows.mappings().all():
                 results.append(_result("Moneda", row["currency_name"], f"{row['currency_code']} / {row['currency_symbol']}", _deep_path("/finance/currencies", tab="currencies", search=row["currency_code"], open="edit", id=row["id"]), "CircleDollarSign", domain="Finanzas", destination_label="Finanzas >> Monedas y tipos de cambio"))
 
-        if _has_any_permission(user, ["USER_READ", "USER_MANAGER", "SYSTEM_CONFIG"]):
+        if _has_any_permission(user, ["USER_READ", "USER_MANAGER"]):
             rows = await session.execute(
                 text(
                     """
@@ -175,7 +175,7 @@ async def global_search(
                 subtitle = " / ".join([value for value in [row["username"], row["email"], row["phone"]] if value])
                 results.append(_result("Usuario", title, subtitle, _deep_path("/admin/users", search=row["username"], open="edit", id=row["id"]), "Users", {"is_active": row["is_active"]}, "Administracion", "Administracion >> Administracion de usuarios"))
 
-        if _has_any_permission(user, ["WAREHOUSE_READ", "WAREHOUSE_MANAGER", "WAREHOUSES_ACCESS", "SYSTEM_CONFIG"]):
+        if _has_any_permission(user, ["WAREHOUSE_READ", "WAREHOUSE_MANAGER", "WAREHOUSES_ACCESS"]):
             rows = await session.execute(
                 text(
                     """
@@ -192,7 +192,7 @@ async def global_search(
             for row in rows.mappings().all():
                 results.append(_result("Bodega", row["warehouse_name"], f"{row['warehouse_code']} / {row['warehouse_type']} / {row['city'] or 'Sin ciudad'}", _deep_path("/admin/warehouses", search=row["warehouse_code"], open="edit", id=row["id"]), "Store", {"is_active": row["is_active"]}, "Administracion", "Administracion >> Administracion de bodegas"))
 
-        if _has_any_permission(user, ["PRICE_LISTS_ACCESS", "PRICE_LISTS_MANAGE", "SYSTEM_CONFIG"]):
+        if _has_any_permission(user, ["PRICE_LISTS_ACCESS", "PRICE_LISTS_MANAGE"]):
             rows = await session.execute(
                 text(
                     """

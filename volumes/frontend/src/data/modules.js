@@ -61,8 +61,6 @@ export const moduleGroups = [
     items: [
       { id: 'customers', label: 'Listado de clientes', path: '/customers', icon: Users, weight: 10, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'account-status', label: 'Estado de cuenta de clientes', path: '/customers/account-status', icon: FileText, weight: 20 },
-      { id: 'customer-credit', label: 'Creditos y limites', path: '/customers/credit-limits', icon: CreditCard, weight: 30, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
-      { id: 'authorized-persons', label: 'Personas autorizadas', path: '/customers/authorized-persons', icon: Shield, weight: 40, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'purchase-history', label: 'Historial de compras', path: '/customers/purchase-history', icon: Receipt, weight: 50 },
     ],
   },

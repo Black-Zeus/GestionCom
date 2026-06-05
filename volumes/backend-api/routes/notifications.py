@@ -22,7 +22,7 @@ def _has_any_permission(user: dict, permissions: list[str]) -> bool:
 
 async def require_notifications_read(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["NOTIFICATIONS_ACCESS", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["NOTIFICATIONS_ACCESS"]):
         return user
     from fastapi import HTTPException
     import json
@@ -32,7 +32,7 @@ async def require_notifications_read(request: Request) -> dict:
 
 async def require_notification_types_write(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["NOTIFICATIONS_MANAGE_TYPES", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["NOTIFICATIONS_MANAGE_TYPES"]):
         return user
     from fastapi import HTTPException
     import json
