@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ChevronDown, KeyRound, RefreshCw, Save, Search, ShieldCheck, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
+import DataTable from '@/components/common/data/DataTable';
 import { rolesService } from '@/services/admin/rolesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -528,44 +529,36 @@ const AdminRolePermissions = () => {
         </div>
       )}
 
-      <div className="mb-4 hidden overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
-          <thead className="bg-slate-100 text-left text-xs uppercase text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-            <tr>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Tipo</th>
-              <th className="px-4 py-3">Usuarios</th>
-              <th className="px-4 py-3">Permisos</th>
-              <th className="px-4 py-3">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {roles.map((role) => (
-              <tr key={role.id} onClick={() => selectRole(role)} className={`cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 ${selectedRole?.id === role.id ? 'bg-blue-50/70 dark:bg-blue-950/20' : ''}`}>
-                <td className="px-4 py-3">
-                  <div className="font-medium">{role.role_name}</div>
-                  <div className="text-xs text-slate-500">{role.role_code}</div>
-                </td>
-                <td className="px-4 py-3">{role.is_system_role ? 'Sistema' : 'Operativo'}</td>
-                <td className="px-4 py-3">{role.users_count}</td>
-                <td className="px-4 py-3">{role.permissions_count}</td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-md px-2 py-1 text-xs font-medium ${role.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-                    {role.status_label}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {!loading && roles.length === 0 && (
-              <tr>
-                <td colSpan="5" className="px-4 py-10 text-center text-sm text-slate-500">
-                  No hay roles para los filtros actuales.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        className="mb-4 hidden"
+        data={roles}
+        loading={loading}
+        emptyMessage="No hay roles para los filtros actuales."
+        columns={[
+          {
+            id: 'role',
+            label: 'Rol',
+            render: (role) => (
+              <button type="button" onClick={() => selectRole(role)} className="text-left">
+                <div className="font-medium">{role.role_name}</div>
+                <div className="text-xs text-slate-500">{role.role_code}</div>
+              </button>
+            ),
+          },
+          { id: 'type', label: 'Tipo', render: (role) => role.is_system_role ? 'Sistema' : 'Operativo' },
+          { id: 'users', label: 'Usuarios', accessor: (role) => role.users_count },
+          { id: 'permissions', label: 'Permisos', accessor: (role) => role.permissions_count },
+          {
+            id: 'status',
+            label: 'Estado',
+            render: (role) => (
+              <span className={`rounded-md px-2 py-1 text-xs font-medium ${role.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
+                {role.status_label}
+              </span>
+            ),
+          },
+        ]}
+      />
 
       <section className="rounded-md border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {selectedRole ? (

@@ -373,7 +373,7 @@ const AdminPaymentMethods = () => {
 
       <KpiBar items={kpiItems} className="mb-4" />
 
-      <FilterBar className="mb-4" gridClassName="lg:grid-cols-[minmax(280px,1fr)_180px_180px_auto_auto]" searchValue={search} searchPlaceholder="Buscar metodo, codigo o moneda" onSearchChange={setSearch} onSearchSubmit={() => setPage(0)} fields={filterFields} actions={<><button type="button" onClick={loadMethods} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refrescar</button><button type="button" onClick={() => { setSearch(''); setPage(0); setFilters({ status: 'all', type: 'all' }); }} className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Limpiar</button></>} />
+      <FilterBar className="mb-4" gridClassName="lg:grid-cols-[minmax(280px,1fr)_180px_180px_auto_auto]" searchValue={search} searchPlaceholder="Buscar metodo, codigo o moneda" onSearchChange={setSearch} onSearchSubmit={() => setPage(0)} fields={filterFields} actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMethods} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setPage(0); setFilters({ status: 'all', type: 'all' }); }} /></>} />
 
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
 

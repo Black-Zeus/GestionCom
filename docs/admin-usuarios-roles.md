@@ -84,6 +84,7 @@ Habilitar la primera superficie operativa de `Administracion > Usuarios / Roles`
 - `KpiBar`, `FilterBar`, `DataTable` y `DataTablePagination` son componentes comunes extensibles para mantener coherencia entre modulos.
 - `DataTable` recibe `columns`, `data`, `getRowKey`, `emptyMessage`, `loading` y `footer`.
 - Las columnas de `DataTable` pueden definir `sortable`, `accessor`, `sortValue`, `render`, `align` y `cellClassName`.
+- Los componentes UI reutilizables estan documentados en `docs/frontend-componentes-ui.md` y deben respetarse en nuevas secciones.
 - Las cargas lentas de paginas o tablas deben usar `ModuleSpinner` centrado vertical y horizontalmente.
 - Las fechas recibidas desde backend se consideran UTC y se formatean en frontend con la zona horaria de preferencias del usuario.
 - La columna `Acciones` de usuarios incluye edicion, cambio de clave y activacion/desactivacion.

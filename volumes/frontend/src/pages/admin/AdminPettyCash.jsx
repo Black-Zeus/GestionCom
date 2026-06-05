@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleTabs from '@/components/common/navigation/ModuleTabs';
 import { pettyCashAdminService } from '@/services/admin/pettyCashAdminService';
 import { usersService } from '@/services/admin/usersService';
 import { warehousesService } from '@/services/admin/warehousesService';
@@ -546,17 +547,15 @@ const AdminPettyCash = () => {
         <ActionButton label={activeTab === 'funds' ? 'Nuevo fondo' : 'Nueva categoria'} icon={activeTab === 'funds' ? WalletCards : Tags} onClick={() => (activeTab === 'funds' ? openFundModal() : openCategoryModal())} />
       </div>
 
-      <div className="mb-4 inline-flex rounded-md border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        {[{ id: 'funds', label: 'Fondos', icon: WalletCards }, { id: 'categories', label: 'Categorias', icon: Tags }].map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
-              <Icon className="h-4 w-4" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <ModuleTabs
+        className="mb-4"
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        tabs={[
+          { id: 'funds', label: 'Fondos', icon: WalletCards, count: funds.length },
+          { id: 'categories', label: 'Categorias', icon: Tags, count: categories.length },
+        ]}
+      />
 
       <KpiBar items={kpiItems} className="mb-4" />
 
@@ -568,7 +567,7 @@ const AdminPettyCash = () => {
         onSearchChange={setSearch}
         onSearchSubmit={() => setPage(0)}
         fields={filterFields}
-        actions={<><button type="button" onClick={loadPettyCash} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refrescar</button><button type="button" onClick={() => { setSearch(''); setPage(0); setFilters({ fundStatus: 'all', categoryStatus: 'all', evidence: 'all' }); }} className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Limpiar</button></>}
+        actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadPettyCash} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setPage(0); setFilters({ fundStatus: 'all', categoryStatus: 'all', evidence: 'all' }); }} /></>}
       />
 
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
