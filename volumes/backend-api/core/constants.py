@@ -336,6 +336,7 @@ PRIVATE_ROUTES = [
 
     # Módulos de negocio que requieren autenticación
     "/warehouses",                  # Gestión de almacenes y bodegas
+    "/cash-registers",              # Configuración de cajas POS
     "/menu-items",                  # Gestión de Menus
     "/user-menus",                  # Gestión de Menus del usuario
 ]

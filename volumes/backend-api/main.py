@@ -134,6 +134,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Warehouses"]
     },
     {
+        "name": "cash_registers",
+        "prefix": "/cash-registers",
+        "tags": ["Cash Registers"]
+    },
+    {
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]
@@ -187,7 +192,8 @@ async def root(request: Request):
             "health": "/health",
             "authentication": "/auth",
             "users": "/users",
-            "warehouses": "/warehouses", 
+            "warehouses": "/warehouses",
+            "cash_registers": "/cash-registers",
             "system": "/system"
         }
     }

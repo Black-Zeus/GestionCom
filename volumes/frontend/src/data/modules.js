@@ -189,7 +189,7 @@ export const moduleGroups = [
       { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users, weight: 10, permissions: ['USER_READ', 'USER_MANAGER'] },
       { id: 'roles', label: 'Roles', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
       { id: 'warehouses', label: 'Bodegas', path: '/admin/warehouses', icon: Store, weight: 30, permissions: ['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS'] },
-      { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40 },
+      { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40, permissions: ['CASH_POS_ADMIN_ACCESS', 'CASH_SETTINGS_MANAGE'] },
       { id: 'petty-cash-admin', label: 'Administracion de caja chica', path: '/admin/cash-petty', icon: WalletCards, weight: 50 },
     ],
   },

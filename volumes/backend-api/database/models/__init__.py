@@ -15,6 +15,7 @@ from .roles import Role
 from .permissions import Permission
 from .warehouses import Warehouse
 from .warehouse_zones import WarehouseZone
+from .cash_registers import CashRegister
 
 # Modelos de relación (después de los principales)
 from .user_roles import UserRole
@@ -36,6 +37,7 @@ __all_models__ = [
     "User",
     "Warehouse",
     "WarehouseZone",
+    "CashRegister",
 ]
 
 # Modelos de relación
