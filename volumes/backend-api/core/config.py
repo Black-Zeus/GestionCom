@@ -76,6 +76,10 @@ class Settings:
     MINIO_ROOT_PASSWORD: Optional[str] = read_secret("MINIO_ROOT_PASSWORD")
     MINIO_MEDIA_BUCKET: str = os.getenv("MINIO_MEDIA_BUCKET", "gestioncom-media")
     MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    MINIO_PUBLIC_HOST: str = os.getenv("MINIO_PUBLIC_HOST") or ("localhost" if os.getenv("MINIO_HOST", "minio") == "minio" else os.getenv("MINIO_HOST", "minio"))
+    MINIO_PUBLIC_PORT: int = int(os.getenv("MINIO_PUBLIC_PORT") or os.getenv("MINIO_PORT") or "9000")
+    MINIO_PUBLIC_SECURE: bool = os.getenv("MINIO_PUBLIC_SECURE", os.getenv("MINIO_SECURE", "false")).lower() == "true"
+    MINIO_REGION: str = os.getenv("MINIO_REGION", "us-east-1")
     MEDIA_PRESIGNED_EXPIRE_SECONDS: int = int(os.getenv("MEDIA_PRESIGNED_EXPIRE_SECONDS") or "3600")
     
     # ====== Configuraciones adicionales ======

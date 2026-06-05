@@ -29,6 +29,14 @@ class MediaStorage:
             access_key=settings.MINIO_ROOT_USER,
             secret_key=settings.MINIO_ROOT_PASSWORD,
             secure=settings.MINIO_SECURE,
+            region=settings.MINIO_REGION,
+        )
+        self.public_client = Minio(
+            f"{settings.MINIO_PUBLIC_HOST}:{settings.MINIO_PUBLIC_PORT}",
+            access_key=settings.MINIO_ROOT_USER,
+            secret_key=settings.MINIO_ROOT_PASSWORD,
+            secure=settings.MINIO_PUBLIC_SECURE,
+            region=settings.MINIO_REGION,
         )
 
     def ensure_bucket(self) -> None:
@@ -96,7 +104,7 @@ class MediaStorage:
         }
 
     def presigned_url(self, object_key: str) -> str:
-        return self.client.presigned_get_object(
+        return self.public_client.presigned_get_object(
             self.bucket,
             object_key,
             expires=timedelta(seconds=settings.MEDIA_PRESIGNED_EXPIRE_SECONDS),
