@@ -3,8 +3,10 @@ Modulo de perfil y carga sanitizada de imagenes.
 """
 from datetime import datetime, timezone
 
+from io import BytesIO
+
 from fastapi import APIRouter, Depends, File, Path, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import text
 
 from core.constants import ErrorCode, ErrorType, HTTPStatus
@@ -49,13 +51,7 @@ def _row(row):
 
 
 def _asset_urls(asset: dict | None) -> dict | None:
-    if not asset:
-        return None
-    return {
-        **asset,
-        "full_url": media_storage.presigned_url(asset["object_key_full"]),
-        "thumb_url": media_storage.presigned_url(asset["object_key_thumb"]),
-    }
+    return media_storage.safe_asset(asset)
 
 
 async def _read_image(file: UploadFile) -> bytes:
@@ -117,6 +113,57 @@ async def _get_asset(session, asset_id):
         return None
     result = await session.execute(text("SELECT * FROM media_assets WHERE id = :id AND deleted_at IS NULL"), {"id": asset_id})
     return _row(result.mappings().first())
+
+
+@router.get("/media/{media_code}/{variant}")
+async def get_media(media_code: str = Path(...), variant: str = Path(...)):
+    normalized_variant = variant.strip().lower()
+    if normalized_variant not in {"full", "thumb"}:
+        return ResponseManager.error(
+            message="Variante de media no valida",
+            status_code=HTTPStatus.BAD_REQUEST,
+            error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+            error_type=ErrorType.VALIDATION_ERROR,
+        )
+
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT media_code, object_key_full, object_key_thumb, mime_type
+                FROM media_assets
+                WHERE media_code = :media_code AND deleted_at IS NULL
+                LIMIT 1
+                """
+            ),
+            {"media_code": media_code.strip()},
+        )
+        asset = _row(result.mappings().first())
+
+    if not asset:
+        return ResponseManager.error(
+            message="Media no encontrada",
+            status_code=HTTPStatus.NOT_FOUND,
+            error_code=ErrorCode.RESOURCE_NOT_FOUND,
+            error_type=ErrorType.RESOURCE_ERROR,
+        )
+
+    object_key = asset["object_key_thumb"] if normalized_variant == "thumb" else asset["object_key_full"]
+    try:
+        content = media_storage.get_object_bytes(object_key)
+    except Exception:
+        return ResponseManager.error(
+            message="Media no disponible",
+            status_code=HTTPStatus.NOT_FOUND,
+            error_code=ErrorCode.RESOURCE_NOT_FOUND,
+            error_type=ErrorType.RESOURCE_ERROR,
+        )
+
+    return StreamingResponse(
+        BytesIO(content),
+        media_type=asset.get("mime_type") or "image/webp",
+        headers={"Cache-Control": "private, max-age=300"},
+    )
 
 
 @router.get("/me", response_class=JSONResponse)

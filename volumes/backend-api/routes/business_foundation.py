@@ -294,9 +294,7 @@ async def _media_map(session, asset_ids: list[int]) -> dict[int, dict]:
     assets = {}
     for asset in result.mappings().all():
         item = {key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in asset.items()}
-        item["full_url"] = media_storage.presigned_url(asset["object_key_full"])
-        item["thumb_url"] = media_storage.presigned_url(asset["object_key_thumb"])
-        assets[int(asset["id"])] = item
+        assets[int(asset["id"])] = media_storage.safe_asset(item)
     return assets
 
 

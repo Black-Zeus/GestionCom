@@ -133,6 +133,30 @@ async def validate_token(token: str) -> AuthenticatedUser:
     )
 
 
+async def validate_sse_ticket(ticket: str) -> AuthenticatedUser:
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        result = await client.post(
+            f"{settings.BACKEND_API_URL.rstrip('/')}/auth/validate-sse-ticket",
+            json={"token": ticket},
+        )
+        result.raise_for_status()
+        payload = result.json().get("data") or {}
+
+    if not payload.get("valid"):
+        raise HTTPException(status_code=401, detail="Ticket SSE invalido")
+
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Ticket SSE sin usuario")
+
+    return AuthenticatedUser(
+        user_id=int(user_id),
+        username=payload.get("username"),
+        roles=payload.get("roles") or [],
+        permissions=[],
+    )
+
+
 def target_fingerprint(target: dict) -> str:
     normalized_target = {
         "broadcast": bool(target.get("broadcast")),
@@ -299,13 +323,22 @@ async def publish_event(
 @app.get("/events/stream")
 async def stream_events(
     request: Request,
-    token: str = Query(...),
+    ticket: Optional[str] = Query(default=None),
+    token: Optional[str] = Query(default=None),
     client_id: Optional[str] = Query(default=None),
     last_event_id: Optional[str] = Query(default=None),
     last_event_id_header: Optional[str] = Header(default=None, alias="Last-Event-ID"),
 ):
-    user = await validate_token(token)
-    connection_id = normalize_client_id(client_id, token)
+    if ticket:
+        user = await validate_sse_ticket(ticket)
+        credential_fingerprint_source = ticket
+    elif token:
+        user = await validate_token(token)
+        credential_fingerprint_source = token
+    else:
+        raise HTTPException(status_code=401, detail="Credencial SSE requerida")
+
+    connection_id = normalize_client_id(client_id, credential_fingerprint_source)
     stream_names = stream_names_for_user(user)
     if len(stream_names) > settings.MAX_STREAMS_PER_CONNECTION:
         raise HTTPException(status_code=413, detail="Demasiados streams para la conexion SSE")

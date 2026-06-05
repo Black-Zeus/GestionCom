@@ -224,11 +224,11 @@ async def get_profile(session, user_id: int, requesting_user_id: int, is_own_pro
         )
         avatar = avatar_result.mappings().first()
         if avatar:
-            profile_data["avatar"] = {
-                **{key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in avatar.items()},
-                "full_url": media_storage.presigned_url(avatar["object_key_full"]),
-                "thumb_url": media_storage.presigned_url(avatar["object_key_thumb"]),
+            safe_avatar = {
+                key: (value.isoformat() if hasattr(value, "isoformat") else value)
+                for key, value in avatar.items()
             }
+            profile_data["avatar"] = media_storage.safe_asset(safe_avatar)
         else:
             profile_data["avatar"] = None
         

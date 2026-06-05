@@ -1,3 +1,4 @@
+import apiClient from '@/services/api/apiClient';
 import { tokenStorage } from '@/services/api/tokenStorage';
 import { toast } from '@/services/ui/notify';
 import { appConfig } from '@/config/appConfig';
@@ -122,6 +123,7 @@ class SseCoordinator {
     this.started = false;
     this.reconnectAttempt = 0;
     this.reconnectTimer = null;
+    this.openingStream = false;
     this.handleBroadcast = this.handleBroadcast.bind(this);
     this.handleStorage = this.handleStorage.bind(this);
     this.releaseOwner = this.releaseOwner.bind(this);
@@ -277,12 +279,27 @@ class SseCoordinator {
     }, backoffMs + jitterMs);
   }
 
-  openStream() {
+  async openStream() {
     const token = tokenStorage.getAccessToken();
-    if (!token) return;
+    if (!token || this.eventSource || this.openingStream) return;
+
+    this.openingStream = true;
+
+    let ticket = null;
+    try {
+      const response = await apiClient.post('/auth/sse-ticket');
+      ticket = response.data?.data?.ticket;
+    } catch {
+      this.openingStream = false;
+      this.scheduleReconnect();
+      return;
+    }
+
+    this.openingStream = false;
+    if (!ticket || !this.started) return;
 
     const url = new URL(`${resolveEventsUrl().replace(/\/$/, '')}/events/stream`, window.location.origin);
-    url.searchParams.set('token', token);
+    url.searchParams.set('ticket', ticket);
     url.searchParams.set('client_id', clientId);
 
     this.eventSource = new EventSource(url.toString());

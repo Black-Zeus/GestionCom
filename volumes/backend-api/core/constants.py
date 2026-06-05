@@ -351,6 +351,10 @@ PRIVATE_ROUTES = [
     "/user-menus",                  # Gestión de Menus del usuario
 ]
 
+PUBLIC_MEDIA_ROUTES = [
+    "/profile/media",               # Recursos opacos de imagen, sin exponer storage interno
+]
+
 # Flag para indicar si ResponseManager está disponible
 # Permite fallback a respuestas básicas si hay problemas
 SELF_AUTH_ROUTES = [

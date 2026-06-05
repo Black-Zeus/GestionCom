@@ -110,5 +110,41 @@ class MediaStorage:
             expires=timedelta(seconds=settings.MEDIA_PRESIGNED_EXPIRE_SECONDS),
         )
 
+    def public_media_url(self, media_code: str, variant: str) -> str:
+        return f"/api/profile/media/{media_code}/{variant}"
+
+    def get_object_bytes(self, object_key: str) -> bytes:
+        response = self.client.get_object(self.bucket, object_key)
+        try:
+            return response.read()
+        finally:
+            response.close()
+            response.release_conn()
+
+    def safe_asset(self, asset: dict | None) -> dict | None:
+        if not asset:
+            return None
+
+        media_code = asset.get("media_code")
+        return {
+            "id": asset.get("id"),
+            "media_code": media_code,
+            "owner_type": asset.get("owner_type"),
+            "owner_id": asset.get("owner_id"),
+            "media_role": asset.get("media_role"),
+            "file_name": asset.get("file_name"),
+            "mime_type": asset.get("mime_type"),
+            "full_width": asset.get("full_width"),
+            "full_height": asset.get("full_height"),
+            "thumb_width": asset.get("thumb_width"),
+            "thumb_height": asset.get("thumb_height"),
+            "full_size_bytes": asset.get("full_size_bytes"),
+            "thumb_size_bytes": asset.get("thumb_size_bytes"),
+            "created_at": asset.get("created_at"),
+            "updated_at": asset.get("updated_at"),
+            "full_url": self.public_media_url(media_code, "full") if media_code else None,
+            "thumb_url": self.public_media_url(media_code, "thumb") if media_code else None,
+        }
+
 
 media_storage = MediaStorage()

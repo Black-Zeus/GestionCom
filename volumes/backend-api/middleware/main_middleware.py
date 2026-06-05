@@ -6,7 +6,7 @@ from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from core.response import ResponseManager
-from core.constants import PRIVATE_ROUTES, RESPONSE_MANAGER_AVAILABLE, SELF_AUTH_ROUTES, HTTPStatus
+from core.constants import PRIVATE_ROUTES, PUBLIC_MEDIA_ROUTES, RESPONSE_MANAGER_AVAILABLE, SELF_AUTH_ROUTES, HTTPStatus
 from core.exceptions import AuthenticationException
 import time
 
@@ -40,6 +40,9 @@ class SimpleAuthMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if any(path.startswith(route) for route in SELF_AUTH_ROUTES):
+            return await call_next(request)
+
+        if any(path.startswith(route) for route in PUBLIC_MEDIA_ROUTES):
             return await call_next(request)
         
         # Verificar si la ruta requiere autenticación
@@ -79,11 +82,12 @@ class SimpleAuthMiddleware(BaseHTTPMiddleware):
                         }
                     )
             except Exception as e:
+                print(f"Error interno de autenticación en {request.method} {path}: {e}")
                 # Usar ResponseManager si está disponible
                 if RESPONSE_MANAGER_AVAILABLE:
                     return ResponseManager.internal_server_error(
                         message="Error interno de autenticación",
-                        details=str(e),
+                        details="No fue posible validar la sesión. Intente nuevamente.",
                         request=request
                     )
                 else:
@@ -93,7 +97,7 @@ class SimpleAuthMiddleware(BaseHTTPMiddleware):
                             "success": False,
                             "status": HTTPStatus.INTERNAL_SERVER_ERROR,
                             "message": "Error interno de autenticación",
-                            "error": {"code": "AUTH_SYSTEM_ERROR", "details": str(e)}
+                            "error": {"code": "AUTH_SYSTEM_ERROR", "details": "No fue posible validar la sesión"}
                         }
                     )
         

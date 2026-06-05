@@ -4,7 +4,7 @@ Router de autenticación - Refactorizado con flujo único
 Solo contiene endpoints principales, toda la lógica en auth_helpers
 """
 from utils.log_helper import setup_logger
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
@@ -19,7 +19,7 @@ from database.schemas.auth import (
 )
 from database.schemas.token import TokenValidateResponse
 from core.response import ResponseManager
-from core.constants import ErrorCode, HTTPStatus
+from core.constants import ErrorCode, HTTPStatus, JWTClaims
 from core.config import settings
 
 # Import del helper principal
@@ -126,6 +126,117 @@ async def validate_token(token_data: TokenValidateRequest, request: Request):
         data=response_dict,
         message="Validación completada",
         request=request
+    )
+
+
+@router.post("/sse-ticket", response_class=JSONResponse)
+async def create_sse_ticket(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Emitir credencial corta para abrir EventSource sin exponer el access token completo."""
+
+    user_id = current_user.get("user_id") or current_user.get("id")
+    if not user_id:
+        return ResponseManager.error(
+            message="Sesion invalida",
+            status_code=HTTPStatus.UNAUTHORIZED,
+            error_code=ErrorCode.AUTH_TOKEN_INVALID,
+            details="No se pudo identificar el usuario autenticado",
+            request=request,
+        )
+
+    user_data = await auth_helper._get_user_data_for_refresh(int(user_id))
+    if not user_data:
+        return ResponseManager.error(
+            message="Usuario no disponible",
+            status_code=HTTPStatus.UNAUTHORIZED,
+            error_code=ErrorCode.AUTH_USER_INACTIVE,
+            request=request,
+        )
+
+    try:
+        from core.security import jwt_manager
+
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(seconds=90)
+        user_secret = await auth_helper._get_or_create_user_secret(int(user_id))
+        ticket = jwt_manager.create_access_token(
+            user_id=int(user_id),
+            user_secret=user_secret,
+            username=user_data.get("username") or current_user.get("username") or "",
+            email=user_data.get("email") or current_user.get("email") or "",
+            is_active=bool(user_data.get("is_active", True)),
+            roles=current_user.get("roles", []),
+            permissions=[],
+            extra_claims={
+                JWTClaims.TOKEN_TYPE: "sse",
+                JWTClaims.PERMISSIONS: [],
+                JWTClaims.EXPIRES_AT: int(expires_at.timestamp()),
+                JWTClaims.NOT_BEFORE: int(now.timestamp()),
+            },
+        )
+        return ResponseManager.success(
+            data={
+                "ticket": ticket,
+                "expires_at": expires_at.isoformat(),
+                "expires_in": 90,
+            },
+            message="Ticket SSE emitido",
+            request=request,
+        )
+    except Exception as exc:
+        logger.error(f"Error emitiendo ticket SSE: {exc}")
+        return ResponseManager.internal_server_error(
+            message="No fue posible emitir ticket SSE",
+            request=request,
+        )
+
+
+@router.post("/validate-sse-ticket", response_class=JSONResponse)
+async def validate_sse_ticket(token_data: TokenValidateRequest, request: Request):
+    """Validar ticket corto de EventSource para servicios internos."""
+
+    validation_result = await auth_helper.validate_token(token_data.token)
+    if not validation_result.get("valid"):
+        return ResponseManager.success(
+            data={
+                "valid": False,
+                "status": validation_result.get("status", "invalid"),
+                "reason": validation_result.get("reason", "Ticket invalido"),
+                "validated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            message="Validación completada",
+            request=request,
+        )
+
+    payload = validation_result.get("payload") or {}
+    if payload.get(JWTClaims.TOKEN_TYPE) != "sse":
+        return ResponseManager.success(
+            data={
+                "valid": False,
+                "status": "invalid",
+                "reason": "Tipo de ticket invalido",
+                "validated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            message="Validación completada",
+            request=request,
+        )
+
+    return ResponseManager.success(
+        data={
+            "valid": True,
+            "status": "valid",
+            "reason": "Ticket valido",
+            "validated_at": datetime.now(timezone.utc).isoformat(),
+            "user_id": payload.get(JWTClaims.USER_ID),
+            "username": payload.get(JWTClaims.USERNAME),
+            "roles": payload.get(JWTClaims.ROLES, []),
+            "permissions": [],
+            "expires_at": payload.get(JWTClaims.EXPIRES_AT),
+        },
+        message="Validación completada",
+        request=request,
     )
 
 @router.post("/refresh", response_class=JSONResponse)

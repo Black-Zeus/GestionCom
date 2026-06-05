@@ -271,15 +271,15 @@ async def root(request: Request):
 async def global_exception_handler(request: Request, exc: Exception):
     """Manejador global de excepciones"""
     
-    # Obtener stack trace para desarrollo
     stack_trace = traceback.format_exc()
+    print(f"Error no controlado en {request.method} {request.url.path}: {exc}")
+    print(stack_trace)
     
     if RESPONSE_MANAGER_AVAILABLE:
         return ResponseManager.internal_server_error(
             message="Error interno del servidor",
-            details=str(exc),
+            details="Ha ocurrido un error inesperado. Contacte al administrador con el identificador de traza.",
             request=request,
-            stack_trace=stack_trace
         )
     else:
         # Fallback a respuesta básica
@@ -291,7 +291,7 @@ async def global_exception_handler(request: Request, exc: Exception):
                 "message": "Error interno del servidor",
                 "error": {
                     "code": "INTERNAL_SERVER_ERROR",
-                    "details": str(exc) if app.debug else "Ha ocurrido un error inesperado"
+                    "details": "Ha ocurrido un error inesperado"
                 },
                 "path": str(request.url.path),
                 "method": request.method,
