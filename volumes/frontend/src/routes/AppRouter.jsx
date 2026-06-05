@@ -13,6 +13,7 @@ const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
 const UnderConstruction = lazy(() => import('@/pages/modules/UnderConstruction'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
+const AdminWarehouses = lazy(() => import('@/pages/admin/AdminWarehouses'));
 const AdminRolePermissions = lazy(() => import('@/pages/admin/AdminRolePermissions'));
 const AdminUserPermissions = lazy(() => import('@/pages/admin/AdminUserPermissions'));
 const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
@@ -20,6 +21,7 @@ const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
 const moduleComponents = {
   users: AdminUsers,
   roles: AdminRoles,
+  warehouses: AdminWarehouses,
 };
 
 const Page = ({ children }) => (
