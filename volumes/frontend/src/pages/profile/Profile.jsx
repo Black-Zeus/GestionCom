@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Camera, Check, KeyRound, MonitorSmartphone, Palette, RefreshCw, Save, UserCircle } from 'lucide-react';
+import { Camera, Check, KeyRound, MonitorSmartphone, Palette, RefreshCw, RotateCcw, Save, UserCircle } from 'lucide-react';
 import { ActionButton } from '@/components/common/actions/ActionButton';
+import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
 import KpiBar from '@/components/common/data/KpiBar';
 import StatusBadge from '@/components/common/data/StatusBadge';
@@ -21,6 +22,8 @@ const Profile = () => {
   const [sessions, setSessions] = useState([]);
   const [form, setForm] = useState({ first_name: '', last_name: '', phone: '' });
   const [password, setPassword] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const mergeUserProfile = useAuthStore((state) => state.mergeUserProfile);
@@ -40,6 +43,7 @@ const Profile = () => {
       setProfile(nextProfile);
       setSessions(nextSessions);
       setForm({ first_name: nextProfile.first_name || '', last_name: nextProfile.last_name || '', phone: nextProfile.phone || '' });
+      setPendingAvatarFile(null);
       mergeUserProfile(nextProfile);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar el perfil.'));
@@ -50,6 +54,17 @@ const Profile = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!pendingAvatarFile) {
+      setPendingAvatarPreview('');
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(pendingAvatarFile);
+    setPendingAvatarPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pendingAvatarFile]);
+
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || 'Usuario';
   const completeness = profile?.phone ? 100 : 80;
   const tabs = useMemo(() => [
@@ -59,14 +74,38 @@ const Profile = () => {
     { id: 'preferences', label: 'Personalizacion', icon: Palette },
   ], [sessions.length]);
 
+  const hasProfileChanges = useMemo(() => (
+    Boolean(pendingAvatarFile)
+    || form.first_name !== (profile?.first_name || '')
+    || form.last_name !== (profile?.last_name || '')
+    || form.phone !== (profile?.phone || '')
+  ), [form, pendingAvatarFile, profile]);
+
   const saveProfile = async () => {
-    await notifyPromise(profileService.update(form), {
+    await notifyPromise((async () => {
+      if (
+        form.first_name !== (profile?.first_name || '')
+        || form.last_name !== (profile?.last_name || '')
+        || form.phone !== (profile?.phone || '')
+      ) {
+        await profileService.update(form);
+      }
+      if (pendingAvatarFile) {
+        await profileService.uploadAvatar(pendingAvatarFile);
+      }
+    })(), {
       loading: 'Guardando perfil...',
       success: 'Perfil actualizado.',
       error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar el perfil.'),
     });
+    setPendingAvatarFile(null);
     await hydrateUser();
     await load();
+  };
+
+  const resetProfileChanges = () => {
+    setForm({ first_name: profile?.first_name || '', last_name: profile?.last_name || '', phone: profile?.phone || '' });
+    setPendingAvatarFile(null);
   };
 
   const savePassword = async () => {
@@ -86,17 +125,11 @@ const Profile = () => {
     });
   };
 
-  const uploadAvatar = async (event) => {
+  const selectAvatar = (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    await notifyPromise(profileService.uploadAvatar(file), {
-      loading: 'Procesando avatar...',
-      success: 'Avatar actualizado.',
-      error: (requestError) => getBackendMessage(requestError, 'No fue posible cargar el avatar.'),
-    });
-    await hydrateUser();
-    await load();
+    setPendingAvatarFile(file);
   };
 
   return (
@@ -115,30 +148,41 @@ const Profile = () => {
       <ModuleTabs className="mb-4" activeTab={activeTab} onChange={setActiveTab} tabs={tabs} />
 
       {activeTab === 'profile' && (
-        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex flex-col items-center text-center">
-              <UserAvatar src={profile?.avatar?.full_url} alt={fullName} size="lg" placeholderClassName="text-slate-500" />
-              <div className="mt-3 text-sm font-semibold">{fullName}</div>
-              <div className="text-xs text-slate-500">{profile?.email}</div>
-              <label className="mt-4 inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                <Camera className="h-4 w-4" />
-                Cargar avatar
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={uploadAvatar} />
-              </label>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Se guarda sanitizado en WebP, sin metadata, con thumb 128x128 y full maximo 1024x1024.</p>
+        <>
+          <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-col items-center text-center">
+                <UserAvatar src={pendingAvatarPreview || profile?.avatar?.full_url} alt={fullName} size="lg" placeholderClassName="text-slate-500" />
+                <div className="mt-3 text-sm font-semibold">{fullName}</div>
+                <div className="text-xs text-slate-500">{profile?.email}</div>
+                <label className="mt-4 inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                  <Camera className="h-4 w-4" />
+                  Seleccionar avatar
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={selectAvatar} />
+                </label>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  {pendingAvatarFile ? 'Avatar pendiente de guardar.' : 'Se guarda sanitizado en WebP, sin metadata, con thumb 128x128 y full maximo 1024x1024.'}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="space-y-1 text-sm"><span className="font-medium">Nombre</span><input className={fieldClassName} value={form.first_name} onChange={(event) => setForm((current) => ({ ...current, first_name: event.target.value }))} /></label>
+                <label className="space-y-1 text-sm"><span className="font-medium">Apellido</span><input className={fieldClassName} value={form.last_name} onChange={(event) => setForm((current) => ({ ...current, last_name: event.target.value }))} /></label>
+                <label className="space-y-1 text-sm"><span className="font-medium">Telefono</span><input className={fieldClassName} value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+                <label className="space-y-1 text-sm"><span className="font-medium">Correo</span><input className={`${fieldClassName} bg-slate-100 text-slate-500 dark:bg-slate-800`} value={profile?.email || ''} disabled readOnly /></label>
+              </div>
             </div>
           </div>
-          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="space-y-1 text-sm"><span className="font-medium">Nombre</span><input className={fieldClassName} value={form.first_name} onChange={(event) => setForm((current) => ({ ...current, first_name: event.target.value }))} /></label>
-              <label className="space-y-1 text-sm"><span className="font-medium">Apellido</span><input className={fieldClassName} value={form.last_name} onChange={(event) => setForm((current) => ({ ...current, last_name: event.target.value }))} /></label>
-              <label className="space-y-1 text-sm"><span className="font-medium">Telefono</span><input className={fieldClassName} value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
-              <label className="space-y-1 text-sm"><span className="font-medium">Correo</span><input className={`${fieldClassName} bg-slate-100 text-slate-500 dark:bg-slate-800`} value={profile?.email || ''} disabled readOnly /></label>
-            </div>
-            <div className="mt-4 flex justify-end"><ActionButton label="Guardar perfil" icon={Save} onClick={saveProfile} /></div>
-          </div>
-        </div>
+          <BottomActionBar
+            className="mt-4 rounded-md shadow-sm"
+            leftContent={hasProfileChanges ? 'Cambios pendientes sin guardar.' : 'Perfil sin cambios pendientes.'}
+            actions={[
+              { id: 'reset', label: 'Descartar', icon: RotateCcw, variant: 'neutral', disabled: !hasProfileChanges || loading, onClick: resetProfileChanges },
+              { id: 'save', label: 'Guardar', icon: Save, variant: 'primary', disabled: !hasProfileChanges || loading, onClick: saveProfile },
+            ]}
+          />
+        </>
       )}
 
       {activeTab === 'password' && (
