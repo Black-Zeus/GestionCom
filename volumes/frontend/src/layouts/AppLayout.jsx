@@ -28,6 +28,7 @@ import { useNavigationHistoryStore } from '@/store/useNavigationHistoryStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { appConfig } from '@/config/appConfig';
 import ProductInfoModalContent from '@/components/product/ProductInfoModalContent';
+import UserAvatar from '@/components/common/media/UserAvatar';
 import { authService } from '@/services/auth/authService';
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { notificationService } from '@/services/notifications/notificationService';
@@ -846,13 +847,7 @@ const AppLayout = () => {
               collapsed && 'justify-center px-0'
             )}
           >
-            {displayUserAvatar ? (
-              <img src={displayUserAvatar} alt={displayUserName} className="h-9 w-9 shrink-0 rounded-md object-cover" />
-            ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-white">
-                <UserCircle className="h-6 w-6" />
-              </div>
-            )}
+            <UserAvatar src={displayUserAvatar} alt={displayUserName} size="sm" placeholderClassName="dark:bg-white/10 dark:text-white" />
             {!collapsed && (
               <>
                 <div className="min-w-0 flex-1">
@@ -872,13 +867,7 @@ const AppLayout = () => {
               )}
             >
               <div className="flex items-center gap-3 px-3 py-3">
-                {displayUserAvatar ? (
-                  <img src={displayUserAvatar} alt={displayUserName} className="h-10 w-10 shrink-0 rounded-md object-cover" />
-                ) : (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                    <UserCircle className="h-6 w-6" />
-                  </div>
-                )}
+                <UserAvatar src={displayUserAvatar} alt={displayUserName} size="md" />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold uppercase">{displayUserName}</div>
                   <div className="truncate text-xs text-slate-500 dark:text-slate-400">{displayUserSubtitle}</div>
