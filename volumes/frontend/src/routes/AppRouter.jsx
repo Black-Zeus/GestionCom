@@ -31,6 +31,7 @@ const AdminCustomerFormPage = lazy(() => import('@/pages/admin/AdminCustomerForm
 const AdminCustomerAuthorized = lazy(() => import('@/pages/admin/AdminCustomerAuthorized'));
 const AdminCustomerCredit = lazy(() => import('@/pages/admin/AdminCustomerCredit'));
 const AdminSuppliersMaintainers = lazy(() => import('@/pages/admin/AdminSuppliersMaintainers'));
+const AdminSupplierFormPage = lazy(() => import('@/pages/admin/AdminSupplierFormPage'));
 const AdminSupplierContacts = lazy(() => import('@/pages/admin/AdminSupplierContacts'));
 const AdminSupplierProducts = lazy(() => import('@/pages/admin/AdminSupplierProducts'));
 const AdminProductSupportMaintainers = lazy(() => import('@/pages/admin/AdminProductSupportMaintainers'));
@@ -165,6 +166,26 @@ const AppRouter = () => (
             <Page>
               <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
                 <AdminCustomerFormPage mode="edit" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="suppliers/new"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminSupplierFormPage mode="create" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="suppliers/edit/:supplierCode"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminSupplierFormPage mode="edit" />
               </RequirePermission>
             </Page>
           )}

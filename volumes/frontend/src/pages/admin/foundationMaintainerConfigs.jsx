@@ -9,6 +9,29 @@ const customerStatusChangeOptions = [
   { value: 'DEFAULTED', label: 'Moroso', variant: 'warning', description: 'Cliente con condicion financiera vencida o riesgosa. Debe revisarse antes de autorizar nuevas ventas a credito.' },
 ];
 
+const supplierTypeOptions = [
+  { value: 'COMPANY', label: 'Empresa' },
+  { value: 'INDIVIDUAL', label: 'Persona' },
+  { value: 'FOREIGN', label: 'Extranjero' },
+];
+
+const currencySymbols = {
+  CLP: '$',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  BRL: 'R$',
+  ARS: '$',
+  MXN: '$',
+  CAD: 'C$',
+  PEN: 'S/',
+};
+
+const currencyDisplay = (value) => {
+  if (!value) return '-';
+  return `${value} ${currencySymbols[value] || ''}`.trim();
+};
+
 const customerFields = [
   { id: 'identity_section', type: 'section', label: 'Datos generales', icon: UserRound, columns: 3, description: 'Datos base para identificar al cliente en documentos y busqueda.' },
   { id: 'customer_type', label: 'Tipo', type: 'select', required: true, options: [{ value: 'COMPANY', label: 'Empresa' }, { value: 'INDIVIDUAL', label: 'Persona' }] },
@@ -88,43 +111,50 @@ export const customerMaintainerConfig = customersTabs[0];
 
 const suppliersTabs = [
   {
-    id: 'suppliers', resource: 'suppliers', label: 'Proveedores', singular: 'proveedor', icon: Truck, codeField: 'supplier_code', showStatus: false,
+    id: 'suppliers', resource: 'suppliers', label: 'Proveedores', singular: 'proveedor', icon: Truck, formIcon: Truck, codeField: 'supplier_code', showStatus: false,
+    formMode: 'page', createPath: '/suppliers/new', editPath: (row) => `/suppliers/edit/${encodeURIComponent(row.supplier_code)}`,
     empty: { supplier_type: 'COMPANY', legal_name: '', default_currency_code: 'CLP', default_payment_terms_days: 30, default_tax_rate: 19, credit_limit: 0, current_balance: 0 },
     fields: [
-      { id: 'supplier_type', label: 'Tipo', type: 'select', options: [{ value: 'COMPANY', label: 'Empresa' }, { value: 'INDIVIDUAL', label: 'Persona' }, { value: 'FOREIGN', label: 'Extranjero' }] },
-      { id: 'tax_id', label: 'RUT/DNI' },
-      { id: 'legal_name', label: 'Razon social / nombre', required: true },
-      { id: 'commercial_name', label: 'Nombre fantasia' },
-      { id: 'business_activity', label: 'Giro' },
-      { id: 'email', label: 'Email' },
-      { id: 'phone', label: 'Telefono' },
+      { id: 'identity_section', type: 'section', label: 'Datos generales', icon: Truck, columns: 3, description: 'Datos base para identificar al proveedor en compras y busqueda.' },
+      { id: 'supplier_type', label: 'Tipo', type: 'select', options: supplierTypeOptions },
+      { id: 'legal_name', label: 'Razon social / nombre', required: true, placeholder: 'Nombre legal del proveedor' },
+      { id: 'tax_id', label: 'RUT/DNI', placeholder: 'Ej: 44444444-4' },
+      { id: 'commercial_name', label: 'Nombre fantasia', placeholder: 'Nombre comercial visible' },
+      { id: 'business_activity', label: 'Giro', placeholder: 'Actividad principal' },
+      { id: 'contact_section', type: 'section', label: 'Contacto', icon: Contact, columns: 3, description: 'Canales disponibles para comunicacion comercial y operativa.' },
+      { id: 'email', label: 'Email', type: 'email', placeholder: 'proveedor@empresa.cl', leadingIcon: AtSign },
+      { id: 'phone', label: 'Telefono', placeholder: '+562...', leadingIcon: Phone },
+      { id: 'mobile', label: 'Movil', placeholder: '+569...', leadingIcon: Smartphone },
+      { id: 'commercial_section', type: 'section', label: 'Condiciones comerciales', icon: CircleDollarSign, columns: 3, description: 'Moneda, plazos e informacion base para compras.' },
       { id: 'default_currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies' },
       { id: 'default_payment_terms_days', label: 'Dias pago', type: 'number', min: 0 },
       { id: 'default_tax_rate', label: 'Impuesto %', type: 'number', min: 0 },
       { id: 'credit_limit', label: 'Limite credito', type: 'number', min: 0 },
-      { id: 'notes', label: 'Notas', wide: true },
+      { id: 'notes', label: 'Notas', type: 'textarea', rows: 3, placeholder: 'Observaciones comerciales.' },
     ],
-    tableFields: [{ id: 'legal_name', label: 'Proveedor', primary: true }, { id: 'tax_id', label: 'RUT/DNI' }, { id: 'supplier_type', label: 'Tipo' }, { id: 'email', label: 'Email' }, { id: 'default_currency_code', label: 'Moneda' }],
+    tableFields: [{ id: 'legal_name', label: 'Proveedor', primary: true }, { id: 'tax_id', label: 'RUT/DNI' }, { id: 'supplier_type', label: 'Tipo', options: supplierTypeOptions }, { id: 'email', label: 'Email' }, { id: 'default_currency_code', label: 'Moneda', format: currencyDisplay }],
   },
   {
     id: 'contacts', resource: 'supplier-contacts', label: 'Contactos', singular: 'contacto', icon: Contact, activeField: 'is_active',
     empty: { supplier_id: '', contact_name: '', is_primary: false, is_purchase_contact: true, is_payment_contact: false, is_active: true },
     fields: [{ id: 'supplier_id', label: 'Proveedor', type: 'select', optionsResource: 'suppliers', required: true }, { id: 'contact_name', label: 'Nombre', required: true }, { id: 'position', label: 'Cargo' }, { id: 'email', label: 'Email' }, { id: 'phone', label: 'Telefono' }, { id: 'mobile', label: 'Movil' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Contacto principal' }, { id: 'is_purchase_contact', label: 'Compras', type: 'checkbox', checkLabel: 'Contacto compras' }, { id: 'is_payment_contact', label: 'Pagos', type: 'checkbox', checkLabel: 'Contacto pagos' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'contact_name', label: 'Contacto', primary: true }, { id: 'supplier_id', label: 'ID proveedor' }, { id: 'email', label: 'Email' }, { id: 'phone', label: 'Telefono' }],
+    tableFields: [{ id: 'contact_name', label: 'Contacto', primary: true }, { id: 'supplier_id', label: 'Proveedor', optionsResource: 'suppliers' }, { id: 'email', label: 'Email' }, { id: 'phone', label: 'Telefono' }],
   },
   {
     id: 'addresses', resource: 'supplier-addresses', label: 'Direcciones', singular: 'direccion', icon: Building2, showStatus: false,
     empty: { supplier_id: '', address_type: 'BILLING', address_line: '', country: 'Chile', is_primary: false },
     fields: [{ id: 'supplier_id', label: 'Proveedor', type: 'select', optionsResource: 'suppliers', required: true }, { id: 'address_type', label: 'Tipo', type: 'select', options: [{ value: 'BILLING', label: 'Facturacion' }, { value: 'SHIPPING', label: 'Despacho' }, { value: 'OFFICE', label: 'Oficina' }, { value: 'OTHER', label: 'Otra' }] }, { id: 'address_line', label: 'Direccion', required: true, wide: true }, { id: 'city', label: 'Ciudad' }, { id: 'region', label: 'Region' }, { id: 'country', label: 'Pais' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Principal' }],
-    tableFields: [{ id: 'address_line', label: 'Direccion', primary: true }, { id: 'supplier_id', label: 'ID proveedor' }, { id: 'address_type', label: 'Tipo' }, { id: 'city', label: 'Ciudad' }],
+    tableFields: [{ id: 'address_line', label: 'Direccion', primary: true }, { id: 'supplier_id', label: 'Proveedor', optionsResource: 'suppliers' }, { id: 'address_type', label: 'Tipo', options: [{ value: 'BILLING', label: 'Facturacion' }, { value: 'SHIPPING', label: 'Despacho' }, { value: 'OFFICE', label: 'Oficina' }, { value: 'OTHER', label: 'Otra' }] }, { id: 'city', label: 'Ciudad' }],
   },
   {
     id: 'products', resource: 'supplier-products', label: 'Productos', singular: 'producto proveedor', icon: PackageSearch, activeField: 'is_active',
     empty: { supplier_id: '', product_variant_id: '', minimum_order_quantity: 1, package_quantity: 1, lead_time_days: 7, is_preferred: false, is_active: true },
     fields: [{ id: 'supplier_id', label: 'Proveedor', type: 'select', optionsResource: 'suppliers', required: true }, { id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'supplier_sku', label: 'SKU proveedor' }, { id: 'supplier_barcode', label: 'Codigo proveedor' }, { id: 'supplier_product_name', label: 'Nombre proveedor' }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options' }, { id: 'minimum_order_quantity', label: 'Minimo compra', type: 'number', min: 0 }, { id: 'package_quantity', label: 'Empaque', type: 'number', min: 0 }, { id: 'last_purchase_cost', label: 'Ultimo costo', type: 'number', min: 0 }, { id: 'lead_time_days', label: 'Lead time', type: 'number', min: 0 }, { id: 'is_preferred', label: 'Preferido', type: 'checkbox', checkLabel: 'Proveedor preferido' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'supplier_product_name', label: 'Producto proveedor', primary: true }, { id: 'supplier_id', label: 'ID proveedor' }, { id: 'product_variant_id', label: 'ID SKU' }, { id: 'last_purchase_cost', label: 'Costo' }],
+    tableFields: [{ id: 'supplier_product_name', label: 'Producto proveedor', primary: true }, { id: 'supplier_id', label: 'Proveedor', optionsResource: 'suppliers' }, { id: 'product_variant_id', label: 'SKU', optionsResource: 'product-variants-options' }, { id: 'last_purchase_cost', label: 'Costo' }],
   },
 ];
+
+export const supplierMaintainerConfig = suppliersTabs[0];
 
 const productSupportTabs = [
   {

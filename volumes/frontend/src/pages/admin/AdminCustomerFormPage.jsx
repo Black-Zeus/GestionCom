@@ -305,7 +305,7 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
       </div>
 
       {!error && (
-        <div className="max-w-6xl">
+        <div className="w-full">
           <SimpleFormContent
             fields={fields}
             initialValues={initialValues}

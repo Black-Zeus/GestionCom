@@ -251,7 +251,7 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
         </button>
       </div>
 
-      <div className="max-w-6xl">
+      <div className="w-full">
         <SimpleFormContent
           fields={fields}
           initialValues={initialValues}

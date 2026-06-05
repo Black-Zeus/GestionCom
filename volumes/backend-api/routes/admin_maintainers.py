@@ -339,7 +339,7 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
             order_by = "sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC"
             result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT 1000"))
             rows = [_row(row) for row in result.mappings().all()]
-            if config["table"] == "customers":
+            if config["table"] in {"customers", "suppliers"}:
                 assets = await _media_map(session, [item.get("logo_media_asset_id") for item in rows] + [item.get("banner_media_asset_id") for item in rows])
                 for row in rows:
                     row["logo"] = assets.get(row.get("logo_media_asset_id"))
