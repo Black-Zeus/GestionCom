@@ -15,7 +15,6 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
 
 const emptyRoleForm = {
-  role_code: '',
   role_name: '',
   role_description: '',
 };
@@ -41,7 +40,6 @@ const RoleFormModal = ({ onSubmit, onClose }) => {
 
     try {
       await onSubmit({
-        role_code: form.role_code.trim().toUpperCase(),
         role_name: form.role_name.trim(),
         role_description: form.role_description.trim() || null,
       });
@@ -54,16 +52,6 @@ const RoleFormModal = ({ onSubmit, onClose }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-          <input
-            className="h-10 w-full rounded-md border border-slate-200 px-3 font-mono text-sm uppercase dark:border-slate-700 dark:bg-slate-950"
-            value={form.role_code}
-            onChange={(event) => updateField('role_code', event.target.value)}
-            placeholder="EJ: CAJERO"
-            required
-          />
-        </label>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
           <input

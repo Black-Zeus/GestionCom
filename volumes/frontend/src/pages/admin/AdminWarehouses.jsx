@@ -58,7 +58,7 @@ const warehouseToForm = (warehouse) => ({
   is_active: warehouse.is_active !== false,
 });
 
-const toWarehousePayload = (form, mode) => {
+const toWarehousePayload = (form) => {
   const payload = {
     warehouse_name: form.warehouse_name.trim(),
     warehouse_type: form.warehouse_type,
@@ -70,10 +70,6 @@ const toWarehousePayload = (form, mode) => {
     email: form.email.trim(),
     is_active: Boolean(form.is_active),
   };
-
-  if (mode === 'create') {
-    payload.warehouse_code = form.warehouse_code.trim().toUpperCase();
-  }
 
   return payload;
 };
@@ -102,15 +98,10 @@ const WarehouseFormModal = ({ mode = 'create', initialValues = emptyWarehouseFor
       return;
     }
 
-    if (!isEdit && !/^[A-Z0-9_]{2,20}$/.test(form.warehouse_code.trim().toUpperCase())) {
-      setFormError('El codigo debe usar 2 a 20 caracteres: letras, numeros o guion bajo.');
-      return;
-    }
-
     setSaving(true);
 
     try {
-      await onSubmit(toWarehousePayload(form, mode));
+      await onSubmit(toWarehousePayload(form));
       onClose?.();
     } finally {
       setSaving(false);
@@ -140,17 +131,12 @@ const WarehouseFormModal = ({ mode = 'create', initialValues = emptyWarehouseFor
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-          <input
-            className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`}
-            value={form.warehouse_code}
-            onChange={(event) => updateField('warehouse_code', event.target.value.toUpperCase())}
-            placeholder="BODEGA_CENTRAL"
-            disabled={isEdit}
-            required
-          />
-        </label>
+        {isEdit && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
+            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.warehouse_code} disabled readOnly />
+          </label>
+        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Tipo</span>
           <select className={selectClassName} value={form.warehouse_type} onChange={(event) => updateField('warehouse_type', event.target.value)}>

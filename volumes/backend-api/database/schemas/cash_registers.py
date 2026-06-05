@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 
 class CashRegisterBase(BaseModel):
-    register_code: str = Field(..., min_length=2, max_length=20)
+    register_code: Optional[str] = Field(None, min_length=2, max_length=20)
     register_name: str = Field(..., min_length=3, max_length=100)
     warehouse_id: int = Field(..., gt=0)
     terminal_identifier: Optional[str] = Field(None, max_length=100)

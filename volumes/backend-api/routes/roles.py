@@ -18,6 +18,7 @@ from database.models.roles import Role
 from database.models.user_roles import UserRole
 from database.models.users import User
 from utils.audit_utils import record_audit_log
+from utils.code_generator import generate_sequential_code
 from utils.log_helper import setup_logger
 from utils.permissions_utils import require_permission
 
@@ -183,13 +184,12 @@ async def create_role(
 ):
     """Crear perfil operativo custom."""
     try:
-        role_code = (payload.get("role_code") or "").strip().upper()
         role_name = (payload.get("role_name") or "").strip()
         role_description = (payload.get("role_description") or "").strip() or None
 
-        if len(role_code) < 2 or len(role_name) < 2:
+        if len(role_name) < 2:
             return ResponseManager.error(
-                message="Codigo y nombre del perfil son obligatorios",
+                message="Nombre del perfil es obligatorio",
                 status_code=HTTPStatus.BAD_REQUEST,
                 error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
                 error_type=ErrorType.VALIDATION_ERROR,
@@ -197,6 +197,7 @@ async def create_role(
             )
 
         async with db_manager.get_async_session() as session:
+            role_code = await generate_sequential_code(session, Role, "role_code", "ROLE")
             role = Role(
                 role_code=role_code,
                 role_name=role_name,

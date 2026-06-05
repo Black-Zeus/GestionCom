@@ -15,7 +15,7 @@ class PettyCashFundStatusEnum(str, Enum):
 
 
 class PettyCashCategoryCreate(BaseModel):
-    category_code: str = Field(..., min_length=2, max_length=20)
+    category_code: Optional[str] = Field(None, min_length=2, max_length=20)
     category_name: str = Field(..., min_length=3, max_length=100)
     category_description: Optional[str] = Field(None, max_length=2000)
     max_amount_per_expense: Optional[Decimal] = Field(None, ge=0, max_digits=15, decimal_places=2)
@@ -32,7 +32,7 @@ class PettyCashCategoryUpdate(BaseModel):
 
 
 class PettyCashFundCreate(BaseModel):
-    fund_code: str = Field(..., min_length=2, max_length=50)
+    fund_code: Optional[str] = Field(None, min_length=2, max_length=50)
     warehouse_id: int = Field(..., gt=0)
     responsible_user_id: int = Field(..., gt=0)
     initial_amount: Decimal = Field(..., ge=0, max_digits=15, decimal_places=2)

@@ -15,6 +15,7 @@ from database.models.cash_registers import CashRegister
 from database.models.warehouses import Warehouse
 from database.schemas.cash_registers import CashRegisterCreate, CashRegisterUpdate
 from utils.auth_helpers import get_client_ip
+from utils.code_generator import generate_sequential_code
 from utils.log_helper import setup_logger
 from utils.permissions_utils import get_current_user
 
@@ -163,17 +164,18 @@ async def create_cash_register(
 ):
     try:
         async with db_manager.get_async_session() as session:
+            register_code = await generate_sequential_code(session, CashRegister, "register_code", "POS")
             existing_result = await session.execute(
                 select(CashRegister).where(
                     and_(
-                        CashRegister.register_code == cash_register_data.register_code.upper(),
+                        CashRegister.register_code == register_code,
                         CashRegister.deleted_at.is_(None),
                     )
                 )
             )
             if existing_result.scalar_one_or_none():
                 return ResponseManager.error(
-                    message=f"Ya existe una caja con el codigo: {cash_register_data.register_code}",
+                    message=f"Ya existe una caja con el codigo: {register_code}",
                     status_code=HTTPStatus.BAD_REQUEST,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
@@ -191,7 +193,7 @@ async def create_cash_register(
                 )
 
             new_register = CashRegister(
-                register_code=cash_register_data.register_code,
+                register_code=register_code,
                 register_name=cash_register_data.register_name,
                 warehouse_id=cash_register_data.warehouse_id,
                 terminal_identifier=cash_register_data.terminal_identifier,

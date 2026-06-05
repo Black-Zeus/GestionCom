@@ -22,6 +22,7 @@ from database.schemas.petty_cash import (
     PettyCashFundUpdate,
 )
 from utils.auth_helpers import get_client_ip
+from utils.code_generator import generate_sequential_code
 from utils.log_helper import setup_logger
 from utils.permissions_utils import get_current_user
 
@@ -150,24 +151,27 @@ async def create_category(
 ):
     try:
         async with db_manager.get_async_session() as session:
+            category_code = await generate_sequential_code(session, PettyCashCategory, "category_code", "PCC")
             existing = await session.execute(
                 select(PettyCashCategory).where(
                     and_(
-                        PettyCashCategory.category_code == category_data.category_code.upper(),
+                        PettyCashCategory.category_code == category_code,
                         PettyCashCategory.deleted_at.is_(None),
                     )
                 )
             )
             if existing.scalar_one_or_none():
                 return ResponseManager.error(
-                    message=f"Ya existe una categoria con el codigo: {category_data.category_code}",
+                    message=f"Ya existe una categoria con el codigo: {category_code}",
                     status_code=HTTPStatus.BAD_REQUEST,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
                     request=request,
                 )
 
-            category = PettyCashCategory(**category_data.model_dump())
+            payload = category_data.model_dump()
+            payload["category_code"] = category_code
+            category = PettyCashCategory(**payload)
             session.add(category)
             await session.commit()
             await session.refresh(category)
@@ -277,17 +281,18 @@ async def create_fund(
 ):
     try:
         async with db_manager.get_async_session() as session:
+            fund_code = await generate_sequential_code(session, PettyCashFund, "fund_code", "PCF", width=6)
             existing = await session.execute(
                 select(PettyCashFund).where(
                     and_(
-                        PettyCashFund.fund_code == fund_data.fund_code.upper(),
+                        PettyCashFund.fund_code == fund_code,
                         PettyCashFund.deleted_at.is_(None),
                     )
                 )
             )
             if existing.scalar_one_or_none():
                 return ResponseManager.error(
-                    message=f"Ya existe un fondo con el codigo: {fund_data.fund_code}",
+                    message=f"Ya existe un fondo con el codigo: {fund_code}",
                     status_code=HTTPStatus.BAD_REQUEST,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
@@ -306,6 +311,7 @@ async def create_fund(
                 )
 
             payload = fund_data.model_dump()
+            payload["fund_code"] = fund_code
             payload["fund_status"] = PettyCashFundStatus(payload["fund_status"])
             fund = PettyCashFund(**payload)
             session.add(fund)

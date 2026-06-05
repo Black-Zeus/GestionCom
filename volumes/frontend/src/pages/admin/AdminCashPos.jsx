@@ -46,7 +46,7 @@ const cashRegisterToForm = (cashRegister) => ({
   max_difference_amount: String(cashRegister.max_difference_amount ?? '0'),
 });
 
-const toCashRegisterPayload = (form, mode) => {
+const toCashRegisterPayload = (form) => {
   const payload = {
     register_name: form.register_name.trim(),
     warehouse_id: Number(form.warehouse_id),
@@ -57,10 +57,6 @@ const toCashRegisterPayload = (form, mode) => {
     requires_supervisor_approval: Boolean(form.requires_supervisor_approval),
     max_difference_amount: Number(form.max_difference_amount || 0),
   };
-
-  if (mode === 'create') {
-    payload.register_code = form.register_code.trim().toUpperCase();
-  }
 
   return payload;
 };
@@ -90,11 +86,6 @@ const CashRegisterFormModal = ({ mode = 'create', initialValues = emptyCashRegis
       return;
     }
 
-    if (!isEdit && !/^[A-Z0-9_-]{2,20}$/.test(form.register_code.trim().toUpperCase())) {
-      setFormError('El codigo debe usar 2 a 20 caracteres: letras, numeros, guion o guion bajo.');
-      return;
-    }
-
     if (Number(form.max_difference_amount || 0) < 0) {
       setFormError('La diferencia maxima no puede ser negativa.');
       return;
@@ -103,7 +94,7 @@ const CashRegisterFormModal = ({ mode = 'create', initialValues = emptyCashRegis
     setSaving(true);
 
     try {
-      await onSubmit(toCashRegisterPayload(form, mode));
+      await onSubmit(toCashRegisterPayload(form));
       onClose?.();
     } finally {
       setSaving(false);
@@ -133,17 +124,12 @@ const CashRegisterFormModal = ({ mode = 'create', initialValues = emptyCashRegis
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-          <input
-            className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`}
-            value={form.register_code}
-            onChange={(event) => updateField('register_code', event.target.value.toUpperCase())}
-            placeholder="CAJA01_CENTRO"
-            disabled={isEdit}
-            required
-          />
-        </label>
+        {isEdit && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
+            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.register_code} disabled readOnly />
+          </label>
+        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
           <input className={fieldClassName} value={form.register_name} onChange={(event) => updateField('register_name', event.target.value)} minLength={3} required />

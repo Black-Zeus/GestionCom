@@ -40,6 +40,7 @@ from core.constants import ErrorCode, ErrorType, HTTPStatus
 
 # Utils imports
 from utils.permissions_utils import require_permission
+from utils.code_generator import generate_sequential_code
 
 # ==========================================
 # CONFIGURACIÓN DEL ROUTER
@@ -232,10 +233,17 @@ async def create_warehouse(
     
     try:
         async with db_manager.get_async_session() as session:
+            code_prefix = {
+                WarehouseType.WAREHOUSE: "BOD",
+                WarehouseType.STORE: "TIE",
+                WarehouseType.OUTLET: "OUT",
+            }[WarehouseType(warehouse_data.warehouse_type)]
+            warehouse_code = await generate_sequential_code(session, Warehouse, "warehouse_code", code_prefix)
+
             # Verificar que el código no exista
             existing_stmt = select(Warehouse).where(
                 and_(
-                    Warehouse.warehouse_code == warehouse_data.warehouse_code.upper(),
+                    Warehouse.warehouse_code == warehouse_code,
                     Warehouse.deleted_at.is_(None)
                 )
             )
@@ -244,7 +252,7 @@ async def create_warehouse(
             
             if existing_warehouse:
                 return ResponseManager.error(
-                    message=f"Ya existe una bodega con el código: {warehouse_data.warehouse_code}",
+                    message=f"Ya existe una bodega con el código: {warehouse_code}",
                     status_code=HTTPStatus.BAD_REQUEST,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
@@ -267,7 +275,7 @@ async def create_warehouse(
             
             # Crear la bodega
             new_warehouse = Warehouse(
-                warehouse_code=warehouse_data.warehouse_code.upper(),
+                warehouse_code=warehouse_code,
                 warehouse_name=warehouse_data.warehouse_name,
                 warehouse_type=WarehouseType(warehouse_data.warehouse_type),
                 responsible_user_id=warehouse_data.responsible_user_id,

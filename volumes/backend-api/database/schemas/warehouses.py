@@ -46,7 +46,7 @@ class WarehouseBase(BaseModel):
 
 class WarehouseCreate(WarehouseBase):
     """Schema para crear Warehouse"""
-    pass
+    warehouse_code: Optional[str] = Field(None, min_length=2, max_length=20, description="Codigo generado por backend")
 
 
 class WarehouseUpdate(BaseModel):

@@ -77,7 +77,7 @@ const categoryToForm = (category) => ({
   is_active: category.is_active !== false,
 });
 
-const toFundPayload = (form, mode) => {
+const toFundPayload = (form) => {
   const payload = {
     warehouse_id: Number(form.warehouse_id),
     responsible_user_id: Number(form.responsible_user_id),
@@ -86,14 +86,10 @@ const toFundPayload = (form, mode) => {
     fund_status: form.fund_status,
   };
 
-  if (mode === 'create') {
-    payload.fund_code = form.fund_code.trim().toUpperCase();
-  }
-
   return payload;
 };
 
-const toCategoryPayload = (form, mode) => {
+const toCategoryPayload = (form) => {
   const payload = {
     category_name: form.category_name.trim(),
     category_description: form.category_description.trim() || null,
@@ -101,10 +97,6 @@ const toCategoryPayload = (form, mode) => {
     requires_evidence: Boolean(form.requires_evidence),
     is_active: Boolean(form.is_active),
   };
-
-  if (mode === 'create') {
-    payload.category_code = form.category_code.trim().toUpperCase();
-  }
 
   return payload;
 };
@@ -127,14 +119,9 @@ const FundFormModal = ({ mode = 'create', initialValues = emptyFundForm, warehou
       return;
     }
 
-    if (!isEdit && !/^[A-Z0-9_-]{2,50}$/.test(form.fund_code.trim().toUpperCase())) {
-      setFormError('El codigo debe usar letras, numeros, guion o guion bajo.');
-      return;
-    }
-
     setSaving(true);
     try {
-      await onSubmit(toFundPayload(form, mode));
+      await onSubmit(toFundPayload(form));
       onClose?.();
     } finally {
       setSaving(false);
@@ -144,10 +131,12 @@ const FundFormModal = ({ mode = 'create', initialValues = emptyFundForm, warehou
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-          <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.fund_code} onChange={(event) => updateField('fund_code', event.target.value.toUpperCase())} disabled={isEdit} required />
-        </label>
+        {isEdit && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
+            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.fund_code} disabled readOnly />
+          </label>
+        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Estado</span>
           <select className={selectClassName} value={form.fund_status} onChange={(event) => updateField('fund_status', event.target.value)}>
@@ -200,14 +189,9 @@ const CategoryFormModal = ({ mode = 'create', initialValues = emptyCategoryForm,
     event.preventDefault();
     setFormError('');
 
-    if (!isEdit && !/^[A-Z0-9_-]{2,20}$/.test(form.category_code.trim().toUpperCase())) {
-      setFormError('El codigo debe usar letras, numeros, guion o guion bajo.');
-      return;
-    }
-
     setSaving(true);
     try {
-      await onSubmit(toCategoryPayload(form, mode));
+      await onSubmit(toCategoryPayload(form));
       onClose?.();
     } finally {
       setSaving(false);
@@ -217,10 +201,12 @@ const CategoryFormModal = ({ mode = 'create', initialValues = emptyCategoryForm,
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-          <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.category_code} onChange={(event) => updateField('category_code', event.target.value.toUpperCase())} disabled={isEdit} required />
-        </label>
+        {isEdit && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
+            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.category_code} disabled readOnly />
+          </label>
+        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
           <input className={fieldClassName} value={form.category_name} onChange={(event) => updateField('category_name', event.target.value)} minLength={3} required />
