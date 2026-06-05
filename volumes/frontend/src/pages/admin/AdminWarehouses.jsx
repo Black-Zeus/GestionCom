@@ -1,12 +1,13 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, CheckCircle2, EyeOff, Mail, MapPin, Pencil, Phone, RefreshCw, ShieldAlert, Trash2, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, EyeOff, Mail, MapPin, Pencil, Phone, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { usersService } from '@/services/admin/usersService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -525,12 +526,7 @@ const AdminWarehouses = () => {
       label: 'Estado',
       sortable: true,
       sortValue: (warehouse) => warehouse.is_active,
-      render: (warehouse) => (
-        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${warehouse.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-          {warehouse.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-          {warehouse.is_active ? 'Activa' : 'Inactiva'}
-        </span>
-      ),
+      render: (warehouse) => <StatusBadge variant={warehouse.is_active ? 'active' : 'inactive'}>{warehouse.is_active ? 'Activa' : 'Inactiva'}</StatusBadge>,
     },
     {
       id: 'updated',
@@ -546,7 +542,7 @@ const AdminWarehouses = () => {
       render: (warehouse) => (
         <div className="flex justify-end gap-2">
           <RowActionButton label="Editar bodega" icon={Pencil} disabled={busyWarehouseId === warehouse.id} onClick={() => openEditModal(warehouse)} />
-          <RowActionButton label={warehouse.is_active ? 'Desactivar bodega' : 'Activar bodega'} icon={warehouse.is_active ? EyeOff : ShieldAlert} disabled={busyWarehouseId === warehouse.id} variant={warehouse.is_active ? 'danger' : 'neutral'} onClick={() => toggleWarehouse(warehouse)} />
+          <RowActionButton label={warehouse.is_active ? 'Desactivar bodega' : 'Activar bodega'} icon={warehouse.is_active ? EyeOff : CheckCircle2} disabled={busyWarehouseId === warehouse.id} variant={warehouse.is_active ? 'danger' : 'neutral'} onClick={() => toggleWarehouse(warehouse)} />
           <RowActionButton label="Eliminar bodega" icon={Trash2} disabled={busyWarehouseId === warehouse.id} variant="danger" onClick={() => removeWarehouse(warehouse)} />
         </div>
       ),
@@ -577,25 +573,17 @@ const AdminWarehouses = () => {
         fields={filterFields}
         actions={(
           <>
-            <button
-              type="button"
-              onClick={loadWarehouses}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refrescar
-            </button>
-            <button
-              type="button"
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadWarehouses} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton
+              label="Limpiar"
+              icon={XCircle}
+              variant="neutral"
               onClick={() => {
                 setSearch('');
                 setPage(0);
                 setFilters({ status: 'all', type: 'all' });
               }}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Limpiar
-            </button>
+            />
           </>
         )}
       />

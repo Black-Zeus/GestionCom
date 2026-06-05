@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ClipboardList, EyeOff, FileText, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, ClipboardList, EyeOff, FileText, Pencil, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -8,6 +8,7 @@ import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -192,7 +193,6 @@ const AdminDocumentSeries = () => {
           { id: 'series', label: 'Series', icon: ClipboardList, count: series.length },
         ]}
       />
-      <div className="mb-4 flex justify-end"><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} /></div>
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {activeTab === 'types' && (
         <>
@@ -203,13 +203,13 @@ const AdminDocumentSeries = () => {
           onSearchChange={setSearch}
           onSearchSubmit={() => {}}
           fields={filterFields}
-          actions={<ActionButton label="Limpiar" icon={EyeOff} variant="neutral" onClick={() => { setSearch(''); setFilters((current) => ({ ...current, typeStatus: 'all', category: 'all' })); }} />}
+          actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setFilters((current) => ({ ...current, typeStatus: 'all', category: 'all' })); }} /></>}
         />
         <DataTable loading={loading} data={visibleData} footer={pagination} columns={[
           { id: 'type', label: 'Tipo', render: (item) => <><div className="font-medium">{item.document_type_name}</div><div className="font-mono text-xs text-slate-500">{item.document_type_code}</div></> },
           { id: 'category', label: 'Categoria', render: (item) => categoryLabels[item.document_category] || item.document_category },
           { id: 'movement', label: 'Movimiento', render: (item) => item.generates_movement ? movementLabels[item.movement_type] || item.movement_type : 'No genera' },
-          { id: 'status', label: 'Estado', render: (item) => item.is_active ? 'Activo' : 'Inactivo' },
+          { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <RowActionButton label="Editar" icon={Pencil} onClick={() => openType(item)} /> },
         ]} />
         </>
@@ -223,14 +223,14 @@ const AdminDocumentSeries = () => {
           onSearchChange={setSearch}
           onSearchSubmit={() => {}}
           fields={filterFields}
-          actions={<ActionButton label="Limpiar" icon={EyeOff} variant="neutral" onClick={() => { setSearch(''); setFilters((current) => ({ ...current, seriesStatus: 'all', warehouseId: 'all' })); }} />}
+          actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setFilters((current) => ({ ...current, seriesStatus: 'all', warehouseId: 'all' })); }} /></>}
         />
         <DataTable loading={loading} data={visibleData} footer={pagination} columns={[
           { id: 'series', label: 'Serie', render: (item) => <><div className="font-medium">{item.series_code}</div><div className="text-xs text-slate-500">{item.series_prefix || 'Sin prefijo'}</div></> },
           { id: 'type', label: 'Tipo', render: (item) => item.document_type_name },
           { id: 'warehouse', label: 'Bodega', render: (item) => item.warehouse_name || 'Global' },
           { id: 'range', label: 'Rango', render: (item) => <span className="text-xs">{item.current_number} / {item.max_number}</span> },
-          { id: 'status', label: 'Estado', render: (item) => item.is_active ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />Activa</span> : 'Inactiva' },
+          { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openSeries(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} onClick={() => openSeries({ ...item, is_active: !item.is_active })} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => removeSeries(item)} /></div> },
         ]} />
         </>

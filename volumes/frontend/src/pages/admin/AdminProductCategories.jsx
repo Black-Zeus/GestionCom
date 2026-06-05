@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { productConfigService } from '@/services/admin/productConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -66,6 +67,7 @@ const AdminProductCategories = () => {
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
+  const [parentFilter, setParentFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [tablePageSize, setTablePageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -85,17 +87,29 @@ const AdminProductCategories = () => {
   };
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { setPage(0); }, [search, status, tablePageSize]);
+  useEffect(() => { setPage(0); }, [parentFilter, search, status, tablePageSize]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return categories.filter((item) => {
       const matchesStatus = status === 'all' || (status === 'active' && item.is_active) || (status === 'inactive' && !item.is_active);
+      const matchesParent = parentFilter === 'all' || (parentFilter === 'root' && !item.parent_id) || String(item.parent_id || '') === parentFilter;
       const matchesSearch = !term || [item.category_code, item.category_name, item.parent_name, item.category_path].filter(Boolean).some((value) => value.toLowerCase().includes(term));
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesParent && matchesSearch;
     });
-  }, [categories, search, status]);
+  }, [categories, parentFilter, search, status]);
   const visibleCategories = useMemo(() => filtered.slice(page * tablePageSize, page * tablePageSize + tablePageSize), [filtered, page, tablePageSize]);
+  const parentOptions = useMemo(() => [
+    { value: 'all', label: 'Todas las categorias' },
+    { value: 'root', label: 'Solo raiz' },
+    ...categories.filter((item) => !item.parent_id).map((item) => ({ value: String(item.id), label: item.category_name })),
+  ], [categories]);
+  const clearFilters = () => {
+    setSearch('');
+    setStatus('all');
+    setParentFilter('all');
+    setPage(0);
+  };
 
   const openModal = (category = null) => ModalManager.show({
     type: 'custom',
@@ -137,7 +151,7 @@ const AdminProductCategories = () => {
     { id: 'parent', label: 'Padre', sortable: true, sortValue: (item) => item.parent_name || '', render: (item) => item.parent_name || 'Raiz' },
     { id: 'level', label: 'Nivel', sortable: true, sortValue: (item) => item.category_level },
     { id: 'path', label: 'Ruta', render: (item) => <span className="text-xs text-slate-500">{item.category_path}</span> },
-    { id: 'status', label: 'Estado', render: (item) => <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${item.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{item.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}{item.is_active ? 'Activa' : 'Inactiva'}</span> },
+    { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
     { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openModal(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} disabled={busyId === item.id} onClick={() => toggle(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === item.id} onClick={() => remove(item)} /></div> },
   ];
 
@@ -145,7 +159,23 @@ const AdminProductCategories = () => {
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <div className="mb-5 flex flex-wrap justify-between gap-3"><div><h1 className="text-xl font-semibold">Categorias de productos</h1><p className="mt-1 text-sm text-slate-500">Mantenedor jerarquico para clasificar productos.</p></div><ActionButton label="Nueva" onClick={() => openModal()} /></div>
       <KpiBar items={[{ id: 'total', label: 'Total', value: stats.total, active: status === 'all', onClick: () => setStatus('all') }, { id: 'active', label: 'Activas', value: stats.active, active: status === 'active', onClick: () => setStatus('active') }, { id: 'inactive', label: 'Inactivas', value: stats.total - stats.active, active: status === 'inactive', onClick: () => setStatus('inactive') }, { id: 'roots', label: 'Raiz', value: stats.roots }]} className="mb-4" />
-      <FilterBar className="mb-4" searchValue={search} searchPlaceholder="Buscar categoria" onSearchChange={setSearch} onSearchSubmit={() => {}} actions={<ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />} />
+      <FilterBar
+        className="mb-4"
+        searchValue={search}
+        searchPlaceholder="Buscar categoria"
+        onSearchChange={setSearch}
+        onSearchSubmit={() => {}}
+        fields={[
+          { id: 'status', value: status, onChange: setStatus, options: [{ value: 'all', label: 'Todos los estados' }, { value: 'active', label: 'Activas' }, { value: 'inactive', label: 'Inactivas' }] },
+          { id: 'parent', value: parentFilter, onChange: setParentFilter, options: parentOptions },
+        ]}
+        actions={(
+          <>
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={clearFilters} />
+          </>
+        )}
+      />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <DataTable
         columns={columns}

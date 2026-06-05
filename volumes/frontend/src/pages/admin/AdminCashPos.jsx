@@ -1,12 +1,13 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CreditCard, EyeOff, MapPin, Pencil, RefreshCw, ShieldCheck, Trash2, Wifi, XCircle } from 'lucide-react';
+import { CreditCard, EyeOff, MapPin, Pencil, RefreshCw, ShieldCheck, Trash2, Wifi, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { cashRegistersService } from '@/services/admin/cashRegistersService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -536,12 +537,7 @@ const AdminCashPos = () => {
       label: 'Estado',
       sortable: true,
       sortValue: (cashRegister) => cashRegister.is_active,
-      render: (cashRegister) => (
-        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${cashRegister.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-          {cashRegister.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-          {cashRegister.is_active ? 'Activa' : 'Inactiva'}
-        </span>
-      ),
+      render: (cashRegister) => <StatusBadge variant={cashRegister.is_active ? 'active' : 'inactive'}>{cashRegister.is_active ? 'Activa' : 'Inactiva'}</StatusBadge>,
     },
     {
       id: 'updated',
@@ -588,25 +584,17 @@ const AdminCashPos = () => {
         fields={filterFields}
         actions={(
           <>
-            <button
-              type="button"
-              onClick={loadCashRegisters}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refrescar
-            </button>
-            <button
-              type="button"
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadCashRegisters} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton
+              label="Limpiar"
+              icon={XCircle}
+              variant="neutral"
               onClick={() => {
                 setSearch('');
                 setPage(0);
                 setFilters({ status: 'all', warehouseId: 'all', supervisor: 'all' });
               }}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Limpiar
-            </button>
+            />
           </>
         )}
       />

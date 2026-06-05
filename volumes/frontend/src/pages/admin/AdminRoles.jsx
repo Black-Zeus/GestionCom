@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, Search, ShieldOff, UserRoundCog, Users } from 'lucide-react';
+import { Eye, EyeOff, RefreshCw, Search, UserRoundCog, Users, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -8,6 +8,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { rolesService } from '@/services/admin/rolesService';
 import { usersService } from '@/services/admin/usersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -765,11 +766,7 @@ const AdminRoles = () => {
       label: 'Estado',
       sortable: true,
       sortValue: (role) => role.is_active,
-      render: (role) => (
-        <span className={`rounded-md px-2 py-1 text-xs font-medium ${role.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-          {role.is_active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      render: (role) => <StatusBadge variant={role.is_active ? 'active' : 'inactive'}>{role.is_active ? 'Activo' : 'Inactivo'}</StatusBadge>,
     },
     {
       id: 'actions',
@@ -781,7 +778,7 @@ const AdminRoles = () => {
           <RowActionButton label="Usuarios del perfil" icon={Users} onClick={() => openRoleUsersModal(role)} />
           <RowActionButton
             label="Desactivar perfil"
-            icon={ShieldOff}
+            icon={EyeOff}
             variant="danger"
             disabled={!role.is_active || busyRoleId === role.id}
             onClick={() => deactivateRole(role)}
@@ -815,25 +812,17 @@ const AdminRoles = () => {
         gridClassName="lg:grid-cols-[minmax(280px,1fr)_180px_180px_auto_auto]"
         actions={(
           <>
-            <button
-              type="button"
-              onClick={loadRoles}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refrescar
-            </button>
-            <button
-              type="button"
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadRoles} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton
+              label="Limpiar"
+              icon={XCircle}
+              variant="neutral"
               onClick={() => {
                 setSearch('');
                 setPage(0);
                 setFilters({ status: 'active', type: 'all' });
               }}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Limpiar
-            </button>
+            />
           </>
         )}
       />

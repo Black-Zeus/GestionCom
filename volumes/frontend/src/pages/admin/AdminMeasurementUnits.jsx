@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { measurementUnitsService } from '@/services/admin/measurementUnitsService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
@@ -319,7 +320,7 @@ const AdminMeasurementUnits = () => {
     { id: 'base', label: 'Base', sortable: true, sortValue: (unit) => unit.base_unit_code || '', render: (unit) => unit.unit_type === 'DERIVED' ? <><div>{unit.base_unit_name || 'Sin base'}</div><div className="font-mono text-xs text-slate-500">{unit.base_unit_code || ''}</div></> : <span className="text-slate-500">No aplica</span> },
     { id: 'factor', label: 'Factor', sortable: true, sortValue: (unit) => unit.conversion_factor, render: (unit) => Number(unit.conversion_factor || 1).toLocaleString('es-CL', { maximumFractionDigits: 6 }) },
     { id: 'decimals', label: 'Decimales', sortable: true, sortValue: (unit) => unit.allow_decimals, render: (unit) => unit.allow_decimals ? 'Si' : 'No' },
-    { id: 'status', label: 'Estado', sortable: true, sortValue: (unit) => unit.is_active, render: (unit) => <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${unit.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{unit.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}{unit.is_active ? 'Activa' : 'Inactiva'}</span> },
+    { id: 'status', label: 'Estado', sortable: true, sortValue: (unit) => unit.is_active, render: (unit) => <StatusBadge variant={unit.is_active ? 'active' : 'inactive'}>{unit.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
     { id: 'updated', label: 'Actualizada', sortable: true, sortValue: (unit) => unit.updated_at || '', render: (unit) => formatDateTime(unit.updated_at, timezone) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (unit) => <div className="flex justify-end gap-2"><RowActionButton label="Editar unidad" icon={Pencil} disabled={busyUnitId === unit.id} onClick={() => openEditModal(unit)} /><RowActionButton label={unit.is_active ? 'Desactivar unidad' : 'Activar unidad'} icon={unit.is_active ? EyeOff : CheckCircle2} disabled={busyUnitId === unit.id} variant={unit.is_active ? 'danger' : 'neutral'} onClick={() => toggleUnit(unit)} /><RowActionButton label="Eliminar unidad" icon={Trash2} disabled={busyUnitId === unit.id} variant="danger" onClick={() => removeUnit(unit)} /></div> },
   ];

@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { paymentMethodsService } from '@/services/admin/paymentMethodsService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
@@ -356,7 +357,7 @@ const AdminPaymentMethods = () => {
         );
       },
     },
-    { id: 'status', label: 'Estado', sortable: true, sortValue: (method) => method.is_active, render: (method) => <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${method.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{method.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}{method.is_active ? 'Activo' : 'Inactivo'}</span> },
+    { id: 'status', label: 'Estado', sortable: true, sortValue: (method) => method.is_active, render: (method) => <StatusBadge variant={method.is_active ? 'active' : 'inactive'}>{method.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
     { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (method) => method.updated_at || '', render: (method) => formatDateTime(method.updated_at, timezone) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (method) => <div className="flex justify-end gap-2"><RowActionButton label="Editar metodo" icon={Pencil} disabled={busyMethodId === method.id} onClick={() => openEditModal(method)} /><RowActionButton label={method.is_active ? 'Desactivar metodo' : 'Activar metodo'} icon={method.is_active ? EyeOff : CheckCircle2} disabled={busyMethodId === method.id} variant={method.is_active ? 'danger' : 'neutral'} onClick={() => toggleMethod(method)} /><RowActionButton label="Eliminar metodo" icon={Trash2} disabled={busyMethodId === method.id} variant="danger" onClick={() => removeMethod(method)} /></div> },
   ];

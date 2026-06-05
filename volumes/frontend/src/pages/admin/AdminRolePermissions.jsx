@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, KeyRound, RefreshCw, Save, Search, ShieldCheck,
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { rolesService } from '@/services/admin/rolesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -551,11 +552,7 @@ const AdminRolePermissions = () => {
           {
             id: 'status',
             label: 'Estado',
-            render: (role) => (
-              <span className={`rounded-md px-2 py-1 text-xs font-medium ${role.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-                {role.status_label}
-              </span>
-            ),
+            render: (role) => <StatusBadge variant={role.is_active ? 'active' : 'inactive'}>{role.status_label}</StatusBadge>,
           },
         ]}
       />

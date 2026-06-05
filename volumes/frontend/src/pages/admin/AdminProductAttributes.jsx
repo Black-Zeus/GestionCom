@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, EyeOff, Layers3, ListChecks, Pencil, RefreshCw, Tags, Trash2 } from 'lucide-react';
+import { Layers3, ListChecks, Pencil, RefreshCw, Tags, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -8,6 +8,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { productConfigService } from '@/services/admin/productConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -197,7 +198,6 @@ const AdminProductAttributes = () => {
         ]}
       />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      <div className="mb-4 flex justify-end"><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} /></div>
       <FilterBar
         className="mb-4"
         searchValue={search}
@@ -205,12 +205,17 @@ const AdminProductAttributes = () => {
         onSearchChange={setSearch}
         onSearchSubmit={() => {}}
         fields={filterFields}
-        actions={<ActionButton label="Limpiar" icon={EyeOff} variant="neutral" onClick={clearFilters} />}
+        actions={(
+          <>
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={clearFilters} />
+          </>
+        )}
       />
       {activeTab === 'groups' && (
         <DataTable loading={loading} data={visibleData} footer={pagination} columns={[
           { id: 'group', label: 'Grupo', render: (item) => <><div className="font-medium">{item.group_name}</div><div className="font-mono text-xs text-slate-500">{item.group_code}</div></> },
-          { id: 'active', label: 'Estado', render: (item) => item.is_active ? 'Activo' : 'Inactivo' },
+          { id: 'active', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openGroup(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('grupo', () => productConfigService.removeGroup(item.id))} /></div> },
         ]} />
       )}
@@ -220,6 +225,7 @@ const AdminProductAttributes = () => {
           { id: 'group', label: 'Grupo', render: (item) => item.group_name },
           { id: 'type', label: 'Tipo', render: (item) => typeLabels[item.attribute_type] || item.attribute_type },
           { id: 'flags', label: 'Flags', render: (item) => <div className="text-xs text-slate-500">{item.is_required ? 'Requerido' : 'Opcional'} / {item.affects_sku ? 'SKU' : 'No SKU'}</div> },
+          { id: 'active', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openAttribute(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('atributo', () => productConfigService.removeAttribute(item.id))} /></div> },
         ]} />
       )}
@@ -230,7 +236,7 @@ const AdminProductAttributes = () => {
         </div>
         <DataTable loading={loading} data={visibleData} footer={pagination} columns={[
           { id: 'value', label: 'Valor', render: (item) => <><div className="font-medium">{item.value_name}</div><div className="font-mono text-xs text-slate-500">{item.value_code}</div></> },
-          { id: 'active', label: 'Estado', render: (item) => item.is_active ? <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" />Activo</span> : 'Inactivo' },
+          { id: 'active', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openValue(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('valor', () => productConfigService.removeValue(item.id))} /></div> },
         ]} />
         </>

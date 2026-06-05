@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Eye, EyeOff, KeyRound, Pencil, RefreshCw, Search, ShieldAlert, SlidersHorizontal, UserCog, XCircle } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, KeyRound, Pencil, RefreshCw, Search, SlidersHorizontal, UserCog, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -8,6 +8,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { rolesService } from '@/services/admin/rolesService';
 import { usersService } from '@/services/admin/usersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -1103,12 +1104,7 @@ const AdminUsers = () => {
       label: 'Estado',
       sortable: true,
       sortValue: (user) => user.is_active,
-      render: (user) => (
-        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${user.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>
-          {user.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-          {user.is_active ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      render: (user) => <StatusBadge variant={user.is_active ? 'active' : 'inactive'}>{user.is_active ? 'Activo' : 'Inactivo'}</StatusBadge>,
     },
     {
       id: 'roles',
@@ -1136,7 +1132,7 @@ const AdminUsers = () => {
           <RowActionButton label="Administrar roles" icon={UserCog} disabled={busyUserId === user.id} onClick={() => openRolesModal(user)} />
           <RowActionButton label="Permisos especiales" icon={SlidersHorizontal} disabled={busyUserId === user.id} onClick={() => navigate(`/admin/users/permissions?userId=${user.id}`)} />
           <RowActionButton label="Cambiar clave" icon={KeyRound} disabled={busyUserId === user.id} onClick={() => openPasswordModal(user)} />
-          <RowActionButton label={user.is_active ? 'Desactivar usuario' : 'Activar usuario'} icon={ShieldAlert} disabled={busyUserId === user.id} variant={user.is_active ? 'danger' : 'neutral'} onClick={() => toggleUser(user)} />
+          <RowActionButton label={user.is_active ? 'Desactivar usuario' : 'Activar usuario'} icon={user.is_active ? EyeOff : CheckCircle2} disabled={busyUserId === user.id} variant={user.is_active ? 'danger' : 'neutral'} onClick={() => toggleUser(user)} />
         </div>
       ),
     },
@@ -1165,25 +1161,17 @@ const AdminUsers = () => {
         fields={filterFields}
         actions={(
           <>
-            <button
-              type="button"
-              onClick={loadUsers}
-              className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refrescar
-            </button>
-            <button
-              type="button"
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadUsers} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton
+              label="Limpiar"
+              icon={XCircle}
+              variant="neutral"
               onClick={() => {
                 setSearch('');
                 setPage(0);
                 setFilters({ status: 'all', roleCode: 'all', recent: 'all' });
               }}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              Limpiar
-            </button>
+            />
           </>
         )}
       />

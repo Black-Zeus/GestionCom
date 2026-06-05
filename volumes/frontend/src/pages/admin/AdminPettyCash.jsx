@@ -8,6 +8,7 @@ import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
+import StatusBadge from '@/components/common/data/StatusBadge';
 import { pettyCashAdminService } from '@/services/admin/pettyCashAdminService';
 import { usersService } from '@/services/admin/usersService';
 import { warehousesService } from '@/services/admin/warehousesService';
@@ -59,6 +60,11 @@ const getUserLabel = (user) => (
 );
 
 const getFundStatusLabel = (status) => fundStatuses.find((item) => item.value === status)?.label || status || 'Activo';
+const getFundStatusVariant = (status) => {
+  if (status === 'ACTIVE') return 'active';
+  if (status === 'SUSPENDED') return 'warning';
+  return 'inactive';
+};
 
 const fundToForm = (fund) => ({
   fund_code: fund.fund_code || '',
@@ -519,11 +525,12 @@ const AdminPettyCash = () => {
     ];
 
   const fundColumns = [
-    { id: 'fund', label: 'Fondo', sortable: true, sortValue: (fund) => fund.fund_code, render: (fund) => <><div className="font-medium text-slate-950 dark:text-white">{fund.fund_code}</div><div className="text-xs text-slate-500">{getFundStatusLabel(fund.fund_status)}</div></> },
+    { id: 'fund', label: 'Fondo', sortable: true, sortValue: (fund) => fund.fund_code, render: (fund) => <><div className="font-medium text-slate-950 dark:text-white">{fund.fund_code}</div><div className="text-xs text-slate-500">{fund.fund_name || 'Fondo de caja chica'}</div></> },
     { id: 'warehouse', label: 'Bodega', sortable: true, sortValue: (fund) => fund.warehouse_name || '', render: (fund) => <><div>{fund.warehouse_name || getWarehouseLabel(warehousesById.get(Number(fund.warehouse_id)))}</div><div className="font-mono text-xs text-slate-500">{fund.warehouse_code || warehousesById.get(Number(fund.warehouse_id))?.warehouse_code || ''}</div></> },
     { id: 'responsible', label: 'Responsable', sortable: true, sortValue: (fund) => fund.responsible_name || fund.responsible_username || '', render: (fund) => fund.responsible_name || fund.responsible_username || getUserLabel(usersById.get(Number(fund.responsible_user_id))) },
     { id: 'balance', label: 'Saldo', sortable: true, sortValue: (fund) => fund.current_balance, render: (fund) => <><div className="font-medium">{formatCurrency(fund.current_balance)}</div><div className="text-xs text-slate-500">Inicial {formatCurrency(fund.initial_amount)}</div></> },
     { id: 'activity', label: 'Movimientos', sortable: true, sortValue: (fund) => fund.total_expenses, render: (fund) => <><div>Gastos {formatCurrency(fund.total_expenses)}</div><div className="text-xs text-slate-500">Reposiciones {formatCurrency(fund.total_replenishments)}</div></> },
+    { id: 'status', label: 'Estado', sortable: true, sortValue: (fund) => fund.fund_status, render: (fund) => <StatusBadge variant={getFundStatusVariant(fund.fund_status)}>{getFundStatusLabel(fund.fund_status)}</StatusBadge> },
     { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (fund) => fund.updated_at || '', render: (fund) => formatDateTime(fund.updated_at, timezone) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => <div className="flex justify-end gap-2"><RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}`} onClick={() => openFundModal(fund)} /><RowActionButton label={fund.fund_status === 'ACTIVE' ? 'Suspender fondo' : 'Activar fondo'} icon={fund.fund_status === 'ACTIVE' ? EyeOff : ShieldCheck} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'ACTIVE' ? 'danger' : 'neutral'} onClick={() => changeFundStatus(fund, fund.fund_status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')} /><RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => deleteFund(fund)} /></div> },
   ];
@@ -532,9 +539,9 @@ const AdminPettyCash = () => {
     { id: 'category', label: 'Categoria', sortable: true, sortValue: (category) => category.category_name, render: (category) => <><div className="font-medium text-slate-950 dark:text-white">{category.category_name}</div><div className="font-mono text-xs text-slate-500">{category.category_code}</div></> },
     { id: 'description', label: 'Descripcion', cellClassName: 'text-slate-600 dark:text-slate-300', render: (category) => category.category_description || 'Sin descripcion' },
     { id: 'limit', label: 'Limite', sortable: true, sortValue: (category) => category.max_amount_per_expense || 0, render: (category) => category.max_amount_per_expense == null ? 'Sin limite' : formatCurrency(category.max_amount_per_expense) },
-    { id: 'evidence', label: 'Comprobante', sortable: true, sortValue: (category) => category.requires_evidence, render: (category) => <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${category.requires_evidence ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}><ReceiptText className="h-3.5 w-3.5" />{category.requires_evidence ? 'Requerido' : 'Opcional'}</span> },
-    { id: 'status', label: 'Estado', sortable: true, sortValue: (category) => category.is_active, render: (category) => <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${category.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}>{category.is_active ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}{category.is_active ? 'Activa' : 'Inactiva'}</span> },
-    { id: 'actions', label: 'Acciones', align: 'right', render: (category) => <div className="flex justify-end gap-2"><RowActionButton label="Editar categoria" icon={Pencil} disabled={busyId === `category-${category.id}`} onClick={() => openCategoryModal(category)} /><RowActionButton label={category.is_active ? 'Desactivar categoria' : 'Activar categoria'} icon={category.is_active ? EyeOff : ShieldCheck} disabled={busyId === `category-${category.id}`} variant={category.is_active ? 'danger' : 'neutral'} onClick={() => toggleCategory(category)} /><RowActionButton label="Eliminar categoria" icon={Trash2} disabled={busyId === `category-${category.id}`} variant="danger" onClick={() => deleteCategory(category)} /></div> },
+    { id: 'evidence', label: 'Comprobante', sortable: true, sortValue: (category) => category.requires_evidence, render: (category) => <StatusBadge variant={category.requires_evidence ? 'info' : 'inactive'} icon={ReceiptText}>{category.requires_evidence ? 'Requerido' : 'Opcional'}</StatusBadge> },
+    { id: 'status', label: 'Estado', sortable: true, sortValue: (category) => category.is_active, render: (category) => <StatusBadge variant={category.is_active ? 'active' : 'inactive'}>{category.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
+    { id: 'actions', label: 'Acciones', align: 'right', render: (category) => <div className="flex justify-end gap-2"><RowActionButton label="Editar categoria" icon={Pencil} disabled={busyId === `category-${category.id}`} onClick={() => openCategoryModal(category)} /><RowActionButton label={category.is_active ? 'Desactivar categoria' : 'Activar categoria'} icon={category.is_active ? EyeOff : CheckCircle2} disabled={busyId === `category-${category.id}`} variant={category.is_active ? 'danger' : 'neutral'} onClick={() => toggleCategory(category)} /><RowActionButton label="Eliminar categoria" icon={Trash2} disabled={busyId === `category-${category.id}`} variant="danger" onClick={() => deleteCategory(category)} /></div> },
   ];
 
   return (
