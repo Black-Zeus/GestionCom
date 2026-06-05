@@ -15,6 +15,7 @@ const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const AdminWarehouses = lazy(() => import('@/pages/admin/AdminWarehouses'));
 const AdminCashPos = lazy(() => import('@/pages/admin/AdminCashPos'));
+const AdminPettyCash = lazy(() => import('@/pages/admin/AdminPettyCash'));
 const AdminRolePermissions = lazy(() => import('@/pages/admin/AdminRolePermissions'));
 const AdminUserPermissions = lazy(() => import('@/pages/admin/AdminUserPermissions'));
 const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
@@ -24,6 +25,7 @@ const moduleComponents = {
   roles: AdminRoles,
   warehouses: AdminWarehouses,
   'cash-pos-admin': AdminCashPos,
+  'petty-cash-admin': AdminPettyCash,
 };
 
 const Page = ({ children }) => (

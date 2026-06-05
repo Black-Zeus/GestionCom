@@ -139,6 +139,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Cash Registers"]
     },
     {
+        "name": "petty_cash_admin",
+        "prefix": "/petty-cash-admin",
+        "tags": ["Petty Cash Admin"]
+    },
+    {
         "name": "system",
         "prefix": "/system",
         "tags": ["System"]
@@ -194,6 +199,7 @@ async def root(request: Request):
             "users": "/users",
             "warehouses": "/warehouses",
             "cash_registers": "/cash-registers",
+            "petty_cash_admin": "/petty-cash-admin",
             "system": "/system"
         }
     }
