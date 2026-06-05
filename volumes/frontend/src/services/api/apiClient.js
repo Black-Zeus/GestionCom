@@ -9,6 +9,15 @@ const resolveApiUrl = () => {
     return '/api';
   }
 
+  try {
+    const apiUrl = new URL(configuredUrl, window.location.origin);
+    const sameLocalOrigin = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const pointsToDirectBackend = ['localhost', '127.0.0.1'].includes(apiUrl.hostname) && apiUrl.port === '8000';
+    if (sameLocalOrigin && pointsToDirectBackend) return '/api';
+  } catch {
+    return '/api';
+  }
+
   return configuredUrl;
 };
 
@@ -22,6 +31,11 @@ const apiClient = axios.create({
 });
 
 let refreshPromise = null;
+
+const isAuthRecoveryEndpoint = (url = '') => (
+  url.includes('/auth/login')
+  || url.includes('/auth/refresh')
+);
 
 const refreshSession = async () => {
   const refreshToken = tokenStorage.getRefreshToken();
@@ -70,7 +84,7 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
 
-    if (status !== 401 || originalRequest?._retry) {
+    if (status !== 401 || originalRequest?._retry || isAuthRecoveryEndpoint(originalRequest?.url)) {
       return Promise.reject(error);
     }
 

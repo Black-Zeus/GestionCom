@@ -4,6 +4,7 @@ Manejador de respuestas unificadas para toda la aplicación
 """
 import uuid
 import time
+import re
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Union
 from pydantic import BaseModel, Field
@@ -13,6 +14,28 @@ from fastapi.responses import JSONResponse
 from .constants import HTTPStatus, ErrorCode, ErrorType, ERROR_MESSAGES 
 from .exceptions import BaseAppException
 from .config import settings
+
+
+SENSITIVE_DETAIL_PATTERNS = [
+    (re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]+", re.IGNORECASE), "Bearer [redacted]"),
+    (re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"), "[jwt-redacted]"),
+    (re.compile(r"(?i)(access_token|refresh_token|token|password|secret|authorization)=([^&\s]+)"), r"\1=[redacted]"),
+    (re.compile(r"(?i)(password_hash|object_key_full|object_key_thumb|bucket_name|MINIO_ROOT_PASSWORD|MYSQL_ROOT_PASSWORD|REDIS_PASSWORD)\s*[:=]\s*[^,\s}]+"), r"\1=[redacted]"),
+    (re.compile(r"https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0|mariadb|mysql|redis|minio|backend-api|events-orchestrator)(?::\d+)?[^\s,)]*", re.IGNORECASE), "[internal-url]"),
+    (re.compile(r"\b(?:mariadb|mysql|redis|minio|backend-api|events-orchestrator):\d+\b", re.IGNORECASE), "[internal-service]"),
+    (re.compile(r"(?i)(/app[^,\s)]*|/var/log[^,\s)]*|/run/secrets[^,\s)]*|/home/[^,\s)]+|/tmp/[^,\s)]+)"), "[internal-path]"),
+]
+
+
+def sanitize_public_error_detail(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+
+    sanitized = str(value)
+    for pattern, replacement in SENSITIVE_DETAIL_PATTERNS:
+        sanitized = pattern.sub(replacement, sanitized)
+
+    return sanitized[:500]
 
 
 class ErrorInfo(BaseModel):
@@ -127,24 +150,21 @@ class ResponseManager:
         if error_code and error_code in ERROR_MESSAGES:
             error_description = ERROR_MESSAGES[error_code]
         
-        # Solo incluir stack trace en desarrollo
-        include_stack = settings.ENABLE_STACK_TRACE and settings.is_development
-        
         response_data = ApiResponse(
             success=False,
             status=status_code,
             timestamp=datetime.now(timezone.utc).isoformat(),
             path=path,
             method=method,
-            message=message,
+            message=sanitize_public_error_detail(message) or "Error en la solicitud",
             data=None,
             error=ErrorInfo(
                 code=error_code,
                 type=error_type,
                 description=error_description,
-                details=details,
+                details=sanitize_public_error_detail(details),
                 field=field,
-                stack=stack_trace if include_stack else None
+                stack=None
             ),
             meta=MetaInfo(
                 trace_id=cls._get_trace_id(request),

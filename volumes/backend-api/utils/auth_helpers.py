@@ -167,7 +167,7 @@ class AuthHelper:
             
             return ResponseManager.internal_server_error(
                 message="Error inesperado durante la autenticación",
-                details=str(e),
+                details="No fue posible completar la autenticación",
                 request=request
             )
     
@@ -325,7 +325,7 @@ class AuthHelper:
                 logger.error(f"Traceback completo:", exc_info=True)
                 return ResponseManager.internal_server_error(
                     message="Error en la autenticación",
-                    details=str(e),
+                    details="No fue posible validar las credenciales",
                     request=request
                 )
   
@@ -718,7 +718,7 @@ class AuthHelper:
             elif "expired" in error_str:
                 return {"valid": False, "status": "expired", "reason": "Token ha expirado"}
             else:
-                return {"valid": False, "status": "invalid", "reason": f"Token inválido: {str(e)}"}
+                return {"valid": False, "status": "invalid", "reason": "Token inválido"}
     
     # ==========================================
     # LOGOUT
@@ -755,7 +755,7 @@ class AuthHelper:
             
         except Exception as e:
             logger.error(f"Error en logout: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "No fue posible cerrar la sesión"}
         
     # ==========================================
     # AGREGAR ESTE MÉTODO A LA CLASE AuthHelper
@@ -825,7 +825,7 @@ class AuthHelper:
                 else:
                     return {
                         "success": False,
-                        "error": f"Refresh token inválido: {str(e)}",
+                        "error": "Refresh token inválido",
                         "reason": "invalid"
                     }
             
@@ -860,7 +860,7 @@ class AuthHelper:
             logger.error(f"Error en refresh token: {e}")
             return {
                 "success": False,
-                "error": f"Error inesperado: {str(e)}",
+                "error": "Error inesperado durante la renovación",
                 "reason": "internal_error"
             }
 

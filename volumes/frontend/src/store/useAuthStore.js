@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { authService } from '@/services/auth/authService';
 import { tokenStorage } from '@/services/api/tokenStorage';
 import { appConfig } from '@/config/appConfig';
+import { getBackendMessage } from '@/services/ui/notify';
 
 const demoUser = {
   id: 'demo-admin',
@@ -87,7 +88,7 @@ export const useAuthStore = create(
             return session;
           }
 
-          const message = error.response?.data?.message || error.message || 'No fue posible iniciar sesion';
+          const message = getBackendMessage(error, 'No fue posible iniciar sesion');
           set({ status: 'error', error: message });
           throw error;
         }

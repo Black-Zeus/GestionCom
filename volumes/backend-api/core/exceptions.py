@@ -82,7 +82,7 @@ class TokenExpiredException(AuthenticationException):
         super().__init__(
             message="Token ha expirado",
             error_code=ErrorCode.AUTH_TOKEN_EXPIRED,
-            details=f"El {token_type} token ha expirado, solicite uno nuevo"
+            details="La sesión ha expirado, solicite una nueva autenticación"
         )
 
 
@@ -104,7 +104,7 @@ class TokenMissingException(AuthenticationException):
         super().__init__(
             message="Token de autenticación requerido",
             error_code=ErrorCode.AUTH_TOKEN_MISSING,
-            details="Debe proporcionar un token de autenticación válido en el header Authorization"
+            details="La sesión no está disponible o no es válida"
         )
 
 
@@ -115,7 +115,7 @@ class TokenBlacklistedException(AuthenticationException):
         super().__init__(
             message="Token ha sido revocado",
             error_code=ErrorCode.AUTH_TOKEN_BLACKLISTED,
-            details=reason or "El token ha sido invalidado y ya no puede ser utilizado"
+            details="La sesión ya no puede ser utilizada"
         )
 
 

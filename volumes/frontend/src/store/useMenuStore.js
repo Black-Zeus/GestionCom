@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { menuService } from '@/services/menu/menuService';
+import { getBackendMessage } from '@/services/ui/notify';
 
 const menuCodeToId = (code) => String(code || '')
   .trim()
@@ -76,7 +77,7 @@ export const useMenuStore = create((set, get) => ({
     } catch (error) {
       set({
         status: 'error',
-        error: error.response?.data?.message || error.message || 'No fue posible cargar el menu',
+        error: getBackendMessage(error, 'No fue posible cargar el menu'),
       });
       throw error;
     }

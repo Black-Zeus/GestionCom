@@ -87,7 +87,13 @@ app.openapi = customize_openapi
 # MIDDLEWARE CONFIGURATION
 # ==========================================
 
-# CORS
+# Agregar middleware de trace
+app.add_middleware(TraceMiddleware)
+
+# Agregar middleware de autenticación
+app.add_middleware(SimpleAuthMiddleware)
+
+# CORS debe quedar como capa externa para cubrir tambien respuestas cortadas por middleware.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,
@@ -95,12 +101,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Agregar middleware de trace
-app.add_middleware(TraceMiddleware)
-
-# Agregar middleware de autenticación
-app.add_middleware(SimpleAuthMiddleware)
 
 # ==========================================
 # CONFIGURACIÓN DE ROUTERS
