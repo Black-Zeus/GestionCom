@@ -27,6 +27,7 @@ const SimpleFormContent = ({ fields = [], initialValues = {}, onSubmit, onClose 
             <span className="font-medium">{field.label}</span>
             {field.type === 'select' ? (
               <select className={`${fieldClassName} bg-white dark:bg-slate-950`} value={form[field.id] ?? ''} onChange={(event) => setField(field.id, event.target.value)} required={field.required}>
+                <option value="">{field.required ? 'Seleccione una opcion' : 'Sin seleccion'}</option>
                 {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             ) : field.type === 'checkbox' ? (

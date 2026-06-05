@@ -8,6 +8,7 @@ import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { paymentMethodsService } from '@/services/admin/paymentMethodsService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
@@ -32,32 +33,6 @@ const methodTypeLabels = {
   TRANSFER: 'Transferencia',
   OTHER: 'Otro',
 };
-
-const currencyOptions = [
-  { value: 'CLP', label: 'CLP - $ - Peso chileno' },
-  { value: 'USD', label: 'USD - US$ - Dolar estadounidense' },
-  { value: 'EUR', label: 'EUR - EUR - Euro' },
-  { value: 'ARS', label: 'ARS - $ - Peso argentino' },
-  { value: 'BRL', label: 'BRL - R$ - Real brasileno' },
-  { value: 'PEN', label: 'PEN - S/ - Sol peruano' },
-  { value: 'COP', label: 'COP - $ - Peso colombiano' },
-  { value: 'MXN', label: 'MXN - $ - Peso mexicano' },
-  { value: 'UYU', label: 'UYU - $U - Peso uruguayo' },
-  { value: 'BOB', label: 'BOB - Bs - Boliviano' },
-  { value: 'PYG', label: 'PYG - Gs - Guarani paraguayo' },
-  { value: 'GBP', label: 'GBP - GBP - Libra esterlina' },
-  { value: 'CAD', label: 'CAD - C$ - Dolar canadiense' },
-  { value: 'AUD', label: 'AUD - A$ - Dolar australiano' },
-  { value: 'CHF', label: 'CHF - CHF - Franco suizo' },
-  { value: 'JPY', label: 'JPY - JPY - Yen japones' },
-  { value: 'CNY', label: 'CNY - CNY - Yuan chino' },
-];
-
-const currencyMeta = currencyOptions.reduce((accumulator, currency) => {
-  const [code, symbol, name] = currency.label.split(' - ');
-  accumulator[currency.value] = { code, symbol, name };
-  return accumulator;
-}, {});
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
@@ -87,7 +62,7 @@ const toPaymentMethodPayload = (form) => ({
   is_active: Boolean(form.is_active),
 });
 
-const PaymentMethodFormModal = ({ mode = 'create', initialValues = emptyPaymentMethodForm, onSubmit, onClose }) => {
+const PaymentMethodFormModal = ({ mode = 'create', initialValues = emptyPaymentMethodForm, currencyOptions = [], onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
@@ -148,6 +123,7 @@ const PaymentMethodFormModal = ({ mode = 'create', initialValues = emptyPaymentM
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Moneda</span>
           <select className={selectClassName} value={form.currency_code} onChange={(event) => updateField('currency_code', event.target.value)} required>
+            {!currencyOptions.length && <option value="CLP">CLP</option>}
             {currencyOptions.map((currency) => <option key={currency.value} value={currency.value}>{currency.label}</option>)}
           </select>
         </label>
@@ -182,6 +158,7 @@ const PaymentMethodFormModal = ({ mode = 'create', initialValues = emptyPaymentM
 
 const AdminPaymentMethods = () => {
   const [methods, setMethods] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ status: 'all', type: 'all' });
   const [page, setPage] = useState(0);
@@ -199,6 +176,16 @@ const AdminPaymentMethods = () => {
     const electronic = methods.filter((method) => ['CARD', 'TRANSFER'].includes(method.method_type)).length;
     return { total, active, inactive: total - active, cash, electronic };
   }, [methods]);
+
+  const currencyOptions = useMemo(() => currencies.filter((currency) => currency.is_active !== false).map((currency) => ({
+    value: currency.currency_code,
+    label: `${currency.currency_code} - ${currency.currency_symbol} - ${currency.currency_name}`,
+  })), [currencies]);
+
+  const currencyMeta = useMemo(() => currencies.reduce((accumulator, currency) => {
+    accumulator[currency.currency_code] = { code: currency.currency_code, symbol: currency.currency_symbol, name: currency.currency_name };
+    return accumulator;
+  }, {}), [currencies]);
 
   const filteredMethods = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -224,7 +211,12 @@ const AdminPaymentMethods = () => {
     setLoading(true);
     setError('');
     try {
-      setMethods(await paymentMethodsService.list({ active_only: false, limit: 1000 }));
+      const [nextMethods, nextCurrencies] = await Promise.all([
+        paymentMethodsService.list({ active_only: false, limit: 1000 }),
+        adminMaintainersService.list('currencies'),
+      ]);
+      setMethods(nextMethods);
+      setCurrencies(nextCurrencies);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar metodos de pago.'));
     } finally {
@@ -250,6 +242,7 @@ const AdminPaymentMethods = () => {
       contentProps: {
         mode: 'create',
         initialValues: emptyPaymentMethodForm,
+        currencyOptions,
         onSubmit: async (payload) => {
           await notifyPromise(paymentMethodsService.create(payload), {
             loading: 'Creando metodo de pago...',
@@ -272,6 +265,7 @@ const AdminPaymentMethods = () => {
       contentProps: {
         mode: 'edit',
         initialValues: paymentMethodToForm(method),
+        currencyOptions,
         onSubmit: async (payload) => {
           await notifyPromise(paymentMethodsService.update(method.id, payload), {
             loading: 'Actualizando metodo de pago...',
