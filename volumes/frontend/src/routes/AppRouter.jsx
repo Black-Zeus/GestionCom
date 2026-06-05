@@ -21,6 +21,33 @@ const AdminMeasurementUnits = lazy(() => import('@/pages/admin/AdminMeasurementU
 const AdminProductCategories = lazy(() => import('@/pages/admin/AdminProductCategories'));
 const AdminProductAttributes = lazy(() => import('@/pages/admin/AdminProductAttributes'));
 const AdminDocumentSeries = lazy(() => import('@/pages/admin/AdminDocumentSeries'));
+const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
+const AdminPriceLists = lazy(() => import('@/pages/admin/AdminPriceLists'));
+const AdminTaxConfig = lazy(() => import('@/pages/admin/AdminTaxConfig'));
+const AdminCompanyConfig = lazy(() => import('@/pages/admin/AdminCompanyConfig'));
+const AdminCustomersMaintainers = lazy(() => import('@/pages/admin/AdminCustomersMaintainers'));
+const AdminCustomerAuthorized = lazy(() => import('@/pages/admin/AdminCustomerAuthorized'));
+const AdminCustomerCredit = lazy(() => import('@/pages/admin/AdminCustomerCredit'));
+const AdminSuppliersMaintainers = lazy(() => import('@/pages/admin/AdminSuppliersMaintainers'));
+const AdminSupplierContacts = lazy(() => import('@/pages/admin/AdminSupplierContacts'));
+const AdminSupplierProducts = lazy(() => import('@/pages/admin/AdminSupplierProducts'));
+const AdminProductSupportMaintainers = lazy(() => import('@/pages/admin/AdminProductSupportMaintainers'));
+const AdminProductBarcodes = lazy(() => import('@/pages/admin/AdminProductBarcodes'));
+const AdminProductUnits = lazy(() => import('@/pages/admin/AdminProductUnits'));
+const AdminProductMedia = lazy(() => import('@/pages/admin/AdminProductMedia'));
+const AdminInventoryMaintainers = lazy(() => import('@/pages/admin/AdminInventoryMaintainers'));
+const AdminStockCriticalConfig = lazy(() => import('@/pages/admin/AdminStockCriticalConfig'));
+const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
+const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
+const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
+const AdminFinanceMaintainers = lazy(() => import('@/pages/admin/AdminFinanceMaintainers'));
+const AdminFinanceCurrencies = lazy(() => import('@/pages/admin/AdminFinanceCurrencies'));
+const AdminBankReconciliationSettings = lazy(() => import('@/pages/admin/AdminBankReconciliationSettings'));
+const AdminDocumentTemplates = lazy(() => import('@/pages/admin/AdminDocumentTemplates'));
+const AdminNotificationSettings = lazy(() => import('@/pages/admin/AdminNotificationSettings'));
+const NotificationInbox = lazy(() => import('@/pages/notifications/NotificationInbox'));
+const Profile = lazy(() => import('@/pages/profile/Profile'));
+const GlobalSearchResults = lazy(() => import('@/pages/search/GlobalSearchResults'));
 const AdminRolePermissions = lazy(() => import('@/pages/admin/AdminRolePermissions'));
 const AdminUserPermissions = lazy(() => import('@/pages/admin/AdminUserPermissions'));
 const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
@@ -36,6 +63,32 @@ const moduleComponents = {
   categories: AdminProductCategories,
   'product-attributes': AdminProductAttributes,
   'document-series': AdminDocumentSeries,
+  products: AdminProducts,
+  'price-lists': AdminPriceLists,
+  'tax-config': AdminTaxConfig,
+  'company-config': AdminCompanyConfig,
+  customers: AdminCustomersMaintainers,
+  'authorized-persons': AdminCustomerAuthorized,
+  'customer-credit': AdminCustomerCredit,
+  suppliers: AdminSuppliersMaintainers,
+  'supplier-contacts': AdminSupplierContacts,
+  'supplier-products': AdminSupplierProducts,
+  'product-brand-models': AdminProductSupportMaintainers,
+  barcodes: AdminProductBarcodes,
+  'product-units': AdminProductUnits,
+  'product-media': AdminProductMedia,
+  'warehouse-zones': AdminInventoryMaintainers,
+  'stock-critical-config': AdminStockCriticalConfig,
+  'system-parameters': AdminSystemParameterMaintainers,
+  promotions: AdminSalesConfigMaintainers,
+  'return-reasons': AdminReturnReasons,
+  'finance-banking': AdminFinanceMaintainers,
+  'finance-currencies': AdminFinanceCurrencies,
+  'bank-reconciliation-settings': AdminBankReconciliationSettings,
+  'document-templates': AdminDocumentTemplates,
+  'notification-settings': AdminNotificationSettings,
+  notifications: NotificationInbox,
+  profile: Profile,
 };
 
 const Page = ({ children }) => (
@@ -73,6 +126,7 @@ const AppRouter = () => (
             </Page>
           )}
         />
+        <Route path="search" element={<Page><GlobalSearchResults /></Page>} />
         {navigablePages.map((module) => {
           const ModuleComponent = moduleComponents[module.id] || UnderConstruction;
           const moduleContent = <ModuleComponent />;

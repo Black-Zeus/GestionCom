@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, KeyRound, Pencil, RefreshCw, Search, SlidersHorizontal, UserCog, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -734,9 +734,11 @@ const UserRolesModal = ({ user, onSubmit, onClose }) => {
 
 const AdminUsers = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledDeepLinkRef = useRef('');
   const [users, setUsers] = useState([]);
   const [roleOptions, setRoleOptions] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [filters, setFilters] = useState({
     status: 'all',
     roleCode: 'all',
@@ -861,6 +863,15 @@ const AdminUsers = () => {
     loadRoles();
   }, []);
 
+  useEffect(() => {
+    const nextSearch = searchParams.get('search') || '';
+    if (nextSearch !== search) {
+      setSearch(nextSearch);
+      setPage(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const openCreateModal = () => {
     ModalManager.show({
       type: 'custom',
@@ -920,6 +931,24 @@ const AdminUsers = () => {
       },
     });
   };
+
+  useEffect(() => {
+    const openMode = searchParams.get('open');
+    const recordId = Number(searchParams.get('id'));
+    const deepLinkKey = `${openMode}:${recordId}`;
+    if (loading || openMode !== 'edit' || !recordId || handledDeepLinkRef.current === deepLinkKey) return;
+
+    const targetUser = users.find((user) => Number(user.id) === recordId);
+    if (!targetUser) return;
+
+    handledDeepLinkRef.current = deepLinkKey;
+    openEditModal(targetUser);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('open');
+    nextParams.delete('id');
+    setSearchParams(nextParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, searchParams, setSearchParams, users]);
 
   const openPasswordModal = (user) => {
     ModalManager.show({

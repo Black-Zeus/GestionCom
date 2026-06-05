@@ -16,13 +16,14 @@ export const useNavigationHistoryStore = create(
           const nextItem = {
             id: module.id,
             label: module.label,
-            path: module.path,
+            path: module.visitPath || module.path,
+            basePath: module.path,
             group: module.group,
             tooltip: module.description || `${module.group}: ${module.label}`,
             visitedAt: Date.now(),
           };
 
-          const filteredItems = state.items.filter((item) => item.path !== module.path);
+          const filteredItems = state.items.filter((item) => item.path !== nextItem.path);
 
           return {
             items: [...filteredItems, nextItem].slice(-MAX_HISTORY_ITEMS),

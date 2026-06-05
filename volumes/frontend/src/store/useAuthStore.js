@@ -108,6 +108,12 @@ export const useAuthStore = create(
         }
       },
 
+      mergeUserProfile(profile) {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...profile } : profile,
+        }));
+      },
+
       async syncSession() {
         if (get().isDemoSession) return get();
 

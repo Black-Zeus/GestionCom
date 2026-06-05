@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, CheckCircle2, EyeOff, Mail, MapPin, Pencil, Phone, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
+import { useSearchParams } from 'react-router-dom';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
@@ -200,9 +201,11 @@ const WarehouseFormModal = ({ mode = 'create', initialValues = emptyWarehouseFor
 };
 
 const AdminWarehouses = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledDeepLinkRef = useRef('');
   const [warehouses, setWarehouses] = useState([]);
   const [users, setUsers] = useState([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [filters, setFilters] = useState({ status: 'all', type: 'all' });
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -286,6 +289,15 @@ const AdminWarehouses = () => {
   }, []);
 
   useEffect(() => {
+    const nextSearch = searchParams.get('search') || '';
+    if (nextSearch !== search) {
+      setSearch(nextSearch);
+      setPage(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  useEffect(() => {
     setPage(0);
   }, [search]);
 
@@ -340,6 +352,24 @@ const AdminWarehouses = () => {
       },
     });
   };
+
+  useEffect(() => {
+    const openMode = searchParams.get('open');
+    const recordId = Number(searchParams.get('id'));
+    const deepLinkKey = `${openMode}:${recordId}`;
+    if (loading || openMode !== 'edit' || !recordId || handledDeepLinkRef.current === deepLinkKey) return;
+
+    const targetWarehouse = warehouses.find((warehouse) => Number(warehouse.id) === recordId);
+    if (!targetWarehouse) return;
+
+    handledDeepLinkRef.current = deepLinkKey;
+    openEditModal(targetWarehouse);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('open');
+    nextParams.delete('id');
+    setSearchParams(nextParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, searchParams, setSearchParams, warehouses]);
 
   const toggleWarehouse = async (warehouse) => {
     const nextState = !warehouse.is_active;
