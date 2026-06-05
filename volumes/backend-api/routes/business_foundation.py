@@ -88,19 +88,19 @@ async def require_prices_write(request: Request) -> dict:
 
 
 async def require_taxes_read(request: Request) -> dict:
-    return await _require(request, ["TAX_CONFIG_ACCESS", "TAX_CONFIG_MANAGE", "SYSTEM_CONFIG"], "Se requiere permiso para ver impuestos")
+    return await _require(request, ["TAX_CONFIG_ACCESS", "TAX_CONFIG_MANAGE"], "Se requiere permiso para ver impuestos")
 
 
 async def require_taxes_write(request: Request) -> dict:
-    return await _require(request, ["TAX_CONFIG_MANAGE", "SYSTEM_CONFIG"], "Se requiere permiso para gestionar impuestos")
+    return await _require(request, ["TAX_CONFIG_MANAGE"], "Se requiere permiso para gestionar impuestos")
 
 
 async def require_company_read(request: Request) -> dict:
-    return await _require(request, ["COMPANY_CONFIG_ACCESS", "COMPANY_CONFIG_MANAGE", "SYSTEM_CONFIG"], "Se requiere permiso para ver empresa")
+    return await _require(request, ["COMPANY_CONFIG_ACCESS", "COMPANY_CONFIG_MANAGE"], "Se requiere permiso para ver empresa")
 
 
 async def require_company_write(request: Request) -> dict:
-    return await _require(request, ["COMPANY_CONFIG_MANAGE", "SYSTEM_CONFIG"], "Se requiere permiso para gestionar empresa")
+    return await _require(request, ["COMPANY_CONFIG_MANAGE"], "Se requiere permiso para gestionar empresa")
 
 
 def _decimal(value):
@@ -612,7 +612,7 @@ async def delete_product_variant(request: Request, variant_id: int = Path(..., g
 @router.get("/company-config", response_class=JSONResponse)
 async def list_company_configs(request: Request, user: dict = Depends(require_company_read)):
     async with db_manager.get_async_session() as session:
-        result = await session.execute(select(DteCompanyConfig).order_by(DteCompanyConfig.company_name))
+        result = await session.execute(select(DteCompanyConfig).where(DteCompanyConfig.deleted_at.is_(None)).order_by(DteCompanyConfig.company_name))
         rows = [company_to_dict(item) for item in result.scalars().all()]
         assets = await _media_map(session, [item.get("logo_media_asset_id") for item in rows] + [item.get("banner_media_asset_id") for item in rows])
         for row in rows:
@@ -637,7 +637,7 @@ async def create_company_config(data: CompanyConfigCreate, request: Request, use
 @router.put("/company-config/{company_id}", response_class=JSONResponse)
 async def update_company_config(data: CompanyConfigUpdate, request: Request, company_id: int = Path(..., gt=0), user: dict = Depends(require_company_write)):
     async with db_manager.get_async_session() as session:
-        result = await session.execute(select(DteCompanyConfig).where(DteCompanyConfig.id == company_id))
+        result = await session.execute(select(DteCompanyConfig).where(and_(DteCompanyConfig.id == company_id, DteCompanyConfig.deleted_at.is_(None))))
         company = result.scalar_one_or_none()
         if not company:
             return ResponseManager.error(message="Empresa no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
@@ -650,3 +650,18 @@ async def update_company_config(data: CompanyConfigUpdate, request: Request, com
         await session.commit()
         await session.refresh(company)
         return ResponseManager.success(data=company_to_dict(company), message="Empresa actualizada correctamente", request=request)
+
+
+@router.delete("/company-config/{company_id}", response_class=JSONResponse)
+async def delete_company_config(request: Request, company_id: int = Path(..., gt=0), user: dict = Depends(require_company_write)):
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(select(DteCompanyConfig).where(and_(DteCompanyConfig.id == company_id, DteCompanyConfig.deleted_at.is_(None))))
+        company = result.scalar_one_or_none()
+        if not company:
+            return ResponseManager.error(message="Empresa no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        company.deleted_at = datetime.now(timezone.utc)
+        company.is_active = False
+        if company.dte_environment == DteEnvironment.PRODUCCION:
+            company.dte_environment = DteEnvironment.CERTIFICACION
+        await session.commit()
+        return ResponseManager.success(data={"id": company_id}, message="Empresa eliminada correctamente", request=request)

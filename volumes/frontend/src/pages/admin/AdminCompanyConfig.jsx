@@ -1,30 +1,67 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, ImageUp, Pencil, Plus } from 'lucide-react';
+import { Building2, Image, Pencil, Plus, Power, ServerCog, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
-import { profileService } from '@/services/profile/profileService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { activeFilter, fieldOptions, filterActions, includesTerm, statusCell, tableFooter } from './businessFoundationShared';
 
 const environmentLabels = { CERTIFICACION: 'Certificacion', PRODUCCION: 'Produccion' };
 
-const pickImage = (onSelect) => {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/png,image/jpeg,image/webp';
-  input.onchange = () => {
-    const file = input.files?.[0];
-    if (file) onSelect(file);
-  };
-  input.click();
+const openExpandedMedia = (entry) => ModalManager.show({
+  type: 'custom',
+  title: entry.label,
+  size: entry.label === 'Banner' ? 'fullscreenWide' : 'large',
+  showFooter: false,
+  content: (
+    <div className={`flex items-center justify-center rounded-md bg-slate-950/95 ${entry.label === 'Banner' ? 'p-2' : 'p-3'}`}>
+      <img src={entry.fullSrc || entry.src} alt={entry.label} className={`${entry.label === 'Banner' ? 'max-h-[76vh]' : 'max-h-[72vh]'} max-w-full object-contain`} />
+    </div>
+  ),
+});
+
+const CompanyMediaViewer = ({ item }) => {
+  const media = [
+    { label: 'Logo', src: item.logo?.thumb_url, fullSrc: item.logo?.full_url, ratio: 'aspect-square' },
+    { label: 'Banner', src: item.banner?.thumb_url, fullSrc: item.banner?.full_url, ratio: 'aspect-[16/5]' },
+  ].filter((entry) => entry.src);
+
+  if (!media.length) {
+    return (
+      <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
+        <Image className="mx-auto h-10 w-10 text-slate-400" />
+        <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Sin imagenes cargadas</p>
+        <p className="mt-1 text-xs text-slate-500">Puedes agregar logo o banner desde la edicion de empresa.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {media.map((entry) => (
+        <div key={entry.label} className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
+          <button
+            type="button"
+            className={`block w-full overflow-hidden rounded-md bg-slate-100 outline-none transition hover:ring-2 hover:ring-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-900 ${entry.ratio}`}
+            onClick={() => openExpandedMedia(entry)}
+            aria-label={`Ampliar ${entry.label}`}
+          >
+            <img src={entry.src} alt={entry.label} className="h-full w-full object-contain p-3" />
+          </button>
+          <p className="mt-3 text-center text-sm font-semibold text-slate-700 dark:text-slate-200">{entry.label}</p>
+        </div>
+      ))}
+    </div>
+  );
 };
 
 const AdminCompanyConfig = () => {
+  const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -56,48 +93,72 @@ const AdminCompanyConfig = () => {
   const activeCompany = companies.find((item) => item.is_active);
   const productionCompany = companies.find((item) => item.dte_environment === 'PRODUCCION');
 
-  const openForm = (company = null) => ModalManager.show({
+  const openForm = (company = null) => {
+    if (!company) {
+      navigate('/config/company/new');
+      return;
+    }
+    navigate(`/config/company/edit/${encodeURIComponent(company.company_rut)}`);
+  };
+
+  const openMedia = (company) => ModalManager.show({
     type: 'custom',
-    title: company ? 'Editar empresa' : 'Nueva empresa',
+    title: `Media de ${company.company_name}`,
     size: 'large',
-    showFooter: false,
-    contentComponent: SimpleFormContent,
-    contentProps: {
-      initialValues: company || { company_rut: '', company_name: '', company_business_name: '', company_address: '', company_comuna: '', company_city: '', company_region: '', economic_activity_code: '', economic_activity_name: '', dte_environment: 'CERTIFICACION', sii_user: '', is_active: !activeCompany },
-      fields: [
-        { id: 'company_rut', label: 'RUT', required: true },
-        { id: 'company_name', label: 'Nombre fantasia', required: true },
-        { id: 'company_business_name', label: 'Razon social', required: true, wide: true },
-        { id: 'company_address', label: 'Direccion', required: true, wide: true },
-        { id: 'company_comuna', label: 'Comuna', required: true },
-        { id: 'company_city', label: 'Ciudad', required: true },
-        { id: 'company_region', label: 'Region', required: true },
-        { id: 'economic_activity_code', label: 'Codigo actividad', required: true },
-        { id: 'economic_activity_name', label: 'Actividad economica', required: true, wide: true },
-        { id: 'dte_environment', label: 'Ambiente DTE', type: 'select', options: Object.entries(environmentLabels).map(([value, label]) => ({ value, label })) },
-        { id: 'sii_user', label: 'Usuario SII' },
-        { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activa' },
-      ],
-      onSubmit: async (form) => {
-        const payload = { ...form, sii_user: form.sii_user || null };
-        await notifyPromise(company ? businessFoundationService.companies.update(company.id, payload) : businessFoundationService.companies.create(payload), {
-          loading: 'Guardando empresa...',
-          success: payload.is_active || payload.dte_environment === 'PRODUCCION' ? 'Empresa guardada y regla unica aplicada.' : 'Empresa guardada.',
-          error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.'),
-        });
-        await load();
-      },
-    },
+    showFooter: true,
+    content: <CompanyMediaViewer item={company} />,
   });
 
-  const uploadCompanyMedia = (company, role) => pickImage(async (file) => {
-    await notifyPromise(profileService.uploadCompanyMedia(company.id, role, file), {
-      loading: role === 'logo' ? 'Procesando logo...' : 'Procesando banner...',
-      success: role === 'logo' ? 'Logo actualizado.' : 'Banner actualizado.',
-      error: (requestError) => getBackendMessage(requestError, 'No fue posible cargar la imagen.'),
+  const changeEnvironment = async (company) => {
+    const nextEnvironment = company.dte_environment === 'PRODUCCION' ? 'CERTIFICACION' : 'PRODUCCION';
+    const confirmed = await ModalManager.confirm({
+      title: 'Cambiar ambiente DTE',
+      message: `Confirma cambiar ${company.company_name} a ${environmentLabels[nextEnvironment]}.`,
+      buttons: { cancel: 'Cancelar', confirm: 'Cambiar ambiente' },
+    });
+    if (!confirmed) return;
+
+    await notifyPromise(businessFoundationService.companies.update(company.id, { dte_environment: nextEnvironment }), {
+      loading: 'Actualizando ambiente...',
+      success: nextEnvironment === 'PRODUCCION' ? 'Empresa en produccion. Regla unica aplicada.' : 'Empresa en certificacion.',
+      error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el ambiente.'),
     });
     await load();
-  });
+  };
+
+  const removeCompany = async (company) => {
+    const confirmed = await ModalManager.confirm({
+      title: 'Eliminar empresa',
+      message: `Confirma eliminar ${company.company_name}. Esta accion la quitara del mantenedor.`,
+      buttons: { cancel: 'Cancelar', confirm: 'Eliminar' },
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+
+    await notifyPromise(businessFoundationService.companies.remove(company.id), {
+      loading: 'Eliminando empresa...',
+      success: 'Empresa eliminada.',
+      error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar la empresa.'),
+    });
+    await load();
+  };
+
+  const changeStatus = async (company) => {
+    const nextState = !company.is_active;
+    const confirmed = await ModalManager.confirm({
+      title: nextState ? 'Activar empresa' : 'Inactivar empresa',
+      message: `Confirma ${nextState ? 'activar' : 'inactivar'} ${company.company_name}.`,
+      buttons: { cancel: 'Cancelar', confirm: nextState ? 'Activar' : 'Inactivar' },
+    });
+    if (!confirmed) return;
+
+    await notifyPromise(businessFoundationService.companies.update(company.id, { is_active: nextState }), {
+      loading: 'Actualizando estado...',
+      success: nextState ? 'Empresa activada. Regla unica aplicada.' : 'Empresa inactivada.',
+      error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
+    });
+    await load();
+  };
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
@@ -121,9 +182,21 @@ const AdminCompanyConfig = () => {
           { id: 'location', label: 'Ubicacion', render: (item) => `${item.company_city}, ${item.company_region}` },
           { id: 'activity', label: 'Actividad', render: (item) => <><div>{item.economic_activity_name}</div><div className="font-mono text-xs text-slate-500">{item.economic_activity_code}</div></> },
           { id: 'environment', label: 'DTE', render: (item) => <span className="inline-flex items-center gap-1 text-sm"><Building2 className="h-4 w-4 text-slate-500" />{environmentLabels[item.dte_environment]}</span> },
-          { id: 'media', label: 'Media', render: (item) => <span className="text-xs text-slate-500">{[item.logo && 'Logo', item.banner && 'Banner'].filter(Boolean).join(' / ') || 'Sin imagenes'}</span> },
           { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) },
-          { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} /><RowActionButton label="Cargar logo" icon={ImageUp} onClick={() => uploadCompanyMedia(item, 'logo')} /><RowActionButton label="Cargar banner" icon={ImageUp} onClick={() => uploadCompanyMedia(item, 'banner')} /></div> },
+          {
+            id: 'actions',
+            label: 'Acciones',
+            align: 'right',
+            render: (item) => (
+              <div className="flex justify-end gap-2">
+                <RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} />
+                <RowActionButton label="Ver media" icon={Image} onClick={() => openMedia(item)} />
+                <RowActionButton label="Cambiar ambiente" icon={ServerCog} onClick={() => changeEnvironment(item)} />
+                <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => removeCompany(item)} />
+                <RowActionButton label={item.is_active ? 'Inactivar' : 'Activar'} icon={Power} onClick={() => changeStatus(item)} />
+              </div>
+            ),
+          },
         ]}
       />
     </section>

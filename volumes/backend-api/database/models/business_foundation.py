@@ -183,7 +183,7 @@ class ProductModel(BaseModel):
     brand = relationship("ProductBrand")
 
 
-class DteCompanyConfig(SimpleBaseModel):
+class DteCompanyConfig(BaseModel):
     __tablename__ = "dte_company_config"
 
     company_rut = Column(String(12), nullable=False, unique=True)

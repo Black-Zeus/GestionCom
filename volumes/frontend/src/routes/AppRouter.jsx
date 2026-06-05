@@ -25,7 +25,9 @@ const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
 const AdminPriceLists = lazy(() => import('@/pages/admin/AdminPriceLists'));
 const AdminTaxConfig = lazy(() => import('@/pages/admin/AdminTaxConfig'));
 const AdminCompanyConfig = lazy(() => import('@/pages/admin/AdminCompanyConfig'));
+const AdminCompanyFormPage = lazy(() => import('@/pages/admin/AdminCompanyFormPage'));
 const AdminCustomersMaintainers = lazy(() => import('@/pages/admin/AdminCustomersMaintainers'));
+const AdminCustomerFormPage = lazy(() => import('@/pages/admin/AdminCustomerFormPage'));
 const AdminCustomerAuthorized = lazy(() => import('@/pages/admin/AdminCustomerAuthorized'));
 const AdminCustomerCredit = lazy(() => import('@/pages/admin/AdminCustomerCredit'));
 const AdminSuppliersMaintainers = lazy(() => import('@/pages/admin/AdminSuppliersMaintainers'));
@@ -127,6 +129,46 @@ const AppRouter = () => (
           )}
         />
         <Route path="search" element={<Page><GlobalSearchResults /></Page>} />
+        <Route
+          path="config/company/new"
+          element={(
+            <Page>
+              <RequirePermission permissions={['COMPANY_CONFIG_ACCESS', 'COMPANY_CONFIG_MANAGE']}>
+                <AdminCompanyFormPage mode="create" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="config/company/edit/:companyRut"
+          element={(
+            <Page>
+              <RequirePermission permissions={['COMPANY_CONFIG_ACCESS', 'COMPANY_CONFIG_MANAGE']}>
+                <AdminCompanyFormPage mode="edit" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="customers/new"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminCustomerFormPage mode="create" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="customers/edit/:customerCode"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminCustomerFormPage mode="edit" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
         {navigablePages.map((module) => {
           const ModuleComponent = moduleComponents[module.id] || UnderConstruction;
           const moduleContent = <ModuleComponent />;

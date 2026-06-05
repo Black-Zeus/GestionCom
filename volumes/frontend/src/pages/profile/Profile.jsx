@@ -152,7 +152,7 @@ const Profile = () => {
           <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
             <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
               <div className="flex flex-col items-center text-center">
-                <UserAvatar src={pendingAvatarPreview || profile?.avatar?.full_url} alt={fullName} size="lg" placeholderClassName="text-slate-500" />
+                <UserAvatar src={pendingAvatarPreview || profile?.avatar?.thumb_url} alt={fullName} size="lg" placeholderClassName="text-slate-500" />
                 <div className="mt-3 text-sm font-semibold">{fullName}</div>
                 <div className="text-xs text-slate-500">{profile?.email}</div>
                 <label className="mt-4 inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">

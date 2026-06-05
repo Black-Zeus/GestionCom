@@ -22,6 +22,16 @@ const alignClass = {
   right: 'text-right',
 };
 
+const actionCellClass = [
+  'w-[9.75rem]',
+  'min-w-[9.75rem]',
+  'max-w-[9.75rem]',
+  '[&>div]:ml-auto',
+  '[&>div]:flex-wrap',
+  '[&>div]:justify-end',
+  '[&>div]:max-w-[7.75rem]',
+].join(' ');
+
 const DataTable = ({
   columns = [],
   data = [],
@@ -96,11 +106,15 @@ const DataTable = ({
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {sortedData.map((row, rowIndex) => (
               <tr key={getRowKey(row, rowIndex)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                {columns.map((column) => (
-                  <td key={column.id} className={`px-4 py-3 ${alignClass[column.align || 'left']} ${column.cellClassName || ''}`}>
-                    {column.render ? column.render(row, rowIndex) : getValue(row, column)}
-                  </td>
-                ))}
+                {columns.map((column) => {
+                  const isActionsColumn = column.id === 'actions';
+
+                  return (
+                    <td key={column.id} className={`px-4 py-3 ${alignClass[column.align || 'left']} ${isActionsColumn ? actionCellClass : ''} ${column.cellClassName || ''}`}>
+                      {column.render ? column.render(row, rowIndex) : getValue(row, column)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
             {!loading && sortedData.length === 0 && (

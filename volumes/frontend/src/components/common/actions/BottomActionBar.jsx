@@ -22,7 +22,7 @@ const BottomActionBar = ({
           return (
             <button
               key={action.id || action.label}
-              type="button"
+              type={action.type || 'button'}
               onClick={action.onClick}
               disabled={action.disabled}
               className={`inline-flex h-11 items-center gap-2 rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${variants[action.variant || 'neutral'] || variants.neutral} ${action.className || ''}`}

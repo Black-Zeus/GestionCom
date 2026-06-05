@@ -1,43 +1,53 @@
 /* eslint-disable react/prop-types */
-import { Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Landmark, MapPin, PackageSearch, Percent, RotateCcw, Settings, ShieldCheck, Truck, UserRound, Users } from 'lucide-react';
+import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, Smartphone, Truck, UserRound, Users } from 'lucide-react';
 import AdminGenericMaintainers from './AdminGenericMaintainers';
 
-const activeStatusOptions = [
-  { value: 'ACTIVE', label: 'Activo' },
-  { value: 'INACTIVE', label: 'Inactivo' },
-  { value: 'BLOCKED', label: 'Bloqueado' },
-  { value: 'DEFAULTED', label: 'Moroso' },
+const customerStatusChangeOptions = [
+  { value: 'ACTIVE', label: 'Activo', variant: 'active', description: 'Cliente habilitado para operar normalmente en ventas, credito y autorizaciones segun sus permisos comerciales.' },
+  { value: 'INACTIVE', label: 'Inactivo', variant: 'inactive', description: 'Cliente deshabilitado administrativamente. Se conserva el historial, pero no deberia usarse en nuevas operaciones.' },
+  { value: 'BLOCKED', label: 'Bloqueado', variant: 'danger', description: 'Cliente detenido por una condicion operativa o administrativa que requiere revision antes de volver a operar.' },
+  { value: 'DEFAULTED', label: 'Moroso', variant: 'warning', description: 'Cliente con condicion financiera vencida o riesgosa. Debe revisarse antes de autorizar nuevas ventas a credito.' },
 ];
 
 const customerFields = [
+  { id: 'identity_section', type: 'section', label: 'Datos generales', icon: UserRound, columns: 3, description: 'Datos base para identificar al cliente en documentos y busqueda.' },
   { id: 'customer_type', label: 'Tipo', type: 'select', required: true, options: [{ value: 'COMPANY', label: 'Empresa' }, { value: 'INDIVIDUAL', label: 'Persona' }] },
-  { id: 'tax_id', label: 'RUT/DNI', required: true },
-  { id: 'legal_name', label: 'Razon social / nombre', required: true },
-  { id: 'commercial_name', label: 'Nombre fantasia' },
-  { id: 'contact_person', label: 'Contacto' },
-  { id: 'email', label: 'Email' },
-  { id: 'phone', label: 'Telefono' },
-  { id: 'mobile', label: 'Movil' },
-  { id: 'address', label: 'Direccion', wide: true },
-  { id: 'city', label: 'Ciudad' },
-  { id: 'region', label: 'Region' },
-  { id: 'country', label: 'Pais' },
-  { id: 'customer_status', label: 'Estado comercial', type: 'select', options: activeStatusOptions },
-  { id: 'is_credit_customer', label: 'Credito', type: 'checkbox', checkLabel: 'Cliente de credito' },
-  { id: 'notes', label: 'Notas', wide: true },
+  { id: 'legal_name', label: 'Razon social / nombre', required: true, placeholder: 'Nombre legal del cliente' },
+  { id: 'tax_id', label: 'RUT/DNI', required: true, placeholder: 'Ej: 11111111-1' },
+  { id: 'commercial_name', label: 'Nombre fantasia', placeholder: 'Nombre comercial visible' },
+  { id: 'contact_person', label: 'Contacto principal', placeholder: 'Nombre de contacto' },
+  { id: 'contact_section', type: 'section', label: 'Contacto', icon: Contact, columns: 3, description: 'Canales disponibles para comunicacion operativa y comercial.' },
+  { id: 'email', label: 'Email', type: 'email', placeholder: 'cliente@empresa.cl', leadingIcon: AtSign },
+  { id: 'phone', label: 'Telefono', placeholder: '+562...', leadingIcon: Phone },
+  { id: 'mobile', label: 'Movil', placeholder: '+569...', leadingIcon: Smartphone },
+  { id: 'location_section', type: 'section', label: 'Ubicacion', icon: MapPin, columns: 3, description: 'Direccion principal del cliente para gestion comercial y documental.' },
+  { id: 'address', label: 'Direccion', span: 'full', placeholder: 'Calle, numero, oficina o local' },
+  { id: 'city', label: 'Ciudad', placeholder: 'Santiago' },
+  { id: 'region', label: 'Region', placeholder: 'Metropolitana' },
+  { id: 'country', label: 'Pais', placeholder: 'Chile' },
+  { id: 'commercial_section', type: 'section', label: 'Configuracion comercial', icon: CreditCard, columns: 3, description: 'Estado operativo y condiciones generales para operar con el cliente.' },
+  { id: 'status_id', label: 'Estado comercial', type: 'select', optionsResource: 'customer-statuses', help: 'Controla si el cliente puede operar normalmente o requiere revision.' },
+  { id: 'is_credit_customer', label: 'Credito', type: 'checkbox', checkLabel: 'Cliente con credito habilitado', help: 'Permite ventas a credito y registra deuda.' },
+  { id: 'notes', label: 'Notas', type: 'textarea', rows: 3, placeholder: 'Observaciones visibles para gestion comercial.' },
 ];
 
 const customersTabs = [
   {
-    id: 'customers', resource: 'customers', label: 'Clientes', singular: 'cliente', icon: Users, codeField: 'customer_code', statusField: 'customer_status',
-    activeValue: 'ACTIVE', empty: { customer_type: 'COMPANY', tax_id: '', legal_name: '', commercial_name: '', country: 'Chile', customer_status: 'ACTIVE', is_credit_customer: false },
+    id: 'customers', resource: 'customers', label: 'Clientes', singular: 'cliente', icon: Users, formIcon: UserRound, codeField: 'customer_code', statusField: 'status_id', statusOptionsResource: 'customer-statuses', size: 'modalLarge',
+    formMode: 'page', createPath: '/customers/new', editPath: (row) => `/customers/edit/${encodeURIComponent(row.customer_code)}`,
+    activeValue: 'ACTIVE', forceStatusToggle: true, statusChangeOptions: customerStatusChangeOptions, empty: { customer_type: 'COMPANY', tax_id: '', legal_name: '', commercial_name: '', country: 'Chile', status_id: '', is_credit_customer: false },
     fields: customerFields,
     tableFields: [{ id: 'legal_name', label: 'Cliente', primary: true }, { id: 'tax_id', label: 'RUT/DNI' }, { id: 'customer_type', label: 'Tipo' }, { id: 'email', label: 'Email' }, { id: 'city', label: 'Ciudad' }],
     searchFields: ['customer_code', 'tax_id', 'legal_name', 'commercial_name', 'email'],
+    rowActions: [
+      { label: 'Autorizaciones', icon: Shield, path: '/customers/authorized-persons', params: (row) => ({ customer_id: row.id }) },
+      { label: 'Credito', icon: CreditCard, path: '/customers/credit-limits', params: (row) => ({ customer_id: row.id }) },
+    ],
   },
   {
     id: 'authorized', resource: 'customer-authorized-users', label: 'Autorizados', singular: 'autorizado', icon: UserRound, activeField: 'is_active',
     empty: { customer_id: '', authorized_name: '', authorization_level: 'BASIC', is_primary_contact: false, is_active: true },
+    routeFilters: [{ param: 'customer_id', field: 'customer_id' }],
     fields: [
       { id: 'customer_id', label: 'Cliente', type: 'select', optionsResource: 'customers', required: true },
       { id: 'authorized_name', label: 'Nombre', required: true },
@@ -50,11 +60,12 @@ const customersTabs = [
       { id: 'is_primary_contact', label: 'Principal', type: 'checkbox', checkLabel: 'Contacto principal' },
       { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
     ],
-    tableFields: [{ id: 'authorized_name', label: 'Autorizado', primary: true }, { id: 'customer_id', label: 'ID cliente' }, { id: 'authorized_tax_id', label: 'RUT/DNI' }, { id: 'authorization_level', label: 'Nivel' }],
+    tableFields: [{ id: 'authorized_name', label: 'Autorizado', primary: true }, { id: 'customer_id', label: 'Cliente', optionsResource: 'customers' }, { id: 'authorized_tax_id', label: 'RUT/DNI' }, { id: 'authorization_level', label: 'Nivel' }],
   },
   {
     id: 'credit', resource: 'customer-credit-config', label: 'Credito', singular: 'configuracion de credito', icon: CreditCard, activeField: 'auto_block_on_overdue',
     empty: { customer_id: '', credit_limit: 0, available_credit: 0, used_credit: 0, payment_terms_days: 30, grace_period_days: 5, minimum_payment_percentage: 30, penalty_rate: 2, risk_level: 'MEDIUM', allows_cash: true, allows_check: true, allows_transfer: true, allows_postdated_check: false, allows_installments: false, requires_guarantor: false, auto_block_on_overdue: true },
+    routeFilters: [{ param: 'customer_id', field: 'customer_id' }],
     fields: [
       { id: 'customer_id', label: 'Cliente', type: 'select', optionsResource: 'customers', required: true },
       { id: 'credit_limit', label: 'Limite credito', type: 'number', min: 0 },
@@ -69,9 +80,11 @@ const customersTabs = [
       { id: 'allows_installments', label: 'Cuotas', type: 'checkbox', checkLabel: 'Permite cuotas' },
       { id: 'auto_block_on_overdue', label: 'Bloqueo', type: 'checkbox', checkLabel: 'Bloqueo automatico' },
     ],
-    tableFields: [{ id: 'customer_id', label: 'ID cliente', primary: true }, { id: 'credit_limit', label: 'Limite' }, { id: 'payment_terms_days', label: 'Plazo' }, { id: 'risk_level', label: 'Riesgo' }],
+    tableFields: [{ id: 'customer_id', label: 'Cliente', primary: true, optionsResource: 'customers' }, { id: 'credit_limit', label: 'Limite' }, { id: 'payment_terms_days', label: 'Plazo' }, { id: 'risk_level', label: 'Riesgo' }],
   },
 ];
+
+export const customerMaintainerConfig = customersTabs[0];
 
 const suppliersTabs = [
   {
@@ -291,7 +304,10 @@ const systemTabs = [
   },
 ];
 
-export const CustomersMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de clientes" description="Clientes, autorizados y condiciones de credito." tabs={customersTabs} initialTab={initialTab} />;
+export const CustomersMaintainers = ({ initialTab, visibleTabs }) => {
+  const scopedTabs = visibleTabs?.length ? customersTabs.filter((tab) => visibleTabs.includes(tab.id)) : customersTabs;
+  return <AdminGenericMaintainers title="Mantenedores de clientes" description="Clientes, autorizados y condiciones de credito." tabs={scopedTabs} initialTab={initialTab} />;
+};
 export const SuppliersMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de proveedores" description="Proveedores, contactos, direcciones y productos asociados." tabs={suppliersTabs} initialTab={initialTab} />;
 export const ProductSupportMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores auxiliares de productos" description="Marcas, modelos, codigos de barra, unidades por producto y media asociada." tabs={productSupportTabs} initialTab={initialTab} />;
 export const InventoryMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de inventario" description="Zonas, codigos, unidades y reglas de reposicion." tabs={inventoryTabs} initialTab={initialTab} />;

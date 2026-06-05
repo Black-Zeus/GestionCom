@@ -11,6 +11,7 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
+from services.media_storage import media_storage
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Admin Maintainers"])
@@ -18,10 +19,10 @@ router = APIRouter(tags=["Admin Maintainers"])
 
 RESOURCES = {
     "customers": {
-        "table": "customers", "code_field": "customer_code", "prefix": "CUS", "active_field": "customer_status",
-        "active_value": "ACTIVE", "inactive_value": "INACTIVE", "soft_delete": True,
-        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_id", "sales_rep_user_id", "customer_status", "is_credit_customer", "registration_date", "notes", "internal_notes"],
-        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_id", "sales_rep_user_id"], "date": ["registration_date"],
+        "table": "customers", "code_field": "customer_code", "prefix": "CUS", "active_field": "status_id",
+        "soft_delete": True,
+        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_id", "sales_rep_user_id", "status_id", "is_credit_customer", "registration_date", "notes", "internal_notes"],
+        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_id", "sales_rep_user_id", "status_id"], "date": ["registration_date"],
     },
     "customer-authorized-users": {
         "table": "customer_authorized_users", "active_field": "is_active", "soft_delete": False,
@@ -189,6 +190,12 @@ RESOURCES = {
         "fields": ["status_group", "status_code", "status_name", "status_display_es", "status_color", "status_icon", "is_active", "sort_order"],
         "required": ["status_group", "status_code", "status_name", "status_display_es"], "bool": ["is_active"], "int": ["sort_order"],
     },
+    "customer-statuses": {
+        "table": "system_statuses", "active_field": "is_active", "soft_delete": False,
+        "where": "status_group = 'CUSTOMER' AND is_active = TRUE",
+        "fields": ["status_group", "status_code", "status_name", "status_display_es", "status_color", "status_icon", "is_active", "sort_order"],
+        "bool": ["is_active"], "int": ["sort_order"], "read_only": True,
+    },
 }
 
 
@@ -212,7 +219,6 @@ async def require_read(request: Request) -> dict:
         "DOCUMENT_TEMPLATES_MANAGE",
         "NOTIFICATION_SETTINGS_ACCESS",
         "NOTIFICATION_SETTINGS_MANAGE",
-        "SYSTEM_CONFIG",
     ]):
         return user
     from fastapi import HTTPException
@@ -230,7 +236,6 @@ async def require_write(request: Request) -> dict:
         "FINANCE_MAINTAINERS_MANAGE",
         "DOCUMENT_TEMPLATES_MANAGE",
         "NOTIFICATION_SETTINGS_MANAGE",
-        "SYSTEM_CONFIG",
     ]):
         return user
     from fastapi import HTTPException
@@ -252,6 +257,23 @@ def _json_value(value):
     if isinstance(value, Decimal):
         return float(value)
     return value
+
+
+def _row(row):
+    return {key: _json_value(value) for key, value in row.items()} if row else None
+
+
+async def _media_map(session, asset_ids: list[int | None]) -> dict:
+    ids = sorted({int(item) for item in asset_ids if item})
+    if not ids:
+        return {}
+    placeholders = ", ".join(f":id_{index}" for index, _ in enumerate(ids))
+    params = {f"id_{index}": item for index, item in enumerate(ids)}
+    result = await session.execute(text(f"SELECT * FROM media_assets WHERE id IN ({placeholders}) AND deleted_at IS NULL"), params)
+    return {
+        row["id"]: media_storage.safe_asset(_row(row))
+        for row in result.mappings().all()
+    }
 
 
 def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
@@ -307,10 +329,21 @@ async def list_resources(request: Request, user: dict = Depends(require_read)):
 async def list_items(request: Request, resource: str = Path(...), user: dict = Depends(require_read)):
     try:
         config = _config(resource)
-        where = " WHERE deleted_at IS NULL" if config.get("soft_delete") else ""
+        conditions = []
+        if config.get("soft_delete"):
+            conditions.append("deleted_at IS NULL")
+        if config.get("where"):
+            conditions.append(config["where"])
+        where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
         async with db_manager.get_async_session() as session:
-            result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY id DESC LIMIT 1000"))
-            rows = [{key: _json_value(value) for key, value in row.items()} for row in result.mappings().all()]
+            order_by = "sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC"
+            result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT 1000"))
+            rows = [_row(row) for row in result.mappings().all()]
+            if config["table"] == "customers":
+                assets = await _media_map(session, [item.get("logo_media_asset_id") for item in rows] + [item.get("banner_media_asset_id") for item in rows])
+                for row in rows:
+                    row["logo"] = assets.get(row.get("logo_media_asset_id"))
+                    row["banner"] = assets.get(row.get("banner_media_asset_id"))
             return ResponseManager.success(data=rows, request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
@@ -324,6 +357,9 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
             return ResponseManager.error(message="Recurso solo disponible para seleccion", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
         data = _normalize(config, payload)
         async with db_manager.get_async_session() as session:
+            if config["table"] == "customers" and data.get("status_id") in (None, ""):
+                status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'CUSTOMER' AND status_code = 'ACTIVE' LIMIT 1"))
+                data["status_id"] = status_result.scalar_one_or_none()
             if config.get("code_field"):
                 data[config["code_field"]] = await _next_code(session, config["table"], config["code_field"], config["prefix"])
             if "created_by_user_id" in config["fields"] or config["table"] in {"customers", "suppliers"}:

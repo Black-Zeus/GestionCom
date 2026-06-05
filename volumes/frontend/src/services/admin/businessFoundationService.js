@@ -35,5 +35,8 @@ export const businessFoundationService = {
     async update(id, payload) {
       return unwrap(await apiClient.put(`/business-foundation/company-config/${id}`, payload));
     },
+    async remove(id) {
+      return unwrap(await apiClient.delete(`/business-foundation/company-config/${id}`));
+    },
   },
 };

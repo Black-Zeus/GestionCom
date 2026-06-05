@@ -31,6 +31,9 @@ export const profileService = {
   uploadProductImage(productId, file) {
     return upload(`/profile/products/${productId}/image`, file);
   },
+  uploadCustomerMedia(customerId, role, file) {
+    return upload(`/profile/customers/${customerId}/${role}`, file);
+  },
 };
 
 export default profileService;

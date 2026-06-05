@@ -32,7 +32,7 @@ def _has_any_permission(user: dict, permissions: list[str]) -> bool:
 
 async def require_profile(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["PROFILE_ACCESS", "SYSTEM_CONFIG"]):
+    if _has_any_permission(user, ["PROFILE_ACCESS"]):
         return user
     from fastapi import HTTPException
     import json
@@ -262,7 +262,7 @@ async def upload_avatar(request: Request, file: UploadFile = File(...), user: di
 
 @router.post("/companies/{company_id}/{media_role}", response_class=JSONResponse)
 async def upload_company_media(request: Request, company_id: int = Path(..., gt=0), media_role: str = Path(...), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    if not _has_any_permission(user, ["COMPANY_CONFIG_MANAGE", "SYSTEM_CONFIG"]):
+    if not _has_any_permission(user, ["COMPANY_CONFIG_MANAGE"]):
         return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
     role = media_role.strip().upper()
     if role not in {"LOGO", "BANNER"}:
@@ -280,7 +280,7 @@ async def upload_company_media(request: Request, company_id: int = Path(..., gt=
 
 @router.post("/products/{product_id}/image", response_class=JSONResponse)
 async def upload_product_image(request: Request, product_id: int = Path(..., gt=0), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    if not _has_any_permission(user, ["PRODUCTS_MANAGE", "SYSTEM_CONFIG"]):
+    if not _has_any_permission(user, ["PRODUCTS_MANAGE"]):
         return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
     try:
         async with db_manager.get_async_session() as session:
@@ -288,5 +288,23 @@ async def upload_product_image(request: Request, product_id: int = Path(..., gt=
             await session.execute(text("UPDATE products SET primary_image_media_asset_id = :asset_id WHERE id = :product_id"), {"asset_id": asset["id"], "product_id": product_id})
             await session.commit()
             return ResponseManager.success(data=_asset_urls(asset), message="Imagen de producto actualizada", request=request)
+    except ValueError as exc:
+        return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+
+@router.post("/customers/{customer_id}/{media_role}", response_class=JSONResponse)
+async def upload_customer_media(request: Request, customer_id: int = Path(..., gt=0), media_role: str = Path(...), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    if not _has_any_permission(user, ["FOUNDATION_MAINTAINERS_MANAGE"]):
+        return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    role = media_role.strip().upper()
+    if role not in {"LOGO", "BANNER"}:
+        return ResponseManager.error(message="Tipo de media invalido", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+    try:
+        async with db_manager.get_async_session() as session:
+            asset = await _create_media_asset(session, owner_type="CUSTOMER", owner_id=customer_id, media_role=role, profile=role.lower(), file=file, uploaded_by=_user_id(user))
+            column = "logo_media_asset_id" if role == "LOGO" else "banner_media_asset_id"
+            await session.execute(text(f"UPDATE customers SET {column} = :asset_id WHERE id = :customer_id"), {"asset_id": asset["id"], "customer_id": customer_id})
+            await session.commit()
+            return ResponseManager.success(data=_asset_urls(asset), message="Imagen de cliente actualizada", request=request)
     except ValueError as exc:
         return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
