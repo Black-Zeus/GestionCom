@@ -13,7 +13,6 @@ import {
   FileText,
   Gauge,
   Home,
-  Image,
   LineChart,
   MapPin,
   Package,
@@ -94,7 +93,6 @@ export const moduleGroups = [
       { id: 'product-brand-models', label: 'Marcas y modelos de productos', path: '/products/brands-models', icon: Tags, weight: 78, permissions: ['PRODUCT_BRAND_MODELS_ACCESS', 'PRODUCT_BRAND_MODELS_MANAGE'] },
       { id: 'barcodes', label: 'Codigos de barra de productos', path: '/barcodes', icon: Receipt, weight: 80, permissions: ['PRODUCT_BARCODES_ACCESS', 'PRODUCT_BARCODES_MANAGE'] },
       { id: 'product-units', label: 'Unidades por producto', path: '/products/units', icon: Ruler, weight: 82, permissions: ['PRODUCT_UNITS_ACCESS', 'PRODUCT_UNITS_MANAGE'] },
-      { id: 'product-media', label: 'Media de productos', path: '/products/media', icon: Image, weight: 84, permissions: ['PRODUCT_MEDIA_ACCESS', 'PRODUCT_MEDIA_MANAGE'] },
     ],
   },
   {

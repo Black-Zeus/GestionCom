@@ -49,6 +49,20 @@ const amountDisplay = (value, item = {}) => {
   return `${currencyDisplay(item.max_purchase_currency_code || item.default_currency_code || item.currency_code || 'CLP')} ${amount}`;
 };
 
+const factorDisplay = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 6 }).format(Number(value));
+};
+
+const productUnitUses = (value, item = {}) => {
+  const uses = [
+    item.is_purchase_unit && 'Compra',
+    item.is_sale_unit && 'Venta',
+    item.is_inventory_unit && 'Inventario',
+  ].filter(Boolean);
+  return uses.length ? uses.join(' / ') : '-';
+};
+
 const customerPrimaryContactEmail = (item, { relatedData = {} } = {}) => {
   if (!item?.contact_person) return '';
   const contact = (relatedData['customer-authorized-users'] || []).find((row) => (
@@ -302,19 +316,20 @@ const productBarcodeTabs = [
 
 const productUnitTabs = [
   {
-    id: 'units', resource: 'product-units', label: 'Unidades', singular: 'unidad por producto', icon: PackageSearch, activeField: 'is_active',
-    empty: { product_id: '', measurement_unit_id: '', conversion_factor: 1, is_purchase_unit: false, is_sale_unit: false, is_inventory_unit: false, is_active: true },
-    fields: [{ id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options', required: true }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options', required: true }, { id: 'conversion_factor', label: 'Factor', type: 'number', min: 0 }, { id: 'is_purchase_unit', label: 'Compra', type: 'checkbox', checkLabel: 'Unidad compra' }, { id: 'is_sale_unit', label: 'Venta', type: 'checkbox', checkLabel: 'Unidad venta' }, { id: 'is_inventory_unit', label: 'Inventario', type: 'checkbox', checkLabel: 'Unidad inventario' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'product_id', label: 'Producto', primary: true, optionsResource: 'products-options' }, { id: 'measurement_unit_id', label: 'Unidad', optionsResource: 'measurement-units-options' }, { id: 'conversion_factor', label: 'Factor' }],
-  },
-];
-
-const productMediaTabs = [
-  {
-    id: 'media', resource: 'product-media', label: 'Media', singular: 'media de producto', icon: PackageSearch, showStatus: false,
-    empty: { product_id: '', product_variant_id: '', media_type: 'IMAGE', storage_provider: 'MINIO', object_key: '', is_primary: false, sort_order: 0 },
-    fields: [{ id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options' }, { id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options' }, { id: 'media_type', label: 'Tipo', type: 'select', options: ['IMAGE', 'DOCUMENT', 'LABEL', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'storage_provider', label: 'Proveedor', type: 'select', options: ['MINIO', 'S3', 'LOCAL', 'EXTERNAL'].map((value) => ({ value, label: value })) }, { id: 'object_key', label: 'Objeto', required: true, wide: true }, { id: 'public_url', label: 'URL publica', wide: true }, { id: 'file_name', label: 'Archivo' }, { id: 'mime_type', label: 'MIME' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Principal' }, { id: 'sort_order', label: 'Orden', type: 'number', min: 0 }],
-    tableFields: [{ id: 'object_key', label: 'Objeto', primary: true }, { id: 'media_type', label: 'Tipo' }, { id: 'file_name', label: 'Archivo' }],
+    id: 'units', resource: 'product-units', label: 'Unidades', singular: 'unidad por producto', icon: PackageSearch, activeField: 'is_active', detailDescription: 'Submodulo: Unidades por producto', size: 'modalLarge',
+    empty: { product_id: '', measurement_unit_id: '', conversion_factor: 1, is_purchase_unit: false, is_sale_unit: true, is_inventory_unit: true, is_active: true },
+    fields: [
+      { id: 'context_section', type: 'section', label: 'Producto y unidad', icon: PackageSearch, columns: 2, description: 'Define la unidad comercial o logistica asociada al producto.' },
+      { id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options', required: true },
+      { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options', required: true },
+      { id: 'conversion_section', type: 'section', label: 'Conversion y usos', icon: Settings, columns: 3, description: 'El factor expresa cuantas unidades base representa esta unidad.' },
+      { id: 'conversion_factor', label: 'Factor conversion', type: 'number', min: 0.000001 },
+      { id: 'is_purchase_unit', label: 'Compra', type: 'checkbox', checkLabel: 'Compra' },
+      { id: 'is_sale_unit', label: 'Venta', type: 'checkbox', checkLabel: 'Venta' },
+      { id: 'is_inventory_unit', label: 'Inventario', type: 'checkbox', checkLabel: 'Inventario' },
+      { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
+    ],
+    tableFields: [{ id: 'product_id', label: 'Producto', primary: true, optionsResource: 'products-options' }, { id: 'measurement_unit_id', label: 'Unidad', optionsResource: 'measurement-units-options' }, { id: 'conversion_factor', label: 'Factor', format: factorDisplay }, { id: 'uses', label: 'Uso', format: productUnitUses }],
   },
 ];
 
@@ -470,9 +485,8 @@ export const SuppliersMaintainers = ({ initialTab, visibleTabs }) => {
   const scopedTabs = visibleTabs?.length ? suppliersTabs.filter((tab) => visibleTabs.includes(tab.id)) : suppliersTabs;
   return <AdminGenericMaintainers title="Mantenedores de proveedores" description="Proveedores, contactos, direcciones y productos asociados." tabs={scopedTabs} initialTab={initialTab} />;
 };
-export const ProductBarcodeMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Codigos de barra de productos" description="Codigos asociados a SKU / Variedades y unidades comerciales." tabs={productBarcodeTabs} initialTab={initialTab} />;
+export const ProductBarcodeMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Codigos de barra de productos" description="Codigos asociados a SKU / Variaciones y unidades comerciales." tabs={productBarcodeTabs} initialTab={initialTab} />;
 export const ProductUnitMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Unidades por producto" description="Unidades alternativas de compra, venta e inventario por producto." tabs={productUnitTabs} initialTab={initialTab} />;
-export const ProductMediaMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Media de productos" description="Media tecnica asociada a productos o SKU / Variedades." tabs={productMediaTabs} initialTab={initialTab} />;
 export const InventoryMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de inventario" description="Zonas de bodega y reglas de reposicion." tabs={inventoryTabs} initialTab={initialTab} />;
 export const SalesConfigMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores comerciales" description="Promociones y reglas de devolucion sin transaccionar ventas." tabs={salesConfigTabs} initialTab={initialTab} />;
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;

@@ -123,11 +123,6 @@ RESOURCES = {
         "fields": ["product_id", "measurement_unit_id", "conversion_factor", "is_purchase_unit", "is_sale_unit", "is_inventory_unit", "is_active"],
         "required": ["product_id", "measurement_unit_id"], "bool": ["is_purchase_unit", "is_sale_unit", "is_inventory_unit", "is_active"], "int": ["product_id", "measurement_unit_id"], "decimal": ["conversion_factor"],
     },
-    "product-media": {
-        "table": "product_media", "soft_delete": True,
-        "fields": ["product_id", "product_variant_id", "media_type", "storage_provider", "bucket_name", "object_key", "public_url", "file_name", "mime_type", "file_size_bytes", "is_primary", "sort_order"],
-        "required": ["object_key"], "bool": ["is_primary"], "int": ["product_id", "product_variant_id", "file_size_bytes", "sort_order"],
-    },
     "document-templates": {
         "table": "document_templates", "code_field": "template_code", "prefix": "DTPL", "active_field": "is_active", "soft_delete": True,
         "fields": ["template_name", "document_type_id", "template_channel", "template_subject", "template_body", "paper_size", "orientation", "is_default", "is_active"],
@@ -226,8 +221,6 @@ async def require_read(request: Request) -> dict:
         "PRODUCT_BARCODES_MANAGE",
         "PRODUCT_UNITS_ACCESS",
         "PRODUCT_UNITS_MANAGE",
-        "PRODUCT_MEDIA_ACCESS",
-        "PRODUCT_MEDIA_MANAGE",
         "SALES_MAINTAINERS_ACCESS",
         "SALES_MAINTAINERS_MANAGE",
         "FINANCE_MAINTAINERS_ACCESS",
@@ -252,7 +245,6 @@ async def require_write(request: Request) -> dict:
         "PRODUCT_BRAND_MODELS_MANAGE",
         "PRODUCT_BARCODES_MANAGE",
         "PRODUCT_UNITS_MANAGE",
-        "PRODUCT_MEDIA_MANAGE",
         "SALES_MAINTAINERS_MANAGE",
         "FINANCE_MAINTAINERS_MANAGE",
         "DOCUMENT_TEMPLATES_MANAGE",
@@ -349,6 +341,13 @@ def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
             if barcode_type == "QR" and len(normalized_value) > 255:
                 raise ValueError("QR acepta hasta 255 caracteres")
             data["barcode_value"] = normalized_value
+    if config.get("table") == "product_measurement_units":
+        factor = data.get("conversion_factor")
+        if factor is not None and factor <= 0:
+            raise ValueError("El factor de conversion debe ser mayor a cero")
+        role_flags = ["is_purchase_unit", "is_sale_unit", "is_inventory_unit"]
+        if any(flag in data for flag in role_flags) and not any(data.get(flag) for flag in role_flags):
+            raise ValueError("Selecciona al menos un uso para la unidad")
     return data
 
 
@@ -421,7 +420,8 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
             await session.commit()
             result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = LAST_INSERT_ID()"))
             row = result.mappings().first()
-            return ResponseManager.success(data={key: _json_value(value) for key, value in row.items()}, message="Registro creado correctamente", request=request)
+            row_data = {key: _json_value(value) for key, value in row.items()}
+            return ResponseManager.success(data=row_data, message="Registro creado correctamente", request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except ValueError as exc:
@@ -446,7 +446,8 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
             await session.commit()
             result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = :id"), {"id": item_id})
             row = result.mappings().first()
-            return ResponseManager.success(data={key: _json_value(value) for key, value in row.items()}, message="Registro actualizado correctamente", request=request)
+            row_data = {key: _json_value(value) for key, value in row.items()}
+            return ResponseManager.success(data=row_data, message="Registro actualizado correctamente", request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except ValueError as exc:

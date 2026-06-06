@@ -126,7 +126,6 @@ INSERT INTO menu_items (
 ((SELECT id FROM menu_items WHERE menu_code = 'inventory'), 'warehouse_zones', 'Zonas de bodega', 'Zonas operativas dentro de bodegas.', 'map-pin-line', '/inventory/warehouse-zones', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'INVENTORY_MAINTAINERS_ACCESS'), TRUE, TRUE, 35, 2, '/inventory/warehouse-zones'),
 ((SELECT id FROM menu_items WHERE menu_code = 'inventory'), 'stock_critical_config', 'Stock critico y reposicion', 'Reglas de stock minimo, seguridad y reorden.', 'alarm-warning-line', '/inventory/stock-critical', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'INVENTORY_MAINTAINERS_ACCESS'), TRUE, TRUE, 36, 2, '/inventory/stock-critical'),
 ((SELECT id FROM menu_items WHERE menu_code = 'inventory'), 'product_units', 'Unidades por producto', 'Unidades alternativas de compra, venta e inventario.', 'ruler-line', '/products/units', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'INVENTORY_MAINTAINERS_ACCESS'), TRUE, TRUE, 82, 2, '/products/units'),
-((SELECT id FROM menu_items WHERE menu_code = 'inventory'), 'product_media', 'Media de productos', 'Registro tecnico de media asociada a productos.', 'image-line', '/products/media', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'INVENTORY_MAINTAINERS_ACCESS'), TRUE, TRUE, 84, 2, '/products/media'),
 ((SELECT id FROM menu_items WHERE menu_code = 'sales'), 'promotions', 'Promociones comerciales', 'Promociones y reglas comerciales sin venta directa.', 'price-tag-line', '/sales/promotions', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'SALES_MAINTAINERS_ACCESS'), TRUE, TRUE, 40, 2, '/sales/promotions'),
 ((SELECT id FROM menu_items WHERE menu_code = 'documents'), 'return_reasons', 'Motivos de devolucion', 'Catalogo de motivos y reglas para devoluciones.', 'refund-2-line', '/returns/reasons', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'SALES_MAINTAINERS_ACCESS'), TRUE, TRUE, 22, 2, '/returns/reasons'),
 ((SELECT id FROM menu_items WHERE menu_code = 'documents'), 'document_templates', 'Plantillas de documentos', 'Plantillas de impresion, PDF o correo.', 'file-text-line', '/config/document-templates', 'LINK', (SELECT id FROM permissions WHERE permission_code = 'DOCUMENT_TEMPLATES_ACCESS'), TRUE, TRUE, 50, 2, '/config/document-templates'),
@@ -150,7 +149,7 @@ ON DUPLICATE KEY UPDATE
 
 UPDATE menu_items
 SET required_permission_id = (SELECT id FROM permissions WHERE permission_code = 'INVENTORY_MAINTAINERS_ACCESS')
-WHERE menu_code IN ('barcodes', 'warehouse_zones', 'stock_critical_config', 'product_units', 'product_media');
+WHERE menu_code IN ('barcodes', 'warehouse_zones', 'stock_critical_config', 'product_units');
 
 -- Root hereda SUPER_ADMIN; este refuerzo mantiene SUPER_ADMIN con todos los permisos activos.
 INSERT IGNORE INTO role_permissions (role_id, permission_id, granted_by_user_id)

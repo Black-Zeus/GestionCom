@@ -38,7 +38,6 @@ const AdminSupplierProducts = lazy(() => import('@/pages/admin/AdminSupplierProd
 const AdminProductSupportMaintainers = lazy(() => import('@/pages/admin/AdminProductSupportMaintainers'));
 const AdminProductBarcodes = lazy(() => import('@/pages/admin/AdminProductBarcodes'));
 const AdminProductUnits = lazy(() => import('@/pages/admin/AdminProductUnits'));
-const AdminProductMedia = lazy(() => import('@/pages/admin/AdminProductMedia'));
 const AdminInventoryMaintainers = lazy(() => import('@/pages/admin/AdminInventoryMaintainers'));
 const AdminStockCriticalConfig = lazy(() => import('@/pages/admin/AdminStockCriticalConfig'));
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
@@ -81,7 +80,6 @@ const moduleComponents = {
   'product-brand-models': AdminProductSupportMaintainers,
   barcodes: AdminProductBarcodes,
   'product-units': AdminProductUnits,
-  'product-media': AdminProductMedia,
   'warehouse-zones': AdminInventoryMaintainers,
   'stock-critical-config': AdminStockCriticalConfig,
   'system-parameters': AdminSystemParameterMaintainers,
