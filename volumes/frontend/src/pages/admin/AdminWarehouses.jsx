@@ -14,6 +14,7 @@ import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
 import { formatDateTime } from '@/utils/dateTime';
+import { formatPhone, normalizePhoneForStorage } from '@/utils/phone';
 
 const warehouseTypes = [
   { value: 'WAREHOUSE', label: 'Bodega' },
@@ -68,7 +69,7 @@ const toWarehousePayload = (form) => {
     address: form.address.trim(),
     city: form.city.trim(),
     country: form.country.trim(),
-    phone: form.phone.trim(),
+    phone: form.phone ? normalizePhoneForStorage(form.phone) : '',
     email: form.email.trim(),
     is_active: Boolean(form.is_active),
   };
@@ -546,7 +547,7 @@ const AdminWarehouses = () => {
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Phone className="h-3.5 w-3.5" />
-            <span>{warehouse.phone || 'Sin telefono'}</span>
+            <span>{warehouse.phone ? formatPhone(warehouse.phone) : 'Sin telefono'}</span>
           </div>
         </div>
       ),

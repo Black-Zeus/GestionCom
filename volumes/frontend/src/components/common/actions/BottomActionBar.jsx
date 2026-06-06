@@ -11,11 +11,11 @@ const BottomActionBar = ({
   className = '',
 }) => (
   <div className={`border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900 ${className}`}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="min-w-0 text-sm text-slate-500 dark:text-slate-400">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0 flex-[1_1_28rem] text-sm text-slate-500 dark:text-slate-400">
         {leftContent}
       </div>
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex shrink-0 flex-wrap justify-end gap-2">
         {actions.map((action) => {
           const Icon = action.icon;
 

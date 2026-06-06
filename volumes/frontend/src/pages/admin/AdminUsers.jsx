@@ -14,6 +14,7 @@ import { usersService } from '@/services/admin/usersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
 import { formatDateTime } from '@/utils/dateTime';
+import { formatPhone, normalizePhoneForStorage } from '@/utils/phone';
 
 const emptyUserForm = {
   username: '',
@@ -31,7 +32,7 @@ const toCreatePayload = (form) => ({
   email: form.email,
   first_name: form.first_name,
   last_name: form.last_name,
-  phone: form.phone || null,
+  phone: form.phone ? normalizePhoneForStorage(form.phone) : null,
   role_id: Number(form.role_id),
   password: form.password,
   confirm_password: form.confirm_password,
@@ -41,7 +42,7 @@ const toUpdatePayload = (form) => ({
   email: form.email,
   first_name: form.first_name,
   last_name: form.last_name,
-  phone: form.phone || null,
+  phone: form.phone ? normalizePhoneForStorage(form.phone) : null,
 });
 
 const userToForm = (user) => ({
@@ -1124,7 +1125,7 @@ const AdminUsers = () => {
       render: (user) => (
         <>
           <div>{user.email}</div>
-          <div className="text-xs text-slate-500">{user.phone || 'Sin telefono'}</div>
+          <div className="text-xs text-slate-500">{user.phone ? formatPhone(user.phone) : 'Sin telefono'}</div>
         </>
       ),
     },

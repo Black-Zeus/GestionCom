@@ -69,7 +69,7 @@ const AutocompleteSelect = ({
         onClick={() => {
           if (!disabled) setOpen((current) => !current);
         }}
-        className="flex h-10 w-full min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition hover:border-blue-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-blue-500 dark:focus:ring-blue-900/40 dark:disabled:bg-slate-900"
+        className="flex h-11 w-full min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition hover:border-blue-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-blue-500 dark:focus:ring-blue-900/40 dark:disabled:bg-slate-900"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
