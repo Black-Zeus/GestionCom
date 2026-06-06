@@ -31,11 +31,31 @@ const apiClient = axios.create({
 });
 
 let refreshPromise = null;
+const TOKEN_REFRESH_SKEW_SECONDS = 30;
 
 const isAuthRecoveryEndpoint = (url = '') => (
   url.includes('/auth/login')
   || url.includes('/auth/refresh')
 );
+
+const getTokenExpiration = (token) => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(window.atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=')));
+    return typeof decoded.exp === 'number' ? decoded.exp : null;
+  } catch {
+    return null;
+  }
+};
+
+const shouldRefreshToken = (token) => {
+  const expiresAt = getTokenExpiration(token);
+  if (!expiresAt) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return expiresAt - now <= TOKEN_REFRESH_SKEW_SECONDS;
+};
 
 const refreshSession = async () => {
   const refreshToken = tokenStorage.getRefreshToken();
@@ -68,8 +88,15 @@ const refreshSession = async () => {
   return accessToken;
 };
 
-apiClient.interceptors.request.use((config) => {
-  const accessToken = tokenStorage.getAccessToken();
+apiClient.interceptors.request.use(async (config) => {
+  let accessToken = tokenStorage.getAccessToken();
+
+  if (accessToken && tokenStorage.getRefreshToken() && !isAuthRecoveryEndpoint(config.url) && shouldRefreshToken(accessToken)) {
+    refreshPromise ||= refreshSession().finally(() => {
+      refreshPromise = null;
+    });
+    accessToken = await refreshPromise;
+  }
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
