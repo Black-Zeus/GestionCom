@@ -6,7 +6,7 @@ import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import RecordNotFoundState from '@/components/common/states/RecordNotFoundState';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
-import { profileService } from '@/services/profile/profileService';
+import { mediaService } from '@/services/media/mediaService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { supplierMaintainerConfig } from './foundationMaintainerConfigs';
 
@@ -275,8 +275,8 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
         ? await adminMaintainersService.update(supplierMaintainerConfig.resource, supplier.id, payload)
         : await adminMaintainersService.create(supplierMaintainerConfig.resource, payload);
 
-      if (pendingLogoFile) await profileService.uploadSupplierMedia(savedSupplier.id || supplier?.id, 'logo', pendingLogoFile);
-      if (pendingBannerFile) await profileService.uploadSupplierMedia(savedSupplier.id || supplier?.id, 'banner', pendingBannerFile);
+      if (pendingLogoFile) await mediaService.uploadSupplierMedia(savedSupplier.id || supplier?.id, 'logo', pendingLogoFile);
+      if (pendingBannerFile) await mediaService.uploadSupplierMedia(savedSupplier.id || supplier?.id, 'banner', pendingBannerFile);
 
       return savedSupplier;
     })(), {

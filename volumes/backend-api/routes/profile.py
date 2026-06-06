@@ -4,6 +4,7 @@ Modulo de perfil y carga sanitizada de imagenes.
 from datetime import datetime, timezone
 
 from io import BytesIO
+import logging
 
 from fastapi import APIRouter, Depends, File, Path, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -17,6 +18,7 @@ from utils.permissions_utils import get_current_user
 from utils.phone import normalize_phone_for_storage
 
 router = APIRouter(tags=["Profile"])
+logger = logging.getLogger(__name__)
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
@@ -66,7 +68,7 @@ async def _read_image(file: UploadFile) -> bytes:
     return content
 
 
-async def _create_media_asset(session, *, owner_type: str, owner_id: int, media_role: str, profile: str, file: UploadFile, uploaded_by: int) -> dict:
+async def _create_media_asset(session, *, owner_type: str, owner_id: int, media_role: str, profile: str, file: UploadFile, uploaded_by: int, replace_existing: bool = True) -> dict:
     content = await _read_image(file)
     stored = media_storage.upload_image(content=content, profile=profile, owner_type=owner_type, owner_id=owner_id, role=media_role)
     params = {
@@ -77,16 +79,17 @@ async def _create_media_asset(session, *, owner_type: str, owner_id: int, media_
         "file_name": file.filename,
         "uploaded_by_user_id": uploaded_by,
     }
-    await session.execute(
-        text(
-            """
-            UPDATE media_assets
-            SET deleted_at = CURRENT_TIMESTAMP
-            WHERE owner_type = :owner_type AND owner_id = :owner_id AND media_role = :media_role AND deleted_at IS NULL
-            """
-        ),
-        params,
-    )
+    if replace_existing:
+        await session.execute(
+            text(
+                """
+                UPDATE media_assets
+                SET deleted_at = CURRENT_TIMESTAMP
+                WHERE owner_type = :owner_type AND owner_id = :owner_id AND media_role = :media_role AND deleted_at IS NULL
+                """
+            ),
+            params,
+        )
     await session.execute(
         text(
             """
@@ -290,12 +293,79 @@ async def upload_product_image(request: Request, product_id: int = Path(..., gt=
         return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
     try:
         async with db_manager.get_async_session() as session:
-            asset = await _create_media_asset(session, owner_type="PRODUCT", owner_id=product_id, media_role="PRODUCT_IMAGE", profile="product", file=file, uploaded_by=_user_id(user))
+            product = await session.execute(text("SELECT id FROM products WHERE id = :product_id AND deleted_at IS NULL"), {"product_id": product_id})
+            if not product.mappings().first():
+                return ResponseManager.error(message="Producto no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+            try:
+                asset = await _create_media_asset(session, owner_type="PRODUCT", owner_id=product_id, media_role="PRODUCT_IMAGE", profile="product", file=file, uploaded_by=_user_id(user))
+            except ValueError as exc:
+                return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            except Exception as exc:
+                logger.exception("No fue posible procesar imagen de producto %s", product_id)
+                return ResponseManager.error(message="No fue posible procesar la imagen de producto.", status_code=HTTPStatus.INTERNAL_SERVER_ERROR, error_code=ErrorCode.SYSTEM_INTERNAL_ERROR, error_type=ErrorType.SYSTEM_ERROR, request=request)
             await session.execute(text("UPDATE products SET primary_image_media_asset_id = :asset_id WHERE id = :product_id"), {"asset_id": asset["id"], "product_id": product_id})
+            await session.execute(text("UPDATE product_media SET deleted_at = CURRENT_TIMESTAMP, is_primary = FALSE WHERE product_id = :product_id AND deleted_at IS NULL"), {"product_id": product_id})
+            await session.execute(
+                text(
+                    """
+                    INSERT INTO product_media (
+                      product_id, media_asset_id, media_type, storage_provider,
+                      bucket_name, object_key, file_name, mime_type,
+                      file_size_bytes, is_primary, sort_order, uploaded_by_user_id
+                    ) VALUES (
+                      :product_id, :media_asset_id, 'IMAGE', 'MINIO',
+                      :bucket_name, :object_key, :file_name, :mime_type,
+                      :file_size_bytes, TRUE, 0, :uploaded_by_user_id
+                    )
+                    """
+                ),
+                {
+                    "product_id": product_id,
+                    "media_asset_id": asset["id"],
+                    "bucket_name": asset.get("bucket_name"),
+                    "object_key": asset.get("object_key_full"),
+                    "file_name": asset.get("file_name"),
+                    "mime_type": asset.get("mime_type"),
+                    "file_size_bytes": asset.get("full_size_bytes"),
+                    "uploaded_by_user_id": _user_id(user),
+                },
+            )
             await session.commit()
             return ResponseManager.success(data=_asset_urls(asset), message="Imagen de producto actualizada", request=request)
     except ValueError as exc:
         return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+
+@router.delete("/products/{product_id}/image", response_class=JSONResponse)
+async def delete_product_image(request: Request, product_id: int = Path(..., gt=0), user: dict = Depends(get_current_user)):
+    if not _has_any_permission(user, ["PRODUCTS_MANAGE"]):
+        return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    async with db_manager.get_async_session() as session:
+        product = await session.execute(
+            text("SELECT id, primary_image_media_asset_id FROM products WHERE id = :product_id AND deleted_at IS NULL"),
+            {"product_id": product_id},
+        )
+        row = product.mappings().first()
+        if not row:
+            return ResponseManager.error(message="Producto no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+
+        await session.execute(text("UPDATE products SET primary_image_media_asset_id = NULL WHERE id = :product_id"), {"product_id": product_id})
+        await session.execute(text("UPDATE product_media SET deleted_at = CURRENT_TIMESTAMP, is_primary = FALSE WHERE product_id = :product_id AND deleted_at IS NULL"), {"product_id": product_id})
+        await session.execute(
+            text(
+                """
+                UPDATE media_assets
+                SET deleted_at = CURRENT_TIMESTAMP
+                WHERE owner_type = 'PRODUCT'
+                  AND owner_id = :product_id
+                  AND media_role = 'PRODUCT_IMAGE'
+                  AND deleted_at IS NULL
+                """
+            ),
+            {"product_id": product_id},
+        )
+        await session.commit()
+        return ResponseManager.success(data={"product_id": product_id, "primary_image": None}, message="Imagen de producto removida", request=request)
 
 
 @router.post("/customers/{customer_id}/{media_role}", response_class=JSONResponse)

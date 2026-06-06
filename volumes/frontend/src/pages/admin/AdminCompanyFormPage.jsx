@@ -6,7 +6,7 @@ import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import RecordNotFoundState from '@/components/common/states/RecordNotFoundState';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
-import { profileService } from '@/services/profile/profileService';
+import { mediaService } from '@/services/media/mediaService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { normalizeRutForStorage } from '@/utils/rut';
 
@@ -221,8 +221,8 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
       const savedCompany = isEdit
         ? await businessFoundationService.companies.update(company.id, payload)
         : await businessFoundationService.companies.create(payload);
-      if (pendingLogoFile) await profileService.uploadCompanyMedia(savedCompany.id || company?.id, 'logo', pendingLogoFile);
-      if (pendingBannerFile) await profileService.uploadCompanyMedia(savedCompany.id || company?.id, 'banner', pendingBannerFile);
+      if (pendingLogoFile) await mediaService.uploadCompanyMedia(savedCompany.id || company?.id, 'logo', pendingLogoFile);
+      if (pendingBannerFile) await mediaService.uploadCompanyMedia(savedCompany.id || company?.id, 'banner', pendingBannerFile);
       return savedCompany;
     })(), {
       loading: 'Guardando empresa...',

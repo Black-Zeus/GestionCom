@@ -6,7 +6,7 @@ import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import RecordNotFoundState from '@/components/common/states/RecordNotFoundState';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
-import { profileService } from '@/services/profile/profileService';
+import { mediaService } from '@/services/media/mediaService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { customerMaintainerConfig } from './foundationMaintainerConfigs';
 
@@ -283,10 +283,10 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
         : await adminMaintainersService.create(customerMaintainerConfig.resource, payload);
 
       if (pendingLogoFile) {
-        await profileService.uploadCustomerMedia(savedCustomer.id || customer?.id, 'logo', pendingLogoFile);
+        await mediaService.uploadCustomerMedia(savedCustomer.id || customer?.id, 'logo', pendingLogoFile);
       }
       if (pendingBannerFile) {
-        await profileService.uploadCustomerMedia(savedCustomer.id || customer?.id, 'banner', pendingBannerFile);
+        await mediaService.uploadCustomerMedia(savedCustomer.id || customer?.id, 'banner', pendingBannerFile);
       }
 
       return savedCustomer;
