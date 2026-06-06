@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { Search } from 'lucide-react';
+import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 
 const FilterBar = ({
   searchValue = '',
@@ -22,22 +23,27 @@ const FilterBar = ({
         className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
         placeholder={searchPlaceholder}
       />
-      <button type="button" onClick={onSearchSubmit} className="text-slate-500 hover:text-blue-600" aria-label="Buscar">
+      <button type="button" onClick={onSearchSubmit} className="inline-flex h-8 w-8 items-center justify-center text-slate-500 hover:text-blue-600" aria-label="Buscar">
         <Search className="h-4 w-4" />
       </button>
     </div>
 
     {fields.map((field) => (
-      <select
+      <AutocompleteSelect
         key={field.id}
         value={field.value}
-        onChange={(event) => field.onChange?.(event.target.value)}
-        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
-      >
-        {field.options.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+        onChange={(nextValue) => field.onChange?.(nextValue)}
+        options={field.options || []}
+        placeholder={field.placeholder || 'Seleccionar'}
+        searchPlaceholder={field.searchPlaceholder || 'Buscar opcion'}
+        disabled={field.disabled}
+        clearable={field.clearable}
+        showIcons={field.showIcons ?? (field.options || []).some((option) => option.icon)}
+        multiple={field.multiple}
+        maxVisibleTags={field.maxVisibleTags}
+        className={field.className}
+        buttonClassName="h-10 shadow-none"
+      />
     ))}
 
     {actions}

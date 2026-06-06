@@ -11,16 +11,31 @@ const AutocompleteSelect = ({
   disabled = false,
   clearable = false,
   showIcons = false,
+  multiple = false,
+  maxVisibleTags = 2,
   className = '',
+  buttonClassName = '',
 }) => {
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
 
+  const selectedValues = useMemo(() => {
+    if (!multiple) return [];
+    if (Array.isArray(value)) return value.map((item) => String(item));
+    if (value === null || value === undefined || value === '') return [];
+    return [String(value)];
+  }, [multiple, value]);
+
   const selectedOption = useMemo(
-    () => options.find((option) => String(option.value) === String(value)),
-    [options, value]
+    () => (!multiple ? options.find((option) => String(option.value) === String(value)) : null),
+    [multiple, options, value]
+  );
+
+  const selectedOptions = useMemo(
+    () => (multiple ? options.filter((option) => selectedValues.includes(String(option.value))) : []),
+    [multiple, options, selectedValues]
   );
 
   const filteredOptions = useMemo(() => {
@@ -48,6 +63,17 @@ const AutocompleteSelect = ({
   }, [open]);
 
   const selectOption = (nextValue) => {
+    if (multiple) {
+      const normalizedNextValue = String(nextValue);
+      const exists = selectedValues.includes(normalizedNextValue);
+      const nextValues = exists
+        ? selectedValues.filter((item) => item !== normalizedNextValue)
+        : [...selectedValues, normalizedNextValue];
+      onChange?.(nextValues);
+      setTerm('');
+      return;
+    }
+
     onChange?.(nextValue);
     setTerm('');
     setOpen(false);
@@ -55,11 +81,12 @@ const AutocompleteSelect = ({
 
   const clearValue = (event) => {
     event.stopPropagation();
-    onChange?.('');
+    onChange?.(multiple ? [] : '');
     setTerm('');
   };
 
   const SelectedIcon = showIcons ? selectedOption?.icon : null;
+  const hasSelection = multiple ? selectedOptions.length > 0 : Boolean(selectedOption);
 
   return (
     <div ref={containerRef} className={`relative min-w-0 ${className}`}>
@@ -69,17 +96,32 @@ const AutocompleteSelect = ({
         onClick={() => {
           if (!disabled) setOpen((current) => !current);
         }}
-        className="flex h-11 w-full min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition hover:border-blue-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-blue-500 dark:focus:ring-blue-900/40 dark:disabled:bg-slate-900"
+        className={`flex h-11 w-full min-w-0 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition hover:border-blue-300 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-blue-500 dark:focus:ring-blue-900/40 dark:disabled:bg-slate-900 ${buttonClassName}`}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
         {SelectedIcon && (
           <SelectedIcon className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-300" />
         )}
-        <span className={`min-w-0 flex-1 truncate ${selectedOption ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>
-          {selectedOption?.label || placeholder}
-        </span>
-        {clearable && selectedOption && !disabled && (
+        {multiple && selectedOptions.length > 0 ? (
+          <span className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+            {selectedOptions.slice(0, maxVisibleTags).map((option) => (
+              <span key={option.value} className="max-w-[9rem] truncate rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/50 dark:text-blue-200">
+                {option.label}
+              </span>
+            ))}
+            {selectedOptions.length > maxVisibleTags && (
+              <span className="shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                +{selectedOptions.length - maxVisibleTags}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className={`min-w-0 flex-1 truncate ${selectedOption ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>
+            {selectedOption?.label || placeholder}
+          </span>
+        )}
+        {clearable && hasSelection && !disabled && (
           <span
             role="button"
             tabIndex={-1}
@@ -109,12 +151,14 @@ const AutocompleteSelect = ({
               placeholder={searchPlaceholder}
             />
           </div>
-          <div className="max-h-64 overflow-y-auto py-1" role="listbox">
+          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-multiselectable={multiple || undefined}>
             {filteredOptions.length === 0 && (
               <div className="px-3 py-3 text-sm text-slate-500">Sin coincidencias</div>
             )}
             {filteredOptions.map((option) => {
-              const selected = String(option.value) === String(value);
+              const selected = multiple
+                ? selectedValues.includes(String(option.value))
+                : String(option.value) === String(value);
               const OptionIcon = showIcons ? option.icon : null;
               return (
                 <button

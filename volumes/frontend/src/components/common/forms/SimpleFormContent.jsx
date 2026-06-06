@@ -91,7 +91,7 @@ const SimpleFormContent = ({
     fields.forEach((field) => {
       if (field.type === 'section' || field.type === 'custom' || field.disabled || field.readOnly) return;
       const value = nextForm[field.id];
-      if (field.required && (value === undefined || value === null || value === '')) {
+      if (field.required && (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0))) {
         nextErrors[field.id] = `${field.label} es requerido.`;
         return;
       }
@@ -166,6 +166,8 @@ const SimpleFormContent = ({
             searchPlaceholder={field.searchPlaceholder || 'Buscar opcion'}
             clearable={field.clearable}
             showIcons={field.showIcons}
+            multiple={field.multiple}
+            maxVisibleTags={field.maxVisibleTags}
             disabled={field.disabled}
           />
         ) : field.type === 'custom' && field.render ? (

@@ -17,7 +17,7 @@ export const ActionButton = ({
 }) => (
   <button
     type="button"
-    className={`inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant] || variants.primary} ${className}`}
+    className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${variants[variant] || variants.primary} ${className}`}
     {...props}
   >
     {Icon ? <Icon className="h-4 w-4" /> : <span className="text-base leading-none">+</span>}
