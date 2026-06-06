@@ -1,13 +1,12 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Boxes, ImageUp, Package, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Boxes, ImageUp, Package, Pencil, Plus, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
-import ModuleTabs from '@/components/common/navigation/ModuleTabs';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
@@ -220,7 +219,7 @@ const AdminProducts = () => {
   const [units, setUnits] = useState([]);
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'products');
+  const [activeTab, setActiveTab] = useState((searchParams.get('product_code') || searchParams.get('product_id') || searchParams.get('tab') === 'variants') ? 'variants' : 'products');
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(0);
@@ -257,14 +256,21 @@ const AdminProducts = () => {
   useEffect(() => { setPage(0); }, [activeTab, search, status, pageSize]);
   useEffect(() => {
     const nextTab = searchParams.get('tab');
+    const nextProductCode = searchParams.get('product_code');
+    const nextProductId = searchParams.get('product_id');
     const nextSearch = searchParams.get('search') || '';
-    if (['products', 'variants'].includes(nextTab) && nextTab !== activeTab) setActiveTab(nextTab);
+    const nextActiveTab = nextProductCode || nextProductId || nextTab === 'variants' ? 'variants' : 'products';
+    if (nextActiveTab !== activeTab) setActiveTab(nextActiveTab);
     if (nextSearch !== search) setSearch(nextSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const unitOptions = units.map((unit) => ({ value: String(unit.id), label: `${unit.unit_code} - ${unit.unit_name}` }));
   const productOptions = products.map((product) => ({ value: String(product.id), label: `${product.product_code} - ${product.product_name}` }));
+  const selectedProductCode = searchParams.get('product_code') || '';
+  const legacyProductId = searchParams.get('product_id') || '';
+  const selectedProduct = products.find((product) => (selectedProductCode && String(product.product_code) === selectedProductCode) || (legacyProductId && String(product.id) === String(legacyProductId)));
+  const selectedProductId = selectedProduct?.id ? String(selectedProduct.id) : legacyProductId;
 
   const openProduct = (product = null) => ModalManager.show({
     type: 'custom', title: product ? 'Editar producto' : 'Nuevo producto', size: 'large', showFooter: false, contentComponent: ProductFormModal,
@@ -282,25 +288,28 @@ const AdminProducts = () => {
     },
   });
 
-  const openVariant = (variant = null) => ModalManager.show({
-    type: 'custom', title: variant ? 'Editar SKU' : 'Nuevo SKU', size: 'large', showFooter: false, contentComponent: SimpleFormContent,
+  const openVariant = (variant = null, fixedProductId = selectedProductId) => {
+    const resolvedProductId = variant?.product_id ? String(variant.product_id) : fixedProductId || productOptions[0]?.value || '';
+    ModalManager.show({
+      type: 'custom', title: variant ? 'Editar SKU / Variedad' : 'Nueva SKU / Variedad', size: 'large', showFooter: false, contentComponent: SimpleFormContent,
     contentProps: {
-      initialValues: variant ? { variant_sku: variant.variant_sku, product_id: String(variant.product_id), variant_name: variant.variant_name, variant_description: variant.variant_description || '', is_default_variant: variant.is_default_variant, is_active: variant.is_active } : { product_id: productOptions[0]?.value || '', variant_name: '', variant_description: '', is_default_variant: false, is_active: true },
+      initialValues: variant ? { variant_sku: variant.variant_sku, product_id: resolvedProductId, variant_name: variant.variant_name, variant_description: variant.variant_description || '', is_default_variant: variant.is_default_variant, is_active: variant.is_active } : { product_id: resolvedProductId, variant_name: '', variant_description: '', is_default_variant: false, is_active: true },
       fields: [
         ...(variant ? [{ id: 'variant_sku', label: 'SKU', readOnly: true, disabled: true }] : []),
-        { id: 'product_id', label: 'Producto', type: 'select', required: true, options: productOptions },
-        { id: 'variant_name', label: 'Nombre SKU', required: true },
+        { id: 'product_id', label: 'Producto', type: 'select', required: true, disabled: Boolean(fixedProductId), options: productOptions },
+        { id: 'variant_name', label: 'Nombre SKU / Variedad', required: true },
         { id: 'variant_description', label: 'Descripcion', wide: true },
-        { id: 'is_default_variant', label: 'Defecto', type: 'checkbox', checkLabel: 'SKU por defecto' },
+        { id: 'is_default_variant', label: 'Defecto', type: 'checkbox', checkLabel: 'SKU / Variedad por defecto' },
         { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
       ],
       onSubmit: async (form) => {
         const payload = { product_id: Number(form.product_id), variant_name: form.variant_name.trim(), variant_description: form.variant_description || null, is_default_variant: Boolean(form.is_default_variant), is_active: Boolean(form.is_active) };
-        await notifyPromise(variant ? businessFoundationService.variants.update(variant.id, payload) : businessFoundationService.variants.create(payload), { loading: 'Guardando SKU...', success: 'SKU guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
+        await notifyPromise(variant ? businessFoundationService.variants.update(variant.id, payload) : businessFoundationService.variants.create(payload), { loading: 'Guardando SKU / Variedad...', success: 'SKU / Variedad guardada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
         await load();
       },
     },
-  });
+    });
+  };
 
   useEffect(() => {
     const openMode = searchParams.get('open');
@@ -345,26 +354,53 @@ const AdminProducts = () => {
     await load();
   });
 
+  const openSkuView = (product) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('product_code', product.product_code);
+    nextParams.delete('product_id');
+    nextParams.delete('tab');
+    nextParams.delete('open');
+    nextParams.delete('id');
+    setSearchParams(nextParams);
+  };
+
+  const closeSkuView = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('product_code');
+    nextParams.delete('product_id');
+    nextParams.delete('tab');
+    nextParams.delete('open');
+    nextParams.delete('id');
+    setSearchParams(nextParams);
+  };
+
   const dataByTab = {
     products: products.filter((item) => activeFilter(status)(item) && includesTerm(item, ['product_code', 'product_name', 'brand_name', 'model_name', 'category_name'], search.trim().toLowerCase())),
-    variants: variants.filter((item) => activeFilter(status)(item) && includesTerm(item, ['variant_sku', 'variant_name', 'product_code', 'product_name'], search.trim().toLowerCase())),
+    variants: variants.filter((item) => (!selectedProductId || String(item.product_id) === String(selectedProductId)) && activeFilter(status)(item) && includesTerm(item, ['variant_sku', 'variant_name', 'product_code', 'product_name'], search.trim().toLowerCase())),
   };
   const activeData = dataByTab[activeTab];
   const visibleData = activeData.slice(page * pageSize, page * pageSize + pageSize);
-  const actionConfig = activeTab === 'products' ? { label: 'Nuevo producto', onClick: () => openProduct(), disabled: !unitOptions.length } : { label: 'Nuevo SKU', onClick: () => openVariant(), disabled: !productOptions.length };
+  const isScopedSkuView = activeTab === 'variants' && Boolean(selectedProductCode || legacyProductId);
+  const actionConfig = activeTab === 'products'
+    ? { label: 'Nuevo producto', onClick: () => openProduct(), disabled: !unitOptions.length }
+    : { label: 'Nueva SKU / Variedad', onClick: () => openVariant(null, selectedProductId), disabled: isScopedSkuView ? !selectedProductId : !productOptions.length };
+  const title = activeTab === 'products' ? 'Catalogo de productos' : `SKU / Variedades${selectedProduct ? ` - ${selectedProduct.product_name}` : ''}`;
+  const description = activeTab === 'products' ? 'Productos base y SKU vendibles.' : 'SKU vendibles asociados al producto seleccionado.';
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Catalogo de productos</h1><p className="mt-1 text-sm text-slate-500">Productos base y SKU vendibles.</p></div>
-        <ActionButton label={actionConfig.label} icon={Plus} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
+        <div><h1 className="text-xl font-semibold">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div>
+        <div className="flex flex-wrap gap-2">
+          {activeTab === 'variants' && <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={closeSkuView} />}
+          <ActionButton label={actionConfig.label} icon={Plus} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
+        </div>
       </div>
       <KpiBar items={[{ label: 'Productos', value: products.length }, { label: 'SKU', value: variants.length }, { label: 'Marcas', value: brands.length }, { label: 'Modelos', value: models.length }]} className="mb-4" />
-      <ModuleTabs className="mb-4" activeTab={activeTab} onChange={setActiveTab} tabs={[{ id: 'products', label: 'Productos', icon: Package, count: products.length }, { id: 'variants', label: 'SKU', icon: Boxes, count: variants.length }]} />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      <FilterBar className="mb-4" searchValue={search} searchPlaceholder="Buscar producto, codigo o SKU" onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
-      {activeTab === 'products' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <div className="flex items-center gap-3">{item.primary_image?.thumb_url ? <img src={item.primary_image.thumb_url} alt={item.product_name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800"><Package className="h-5 w-5" /></div>}<div><div className="font-medium">{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></div></div> }, { id: 'category', label: 'Categoria', render: (item) => item.category_name || '-' }, { id: 'brand', label: 'Marca / modelo', render: (item) => [item.brand_name || item.brand, item.model_name || item.model].filter(Boolean).join(' / ') || '-' }, { id: 'unit', label: 'Unidad', render: (item) => item.base_unit_code }, { id: 'controls', label: 'Control', render: (item) => <span className="text-xs text-slate-500">{[item.has_variants && 'Variantes', item.has_batch_control && 'Lotes', item.has_serial_numbers && 'Seriales'].filter(Boolean).join(' / ') || 'Simple'}</span> }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openProduct(item)} /><RowActionButton label="Cargar imagen" icon={ImageUp} onClick={() => uploadProductImage(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('producto', () => businessFoundationService.products.remove(item.id))} /></div> }]} />}
-      {activeTab === 'variants' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU', render: (item) => <><div className="font-medium">{item.variant_name}</div><div className="font-mono text-xs text-slate-500">{item.variant_sku}</div></> }, { id: 'product', label: 'Producto', render: (item) => <><div>{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></> }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU', () => businessFoundationService.variants.remove(item.id))} /></div> }]} />}
+      <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeTab === 'products' ? 'Buscar producto, codigo o marca' : 'Buscar SKU / Variedad'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
+      {activeTab === 'products' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <div className="flex items-center gap-3">{item.primary_image?.thumb_url ? <img src={item.primary_image.thumb_url} alt={item.product_name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800"><Package className="h-5 w-5" /></div>}<div><div className="font-medium">{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></div></div> }, { id: 'category', label: 'Categoria', render: (item) => item.category_name || '-' }, { id: 'brand', label: 'Marca / modelo', render: (item) => [item.brand_name || item.brand, item.model_name || item.model].filter(Boolean).join(' / ') || '-' }, { id: 'unit', label: 'Unidad', render: (item) => item.base_unit_code }, { id: 'controls', label: 'Control', render: (item) => <span className="text-xs text-slate-500">{[item.has_variants && 'Variedades', item.has_batch_control && 'Lotes', item.has_serial_numbers && 'Seriales'].filter(Boolean).join(' / ') || 'Simple'}</span> }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openProduct(item)} /><RowActionButton label="Cargar imagen" icon={ImageUp} onClick={() => uploadProductImage(item)} /><RowActionButton label="SKU / Variedades" icon={Boxes} onClick={() => openSkuView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('producto', () => businessFoundationService.products.remove(item.id))} /></div> }]} />}
+      {activeTab === 'variants' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variedad', render: (item) => <><div className="font-medium">{item.variant_name}</div><div className="font-mono text-xs text-slate-500">{item.variant_sku}</div></> }, { id: 'product', label: 'Producto', render: (item) => <><div>{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></> }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item, String(item.product_id))} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU / Variedad', () => businessFoundationService.variants.remove(item.id))} /></div> }]} />}
     </section>
   );
 };
