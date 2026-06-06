@@ -212,8 +212,8 @@ const AdminProductBarcodes = () => {
         is_active: item.is_active !== false,
       } : { product_variant_id: '', barcode_type: 'EAN13', barcode_value: '', measurement_unit_id: '', is_primary: false, is_active: true },
       fields: [
-        { type: 'section', id: 'identity', label: 'Datos del codigo', description: 'Codigo estandar asociado a una SKU / Variedad.', icon: Barcode, columns: 3 },
-        { id: 'product_variant_id', label: 'SKU / Variedad', type: 'autocomplete', options: variantOptions, required: true, placeholder: 'Seleccionar SKU' },
+        { type: 'section', id: 'identity', label: 'Datos del codigo', description: 'Codigo estandar asociado a una SKU / Variacion.', icon: Barcode, columns: 3 },
+        { id: 'product_variant_id', label: 'SKU / Variacion', type: 'autocomplete', options: variantOptions, required: true, placeholder: 'Seleccionar SKU' },
         { id: 'barcode_type', label: 'Tipo', type: 'autocomplete', options: BARCODE_TYPES, required: true, showIcons: true, placeholder: 'Seleccionar tipo' },
         { id: 'measurement_unit_id', label: 'Unidad', type: 'autocomplete', options: unitOptions, placeholder: 'Unidad asociada', clearable: true },
         { id: 'barcode_value', label: 'Codigo', required: true, mono: true, span: 2, placeholder: 'Ingresa el valor del codigo' },
@@ -306,7 +306,7 @@ const AdminProductBarcodes = () => {
   const columns = [
     { id: 'barcode_value', label: 'Codigo', sortable: true, render: (item) => <div><div className="font-mono font-semibold">{item.barcode_value}</div>{item.is_primary && <div className="text-xs text-slate-500">Principal</div>}</div> },
     { id: 'barcode_type', label: 'Tipo', sortable: true, render: (item) => <BarcodeTypeBadge type={item.barcode_type} /> },
-    { id: 'product_variant_id', label: 'SKU / Variedad', render: (item) => variantLabelById[String(item.product_variant_id)] || '-' },
+    { id: 'product_variant_id', label: 'SKU / Variacion', render: (item) => variantLabelById[String(item.product_variant_id)] || '-' },
     { id: 'measurement_unit_id', label: 'Unidad', render: (item) => unitLabelById[String(item.measurement_unit_id)] || '-' },
     { id: 'preview', label: 'Vista', align: 'center', render: (item) => <BarcodePreview type={item.barcode_type} value={item.barcode_value} compact /> },
     { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active !== false ? 'active' : 'inactive'}>{item.is_active !== false ? 'Activo' : 'Inactivo'}</StatusBadge> },
@@ -318,7 +318,7 @@ const AdminProductBarcodes = () => {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Codigos de barra de productos</h1>
-          <p className="mt-1 text-sm text-slate-500">Codigos estandar asociados a SKU / Variedades y unidades comerciales.</p>
+          <p className="mt-1 text-sm text-slate-500">Codigos estandar asociados a SKU / Variaciones y unidades comerciales.</p>
         </div>
         <ActionButton label="Nuevo codigo" icon={Barcode} onClick={() => openForm()} />
       </div>

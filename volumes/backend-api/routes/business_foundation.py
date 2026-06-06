@@ -2,6 +2,7 @@
 Routers para mantenedores base de ventas e inventario.
 """
 from datetime import datetime, timezone
+from itertools import product as cartesian_product
 
 from fastapi import APIRouter, Depends, Path, Query, Request
 from fastapi.responses import JSONResponse
@@ -38,6 +39,7 @@ from database.schemas.business_foundation import (
     ProductCreate,
     ProductUpdate,
     ProductVariantCreate,
+    ProductVariantGenerate,
     ProductVariantUpdate,
     TaxRateCreate,
     TaxRateUpdate,
@@ -206,6 +208,7 @@ def product_to_dict(product: Product) -> dict:
 
 def variant_to_dict(variant: ProductVariant) -> dict:
     product = _rel(variant, "product")
+    attributes = getattr(variant, "_attributes", [])
     return {
         "id": variant.id,
         "product_id": variant.product_id,
@@ -216,9 +219,53 @@ def variant_to_dict(variant: ProductVariant) -> dict:
         "variant_description": variant.variant_description,
         "is_default_variant": variant.is_default_variant,
         "is_active": variant.is_active,
+        "attributes": attributes,
+        "attribute_summary": " / ".join(
+            f"{item.get('attribute_name')}: {item.get('value_name')}" for item in attributes if item.get("value_name")
+        ),
         "created_at": variant.created_at.isoformat() if variant.created_at else None,
         "updated_at": variant.updated_at.isoformat() if variant.updated_at else None,
     }
+
+
+async def _variant_attribute_map(session, variant_ids: list[int]) -> dict[int, list[dict]]:
+    if not variant_ids:
+        return {}
+    placeholders = ", ".join(f":id_{index}" for index, _ in enumerate(variant_ids))
+    params = {f"id_{index}": item_id for index, item_id in enumerate(variant_ids)}
+    result = await session.execute(
+        text(
+            f"""
+            SELECT
+              pva.product_variant_id,
+              a.id AS attribute_id,
+              a.attribute_code,
+              a.attribute_name,
+              av.id AS value_id,
+              av.value_code,
+              COALESCE(av.value_name, pva.text_value) AS value_name,
+              pva.text_value
+            FROM product_variant_attributes pva
+            JOIN attributes a ON a.id = pva.attribute_id
+            LEFT JOIN attribute_values av ON av.id = pva.attribute_value_id
+            WHERE pva.product_variant_id IN ({placeholders})
+            ORDER BY a.sort_order, a.attribute_name, av.sort_order, av.value_name
+            """
+        ),
+        params,
+    )
+    mapped: dict[int, list[dict]] = {}
+    for row in result.mappings():
+        mapped.setdefault(row["product_variant_id"], []).append({
+            "attribute_id": row["attribute_id"],
+            "attribute_code": row["attribute_code"],
+            "attribute_name": row["attribute_name"],
+            "value_id": row["value_id"],
+            "value_code": row["value_code"],
+            "value_name": row["value_name"],
+            "text_value": row["text_value"],
+        })
+    return mapped
 
 
 def price_item_to_dict(item: PriceListItem) -> dict:
@@ -566,7 +613,62 @@ async def list_product_variants(request: Request, user: dict = Depends(require_p
         if active_only:
             stmt = stmt.where(ProductVariant.is_active == True)
         result = await session.execute(stmt.order_by(ProductVariant.variant_sku))
-        return ResponseManager.success(data=[variant_to_dict(item) for item in result.scalars().all()], request=request)
+        variants = result.scalars().all()
+        attributes = await _variant_attribute_map(session, [item.id for item in variants])
+        rows = []
+        for item in variants:
+            item._attributes = attributes.get(item.id, [])
+            rows.append(variant_to_dict(item))
+        return ResponseManager.success(data=rows, request=request)
+
+
+@router.get("/product-variants/sku-attributes", response_class=JSONResponse)
+async def list_sku_attributes(request: Request, user: dict = Depends(require_products_read)):
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT
+                  a.id AS attribute_id,
+                  a.attribute_code,
+                  a.attribute_name,
+                  a.attribute_type,
+                  a.is_required,
+                  a.sort_order,
+                  av.id AS value_id,
+                  av.value_code,
+                  av.value_name,
+                  av.sort_order AS value_sort_order
+                FROM attributes a
+                JOIN attribute_values av ON av.attribute_id = a.id
+                 AND av.deleted_at IS NULL
+                 AND av.is_active = TRUE
+                WHERE a.deleted_at IS NULL
+                  AND a.is_active = TRUE
+                  AND a.affects_sku = TRUE
+                  AND a.attribute_type IN ('SELECT', 'MULTISELECT')
+                ORDER BY a.sort_order, a.attribute_name, av.sort_order, av.value_name
+                """
+            )
+        )
+        attributes: dict[int, dict] = {}
+        for row in result.mappings():
+            item = attributes.setdefault(row["attribute_id"], {
+                "id": row["attribute_id"],
+                "attribute_code": row["attribute_code"],
+                "attribute_name": row["attribute_name"],
+                "attribute_type": row["attribute_type"],
+                "is_required": bool(row["is_required"]),
+                "sort_order": row["sort_order"],
+                "values": [],
+            })
+            item["values"].append({
+                "id": row["value_id"],
+                "value_code": row["value_code"],
+                "value_name": row["value_name"],
+                "sort_order": row["value_sort_order"],
+            })
+        return ResponseManager.success(data=list(attributes.values()), request=request)
 
 
 @router.post("/product-variants", response_class=JSONResponse)
@@ -579,6 +681,127 @@ async def create_product_variant(data: ProductVariantCreate, request: Request, u
         await session.commit()
         await session.refresh(variant)
         return ResponseManager.success(data=variant_to_dict(variant), message="SKU creado correctamente", request=request)
+
+
+@router.post("/product-variants/generate", response_class=JSONResponse)
+async def generate_product_variants(data: ProductVariantGenerate, request: Request, user: dict = Depends(require_products_write)):
+    async with db_manager.get_async_session() as session:
+        product_result = await session.execute(select(Product).where(and_(Product.id == data.product_id, Product.deleted_at.is_(None))))
+        base_product = product_result.scalar_one_or_none()
+        if not base_product:
+            return ResponseManager.error(message="Producto no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        if not base_product.has_variants:
+            return ResponseManager.error(message="El producto no usa variantes", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+        attribute_ids = [item.attribute_id for item in data.attributes]
+        value_ids = [value_id for item in data.attributes for value_id in item.value_ids]
+        if len(set(attribute_ids)) != len(attribute_ids):
+            return ResponseManager.error(message="No se puede repetir un atributo en la generacion", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+        attr_params = {f"attr_{index}": item_id for index, item_id in enumerate(attribute_ids)}
+        value_params = {f"value_{index}": item_id for index, item_id in enumerate(value_ids)}
+        attr_placeholders = ", ".join(f":{key}" for key in attr_params)
+        value_placeholders = ", ".join(f":{key}" for key in value_params)
+        attr_result = await session.execute(
+            text(
+                f"""
+                SELECT id, attribute_code, attribute_name
+                FROM attributes
+                WHERE id IN ({attr_placeholders})
+                  AND deleted_at IS NULL
+                  AND is_active = TRUE
+                  AND affects_sku = TRUE
+                  AND attribute_type IN ('SELECT', 'MULTISELECT')
+                """
+            ),
+            attr_params,
+        )
+        attrs = {row["id"]: dict(row) for row in attr_result.mappings()}
+        value_result = await session.execute(
+            text(
+                f"""
+                SELECT id, attribute_id, value_code, value_name
+                FROM attribute_values
+                WHERE id IN ({value_placeholders})
+                  AND deleted_at IS NULL
+                  AND is_active = TRUE
+                """
+            ),
+            value_params,
+        )
+        values = {row["id"]: dict(row) for row in value_result.mappings()}
+        if len(attrs) != len(attribute_ids) or len(values) != len(value_ids):
+            return ResponseManager.error(message="Atributos o valores invalidos para SKU", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+        selected_groups = []
+        for item in data.attributes:
+            attr = attrs.get(item.attribute_id)
+            selected_values = [values[value_id] for value_id in item.value_ids]
+            if any(value["attribute_id"] != item.attribute_id for value in selected_values):
+                return ResponseManager.error(message="Un valor no pertenece al atributo seleccionado", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            selected_groups.append({"attribute": attr, "values": selected_values})
+
+        existing_result = await session.execute(
+            text(
+                """
+                SELECT pv.id, GROUP_CONCAT(CONCAT(pva.attribute_id, ':', pva.attribute_value_id) ORDER BY pva.attribute_id SEPARATOR '|') AS signature
+                FROM product_variants pv
+                JOIN product_variant_attributes pva ON pva.product_variant_id = pv.id
+                WHERE pv.product_id = :product_id
+                  AND pv.deleted_at IS NULL
+                GROUP BY pv.id
+                """
+            ),
+            {"product_id": data.product_id},
+        )
+        existing_signatures = {row["signature"] for row in existing_result.mappings() if row["signature"]}
+        existing_count = await session.execute(text("SELECT COUNT(*) FROM product_variants WHERE product_id = :product_id AND deleted_at IS NULL"), {"product_id": data.product_id})
+        has_existing_variants = int(existing_count.scalar() or 0) > 0
+
+        created = []
+        skipped = 0
+        for combination in cartesian_product(*[group["values"] for group in selected_groups]):
+            signature_parts = [f"{selected_groups[index]['attribute']['id']}:{value['id']}" for index, value in enumerate(combination)]
+            signature = "|".join(sorted(signature_parts, key=lambda part: int(part.split(":")[0])))
+            if signature in existing_signatures:
+                skipped += 1
+                continue
+
+            value_names = [value["value_name"] for value in combination]
+            variant = ProductVariant(
+                product_id=data.product_id,
+                variant_sku=await generate_sequential_code(session, ProductVariant, "variant_sku", "SKU"),
+                variant_name=f"{base_product.product_name} - {' / '.join(value_names)}",
+                variant_description=None,
+                is_default_variant=not has_existing_variants and not created,
+                is_active=data.is_active,
+            )
+            session.add(variant)
+            await session.flush()
+            for index, value in enumerate(combination):
+                await session.execute(
+                    text(
+                        """
+                        INSERT INTO product_variant_attributes (product_variant_id, attribute_id, attribute_value_id)
+                        VALUES (:variant_id, :attribute_id, :value_id)
+                        """
+                    ),
+                    {"variant_id": variant.id, "attribute_id": selected_groups[index]["attribute"]["id"], "value_id": value["id"]},
+                )
+            existing_signatures.add(signature)
+            variant._attributes = [{
+                "attribute_id": selected_groups[index]["attribute"]["id"],
+                "attribute_code": selected_groups[index]["attribute"]["attribute_code"],
+                "attribute_name": selected_groups[index]["attribute"]["attribute_name"],
+                "value_id": value["id"],
+                "value_code": value["value_code"],
+                "value_name": value["value_name"],
+                "text_value": None,
+            } for index, value in enumerate(combination)]
+            created.append(variant)
+
+        await session.commit()
+        return ResponseManager.success(data={"created": [variant_to_dict(item) for item in created], "created_count": len(created), "skipped_count": skipped}, message="SKU generados correctamente", request=request)
 
 
 @router.put("/product-variants/{variant_id}", response_class=JSONResponse)

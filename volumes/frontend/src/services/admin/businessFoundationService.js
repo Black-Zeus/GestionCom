@@ -24,7 +24,15 @@ export const businessFoundationService = {
   priceLists: crud('/business-foundation/price-lists'),
   priceItems: crud('/business-foundation/price-list-items'),
   products: crud('/business-foundation/products'),
-  variants: crud('/business-foundation/product-variants'),
+  variants: {
+    ...crud('/business-foundation/product-variants'),
+    async listSkuAttributes() {
+      return list(unwrap(await apiClient.get('/business-foundation/product-variants/sku-attributes')));
+    },
+    async generate(payload) {
+      return unwrap(await apiClient.post('/business-foundation/product-variants/generate', payload));
+    },
+  },
   companies: {
     async list(params = {}) {
       return list(unwrap(await apiClient.get('/business-foundation/company-config', { params })));

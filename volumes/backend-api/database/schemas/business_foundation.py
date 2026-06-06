@@ -2,7 +2,7 @@
 Schemas Pydantic para configuracion base de ventas e inventario.
 """
 from datetime import date
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -139,6 +139,17 @@ class ProductVariantUpdate(BaseModel):
     variant_description: Optional[str] = None
     is_default_variant: Optional[bool] = None
     is_active: Optional[bool] = None
+
+
+class ProductVariantAttributeSelection(BaseModel):
+    attribute_id: int = Field(..., gt=0)
+    value_ids: List[int] = Field(..., min_length=1)
+
+
+class ProductVariantGenerate(BaseModel):
+    product_id: int = Field(..., gt=0)
+    attributes: List[ProductVariantAttributeSelection] = Field(..., min_length=1)
+    is_active: bool = True
 
 
 class CompanyConfigCreate(BaseModel):

@@ -89,7 +89,7 @@ const AdminProductAttributes = () => {
     contentProps: {
       initialValues: group ? { group_code: group.group_code, group_name: group.group_name, group_description: group.group_description || '', sort_order: group.sort_order || 0, is_active: group.is_active } : { group_name: '', group_description: '', sort_order: 0, is_active: true },
       fields: [
-        { type: 'section', id: 'identity', label: 'Datos del grupo', description: 'Agrupa atributos relacionados para ordenar su uso en productos y SKU / Variedades.', icon: Layers3, columns: 3 },
+        { type: 'section', id: 'identity', label: 'Datos del grupo', description: 'Agrupa atributos relacionados para ordenar su uso en productos y SKU / Variaciones.', icon: Layers3, columns: 3 },
         { id: 'group_name', label: 'Nombre', required: true },
         { id: 'sort_order', label: 'Orden', type: 'number', min: 0 },
         { id: 'group_description', label: 'Descripcion', type: 'textarea', rows: 2, span: 'full', placeholder: 'Ejemplo: caracteristicas fisicas, presentacion, informacion comercial.' },
@@ -122,14 +122,14 @@ const AdminProductAttributes = () => {
           render: ({ form }) => {
             return (
                 <div className="truncate rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200">
-                  {typeHelpMessages[form.attribute_type] || 'Define como se captura este atributo en productos y SKU / Variedades.'}
+                  {typeHelpMessages[form.attribute_type] || 'Define como se captura este atributo en productos y SKU / Variaciones.'}
                 </div>
             );
           },
           },
           { type: 'section', id: 'behavior', label: 'Comportamiento', description: 'Controla si el atributo es obligatorio, visible para SKU y operativo.', icon: ListChecks, columns: 3 },
           { id: 'is_required', label: 'Requerido', type: 'checkbox', checkLabel: 'Requerido', help: 'Obliga a informar este atributo cuando el flujo lo use.' },
-          { id: 'affects_sku', label: 'SKU / Variedades', type: 'checkbox', checkLabel: 'Afecta SKU / Variedades', help: 'Participa en la diferenciacion de variedades vendibles.' },
+          { id: 'affects_sku', label: 'SKU / Variaciones', type: 'checkbox', checkLabel: 'Afecta SKU / Variaciones', help: 'Participa en la diferenciacion de variaciones vendibles.' },
           { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
         ],
         onSubmit: async (form) => {
@@ -273,7 +273,7 @@ const AdminProductAttributes = () => {
       ? `Atributos - ${selectedGroup?.group_name || selectedGroupCode}`
       : `Valores - ${selectedAttribute?.attribute_name || selectedAttributeCode}`;
   const description = activeLevel === 'groups'
-    ? 'Grupos, atributos y valores para SKU / Variedades.'
+    ? 'Grupos, atributos y valores para SKU / Variaciones.'
     : activeLevel === 'attributes'
       ? 'Atributos asociados al grupo seleccionado.'
       : 'Valores disponibles para el atributo seleccionado.';
@@ -317,7 +317,7 @@ const AdminProductAttributes = () => {
         <DataTable loading={loading} data={visibleData} footer={pagination} columns={[
           { id: 'attr', label: 'Atributo', render: (item) => <span className="font-medium">{item.attribute_name}</span> },
           { id: 'type', label: 'Tipo', render: (item) => typeLabels[item.attribute_type] || item.attribute_type },
-          { id: 'flags', label: 'Uso', render: (item) => <div className="text-xs text-slate-500">{item.is_required ? 'Requerido' : 'Opcional'} / {item.affects_sku ? 'SKU / Variedades' : 'No afecta SKU'}</div> },
+          { id: 'flags', label: 'Uso', render: (item) => <div className="text-xs text-slate-500">{item.is_required ? 'Requerido' : 'Opcional'} / {item.affects_sku ? 'SKU / Variaciones' : 'No afecta SKU'}</div> },
           { id: 'values_count', label: 'Valores activos', render: (item) => selectableAttributeTypes.includes(item.attribute_type) ? (activeValueCountByAttribute[String(item.id)] || 0) : '-' },
           { id: 'sort_order', label: 'Orden', render: (item) => item.sort_order ?? 0 },
           { id: 'active', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
