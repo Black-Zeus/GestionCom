@@ -1,9 +1,6 @@
 -- Reconstruye grupos, atributos y valores para inventario de ropa maternal.
--- Base tomada del legacy inv_old/DB/inventario.sql:
--- - colores: catalogo legacy de colores.
--- - tallas: XS, S, M, L, XL, XXL, ST.
--- - productos/temporal: SKU compuesto por producto + talla + color, con prendas como
---   polera, pantalon, vestido, blusa, enterito, palazzo, calza y lactancia.
+-- Base funcional para SKU / Variedades: talla, color, calce, prenda,
+-- material, temporada, patron, manga, pierna y empaque.
 --
 -- IMPORTANTE: este seed limpia los catalogos de atributos actuales.
 
