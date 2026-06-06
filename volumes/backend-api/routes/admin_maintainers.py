@@ -364,6 +364,11 @@ def _row(row):
     return {key: _json_value(value) for key, value in row.items()} if row else None
 
 
+def _barcode_check_digit(digits: str, weights: list[int]) -> str:
+    checksum = sum(int(digit) * weights[index % len(weights)] for index, digit in enumerate(digits))
+    return str((10 - (checksum % 10)) % 10)
+
+
 async def _media_map(session, asset_ids: list[int | None]) -> dict:
     ids = sorted({int(item) for item in asset_ids if item})
     if not ids:
@@ -418,12 +423,24 @@ def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
             normalized_value = str(barcode_value).strip()
             if barcode_type in {"EAN13", "EAN8", "UPC"}:
                 normalized_value = "".join(character for character in normalized_value if character.isdigit())
+            if barcode_type == "EAN13" and normalized_value.isdigit() and len(normalized_value) == 12:
+                normalized_value = f"{normalized_value}{_barcode_check_digit(normalized_value, [1, 3])}"
+            if barcode_type == "EAN8" and normalized_value.isdigit() and len(normalized_value) == 7:
+                normalized_value = f"{normalized_value}{_barcode_check_digit(normalized_value, [3, 1])}"
+            if barcode_type == "UPC" and normalized_value.isdigit() and len(normalized_value) == 11:
+                normalized_value = f"{normalized_value}{_barcode_check_digit(normalized_value, [3, 1])}"
             if barcode_type == "EAN13" and (not normalized_value.isdigit() or len(normalized_value) != 13):
                 raise ValueError("EAN-13 debe tener exactamente 13 digitos")
+            if barcode_type == "EAN13" and _barcode_check_digit(normalized_value[:12], [1, 3]) != normalized_value[12]:
+                raise ValueError("EAN-13 no tiene un digito verificador valido")
             if barcode_type == "EAN8" and (not normalized_value.isdigit() or len(normalized_value) != 8):
                 raise ValueError("EAN-8 debe tener exactamente 8 digitos")
+            if barcode_type == "EAN8" and _barcode_check_digit(normalized_value[:7], [3, 1]) != normalized_value[7]:
+                raise ValueError("EAN-8 no tiene un digito verificador valido")
             if barcode_type == "UPC" and (not normalized_value.isdigit() or len(normalized_value) != 12):
                 raise ValueError("UPC-A debe tener exactamente 12 digitos")
+            if barcode_type == "UPC" and _barcode_check_digit(normalized_value[:11], [3, 1]) != normalized_value[11]:
+                raise ValueError("UPC-A no tiene un digito verificador valido")
             if barcode_type == "CODE128" and (len(normalized_value) > 80 or any(ord(character) < 32 or ord(character) > 126 for character in normalized_value)):
                 raise ValueError("Code 128 acepta texto imprimible de hasta 80 caracteres")
             if barcode_type == "QR" and len(normalized_value) > 255:
@@ -468,6 +485,22 @@ def _apply_calculated_stock_fields(data: dict) -> dict:
         raise ValueError("El stock maximo no puede ser menor que el punto de reorden")
     data["reorder_quantity"] = maximum_stock - reorder_point
     return data
+
+
+async def _ensure_unique_product_barcode(session, barcode_value: str | None, item_id: int | None = None) -> None:
+    if not barcode_value:
+        return
+    params = {"barcode_value": barcode_value}
+    id_filter = ""
+    if item_id is not None:
+        id_filter = " AND id <> :id"
+        params["id"] = item_id
+    duplicate_result = await session.execute(
+        text(f"SELECT id FROM product_barcodes WHERE barcode_value = :barcode_value{id_filter} LIMIT 1"),
+        params,
+    )
+    if duplicate_result.scalar_one_or_none():
+        raise ValueError("Ya existe un codigo de barra con ese valor")
 
 
 async def _next_code(session, table: str, field: str, prefix: str) -> str:
@@ -578,16 +611,24 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
                 )
                 if duplicate_result.scalar_one_or_none():
                     raise ValueError("Ya existe una regla de stock critico para este SKU y bodega")
+            if config["table"] == "product_barcodes":
+                await _ensure_unique_product_barcode(session, data.get("barcode_value"))
             if config.get("code_field"):
                 data[config["code_field"]] = await _next_code(session, config["table"], config["code_field"], config["prefix"])
             if "created_by_user_id" in config["fields"] or config["table"] in {"customers", "suppliers"}:
                 data["created_by_user_id"] = user.get("user_id") or user.get("id")
             columns = ", ".join(data.keys())
             values = ", ".join(f":{key}" for key in data.keys())
-            await session.execute(text(f"INSERT INTO {config['table']} ({columns}) VALUES ({values})"), data)
+            insert_result = await session.execute(text(f"INSERT INTO {config['table']} ({columns}) VALUES ({values})"), data)
+            inserted_id = getattr(insert_result, "lastrowid", None)
+            if not inserted_id:
+                inserted_id_result = await session.execute(text("SELECT LAST_INSERT_ID()"))
+                inserted_id = inserted_id_result.scalar_one_or_none()
             await session.commit()
-            result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = LAST_INSERT_ID()"))
+            result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = :id"), {"id": inserted_id})
             row = result.mappings().first()
+            if not row:
+                return ResponseManager.internal_server_error(message="Registro creado, pero no fue posible recuperarlo", request=request)
             row_data = {key: _json_value(value) for key, value in row.items()}
             return ResponseManager.success(data=row_data, message="Registro creado correctamente", request=request)
     except KeyError:
@@ -657,6 +698,8 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
                 }
                 _apply_calculated_stock_fields(merged_data)
                 data["reorder_quantity"] = merged_data["reorder_quantity"]
+            if config["table"] == "product_barcodes" and "barcode_value" in data:
+                await _ensure_unique_product_barcode(session, data.get("barcode_value"), item_id)
             set_clause = ", ".join(f"{key} = :{key}" for key in data.keys() if key != "id")
             await session.execute(text(f"UPDATE {config['table']} SET {set_clause} WHERE id = :id"), data)
             await session.commit()

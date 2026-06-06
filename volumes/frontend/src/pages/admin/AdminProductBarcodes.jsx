@@ -9,7 +9,6 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -34,19 +33,50 @@ const barcodeFormatByType = {
   CODE128: 'CODE128',
 };
 
+const checkDigitConfig = {
+  EAN13: { baseLength: 12, fullLength: 13, weights: [1, 3] },
+  EAN8: { baseLength: 7, fullLength: 8, weights: [3, 1] },
+  UPC: { baseLength: 11, fullLength: 12, weights: [3, 1] },
+};
+
 const normalizeBarcodeValue = (type, value) => {
   const raw = String(value || '').trim();
   if (['EAN13', 'EAN8', 'UPC'].includes(type)) return raw.replace(/\D/g, '');
   return raw;
 };
 
-const validateBarcode = (type, value) => {
+const checkDigit = (digits, weights) => {
+  const sum = digits
+    .split('')
+    .reduce((total, digit, index) => total + Number(digit) * weights[index % weights.length], 0);
+  return String((10 - (sum % 10)) % 10);
+};
+
+const completeBarcodeValue = (type, value) => {
   const normalized = normalizeBarcodeValue(type, value);
+  const config = checkDigitConfig[type];
+  if (config && normalized.length === config.baseLength) return `${normalized}${checkDigit(normalized, config.weights)}`;
+  return normalized;
+};
+
+const editableBarcodeValue = (type, value) => {
+  const normalized = normalizeBarcodeValue(type, value);
+  const config = checkDigitConfig[type];
+  if (!config) return normalized;
+  if (normalized.length === config.fullLength) return normalized.slice(0, config.baseLength);
+  return normalized.slice(0, config.baseLength);
+};
+
+const validateBarcode = (type, value) => {
+  const normalized = completeBarcodeValue(type, value);
   if (!type) return 'Selecciona el tipo de codigo.';
   if (!normalized) return 'Ingresa el codigo.';
   if (type === 'EAN13' && !/^\d{13}$/.test(normalized)) return 'EAN-13 debe tener exactamente 13 digitos.';
+  if (type === 'EAN13' && checkDigit(normalized.slice(0, 12), [1, 3]) !== normalized[12]) return 'EAN-13 no tiene un digito verificador valido.';
   if (type === 'EAN8' && !/^\d{8}$/.test(normalized)) return 'EAN-8 debe tener exactamente 8 digitos.';
+  if (type === 'EAN8' && checkDigit(normalized.slice(0, 7), [3, 1]) !== normalized[7]) return 'EAN-8 no tiene un digito verificador valido.';
   if (type === 'UPC' && !/^\d{12}$/.test(normalized)) return 'UPC-A debe tener exactamente 12 digitos.';
+  if (type === 'UPC' && checkDigit(normalized.slice(0, 11), [3, 1]) !== normalized[11]) return 'UPC-A no tiene un digito verificador valido.';
   if (type === 'CODE128' && !/^[\x20-\x7E]{1,80}$/.test(normalized)) return 'Code 128 acepta texto imprimible de hasta 80 caracteres.';
   if (type === 'QR' && normalized.length > 255) return 'QR acepta hasta 255 caracteres.';
   return '';
@@ -54,7 +84,8 @@ const validateBarcode = (type, value) => {
 
 const optionLabel = (row) => {
   if (!row) return '-';
-  if (row.variant_sku || row.variant_name) return `${row.variant_sku || ''}${row.variant_name ? ` - ${row.variant_name}` : ''}`.trim();
+  if (row.variant_name) return row.variant_name;
+  if (row.product_name) return row.product_name;
   if (row.unit_name) return `${row.unit_name}${row.unit_symbol ? ` (${row.unit_symbol})` : ''}`;
   return row.label || row.name || String(row.id);
 };
@@ -63,7 +94,7 @@ const BarcodePreview = ({ type, value, compact = false }) => {
   const svgRef = useRef(null);
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
-  const normalizedValue = normalizeBarcodeValue(type, value);
+  const normalizedValue = completeBarcodeValue(type, value);
 
   useEffect(() => {
     setError('');
@@ -75,7 +106,7 @@ const BarcodePreview = ({ type, value, compact = false }) => {
       context?.clearRect(0, 0, canvas.width, canvas.height);
     }
     if (!type || !normalizedValue) return;
-    const validationError = validateBarcode(type, normalizedValue);
+    const validationError = validateBarcode(type, value);
     if (validationError) {
       setError(validationError);
       return;
@@ -105,7 +136,7 @@ const BarcodePreview = ({ type, value, compact = false }) => {
     } catch (renderError) {
       setError(renderError?.message || 'No fue posible generar la imagen del codigo.');
     }
-  }, [compact, normalizedValue, type]);
+  }, [compact, normalizedValue, type, value]);
 
   return (
     <div className={`flex items-center justify-center rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 ${compact ? 'min-h-16' : 'min-h-28'}`}>
@@ -117,7 +148,180 @@ const BarcodePreview = ({ type, value, compact = false }) => {
   );
 };
 
-const BarcodePreviewField = ({ form }) => <BarcodePreview type={form.barcode_type} value={form.barcode_value} />;
+const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
+const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
+
+const BarcodeFormContent = ({
+  mode = 'create',
+  initialValues = {},
+  variantOptions = [],
+  unitOptions = [],
+  onSubmit,
+  onClose,
+}) => {
+  const [form, setForm] = useState({
+    product_variant_id: initialValues.product_variant_id ? String(initialValues.product_variant_id) : '',
+    barcode_type: initialValues.barcode_type || 'EAN13',
+    barcode_value: editableBarcodeValue(initialValues.barcode_type || 'EAN13', initialValues.barcode_value || ''),
+    measurement_unit_id: initialValues.measurement_unit_id ? String(initialValues.measurement_unit_id) : '',
+    is_primary: initialValues.is_primary === true,
+    is_active: initialValues.is_active !== false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const isEdit = mode === 'edit';
+
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+  const barcodeConfig = checkDigitConfig[form.barcode_type];
+  const barcodeBaseValue = normalizeBarcodeValue(form.barcode_type, form.barcode_value);
+  const barcodeDigit = barcodeConfig && barcodeBaseValue.length === barcodeConfig.baseLength
+    ? checkDigit(barcodeBaseValue, barcodeConfig.weights)
+    : '';
+
+  const updateBarcodeType = (value) => {
+    setForm((current) => ({
+      ...current,
+      barcode_type: value,
+      barcode_value: editableBarcodeValue(value, current.barcode_value),
+    }));
+  };
+
+  const updateBarcodeValue = (value) => {
+    const nextValue = barcodeConfig ? normalizeBarcodeValue(form.barcode_type, value).slice(0, barcodeConfig.baseLength) : value;
+    updateField('barcode_value', nextValue);
+  };
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setFormError('');
+
+    const barcodeType = form.barcode_type;
+    const barcodeValue = completeBarcodeValue(barcodeType, form.barcode_value);
+    const validationError = validateBarcode(barcodeType, barcodeValue);
+
+    if (!form.product_variant_id) {
+      setFormError('Debes seleccionar un SKU / Variacion.');
+      return;
+    }
+
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSubmit({
+        product_variant_id: Number(form.product_variant_id),
+        barcode_type: barcodeType,
+        barcode_value: barcodeValue,
+        measurement_unit_id: form.measurement_unit_id ? Number(form.measurement_unit_id) : null,
+        is_primary: Boolean(form.is_primary),
+        is_active: Boolean(form.is_active),
+      });
+      onClose?.();
+    } catch (requestError) {
+      setFormError(getBackendMessage(requestError, 'No fue posible guardar el codigo.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-5">
+      <div className="grid gap-3 md:grid-cols-3">
+        <label className="space-y-1 text-sm md:col-span-2">
+          <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variacion</span>
+          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => updateField('product_variant_id', event.target.value)} required>
+            <option value="">Selecciona SKU</option>
+            {variantOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Tipo</span>
+          <select className={selectClassName} value={form.barcode_type} onChange={(event) => updateBarcodeType(event.target.value)} required>
+            {BARCODE_TYPES.map((type) => (
+              <option key={type.value} value={type.value}>{type.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <div className="space-y-1 text-sm md:col-span-2">
+          <span className="font-medium text-slate-700 dark:text-slate-200">{barcodeConfig ? 'Codigo base' : 'Codigo'}</span>
+          <div className={barcodeConfig ? 'grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2' : ''}>
+            <input
+              className={`${fieldClassName} font-mono`}
+              value={form.barcode_value}
+              onChange={(event) => updateBarcodeValue(event.target.value)}
+              required
+              maxLength={barcodeConfig?.baseLength}
+              placeholder={barcodeConfig ? `${barcodeConfig.baseLength} digitos` : 'Ingresa el valor del codigo'}
+            />
+            {barcodeConfig && (
+              <input
+                aria-label="Digito verificador"
+                className={`${fieldClassName} bg-slate-50 text-center font-mono text-slate-500 dark:bg-slate-900`}
+                value={barcodeDigit || '-'}
+                disabled
+                readOnly
+              />
+            )}
+          </div>
+        </div>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Unidad</span>
+          <select className={selectClassName} value={form.measurement_unit_id} onChange={(event) => updateField('measurement_unit_id', event.target.value)}>
+            <option value="">Sin unidad asociada</option>
+            {unitOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="space-y-1 text-sm">
+        <span className="font-medium text-slate-700 dark:text-slate-200">Vista previa</span>
+        <BarcodePreview type={form.barcode_type} value={form.barcode_value} />
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-2">
+        <label className="flex h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+          <input type="checkbox" checked={form.is_primary} onChange={(event) => updateField('is_primary', event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+          Codigo principal
+        </label>
+
+        <label className="flex h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+          <input type="checkbox" checked={form.is_active} onChange={(event) => updateField('is_active', event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+          Activo
+        </label>
+      </div>
+
+      {formError && (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {formError}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+        <div className="min-h-5" />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+            Cancelar
+          </button>
+          <button type="submit" disabled={saving} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">
+            {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+};
 
 const BarcodeTypeBadge = ({ type }) => {
   const Icon = typeIcons[type] || Barcode;
@@ -199,10 +403,12 @@ const AdminProductBarcodes = () => {
   const openForm = (item = null) => ModalManager.show({
     type: 'custom',
     title: item ? 'Editar codigo de barra' : 'Nuevo codigo de barra',
-    size: 'xlarge',
+    icon: Barcode,
+    size: 'large',
     showFooter: false,
-    contentComponent: SimpleFormContent,
+    contentComponent: BarcodeFormContent,
     contentProps: {
+      mode: item ? 'edit' : 'create',
       initialValues: item ? {
         product_variant_id: item.product_variant_id || '',
         barcode_type: item.barcode_type || 'EAN13',
@@ -211,31 +417,9 @@ const AdminProductBarcodes = () => {
         is_primary: item.is_primary === true,
         is_active: item.is_active !== false,
       } : { product_variant_id: '', barcode_type: 'EAN13', barcode_value: '', measurement_unit_id: '', is_primary: false, is_active: true },
-      fields: [
-        { type: 'section', id: 'identity', label: 'Datos del codigo', description: 'Codigo estandar asociado a una SKU / Variacion.', icon: Barcode, columns: 3 },
-        { id: 'product_variant_id', label: 'SKU / Variacion', type: 'autocomplete', options: variantOptions, required: true, placeholder: 'Seleccionar SKU' },
-        { id: 'barcode_type', label: 'Tipo', type: 'autocomplete', options: BARCODE_TYPES, required: true, showIcons: true, placeholder: 'Seleccionar tipo' },
-        { id: 'measurement_unit_id', label: 'Unidad', type: 'autocomplete', options: unitOptions, placeholder: 'Unidad asociada', clearable: true },
-        { id: 'barcode_value', label: 'Codigo', required: true, mono: true, span: 2, placeholder: 'Ingresa el valor del codigo' },
-        { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Codigo principal' },
-        { id: 'preview_section', type: 'section', label: 'Vista previa', description: 'Imagen generada desde el valor ingresado.', icon: Eye, columns: 2 },
-        { id: 'barcode_preview', type: 'custom', hideLabel: true, span: 'full', render: BarcodePreviewField },
-        { id: 'state_section', type: 'section', label: 'Estado operativo', description: 'Controla si el codigo queda disponible para busqueda y lectura.', icon: CheckCircle2, columns: 2 },
-        { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
-      ],
-      onSubmit: async (form) => {
-        const barcodeType = form.barcode_type;
-        const barcodeValue = normalizeBarcodeValue(barcodeType, form.barcode_value);
-        const validationError = validateBarcode(barcodeType, barcodeValue);
-        if (validationError) throw new Error(validationError);
-        const payload = {
-          product_variant_id: form.product_variant_id,
-          barcode_type: barcodeType,
-          barcode_value: barcodeValue,
-          measurement_unit_id: form.measurement_unit_id || null,
-          is_primary: Boolean(form.is_primary),
-          is_active: Boolean(form.is_active),
-        };
+      variantOptions,
+      unitOptions,
+      onSubmit: async (payload) => {
         await notifyPromise(item ? adminMaintainersService.update('product-barcodes', item.id, payload) : adminMaintainersService.create('product-barcodes', payload), {
           loading: 'Guardando codigo...',
           success: 'Codigo guardado.',
