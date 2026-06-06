@@ -23,13 +23,10 @@ const alignClass = {
 };
 
 const actionCellClass = [
-  'w-[9.75rem]',
-  'min-w-[9.75rem]',
-  'max-w-[9.75rem]',
-  '[&>div]:ml-auto',
-  '[&>div]:flex-wrap',
-  '[&>div]:justify-end',
-  '[&>div]:max-w-[7.75rem]',
+  'w-[12.5rem]',
+  'min-w-[12.5rem]',
+  'max-w-[12.5rem]',
+  '!text-center',
 ].join(' ');
 
 const DataTable = ({
@@ -108,10 +105,17 @@ const DataTable = ({
               <tr key={getRowKey(row, rowIndex)} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                 {columns.map((column) => {
                   const isActionsColumn = column.id === 'actions';
+                  const content = column.render ? column.render(row, rowIndex) : getValue(row, column);
 
                   return (
                     <td key={column.id} className={`px-4 py-3 ${alignClass[column.align || 'left']} ${isActionsColumn ? actionCellClass : ''} ${column.cellClassName || ''}`}>
-                      {column.render ? column.render(row, rowIndex) : getValue(row, column)}
+                      {isActionsColumn ? (
+                        <div className="flex w-full justify-center">
+                          <div className="flex w-[10.5rem] max-w-full flex-wrap justify-center gap-2 [&>div]:!flex [&>div]:!w-full [&>div]:!max-w-full [&>div]:!flex-wrap [&>div]:!justify-center [&>div]:!gap-2">
+                            {content}
+                          </div>
+                        </div>
+                      ) : content}
                     </td>
                   );
                 })}

@@ -539,7 +539,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
             label: 'Acciones',
             align: 'right',
             render: (item) => (
-              <div className="inline-grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} />
                 {(activeConfig.rowActions || []).map((action) => {
                   const disabled = isRowActionDisabled(action, item);
