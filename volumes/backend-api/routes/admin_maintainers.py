@@ -436,6 +436,37 @@ def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
         role_flags = ["is_purchase_unit", "is_sale_unit", "is_inventory_unit"]
         if any(flag in data for flag in role_flags) and not any(data.get(flag) for flag in role_flags):
             raise ValueError("Selecciona al menos un uso para la unidad")
+    if config.get("table") == "stock_critical_config":
+        numeric_fields = [
+            "minimum_stock",
+            "maximum_stock",
+            "safety_stock",
+            "reorder_quantity",
+            "lead_time_days",
+            "avg_daily_sales",
+            "alert_frequency_hours",
+        ]
+        for field in numeric_fields:
+            if data.get(field) is not None and data[field] < 0:
+                raise ValueError("Los valores de stock critico no pueden ser negativos")
+        if data.get("alert_frequency_hours") is not None and data["alert_frequency_hours"] < 1:
+            raise ValueError("La frecuencia de alerta debe ser de al menos 1 hora")
+        if data.get("maximum_stock") is not None and data.get("minimum_stock") is not None and data["maximum_stock"] < data["minimum_stock"]:
+            raise ValueError("El stock maximo no puede ser menor que el stock minimo")
+    return data
+
+
+def _apply_calculated_stock_fields(data: dict) -> dict:
+    if not any(field in data for field in ["minimum_stock", "maximum_stock", "safety_stock", "reorder_quantity"]):
+        return data
+    reorder_point = (data.get("minimum_stock") or 0) + (data.get("safety_stock") or 0)
+    maximum_stock = data.get("maximum_stock")
+    if maximum_stock is None:
+        data["reorder_quantity"] = None
+        return data
+    if maximum_stock < reorder_point:
+        raise ValueError("El stock maximo no puede ser menor que el punto de reorden")
+    data["reorder_quantity"] = maximum_stock - reorder_point
     return data
 
 
@@ -533,6 +564,20 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
                     raise ValueError("Zona no encontrada")
                 if not zone_tracks_locations:
                     raise ValueError("La zona no tiene habilitado el control de ubicaciones internas")
+            if config["table"] == "stock_critical_config":
+                data = _apply_calculated_stock_fields(data)
+                duplicate_result = await session.execute(
+                    text(
+                        "SELECT id FROM stock_critical_config "
+                        "WHERE product_variant_id = :product_variant_id AND warehouse_id = :warehouse_id LIMIT 1"
+                    ),
+                    {
+                        "product_variant_id": data.get("product_variant_id"),
+                        "warehouse_id": data.get("warehouse_id"),
+                    },
+                )
+                if duplicate_result.scalar_one_or_none():
+                    raise ValueError("Ya existe una regla de stock critico para este SKU y bodega")
             if config.get("code_field"):
                 data[config["code_field"]] = await _next_code(session, config["table"], config["code_field"], config["prefix"])
             if "created_by_user_id" in config["fields"] or config["table"] in {"customers", "suppliers"}:
@@ -565,7 +610,6 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
         data = _normalize(config, payload, partial=True)
         if not data:
             return ResponseManager.error(message="Sin campos para actualizar", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
-        set_clause = ", ".join(f"{key} = :{key}" for key in data.keys())
         data["id"] = item_id
         async with db_manager.get_async_session() as session:
             if config["table"] == "warehouse_zone_locations" and data.get("warehouse_zone_id"):
@@ -578,6 +622,42 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
                     raise ValueError("Zona no encontrada")
                 if not zone_tracks_locations:
                     raise ValueError("La zona no tiene habilitado el control de ubicaciones internas")
+            if config["table"] == "stock_critical_config" and ("product_variant_id" in data or "warehouse_id" in data):
+                current_result = await session.execute(
+                    text("SELECT product_variant_id, warehouse_id, minimum_stock, maximum_stock, safety_stock FROM stock_critical_config WHERE id = :id"),
+                    {"id": item_id},
+                )
+                current_row = current_result.mappings().first()
+                next_product_variant_id = data.get("product_variant_id", current_row["product_variant_id"] if current_row else None)
+                next_warehouse_id = data.get("warehouse_id", current_row["warehouse_id"] if current_row else None)
+                duplicate_result = await session.execute(
+                    text(
+                        "SELECT id FROM stock_critical_config "
+                        "WHERE product_variant_id = :product_variant_id AND warehouse_id = :warehouse_id AND id <> :id LIMIT 1"
+                    ),
+                    {
+                        "product_variant_id": next_product_variant_id,
+                        "warehouse_id": next_warehouse_id,
+                        "id": item_id,
+                    },
+                )
+                if duplicate_result.scalar_one_or_none():
+                    raise ValueError("Ya existe una regla de stock critico para este SKU y bodega")
+            if config["table"] == "stock_critical_config":
+                current_result = await session.execute(
+                    text("SELECT minimum_stock, maximum_stock, safety_stock FROM stock_critical_config WHERE id = :id"),
+                    {"id": item_id},
+                )
+                current_row = current_result.mappings().first()
+                merged_data = {
+                    "minimum_stock": current_row["minimum_stock"] if current_row else 0,
+                    "maximum_stock": current_row["maximum_stock"] if current_row else None,
+                    "safety_stock": current_row["safety_stock"] if current_row else 0,
+                    **data,
+                }
+                _apply_calculated_stock_fields(merged_data)
+                data["reorder_quantity"] = merged_data["reorder_quantity"]
+            set_clause = ", ".join(f"{key} = :{key}" for key in data.keys() if key != "id")
             await session.execute(text(f"UPDATE {config['table']} SET {set_clause} WHERE id = :id"), data)
             await session.commit()
             result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = :id"), {"id": item_id})

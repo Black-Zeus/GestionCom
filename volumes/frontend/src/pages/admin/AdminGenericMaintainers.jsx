@@ -58,11 +58,13 @@ const getStatus = (item, config, optionData = {}) => {
   return true;
 };
 
+const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+(?:_[A-Z]+)*_\d+\s*-\s*/, '').trim();
+
 const formatValue = (item, field, optionData = {}) => {
   const value = item[field.id] ?? (field.fallbackField ? item[field.fallbackField] : undefined);
   if (field.optionsResource) {
     const option = (optionData[field.optionsResource] || []).find((entry) => String(entry.value) === String(value));
-    if (option) return option.label;
+    if (option) return field.stripCode ? displayLabelWithoutCode(option.label) : option.label;
   }
   if (field.format) return field.format(value, item);
   if (field.options) return field.options.find((option) => String(option.value) === String(value))?.label || value || '-';
@@ -207,8 +209,6 @@ const optionLabel = (row) => {
   if (row.username) return `${row.username} - ${[row.first_name, row.last_name].filter(Boolean).join(' ') || row.email || 'Usuario'}`;
   return row.name || row.label || String(row.id);
 };
-
-const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+(?:_[A-Z]+)*_\d+\s*-\s*/, '').trim();
 
 const filterItems = (items, config, search, status, optionData = {}) => {
   const term = search.trim().toLowerCase();

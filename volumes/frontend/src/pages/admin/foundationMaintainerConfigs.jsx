@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Image, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, Smartphone, Truck, UserRound, Users } from 'lucide-react';
 import AdminGenericMaintainers from './AdminGenericMaintainers';
+import StockCriticalFormModal from './StockCriticalFormModal';
 import WarehouseZoneFormModal from './WarehouseZoneFormModal';
 import WarehouseZoneLocationFormModal from './WarehouseZoneLocationFormModal';
 
@@ -54,6 +55,16 @@ const amountDisplay = (value, item = {}) => {
 const factorDisplay = (value) => {
   if (value === null || value === undefined || value === '') return '-';
   return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 6 }).format(Number(value));
+};
+
+const quantityDisplay = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 4 }).format(Number(value));
+};
+
+const hoursDisplay = (value) => {
+  if (value === null || value === undefined || value === '') return '-';
+  return `${new Intl.NumberFormat('es-CL').format(Number(value))} h`;
 };
 
 const internalLocationDisplay = (value) => (
@@ -409,9 +420,21 @@ const inventoryTabs = [
   },
   {
     id: 'stock', resource: 'stock-critical-config', label: 'Stock critico', singular: 'regla de stock', icon: Settings, activeField: 'is_active',
-    empty: { product_variant_id: '', warehouse_id: '', minimum_stock: 0, safety_stock: 0, lead_time_days: 7, avg_daily_sales: 0, alert_enabled: true, alert_frequency_hours: 24, is_active: true },
+    size: 'modalLarge',
+    formComponent: StockCriticalFormModal,
+    searchFields: ['product_variant_id', 'warehouse_id'],
+    empty: { product_variant_id: '', warehouse_id: '', minimum_stock: 0, maximum_stock: '', safety_stock: 0, reorder_quantity: '', lead_time_days: 7, avg_daily_sales: 0, last_calculated_date: '', alert_enabled: true, alert_frequency_hours: 24, is_active: true },
     fields: [{ id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'warehouse_id', label: 'Bodega', type: 'select', optionsResource: 'warehouses-options', required: true }, { id: 'minimum_stock', label: 'Stock minimo', type: 'number', min: 0 }, { id: 'maximum_stock', label: 'Stock maximo', type: 'number', min: 0 }, { id: 'safety_stock', label: 'Stock seguridad', type: 'number', min: 0 }, { id: 'reorder_quantity', label: 'Cantidad reorden', type: 'number', min: 0 }, { id: 'lead_time_days', label: 'Lead time', type: 'number', min: 0 }, { id: 'alert_enabled', label: 'Alerta', type: 'checkbox', checkLabel: 'Alerta activa' }, { id: 'alert_frequency_hours', label: 'Frecuencia horas', type: 'number', min: 1 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'product_variant_id', label: 'SKU', primary: true }, { id: 'warehouse_id', label: 'Bodega' }, { id: 'minimum_stock', label: 'Minimo' }, { id: 'safety_stock', label: 'Seguridad' }],
+    tableFields: [
+      { id: 'product_variant_id', label: 'SKU / Variacion', primary: true, optionsResource: 'product-variants-options', stripCode: true },
+      { id: 'warehouse_id', label: 'Bodega', optionsResource: 'warehouses-options', stripCode: true },
+      { id: 'minimum_stock', label: 'Minimo', format: quantityDisplay },
+      { id: 'safety_stock', label: 'Seguridad', format: quantityDisplay },
+      { id: 'reorder_point', label: 'Punto reorden', format: quantityDisplay },
+      { id: 'reorder_quantity', label: 'Cant. reorden', format: quantityDisplay },
+      { id: 'alert_frequency_hours', label: 'Frecuencia', format: hoursDisplay },
+      { id: 'alert_enabled', label: 'Alerta', format: (value) => (Number(value) === 1 || value === true ? 'Activa' : 'Inactiva') },
+    ],
   },
 ];
 
