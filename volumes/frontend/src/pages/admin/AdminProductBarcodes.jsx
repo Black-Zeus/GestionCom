@@ -1,5 +1,5 @@
-import { InventoryMaintainers } from './foundationMaintainerConfigs';
+import { ProductBarcodeMaintainers } from './foundationMaintainerConfigs';
 
-const AdminProductBarcodes = () => <InventoryMaintainers initialTab="barcodes" />;
+const AdminProductBarcodes = () => <ProductBarcodeMaintainers initialTab="barcodes" />;
 
 export default AdminProductBarcodes;

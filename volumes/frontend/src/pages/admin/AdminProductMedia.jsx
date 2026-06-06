@@ -1,5 +1,5 @@
-import { InventoryMaintainers } from './foundationMaintainerConfigs';
+import { ProductMediaMaintainers } from './foundationMaintainerConfigs';
 
-const AdminProductMedia = () => <InventoryMaintainers initialTab="media" />;
+const AdminProductMedia = () => <ProductMediaMaintainers initialTab="media" />;
 
 export default AdminProductMedia;

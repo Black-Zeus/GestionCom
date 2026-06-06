@@ -291,31 +291,25 @@ const suppliersTabs = [
 
 export const supplierMaintainerConfig = suppliersTabs[0];
 
-const productSupportTabs = [
-  {
-    id: 'brands', resource: 'product-brands', label: 'Marcas', singular: 'marca', icon: PackageSearch, codeField: 'brand_code', activeField: 'is_active',
-    empty: { brand_name: '', brand_description: '', is_active: true },
-    fields: [{ id: 'brand_name', label: 'Marca', required: true }, { id: 'brand_description', label: 'Descripcion', wide: true }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'brand_name', label: 'Marca', primary: true }, { id: 'brand_description', label: 'Descripcion' }],
-  },
-  {
-    id: 'models', resource: 'product-models', label: 'Modelos', singular: 'modelo', icon: PackageSearch, codeField: 'model_code', activeField: 'is_active',
-    empty: { brand_id: '', model_name: '', model_description: '', is_active: true },
-    fields: [{ id: 'brand_id', label: 'Marca', type: 'select', optionsResource: 'product-brands', required: true }, { id: 'model_name', label: 'Modelo', required: true }, { id: 'model_description', label: 'Descripcion', wide: true }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'model_name', label: 'Modelo', primary: true }, { id: 'brand_id', label: 'ID marca' }, { id: 'model_description', label: 'Descripcion' }],
-  },
+const productBarcodeTabs = [
   {
     id: 'barcodes', resource: 'product-barcodes', label: 'Codigos', singular: 'codigo de barras', icon: Barcode, activeField: 'is_active',
     empty: { product_variant_id: '', barcode_type: 'EAN13', barcode_value: '', is_primary: false, is_active: true },
     fields: [{ id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'barcode_type', label: 'Tipo', type: 'select', options: ['EAN13', 'EAN8', 'UPC', 'CODE128', 'QR', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'barcode_value', label: 'Codigo', required: true }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Principal' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'barcode_value', label: 'Codigo', primary: true }, { id: 'product_variant_id', label: 'ID SKU' }, { id: 'barcode_type', label: 'Tipo' }],
+    tableFields: [{ id: 'barcode_value', label: 'Codigo', primary: true }, { id: 'product_variant_id', label: 'SKU', optionsResource: 'product-variants-options' }, { id: 'barcode_type', label: 'Tipo' }],
   },
+];
+
+const productUnitTabs = [
   {
     id: 'units', resource: 'product-units', label: 'Unidades', singular: 'unidad por producto', icon: PackageSearch, activeField: 'is_active',
     empty: { product_id: '', measurement_unit_id: '', conversion_factor: 1, is_purchase_unit: false, is_sale_unit: false, is_inventory_unit: false, is_active: true },
     fields: [{ id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options', required: true }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options', required: true }, { id: 'conversion_factor', label: 'Factor', type: 'number', min: 0 }, { id: 'is_purchase_unit', label: 'Compra', type: 'checkbox', checkLabel: 'Unidad compra' }, { id: 'is_sale_unit', label: 'Venta', type: 'checkbox', checkLabel: 'Unidad venta' }, { id: 'is_inventory_unit', label: 'Inventario', type: 'checkbox', checkLabel: 'Unidad inventario' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'product_id', label: 'ID producto', primary: true }, { id: 'measurement_unit_id', label: 'ID unidad' }, { id: 'conversion_factor', label: 'Factor' }],
+    tableFields: [{ id: 'product_id', label: 'Producto', primary: true, optionsResource: 'products-options' }, { id: 'measurement_unit_id', label: 'Unidad', optionsResource: 'measurement-units-options' }, { id: 'conversion_factor', label: 'Factor' }],
   },
+];
+
+const productMediaTabs = [
   {
     id: 'media', resource: 'product-media', label: 'Media', singular: 'media de producto', icon: PackageSearch, showStatus: false,
     empty: { product_id: '', product_variant_id: '', media_type: 'IMAGE', storage_provider: 'MINIO', object_key: '', is_primary: false, sort_order: 0 },
@@ -337,7 +331,6 @@ const inventoryTabs = [
     fields: [{ id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'warehouse_id', label: 'Bodega', type: 'select', optionsResource: 'warehouses-options', required: true }, { id: 'minimum_stock', label: 'Stock minimo', type: 'number', min: 0 }, { id: 'maximum_stock', label: 'Stock maximo', type: 'number', min: 0 }, { id: 'safety_stock', label: 'Stock seguridad', type: 'number', min: 0 }, { id: 'reorder_quantity', label: 'Cantidad reorden', type: 'number', min: 0 }, { id: 'lead_time_days', label: 'Lead time', type: 'number', min: 0 }, { id: 'alert_enabled', label: 'Alerta', type: 'checkbox', checkLabel: 'Alerta activa' }, { id: 'alert_frequency_hours', label: 'Frecuencia horas', type: 'number', min: 1 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'product_variant_id', label: 'SKU', primary: true }, { id: 'warehouse_id', label: 'Bodega' }, { id: 'minimum_stock', label: 'Minimo' }, { id: 'safety_stock', label: 'Seguridad' }],
   },
-  ...productSupportTabs.filter((tab) => ['barcodes', 'units', 'media'].includes(tab.id)),
 ];
 
 const salesConfigTabs = [
@@ -477,8 +470,10 @@ export const SuppliersMaintainers = ({ initialTab, visibleTabs }) => {
   const scopedTabs = visibleTabs?.length ? suppliersTabs.filter((tab) => visibleTabs.includes(tab.id)) : suppliersTabs;
   return <AdminGenericMaintainers title="Mantenedores de proveedores" description="Proveedores, contactos, direcciones y productos asociados." tabs={scopedTabs} initialTab={initialTab} />;
 };
-export const ProductSupportMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores auxiliares de productos" description="Marcas, modelos, codigos de barra, unidades por producto y media asociada." tabs={productSupportTabs} initialTab={initialTab} />;
-export const InventoryMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de inventario" description="Zonas, codigos, unidades y reglas de reposicion." tabs={inventoryTabs} initialTab={initialTab} />;
+export const ProductBarcodeMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Codigos de barra de productos" description="Codigos asociados a SKU / Variedades y unidades comerciales." tabs={productBarcodeTabs} initialTab={initialTab} />;
+export const ProductUnitMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Unidades por producto" description="Unidades alternativas de compra, venta e inventario por producto." tabs={productUnitTabs} initialTab={initialTab} />;
+export const ProductMediaMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Media de productos" description="Media tecnica asociada a productos o SKU / Variedades." tabs={productMediaTabs} initialTab={initialTab} />;
+export const InventoryMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de inventario" description="Zonas de bodega y reglas de reposicion." tabs={inventoryTabs} initialTab={initialTab} />;
 export const SalesConfigMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores comerciales" description="Promociones y reglas de devolucion sin transaccionar ventas." tabs={salesConfigTabs} initialTab={initialTab} />;
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;

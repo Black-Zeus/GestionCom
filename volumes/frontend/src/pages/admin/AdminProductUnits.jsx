@@ -1,5 +1,5 @@
-import { InventoryMaintainers } from './foundationMaintainerConfigs';
+import { ProductUnitMaintainers } from './foundationMaintainerConfigs';
 
-const AdminProductUnits = () => <InventoryMaintainers initialTab="units" />;
+const AdminProductUnits = () => <ProductUnitMaintainers initialTab="units" />;
 
 export default AdminProductUnits;
