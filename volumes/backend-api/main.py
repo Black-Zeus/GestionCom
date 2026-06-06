@@ -149,6 +149,16 @@ ROUTERS_TO_LOAD = [
         "tags": ["Payment Methods"]
     },
     {
+        "name": "physical_inventory",
+        "prefix": "/physical-inventory",
+        "tags": ["Physical Inventory"]
+    },
+    {
+        "name": "stock_transfers",
+        "prefix": "/stock-transfers",
+        "tags": ["Stock Transfers"]
+    },
+    {
         "name": "measurement_units",
         "prefix": "/measurement-units",
         "tags": ["Measurement Units"]

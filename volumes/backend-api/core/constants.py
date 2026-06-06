@@ -360,6 +360,8 @@ PRIVATE_ROUTES = [
     "/cash-registers",              # Configuración de cajas POS
     "/petty-cash-admin",            # Administración de caja chica
     "/payment-methods",             # Mantenedor de metodos de pago
+    "/physical-inventory",          # Inventario fisico y conciliacion de stock
+    "/stock-transfers",             # Transferencias, recepcion y ubicacion de stock
     "/measurement-units",           # Mantenedor de unidades de medida
     "/product-config",              # Categorias y atributos de productos
     "/document-config",             # Tipos y series de documentos

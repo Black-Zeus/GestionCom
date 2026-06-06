@@ -170,6 +170,12 @@ RESOURCES = {
         "fields": ["warehouse_id", "zone_code", "zone_name", "is_location_tracking_enabled", "is_active"],
         "bool": ["is_location_tracking_enabled", "is_active"], "int": ["warehouse_id"], "read_only": True,
     },
+    "warehouse-zone-locations-options": {
+        "table": "warehouse_zone_locations", "active_field": "is_active", "soft_delete": True,
+        "fields": ["warehouse_zone_id", "location_code", "location_name", "location_type", "sort_order", "is_active"],
+        "bool": ["is_active"], "int": ["warehouse_zone_id", "sort_order"], "read_only": True,
+        "order_by": "sort_order ASC, location_name ASC, id ASC",
+    },
     "document-types-options": {
         "table": "document_types", "active_field": "is_active", "soft_delete": False,
         "fields": ["document_type_code", "document_type_name", "is_active"],

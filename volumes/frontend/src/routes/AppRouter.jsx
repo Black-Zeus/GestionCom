@@ -41,6 +41,8 @@ const AdminProductUnits = lazy(() => import('@/pages/admin/AdminProductUnits'));
 const AdminWarehouseZones = lazy(() => import('@/pages/admin/AdminWarehouseZones'));
 const AdminWarehouseZoneLocations = lazy(() => import('@/pages/admin/AdminWarehouseZoneLocations'));
 const AdminStockCriticalConfig = lazy(() => import('@/pages/admin/AdminStockCriticalConfig'));
+const AdminPhysicalInventory = lazy(() => import('@/pages/admin/AdminPhysicalInventory'));
+const AdminStockTransfers = lazy(() => import('@/pages/admin/AdminStockTransfers'));
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
 const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
@@ -82,6 +84,8 @@ const moduleComponents = {
   barcodes: AdminProductBarcodes,
   'product-units': AdminProductUnits,
   'stock-critical-config': AdminStockCriticalConfig,
+  'physical-inventory': AdminPhysicalInventory,
+  transfers: AdminStockTransfers,
   'system-parameters': AdminSystemParameterMaintainers,
   promotions: AdminSalesConfigMaintainers,
   'return-reasons': AdminReturnReasons,
@@ -256,6 +260,16 @@ const AppRouter = () => (
             <Page>
               <RequirePermission permissions={['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS', 'INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE']}>
                 <AdminWarehouseZoneLocations />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="stock/transfers/:transferId"
+          element={(
+            <Page>
+              <RequirePermission permissions={['TRANSFERS_ACCESS', 'STOCK_TRANSFER', 'TRANSFER_RECEPTIONS_MANAGE']}>
+                <AdminStockTransfers />
               </RequirePermission>
             </Page>
           )}
