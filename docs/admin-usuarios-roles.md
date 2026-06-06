@@ -62,7 +62,7 @@ Habilitar la primera superficie operativa de `Administracion > Usuarios / Roles`
 
 ## Normalizaciones aplicadas
 
-- Los codigos internos de mantenedores deben generarse en backend y ser solo lectura en frontend. Ver `docs/codigos-internos.md`.
+- Los codigos internos de mantenedores deben generarse en backend y no deben mostrarse en formularios de creacion, edicion o visualizacion. Ver `docs/codigos-internos.md`.
 - La creacion de usuarios ahora persiste `password_hash` usando `PasswordManager.hash_password`.
 - Se agrego seeder `20260604_094036_seed_super_admin.sql` para crear perfil `SUPER_ADMIN`, usuario `root` y asignar todos los permisos activos al perfil.
 - Credencial inicial DEV para root: usuario `root`, clave `GCom#R7xP9!v2`. En ambientes posteriores debe gestionarse como secreto operativo y rotarse al primer acceso.

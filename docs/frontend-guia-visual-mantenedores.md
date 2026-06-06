@@ -26,7 +26,7 @@ Las tablas de datos deben usar siempre `DataTable`.
 
 Columnas recomendadas:
 
-- Primera columna: nombre funcional del registro y codigo visible debajo en fuente mono si existe.
+- Primera columna: nombre funcional del registro. Puede mostrar un dato de negocio secundario debajo solo si no es codigo interno generado por backend.
 - Columnas intermedias: atributos relevantes para comparar o filtrar.
 - Columna `Estado`: obligatoria cuando el registro tenga estado activo/inactivo, suspendido, cerrado, bloqueado o equivalente.
 - Columna `Actualizado`: usar cuando ayude a auditoria o revision operacional.
@@ -106,7 +106,8 @@ Resumen obligatorio:
 - Abrir modales con `ModalManager`.
 - Usar `SimpleFormContent` solo como contenido reutilizable dentro de `ModalManager`.
 - Los codigos generados por backend no se solicitan al crear.
-- En edicion, los codigos se muestran solo si aportan trazabilidad y siempre como `disabled/readOnly`.
+- En modales de `view/edit` y en paginas `new/edit`, nunca se debe mostrar el codigo interno del registro, aunque sea `disabled/readOnly`.
+- Los codigos internos pueden usarse en rutas cuando sean el parametro viable o menos costoso para resolver el registro sin exponer IDs numericos.
 - Formularios con muchas secciones, relaciones o validaciones cruzadas deben pasar a pagina completa.
 
 ## Acciones
@@ -135,5 +136,5 @@ Antes de terminar un mantenedor, validar:
 - La columna `Estado` usa badge cuando corresponde.
 - Las acciones usan `ActionButton` y `RowActionButton`.
 - Los iconos coinciden con la guia.
-- Los codigos generados no son editables.
+- Los codigos internos generados no aparecen en formularios ni paginas de creacion/edicion.
 - La pantalla no contiene tablas HTML manuales.

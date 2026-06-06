@@ -2,7 +2,13 @@
 
 ## Regla general
 
-Los codigos internos de mantenedores no deben ser ingresados por usuarios. El frontend debe tratarlos como datos de solo lectura: pueden mostrarse en listados y, si aportan trazabilidad, en formularios de edicion deshabilitados.
+Los codigos internos de mantenedores no deben ser ingresados por usuarios. El frontend debe tratarlos como datos internos generados por backend.
+
+En modales de visualizacion/edicion y en paginas `new/edit`, el codigo interno del registro nunca debe mostrarse, aunque sea de solo lectura o este deshabilitado. Si se necesita contexto para el usuario, se debe mostrar el nombre funcional, descripcion, estado u otro dato de negocio.
+
+En listados, el codigo interno tampoco debe usarse como apoyo visual por defecto. Solo se debe mostrar cuando el codigo sea un identificador de negocio realmente necesario para la operacion del usuario, no una secuencia tecnica del mantenedor.
+
+Por obviedad operativa, el codigo puede usarse en URL cuando sea el parametro viable o menos costoso para resolver el registro y evitar exponer IDs numericos internos.
 
 En altas de mantenedores, el codigo lo genera siempre el backend dentro de la transaccion de creacion. Esto evita colisiones, formatos inconsistentes y dependencia de criterio manual.
 
@@ -30,4 +36,5 @@ Para transacciones o eventos delicados se debe preferir UUIDv4 o folios transacc
 - La generacion debe vivir en backend.
 - Los endpoints de creacion no deben requerir campos `*_code`.
 - Los endpoints de actualizacion no deben permitir modificar codigos.
+- El frontend no debe renderizar campos `*_code` en formularios de creacion, edicion o visualizacion de mantenedores.
 - Las migraciones que corrijan codigos existentes deben ser idempotentes y preservar relaciones por `id`.
