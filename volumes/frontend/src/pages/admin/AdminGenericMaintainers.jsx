@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, Pencil, Plus, Power, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Image, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
@@ -13,6 +13,8 @@ import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
+import { formatPhone } from '@/utils/phone';
+import { formatRut } from '@/utils/rut';
 import { fieldOptions, filterActions, statusCell, tableFooter } from './businessFoundationShared';
 
 const defaultFieldClass = (field, optionData = {}) => ({
@@ -25,6 +27,7 @@ const defaultFieldClass = (field, optionData = {}) => ({
   wide: field.wide,
   placeholder: field.placeholder,
   help: field.help,
+  checkLabel: field.checkLabel,
   rows: field.rows,
   mono: field.mono,
   span: field.span,
@@ -34,6 +37,10 @@ const defaultFieldClass = (field, optionData = {}) => ({
   description: field.description,
   readOnly: field.readOnly,
   disabled: field.disabled,
+  validation: field.validation,
+  render: field.render,
+  localOptions: field.localOptions,
+  showOptionDescription: field.showOptionDescription,
 });
 
 const getStatusOption = (item, config, optionData = {}) => {
@@ -52,17 +59,23 @@ const getStatus = (item, config, optionData = {}) => {
 };
 
 const formatValue = (item, field, optionData = {}) => {
-  const value = item[field.id];
+  const value = item[field.id] ?? (field.fallbackField ? item[field.fallbackField] : undefined);
   if (field.optionsResource) {
     const option = (optionData[field.optionsResource] || []).find((entry) => String(entry.value) === String(value));
     if (option) return option.label;
   }
   if (field.format) return field.format(value, item);
   if (field.options) return field.options.find((option) => String(option.value) === String(value))?.label || value || '-';
+  if (field.validation === 'rut' || /(^|_)tax_id$/.test(field.id) || field.id === 'company_rut') return formatRut(value);
+  if (field.validation === 'phone' || field.id === 'phone' || field.id === 'mobile') return formatPhone(value);
   if (typeof value === 'boolean') return value ? 'Si' : 'No';
   if (value === null || value === undefined || value === '') return '-';
   return String(value);
 };
+
+const isRowActionDisabled = (action, item) => (
+  typeof action.disabled === 'function' ? action.disabled(item) : Boolean(action.disabled)
+);
 
 const statusVariantByValue = {
   ACTIVE: 'active',
@@ -127,6 +140,53 @@ const StatusChangeContent = ({
   );
 };
 
+const openExpandedMedia = (entry) => ModalManager.show({
+  type: 'custom',
+  title: entry.label,
+  size: entry.label === 'Banner' ? 'fullscreenWide' : 'large',
+  showFooter: false,
+  content: (
+    <div className={`flex items-center justify-center rounded-md bg-slate-950/95 ${entry.label === 'Banner' ? 'p-2' : 'p-3'}`}>
+      <img src={entry.fullSrc || entry.src} alt={entry.label} className={`${entry.label === 'Banner' ? 'max-h-[76vh]' : 'max-h-[72vh]'} max-w-full object-contain`} />
+    </div>
+  ),
+});
+
+const EntityMediaViewer = ({ item, entityLabel = 'registro' }) => {
+  const media = [
+    { label: 'Logo', src: item.logo?.thumb_url, fullSrc: item.logo?.full_url, ratio: 'aspect-square' },
+    { label: 'Banner', src: item.banner?.thumb_url, fullSrc: item.banner?.full_url, ratio: 'aspect-[16/5]' },
+  ].filter((entry) => entry.src);
+
+  if (!media.length) {
+    return (
+      <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
+        <Image className="mx-auto h-10 w-10 text-slate-400" />
+        <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Sin imagenes cargadas</p>
+        <p className="mt-1 text-xs text-slate-500">Puedes agregar logo o banner desde la edicion de {entityLabel}.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {media.map((entry) => (
+        <div key={entry.label} className="rounded-md border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
+          <button
+            type="button"
+            className={`block w-full overflow-hidden rounded-md bg-slate-100 outline-none transition hover:ring-2 hover:ring-blue-500 focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-slate-900 ${entry.ratio}`}
+            onClick={() => openExpandedMedia(entry)}
+            aria-label={`Ampliar ${entry.label}`}
+          >
+            <img src={entry.src} alt={entry.label} className="h-full w-full object-contain p-3" />
+          </button>
+          <p className="mt-3 text-center text-sm font-semibold text-slate-700 dark:text-slate-200">{entry.label}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const optionLabel = (row) => {
   if (row.currency_code) return `${row.currency_code} - ${row.currency_symbol || ''} - ${row.currency_name || ''}`.replace(/\s+-\s+$/, '');
   if (row.bank_name) return `${row.bank_code ? `${row.bank_code} - ` : ''}${row.bank_name}`;
@@ -146,6 +206,8 @@ const optionLabel = (row) => {
   return row.name || row.label || String(row.id);
 };
 
+const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+_[A-Z]+_\d+\s*-\s*/, '').trim();
+
 const filterItems = (items, config, search, status, optionData = {}) => {
   const term = search.trim().toLowerCase();
   return items.filter((item) => {
@@ -163,6 +225,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   const initialTabId = searchParams.get('tab') || initialTab || tabs[0].id;
   const [activeTab, setActiveTab] = useState(tabs.some((tab) => tab.id === initialTabId) ? initialTabId : tabs[0].id);
   const [data, setData] = useState({});
+  const [relatedData, setRelatedData] = useState({});
   const [optionData, setOptionData] = useState({});
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [status, setStatus] = useState('all');
@@ -183,8 +246,15 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
     try {
       const entries = await Promise.all(tabs.map(async (tab) => [tab.id, await adminMaintainersService.list(tab.resource)]));
       setData(Object.fromEntries(entries));
+      const relatedResources = [...new Set(tabs.flatMap((tab) => tab.extraResources || []))];
+      if (relatedResources.length) {
+        const relatedEntries = await Promise.all(relatedResources.map(async (resource) => [resource, await adminMaintainersService.list(resource)]));
+        setRelatedData(Object.fromEntries(relatedEntries));
+      } else {
+        setRelatedData({});
+      }
       const optionResources = [...new Set(tabs.flatMap((tab) => [
-        ...tab.fields.map((field) => field.optionsResource).filter(Boolean),
+        ...tab.fields.map((field) => (field.localOptions ? null : field.optionsResource)).filter(Boolean),
         tab.statusOptionsResource,
       ].filter(Boolean)))];
       if (optionResources.length) {
@@ -222,14 +292,40 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   const filteredItems = useMemo(() => filterItems(scopedItems, activeConfig, search, status, optionData), [activeConfig, scopedItems, search, status, optionData]);
   const visibleItems = filteredItems.slice(page * pageSize, page * pageSize + pageSize);
   const routePrefill = useMemo(() => Object.fromEntries(Object.entries(routeFilterValues)), [routeFilterValues]);
+  const activeScope = activeConfig.scope;
   const scopedLabel = useMemo(() => {
-    const customerId = routeFilterValues.customer_id;
-    if (!customerId) return '';
-    return (optionData.customers || []).find((option) => String(option.value) === String(customerId))?.label || `Cliente ${customerId}`;
-  }, [optionData, routeFilterValues]);
+    if (!activeScope?.field || !activeScope?.optionsResource) return '';
+    const scopedValue = routeFilterValues[activeScope.field];
+    if (!scopedValue) return '';
+    const label = (optionData[activeScope.optionsResource] || []).find((option) => String(option.value) === String(scopedValue))?.label;
+    return label ? displayLabelWithoutCode(label) : activeScope.fallback || 'Registro';
+  }, [activeScope, optionData, routeFilterValues]);
+  const pageTitle = scopedLabel ? `${title} - ${scopedLabel}` : title;
+  const pageDescription = scopedLabel && activeConfig.detailDescription ? activeConfig.detailDescription : description;
+  const renderTableValue = (item, field) => {
+    const detailValue = typeof field.detailResolver === 'function'
+      ? field.detailResolver(item, { relatedData, optionData })
+      : (field.detailField ? item[field.detailField] : '');
+    return (
+      <>
+        <div className={field.primary ? 'font-medium' : ''}>{formatValue(item, field, optionData)}</div>
+        {detailValue && <div className="text-xs text-slate-500">{detailValue}</div>}
+        {field.primary && !detailValue && activeConfig.codeField && <div className="font-mono text-xs text-slate-500">{item[activeConfig.codeField]}</div>}
+      </>
+    );
+  };
 
   const buildFormFields = (item) => {
-    const mappedFields = activeConfig.fields.map((field) => defaultFieldClass(field, optionData));
+    const mappedFields = [];
+    activeConfig.fields.forEach((field, index) => {
+      if (routePrefill[field.id]) {
+        const previousField = mappedFields[mappedFields.length - 1];
+        const nextField = activeConfig.fields[index + 1];
+        if (previousField?.type === 'section' && nextField?.type === 'section') mappedFields.pop();
+        return;
+      }
+      mappedFields.push(defaultFieldClass(field, optionData));
+    });
     const codeField = item && activeConfig.codeField
       ? { id: activeConfig.codeField, label: 'Codigo', readOnly: true, disabled: true, mono: true }
       : null;
@@ -262,9 +358,9 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
         onSubmit: async (form) => {
           const payload = {};
           activeConfig.fields.forEach((field) => {
-            if (field.type === 'section') return;
+            if (field.type === 'section' || field.type === 'custom') return;
             const rawValue = form[field.id];
-            if (field.type === 'number') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(rawValue);
+            if (field.type === 'number' || field.type === 'amount') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(String(rawValue).replace(/[^\d.-]/g, ''));
             else if (field.type === 'checkbox') payload[field.id] = Boolean(rawValue);
             else payload[field.id] = rawValue === '' ? null : rawValue;
           });
@@ -362,6 +458,17 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
     await load();
   };
 
+  const openMedia = (item) => {
+    const title = formatValue(item, activeConfig.tableFields.find((field) => field.primary) || activeConfig.tableFields[0], optionData);
+    ModalManager.show({
+      type: 'custom',
+      title: `Media de ${title}`,
+      size: 'large',
+      showFooter: true,
+      content: <EntityMediaViewer item={item} entityLabel={activeConfig.singular} />,
+    });
+  };
+
   const renderStatus = (item) => {
     if (activeConfig.statusField && (activeConfig.statusChangeOptions?.length || activeConfig.statusOptionsResource)) {
       const currentValue = item[activeConfig.statusField];
@@ -375,6 +482,11 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   };
 
   const runRowAction = (action, item) => {
+    if (isRowActionDisabled(action, item)) return;
+    if (action.type === 'media') {
+      openMedia(item);
+      return;
+    }
     if (action.onClick) {
       action.onClick(item, { navigate });
       return;
@@ -399,16 +511,16 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div>
-        <ActionButton label={`Nuevo ${activeConfig.singular}`} icon={Plus} disabled={activeConfig.disabled} onClick={() => openForm()} />
+        <div><h1 className="text-xl font-semibold">{pageTitle}</h1><p className="mt-1 text-sm text-slate-500">{pageDescription}</p></div>
+        <div className="flex flex-wrap items-center gap-2">
+          {scopedLabel && (
+            <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={() => navigate(activeScope?.backPath || '..')} />
+          )}
+          <ActionButton label={`Nuevo ${activeConfig.singular}`} icon={Plus} disabled={activeConfig.disabled} onClick={() => openForm()} />
+        </div>
       </div>
       <KpiBar items={kpis} className="mb-4" />
       {tabs.length > 1 && <ModuleTabs className="mb-4" activeTab={activeTab} onChange={setActiveTab} tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label, icon: tab.icon, count: (data[tab.id] || []).length }))} />}
-      {scopedLabel && (
-        <div className="mb-4 rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200">
-          Vista filtrada por cliente: <span className="font-semibold">{scopedLabel}</span>
-        </div>
-      )}
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeConfig.searchPlaceholder || 'Buscar registro'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
       <DataTable
@@ -419,7 +531,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
           ...activeConfig.tableFields.map((field) => ({
             id: field.id,
             label: field.label,
-            render: (item) => field.primary ? <><div className="font-medium">{formatValue(item, field, optionData)}</div>{activeConfig.codeField && <div className="font-mono text-xs text-slate-500">{item[activeConfig.codeField]}</div>}</> : formatValue(item, field, optionData),
+            render: (item) => (field.primary || field.detailField || field.detailResolver ? renderTableValue(item, field) : formatValue(item, field, optionData)),
           })),
           ...(activeConfig.showStatus === false ? [] : [{ id: 'status', label: 'Estado', render: renderStatus }]),
           {
@@ -427,13 +539,23 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
             label: 'Acciones',
             align: 'right',
             render: (item) => (
-              <div className="flex justify-end gap-2">
+              <div className="inline-grid grid-cols-3 gap-2">
                 <RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} />
-                {(activeConfig.rowActions || []).map((action) => (
-                  <RowActionButton key={action.label} label={action.label} icon={action.icon} variant={action.variant || 'neutral'} onClick={() => runRowAction(action, item)} />
-                ))}
+                {(activeConfig.rowActions || []).map((action) => {
+                  const disabled = isRowActionDisabled(action, item);
+                  return (
+                    <RowActionButton
+                      key={action.label}
+                      label={disabled && action.disabledLabel ? action.disabledLabel : action.label}
+                      icon={action.icon}
+                      variant={action.variant || 'neutral'}
+                      disabled={disabled}
+                      onClick={() => runRowAction(action, item)}
+                    />
+                  );
+                })}
                 <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove(item)} />
-                {activeConfig.forceStatusToggle && (
+                {(activeConfig.forceStatusToggle || activeConfig.statusField || activeConfig.activeField) && (
                   <RowActionButton label="Cambiar estado" icon={Power} onClick={() => changeStatus(item)} />
                 )}
               </div>

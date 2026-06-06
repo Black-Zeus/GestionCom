@@ -30,6 +30,7 @@ import { appConfig } from '@/config/appConfig';
 import ProductInfoModalContent from '@/components/product/ProductInfoModalContent';
 import UserAvatar from '@/components/common/media/UserAvatar';
 import { authService } from '@/services/auth/authService';
+import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { notificationService } from '@/services/notifications/notificationService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
@@ -52,11 +53,121 @@ const getCleanDisplayName = (value) => (
   String(value || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
 );
 
+const getCustomerNavigationName = (record) => (
+  String(record?.commercial_name || record?.legal_name || record?.customer_code || '')
+    .replace(/^cliente\s+/i, '')
+    .trim()
+);
+
 const hiddenSidebarMenuPaths = new Set(['/notifications']);
 const hiddenSidebarMenuIds = new Set(['notifications']);
 const isHiddenSidebarMenuItem = (item) => (
   hiddenSidebarMenuPaths.has(item?.path) || hiddenSidebarMenuIds.has(item?.id) || hiddenSidebarMenuIds.has(item?.code)
 );
+
+const detailNavigationRoutes = [
+  {
+    id: 'customer-detail',
+    pattern: /^\/customers\/edit\/([^/?#]+)/,
+    resource: 'customers',
+    codeField: 'customer_code',
+    basePath: '/customers',
+    group: 'Listado de clientes',
+    fallbackLabel: 'Cliente',
+    getLabel: (record) => getCustomerNavigationName(record) || record?.customer_code,
+    getTooltip: (record) => `Cliente: ${record?.legal_name || record?.customer_code || 'registro'}`,
+  },
+  {
+    id: 'customer-authorized-detail',
+    pathname: '/customers/authorized-persons',
+    queryParam: 'customer_id',
+    resource: 'customers',
+    codeField: 'id',
+    basePath: '/customers/authorized-persons',
+    parentPath: '/customers',
+    group: 'Listado de clientes',
+    fallbackLabel: 'Cliente',
+    getLabel: (record) => `Autorizaciones - ${getCustomerNavigationName(record) || record?.customer_code}`,
+    getTooltip: (record) => `Autorizaciones de cliente: ${record?.legal_name || record?.customer_code || 'registro'}`,
+  },
+  {
+    id: 'customer-credit-detail',
+    pathname: '/customers/credit-limits',
+    queryParam: 'customer_id',
+    resource: 'customers',
+    codeField: 'id',
+    basePath: '/customers/credit-limits',
+    parentPath: '/customers',
+    group: 'Listado de clientes',
+    fallbackLabel: 'Cliente',
+    getLabel: (record) => `Credito - ${getCustomerNavigationName(record) || record?.customer_code}`,
+    getTooltip: (record) => `Credito de cliente: ${record?.legal_name || record?.customer_code || 'registro'}`,
+  },
+  {
+    id: 'supplier-detail',
+    pattern: /^\/suppliers\/edit\/([^/?#]+)/,
+    resource: 'suppliers',
+    codeField: 'supplier_code',
+    basePath: '/suppliers',
+    group: 'Listado de proveedores',
+    fallbackLabel: 'Proveedor',
+    getLabel: (record) => record?.commercial_name || record?.legal_name || record?.supplier_code,
+    getTooltip: (record) => `Proveedor: ${record?.legal_name || record?.supplier_code || 'registro'}`,
+  },
+  {
+    id: 'supplier-contacts-detail',
+    pathname: '/suppliers/contacts',
+    queryParam: 'supplier_id',
+    resource: 'suppliers',
+    codeField: 'id',
+    basePath: '/suppliers/contacts',
+    parentPath: '/suppliers',
+    group: 'Listado de proveedores',
+    fallbackLabel: 'Proveedor',
+    getLabel: (record) => `Contactos - ${record?.commercial_name || record?.legal_name || record?.supplier_code}`,
+    getTooltip: (record) => `Contactos de proveedor: ${record?.legal_name || record?.supplier_code || 'registro'}`,
+  },
+  {
+    id: 'supplier-addresses-detail',
+    pathname: '/suppliers/addresses',
+    queryParam: 'supplier_id',
+    resource: 'suppliers',
+    codeField: 'id',
+    basePath: '/suppliers/addresses',
+    parentPath: '/suppliers',
+    group: 'Listado de proveedores',
+    fallbackLabel: 'Proveedor',
+    getLabel: (record) => `Direcciones - ${record?.commercial_name || record?.legal_name || record?.supplier_code}`,
+    getTooltip: (record) => `Direcciones de proveedor: ${record?.legal_name || record?.supplier_code || 'registro'}`,
+  },
+  {
+    id: 'supplier-products-detail',
+    pathname: '/suppliers/products',
+    queryParam: 'supplier_id',
+    resource: 'suppliers',
+    codeField: 'id',
+    basePath: '/suppliers/products',
+    parentPath: '/suppliers',
+    group: 'Listado de proveedores',
+    fallbackLabel: 'Proveedor',
+    getLabel: (record) => `Productos - ${record?.commercial_name || record?.legal_name || record?.supplier_code}`,
+    getTooltip: (record) => `Productos de proveedor: ${record?.legal_name || record?.supplier_code || 'registro'}`,
+  },
+];
+
+const getDetailNavigationRoute = (pathname, searchParams) => {
+  for (const config of detailNavigationRoutes) {
+    if (config.pathname && config.queryParam && pathname === config.pathname) {
+      const queryValue = searchParams.get(config.queryParam);
+      if (queryValue) return { config, code: queryValue };
+    }
+    if (config.pattern) {
+      const match = pathname.match(config.pattern);
+      if (match) return { config, code: decodeURIComponent(match[1] || '') };
+    }
+  }
+  return null;
+};
 
 const passwordPolicyRequirements = [
   { id: 'length', shortLabel: '8 caracteres', test: (value) => value.length >= 8 },
@@ -330,6 +441,7 @@ const AppLayout = () => {
   const [globalSearchResults, setGlobalSearchResults] = useState([]);
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
   const [globalSearchError, setGlobalSearchError] = useState('');
+  const [detailNavigationModule, setDetailNavigationModule] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [syncingSession, setSyncingSession] = useState(false);
   const contentRef = useRef(null);
@@ -366,7 +478,31 @@ const AppLayout = () => {
       ? [...dbMenuPages, ...fallbackNavigablePages.filter((page) => page.groupId === 'system')].filter((page) => !isHiddenSidebarMenuItem(page))
       : fallbackNavigablePages.filter((page) => !isHiddenSidebarMenuItem(page))
   ), [dbMenuPages, usingDatabaseMenu]);
-  const activeModule = navigablePages.find((module) => module.path === location.pathname);
+  const currentDetailRoute = useMemo(
+    () => getDetailNavigationRoute(location.pathname, new URLSearchParams(location.search)),
+    [location.pathname, location.search]
+  );
+  const exactActiveModule = navigablePages.find((module) => module.path === location.pathname);
+  const detailFallbackModule = useMemo(() => {
+    if (!currentDetailRoute) return null;
+    const { config } = currentDetailRoute;
+    const parentModule = navigablePages.find((module) => module.path === config.basePath)
+      || navigablePages.find((module) => module.path === config.parentPath);
+
+    return {
+      ...(parentModule || {}),
+      id: config.id,
+      label: parentModule?.label || config.group || config.fallbackLabel,
+      path: location.pathname,
+      group: parentModule?.group || config.group,
+      groupId: parentModule?.groupId,
+      description: config.group,
+      tooltip: parentModule?.description || config.group,
+      isDetailFallback: true,
+    };
+  }, [currentDetailRoute, location.pathname, navigablePages]);
+  const activeModule = detailNavigationModule || detailFallbackModule || exactActiveModule;
+  const historyModule = detailNavigationModule || exactActiveModule;
   const currentLocationPath = `${location.pathname}${location.search || ''}`;
   const activeGroupId = activeModule?.groupId || moduleGroups[0]?.id || fallbackModuleGroups[0]?.id;
   const [openGroupId, setOpenGroupId] = useState(activeGroupId);
@@ -453,14 +589,51 @@ const AppLayout = () => {
   }, [activeGroupId]);
 
   useEffect(() => {
+    if (!currentDetailRoute) {
+      setDetailNavigationModule(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const { config, code } = currentDetailRoute;
+    const parentModule = navigablePages.find((module) => module.path === config.basePath)
+      || navigablePages.find((module) => module.path === config.parentPath);
+
+    setDetailNavigationModule(null);
+
+    adminMaintainersService.list(config.resource)
+      .then((rows) => {
+        if (cancelled) return;
+        const record = rows.find((row) => String(row[config.codeField]) === code);
+        if (!record) return;
+        const label = config.getLabel(record) || code;
+        setDetailNavigationModule({
+          ...(parentModule || {}),
+          id: config.id,
+          label,
+          path: location.pathname,
+          group: parentModule?.group || config.group,
+          groupId: parentModule?.groupId,
+          description: config.group,
+          tooltip: config.getTooltip(record),
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDetailRoute, location.pathname, navigablePages]);
+
+  useEffect(() => {
     document.title = activeModule?.label ? `${appDisplayName} / ${activeModule.label}` : appDisplayName;
   }, [activeModule, appDisplayName]);
 
   useEffect(() => {
-    if (activeModule) {
-      addNavigationVisit({ ...activeModule, visitPath: currentLocationPath });
+    if (historyModule) {
+      addNavigationVisit({ ...historyModule, visitPath: currentLocationPath });
     }
-  }, [activeModule, addNavigationVisit, currentLocationPath]);
+  }, [addNavigationVisit, currentLocationPath, historyModule]);
 
   useEffect(() => {
     if (!sideUserOpen) return undefined;

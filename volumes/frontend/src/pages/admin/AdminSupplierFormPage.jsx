@@ -12,6 +12,7 @@ import { supplierMaintainerConfig } from './foundationMaintainerConfigs';
 
 const optionLabel = (row) => {
   if (row.currency_code) return `${row.currency_code} ${row.currency_symbol || ''}`.trim();
+  if (row.status_display_es) return row.status_display_es;
   if (row.legal_name) return `${row.supplier_code ? `${row.supplier_code} - ` : ''}${row.legal_name}`;
   return row.name || row.label || String(row.id);
 };
@@ -35,6 +36,7 @@ const defaultFieldClass = (field, optionData = {}) => ({
   description: field.description,
   readOnly: field.readOnly,
   disabled: field.disabled,
+  validation: field.validation,
 });
 
 const buildFields = (item, optionData) => {
@@ -111,6 +113,7 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
           rows.filter((row) => row.is_active !== false).map((row) => ({
             value: String(row.currency_code || row.id),
             label: optionLabel(row),
+            code: row.status_code,
           })),
         ])));
         setActiveCompany(companies.find((company) => company.is_active) || null);
@@ -159,7 +162,15 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
     return () => URL.revokeObjectURL(objectUrl);
   }, [pendingBannerFile]);
 
-  const initialValues = useMemo(() => (isEdit ? (supplier ? { ...supplier } : null) : { ...supplierMaintainerConfig.empty }), [isEdit, supplier]);
+  const initialValues = useMemo(() => {
+    if (isEdit) return supplier ? { ...supplier } : null;
+    const activeStatus = optionData[supplierMaintainerConfig.statusOptionsResource]?.find((option) => option.code === supplierMaintainerConfig.activeValue);
+    return {
+      ...supplierMaintainerConfig.empty,
+      default_currency_code: activeCompany?.default_supplier_currency_code || supplierMaintainerConfig.empty.default_currency_code || 'CLP',
+      status_id: activeStatus?.value || supplierMaintainerConfig.empty.status_id,
+    };
+  }, [activeCompany?.default_supplier_currency_code, isEdit, optionData, supplier]);
   const backToList = () => navigate('/suppliers');
 
   const selectLogo = (event) => {

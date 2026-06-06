@@ -33,6 +33,7 @@ const AdminCustomerCredit = lazy(() => import('@/pages/admin/AdminCustomerCredit
 const AdminSuppliersMaintainers = lazy(() => import('@/pages/admin/AdminSuppliersMaintainers'));
 const AdminSupplierFormPage = lazy(() => import('@/pages/admin/AdminSupplierFormPage'));
 const AdminSupplierContacts = lazy(() => import('@/pages/admin/AdminSupplierContacts'));
+const AdminSupplierAddresses = lazy(() => import('@/pages/admin/AdminSupplierAddresses'));
 const AdminSupplierProducts = lazy(() => import('@/pages/admin/AdminSupplierProducts'));
 const AdminProductSupportMaintainers = lazy(() => import('@/pages/admin/AdminProductSupportMaintainers'));
 const AdminProductBarcodes = lazy(() => import('@/pages/admin/AdminProductBarcodes'));
@@ -75,6 +76,7 @@ const moduleComponents = {
   'customer-credit': AdminCustomerCredit,
   suppliers: AdminSuppliersMaintainers,
   'supplier-contacts': AdminSupplierContacts,
+  'supplier-addresses': AdminSupplierAddresses,
   'supplier-products': AdminSupplierProducts,
   'product-brand-models': AdminProductSupportMaintainers,
   barcodes: AdminProductBarcodes,
@@ -171,6 +173,26 @@ const AppRouter = () => (
           )}
         />
         <Route
+          path="customers/authorized-persons"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminCustomerAuthorized />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="customers/credit-limits"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminCustomerCredit />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
           path="suppliers/new"
           element={(
             <Page>
@@ -186,6 +208,36 @@ const AppRouter = () => (
             <Page>
               <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
                 <AdminSupplierFormPage mode="edit" />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="suppliers/contacts"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminSupplierContacts />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="suppliers/addresses"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminSupplierAddresses />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="suppliers/products"
+          element={(
+            <Page>
+              <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
+                <AdminSupplierProducts />
               </RequirePermission>
             </Page>
           )}

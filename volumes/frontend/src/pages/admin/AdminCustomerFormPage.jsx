@@ -16,26 +16,49 @@ const mapStatusOption = (row) => ({
   code: row.status_code,
 });
 
-const defaultFieldClass = (field, optionData = {}) => ({
-  id: field.id,
-  label: field.label,
-  type: field.type,
-  required: field.required,
-  options: field.optionsResource ? optionData[field.optionsResource] || [] : field.options || [],
-  min: field.min,
-  wide: field.wide,
-  placeholder: field.placeholder,
-  help: field.help,
-  rows: field.rows,
-  mono: field.mono,
-  span: field.span,
-  icon: field.icon,
-  leadingIcon: field.leadingIcon,
-  columns: field.columns,
-  description: field.description,
-  readOnly: field.readOnly,
-  disabled: field.disabled,
+const mapCurrencyOption = (row) => ({
+  value: String(row.currency_code),
+  label: `${row.currency_code} - ${row.currency_symbol || ''} - ${row.currency_name || ''}`.replace(/\s+-\s+$/, ''),
 });
+
+const mapAuthorizedContactOption = (row) => ({
+  value: row.authorized_name,
+  label: [row.authorized_name, row.position].filter(Boolean).join(' - '),
+});
+
+const defaultFieldClass = (field, optionData = {}) => {
+  const options = field.optionsResource ? optionData[field.optionsResource] || [] : field.options || [];
+  const contactWithoutOptions = field.id === 'contact_person' && options.length === 0;
+  return {
+    id: field.id,
+    label: field.label,
+    type: field.type,
+    required: field.required,
+    options,
+    min: field.min,
+    wide: field.wide,
+    placeholder: field.placeholder,
+    searchPlaceholder: field.searchPlaceholder,
+    help: field.help || (contactWithoutOptions ? 'Disponible cuando el cliente tenga personas autorizadas.' : undefined),
+    checkLabel: field.checkLabel,
+    clearable: field.clearable,
+    rows: field.rows,
+    mono: field.mono,
+    span: field.span,
+    icon: field.icon,
+    leadingIcon: field.leadingIcon,
+    columns: field.columns,
+    description: field.description,
+    hideLabel: field.hideLabel,
+    readOnly: field.readOnly,
+    disabled: field.disabled || contactWithoutOptions,
+    validation: field.validation,
+    render: field.render,
+    localOptions: field.localOptions,
+    showIcons: field.showIcons,
+    showOptionDescription: field.showOptionDescription,
+  };
+};
 
 const buildFields = (item, optionData) => {
   const mappedFields = customerMaintainerConfig.fields.map((field) => defaultFieldClass(field, optionData));
@@ -51,24 +74,13 @@ const buildFields = (item, optionData) => {
     return [...fields.slice(0, contactIndex), ...logoSection, ...fields.slice(contactIndex)];
   };
 
-  if (!item) return insertLogoSection(mappedFields);
-
-  const codeField = {
-    id: customerMaintainerConfig.codeField,
-    label: 'Codigo',
-    readOnly: true,
-    disabled: true,
-    mono: true,
-  };
-
-  const fieldsWithCode = mappedFields[0]?.type === 'section' ? [mappedFields[0], codeField, ...mappedFields.slice(1)] : [codeField, ...mappedFields];
-  return insertLogoSection(fieldsWithCode);
+  return insertLogoSection(mappedFields);
 };
 
 const buildPayload = (form) => {
   const payload = {};
   customerMaintainerConfig.fields.forEach((field) => {
-    if (field.type === 'section') return;
+    if (field.type === 'section' || field.type === 'custom') return;
     const rawValue = form[field.id];
     if (field.type === 'number') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(rawValue);
     else if (field.type === 'checkbox') payload[field.id] = Boolean(rawValue);
@@ -98,15 +110,17 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
       setLoading(true);
       setError('');
       try {
-        const [customers, statuses, companies] = await Promise.all([
+        const [customers, authorizedUsers, statuses, currencies, companies] = await Promise.all([
           isEdit ? adminMaintainersService.list(customerMaintainerConfig.resource) : Promise.resolve([]),
+          isEdit ? adminMaintainersService.list('customer-authorized-users') : Promise.resolve([]),
           adminMaintainersService.list(customerMaintainerConfig.statusOptionsResource),
+          adminMaintainersService.list('currencies'),
           businessFoundationService.companies.list().catch(() => []),
         ]);
         if (!mounted) return;
 
         const mappedStatuses = statuses.filter((row) => row.is_active !== false).map(mapStatusOption);
-        setOptionData({ [customerMaintainerConfig.statusOptionsResource]: mappedStatuses });
+        const mappedCurrencies = currencies.filter((row) => row.is_active !== false).map(mapCurrencyOption);
         setActiveCompany(companies.find((company) => company.is_active) || null);
 
         if (isEdit) {
@@ -116,8 +130,26 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
             setError('No existen datos para el codigo buscado.');
             return;
           }
-          setCustomer(target);
+          const customerAuthorizedUsers = authorizedUsers
+            .filter((row) => String(row.customer_id) === String(target.id) && row.is_active !== false);
+          const authorizedContactOptions = customerAuthorizedUsers.map(mapAuthorizedContactOption);
+          const hasStoredContact = authorizedContactOptions.some((option) => String(option.value) === String(target.contact_person || ''));
+          const primaryContact = customerAuthorizedUsers.find((row) => row.is_primary_contact === true || Number(row.is_primary_contact) === 1);
+          setOptionData({
+            [customerMaintainerConfig.statusOptionsResource]: mappedStatuses,
+            currencies: mappedCurrencies,
+            'customer-authorized-contact-options': authorizedContactOptions,
+          });
+          setCustomer({
+            ...target,
+            contact_person: hasStoredContact ? target.contact_person : primaryContact?.authorized_name || '',
+          });
         } else {
+          setOptionData({
+            [customerMaintainerConfig.statusOptionsResource]: mappedStatuses,
+            currencies: mappedCurrencies,
+            'customer-authorized-contact-options': [],
+          });
           setCustomer(null);
         }
       } catch (requestError) {
@@ -154,10 +186,22 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
   }, [pendingBannerFile]);
 
   const initialValues = useMemo(() => {
-    if (isEdit) return customer ? { ...customer } : null;
+    if (isEdit) {
+      if (!customer) return null;
+      const contactOptions = optionData['customer-authorized-contact-options'] || [];
+      const hasAuthorizedContact = contactOptions.some((option) => String(option.value) === String(customer.contact_person || ''));
+      return {
+        ...customer,
+        contact_person: hasAuthorizedContact ? customer.contact_person : '',
+      };
+    }
     const activeStatus = optionData[customerMaintainerConfig.statusOptionsResource]?.find((option) => option.code === customerMaintainerConfig.activeValue);
-    return { ...customerMaintainerConfig.empty, status_id: activeStatus?.value || customerMaintainerConfig.empty.status_id };
-  }, [customer, isEdit, optionData]);
+    return {
+      ...customerMaintainerConfig.empty,
+      status_id: activeStatus?.value || customerMaintainerConfig.empty.status_id,
+      default_currency_code: activeCompany?.default_customer_currency_code || customerMaintainerConfig.empty.default_currency_code || 'CLP',
+    };
+  }, [activeCompany?.default_customer_currency_code, customer, isEdit, optionData]);
 
   const selectLogo = (event) => {
     const file = event.target.files?.[0];

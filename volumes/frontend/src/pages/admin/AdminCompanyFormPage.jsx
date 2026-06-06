@@ -5,8 +5,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import RecordNotFoundState from '@/components/common/states/RecordNotFoundState';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
+import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { profileService } from '@/services/profile/profileService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
+import { normalizeRutForStorage } from '@/utils/rut';
 
 const environmentOptions = [
   { value: 'CERTIFICACION', label: 'Certificacion' },
@@ -24,12 +26,20 @@ const emptyCompany = {
   economic_activity_code: '',
   economic_activity_name: '',
   dte_environment: 'CERTIFICACION',
+  default_customer_currency_code: 'CLP',
+  default_supplier_currency_code: 'CLP',
+  default_sales_currency_code: 'CLP',
   sii_user: '',
   is_active: false,
 };
 
+const mapCurrencyOption = (row) => ({
+  value: String(row.currency_code),
+  label: `${row.currency_code} - ${row.currency_symbol || ''} - ${row.currency_name || ''}`.replace(/\s+-\s+$/, ''),
+});
+
 const buildPayload = (form) => ({
-  company_rut: form.company_rut || null,
+  company_rut: form.company_rut ? normalizeRutForStorage(form.company_rut) : null,
   company_name: form.company_name || null,
   company_business_name: form.company_business_name || null,
   company_address: form.company_address || null,
@@ -39,6 +49,9 @@ const buildPayload = (form) => ({
   economic_activity_code: form.economic_activity_code || null,
   economic_activity_name: form.economic_activity_name || null,
   dte_environment: form.dte_environment || 'CERTIFICACION',
+  default_customer_currency_code: form.default_customer_currency_code || 'CLP',
+  default_supplier_currency_code: form.default_supplier_currency_code || 'CLP',
+  default_sales_currency_code: form.default_sales_currency_code || 'CLP',
   sii_user: form.sii_user || null,
   is_active: Boolean(form.is_active),
 });
@@ -55,6 +68,7 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
   const [pendingBannerFile, setPendingBannerFile] = useState(null);
   const [pendingBannerPreview, setPendingBannerPreview] = useState('');
   const [activeCompany, setActiveCompany] = useState(null);
+  const [currencyOptions, setCurrencyOptions] = useState([]);
 
   const backToList = () => navigate('/config/company');
 
@@ -64,11 +78,15 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
       setLoading(true);
       setError('');
       try {
-        const companies = await businessFoundationService.companies.list();
+        const [companies, currencies] = await Promise.all([
+          businessFoundationService.companies.list(),
+          adminMaintainersService.list('currencies'),
+        ]);
         if (!mounted) return;
+        setCurrencyOptions(currencies.filter((row) => row.is_active !== false).map(mapCurrencyOption));
         setActiveCompany(companies.find((row) => row.is_active) || null);
         if (isEdit) {
-          const normalizedRut = decodeURIComponent(companyRut || '').trim();
+          const normalizedRut = normalizeRutForStorage(decodeURIComponent(companyRut || '').trim());
           const target = companies.find((row) => String(row.company_rut) === normalizedRut);
           if (!target) {
             setError('No existen datos para el codigo buscado.');
@@ -174,7 +192,7 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
 
   const fields = useMemo(() => [
     { id: 'legal_section', type: 'section', label: 'Datos generales', icon: Building2, columns: 3, description: 'Identificacion legal y nombre visible de la empresa.' },
-    { id: 'company_rut', label: 'RUT', required: true, disabled: isEdit, readOnly: isEdit, mono: true },
+    { id: 'company_rut', label: 'RUT', required: true, disabled: isEdit, readOnly: isEdit, mono: true, validation: 'rut' },
     { id: 'company_name', label: 'Nombre fantasia', required: true },
     { id: 'company_business_name', label: 'Razon social', required: true },
     { id: 'media_section', type: 'section', label: 'Identidad visual', icon: Building2, columns: 2, description: 'Logo y banner visibles para la empresa.' },
@@ -190,8 +208,12 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
     { id: 'sii_user', label: 'Usuario SII' },
     { id: 'operation_section', type: 'section', label: 'Operacion', icon: Landmark, columns: 2, description: 'Estado operativo y ambiente DTE.' },
     { id: 'dte_environment', label: 'Ambiente DTE', type: 'select', options: environmentOptions },
-    { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Empresa activa', help: 'Solo una empresa puede estar activa a la vez.' },
-  ], [isEdit, mediaField]);
+    { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Empresa activa' },
+    { id: 'currency_section', type: 'section', label: 'Divisas por defecto', icon: Landmark, columns: 3, description: 'Monedas usadas como sugerencia al crear maestros y como base para ventas.' },
+    { id: 'default_customer_currency_code', label: 'Preseleccion clientes', type: 'select', options: currencyOptions, required: true },
+    { id: 'default_supplier_currency_code', label: 'Preseleccion proveedores', type: 'select', options: currencyOptions, required: true },
+    { id: 'default_sales_currency_code', label: 'Moneda base ventas', type: 'select', options: currencyOptions, required: true },
+  ], [currencyOptions, isEdit, mediaField]);
 
   const save = async (form) => {
     const payload = buildPayload(form);

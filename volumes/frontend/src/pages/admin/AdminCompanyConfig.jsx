@@ -9,6 +9,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
+import { formatRut } from '@/utils/rut';
 import { activeFilter, fieldOptions, filterActions, includesTerm, statusCell, tableFooter } from './businessFoundationShared';
 
 const environmentLabels = { CERTIFICACION: 'Certificacion', PRODUCCION: 'Produccion' };
@@ -167,9 +168,6 @@ const AdminCompanyConfig = () => {
         <ActionButton label="Nueva empresa" icon={Plus} onClick={() => openForm()} />
       </div>
       <KpiBar items={[{ label: 'Empresas', value: companies.length }, { label: 'Activa actual', value: activeCompany?.company_name || '-' }, { label: 'Produccion', value: productionCompany?.company_name || '-' }, { label: 'Certificacion', value: companies.filter((item) => item.dte_environment === 'CERTIFICACION').length }]} className="mb-4" />
-      <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100">
-        Solo puede existir una empresa activa y una empresa en ambiente productivo. Al marcar una empresa con cualquiera de esas condiciones, el sistema ajusta automaticamente las demas.
-      </div>
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder="Buscar empresa, RUT o ciudad" onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
       <DataTable
@@ -177,7 +175,7 @@ const AdminCompanyConfig = () => {
         data={visibleCompanies}
         footer={tableFooter({ page, pageSize, total: filteredCompanies.length, loading, setPage, setPageSize })}
         columns={[
-          { id: 'company', label: 'Empresa', render: (item) => <><div className="font-medium">{item.company_name}</div><div className="font-mono text-xs text-slate-500">{item.company_rut}</div></> },
+          { id: 'company', label: 'Empresa', render: (item) => <><div className="font-medium">{item.company_name}</div><div className="font-mono text-xs text-slate-500">{formatRut(item.company_rut)}</div></> },
           { id: 'business', label: 'Razon social', render: (item) => item.company_business_name },
           { id: 'location', label: 'Ubicacion', render: (item) => `${item.company_city}, ${item.company_region}` },
           { id: 'activity', label: 'Actividad', render: (item) => <><div>{item.economic_activity_name}</div><div className="font-mono text-xs text-slate-500">{item.economic_activity_code}</div></> },

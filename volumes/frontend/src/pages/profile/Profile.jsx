@@ -13,6 +13,7 @@ import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDateTime } from '@/utils/dateTime';
+import { normalizePhoneForStorage } from '@/utils/phone';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
 
@@ -88,7 +89,7 @@ const Profile = () => {
         || form.last_name !== (profile?.last_name || '')
         || form.phone !== (profile?.phone || '')
       ) {
-        await profileService.update(form);
+        await profileService.update({ ...form, phone: form.phone ? normalizePhoneForStorage(form.phone) : '' });
       }
       if (pendingAvatarFile) {
         await profileService.uploadAvatar(pendingAvatarFile);
