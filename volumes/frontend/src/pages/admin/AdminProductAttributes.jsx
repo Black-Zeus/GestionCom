@@ -28,7 +28,7 @@ const typeHelpMessages = {
   SELECT: 'Seleccion unica desde valores del atributo, como color o talla.',
   MULTISELECT: 'Seleccion multiple desde valores del atributo, para combinaciones no exclusivas.',
 };
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 150, 200];
 
 const AdminProductAttributes = () => {
   const [searchParams, setSearchParams] = useSearchParams();

@@ -3,7 +3,7 @@ import { ActionButton } from '@/components/common/actions/ActionButton';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import StatusBadge from '@/components/common/data/StatusBadge';
 
-export const PAGE_SIZE_OPTIONS = [10, 25, 50];
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 150, 200];
 
 export const fieldOptions = {
   status: [

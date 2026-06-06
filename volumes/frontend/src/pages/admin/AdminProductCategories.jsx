@@ -12,7 +12,7 @@ import { productConfigService } from '@/services/admin/productConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
 const emptyForm = { category_name: '', category_description: '', parent_id: '', sort_order: '0', is_active: true };
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 150, 200];
 
 const toForm = (category) => ({
   category_name: category.category_name || '',

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { appConfig } from '@/config/appConfig';
 
-export const PAGE_SIZE_OPTIONS = [20, 30, 50, 100];
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 150, 200];
 export const DEFAULT_TIMEZONE = import.meta.env.VITE_FRONTEND_TIMEZONE || 'America/Santiago';
 
 export const usePreferencesStore = create(
@@ -10,7 +10,7 @@ export const usePreferencesStore = create(
     (set) => ({
       theme: 'light',
       timezone: DEFAULT_TIMEZONE,
-      tablePageSize: 20,
+      tablePageSize: 25,
 
       setTheme(theme) {
         set({ theme });
@@ -27,7 +27,7 @@ export const usePreferencesStore = create(
       setTablePageSize(tablePageSize) {
         const nextPageSize = Number(tablePageSize);
         set({
-          tablePageSize: PAGE_SIZE_OPTIONS.includes(nextPageSize) ? nextPageSize : 20,
+          tablePageSize: PAGE_SIZE_OPTIONS.includes(nextPageSize) ? nextPageSize : 25,
         });
       },
     }),

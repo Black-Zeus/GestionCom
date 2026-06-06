@@ -16,7 +16,7 @@ import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950';
 const categoryLabels = { PURCHASE: 'Compra', SALE: 'Venta', INVENTORY: 'Inventario', TRANSFER: 'Transferencia' };
 const movementLabels = { IN: 'Entrada', OUT: 'Salida', TRANSFER: 'Transferencia', ADJUSTMENT: 'Ajuste' };
-const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 150, 200];
 
 const SeriesModal = ({ initialValues, types, warehouses, onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
