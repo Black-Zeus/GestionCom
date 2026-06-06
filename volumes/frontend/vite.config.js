@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const sharedCommonDir = process.env.VITE_SHARED_COMMON_DIR || path.resolve(__dirname, '../../Shared/common');
+
 export default defineConfig({
   plugins: [react()],
 
@@ -36,6 +38,7 @@ export default defineConfig({
       '@pages': path.resolve(__dirname, './src/pages'),
       '@routes': path.resolve(__dirname, './src/routes'),
       '@utils': path.resolve(__dirname, './src/utils'),
+      '@shared': sharedCommonDir,
     },
   },
 

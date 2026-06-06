@@ -5,6 +5,9 @@ Centraliza todos los códigos de error, tipos de error, estados HTTP y configura
 utilizadas en toda la aplicación para mantener consistencia y facilitar mantenimiento.
 """
 from enum import Enum
+import json
+import os
+from pathlib import Path
 from typing import Dict
 
 
@@ -198,6 +201,24 @@ ERROR_MESSAGES: Dict[str, str] = {
     ErrorCode.PERMISSION_NOT_FOUND: "Permiso no encontrado",
     ErrorCode.PERMISSION_ROLE_REQUIRED: "Rol requerido para esta operación",
 }
+
+
+def _load_shared_error_catalog() -> None:
+    catalog_path = os.getenv("ERROR_CATALOG_PATH", "/shared/common/error-catalog.json")
+    path = Path(catalog_path)
+    if not path.exists():
+        return
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+
+    if isinstance(data, dict):
+        ERROR_MESSAGES.update({str(key): str(value) for key, value in data.items()})
+
+
+_load_shared_error_catalog()
 
 
 # ==========================================

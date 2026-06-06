@@ -1,4 +1,5 @@
 import toast from 'react-hot-toast';
+import { getErrorMessageByCode } from './errorCatalog';
 
 const sensitivePatterns = [
   /Bearer\s+[A-Za-z0-9._~+/=-]+/i,
@@ -11,6 +12,9 @@ const sensitivePatterns = [
 export const sanitizeUiMessage = (message, fallback = 'No fue posible completar la operacion.') => {
   if (!message) return fallback;
   const rawMessage = String(message);
+  if (/error interno del servidor|internal server error|request failed with status code 500/i.test(rawMessage)) {
+    return fallback;
+  }
   if (sensitivePatterns.some((pattern) => pattern.test(rawMessage))) return fallback;
   if (/network error|failed to fetch|cors|xmlhttprequest|net::err/i.test(rawMessage)) {
     return 'No fue posible comunicarse con el servicio. Intente nuevamente.';
@@ -18,15 +22,19 @@ export const sanitizeUiMessage = (message, fallback = 'No fue posible completar 
   return rawMessage.slice(0, 220);
 };
 
-export const getBackendMessage = (error, fallback = 'No fue posible completar la operacion.') => (
-  sanitizeUiMessage(
+export const getBackendMessage = (error, fallback = 'No fue posible completar la operacion.') => {
+  const errorCode = error?.response?.data?.error?.code || error?.response?.data?.error_code || error?.code;
+  const catalogMessage = getErrorMessageByCode(errorCode);
+  if (catalogMessage) return catalogMessage;
+
+  return sanitizeUiMessage(
     error?.response?.data?.message
     || error?.response?.data?.error?.message
     || error?.response?.data?.error?.details
     || error?.message,
     fallback
-  )
-);
+  );
+};
 
 export const notifyPromise = (promise, messages = {}) => toast.promise(
   promise,
