@@ -106,6 +106,7 @@ RESOURCES = {
         "table": "product_barcodes", "active_field": "is_active", "soft_delete": True,
         "fields": ["product_variant_id", "barcode_type", "barcode_value", "measurement_unit_id", "is_primary", "is_active"],
         "required": ["product_variant_id", "barcode_type", "barcode_value"], "bool": ["is_primary", "is_active"], "int": ["product_variant_id", "measurement_unit_id"],
+        "enum": {"barcode_type": ["EAN13", "EAN8", "UPC", "CODE128", "QR"]},
     },
     "product-brands": {
         "table": "product_brands", "code_field": "brand_code", "prefix": "BRD", "active_field": "is_active", "soft_delete": True,
@@ -327,6 +328,27 @@ def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
             data[key] = value
         elif key in config.get("datetime", []):
             data[key] = str(value).replace("T", " ") if value is not None else None
+    for key, values in config.get("enum", {}).items():
+        if key in data and data[key] not in (None, "") and data[key] not in values:
+            raise ValueError(f"{key} no es valido")
+    if config.get("table") == "product_barcodes":
+        barcode_type = data.get("barcode_type")
+        barcode_value = data.get("barcode_value")
+        if barcode_type and barcode_value:
+            normalized_value = str(barcode_value).strip()
+            if barcode_type in {"EAN13", "EAN8", "UPC"}:
+                normalized_value = "".join(character for character in normalized_value if character.isdigit())
+            if barcode_type == "EAN13" and (not normalized_value.isdigit() or len(normalized_value) != 13):
+                raise ValueError("EAN-13 debe tener exactamente 13 digitos")
+            if barcode_type == "EAN8" and (not normalized_value.isdigit() or len(normalized_value) != 8):
+                raise ValueError("EAN-8 debe tener exactamente 8 digitos")
+            if barcode_type == "UPC" and (not normalized_value.isdigit() or len(normalized_value) != 12):
+                raise ValueError("UPC-A debe tener exactamente 12 digitos")
+            if barcode_type == "CODE128" and (len(normalized_value) > 80 or any(ord(character) < 32 or ord(character) > 126 for character in normalized_value)):
+                raise ValueError("Code 128 acepta texto imprimible de hasta 80 caracteres")
+            if barcode_type == "QR" and len(normalized_value) > 255:
+                raise ValueError("QR acepta hasta 255 caracteres")
+            data["barcode_value"] = normalized_value
     return data
 
 

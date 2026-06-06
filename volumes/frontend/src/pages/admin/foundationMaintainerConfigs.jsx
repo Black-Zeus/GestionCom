@@ -295,7 +295,7 @@ const productBarcodeTabs = [
   {
     id: 'barcodes', resource: 'product-barcodes', label: 'Codigos', singular: 'codigo de barras', icon: Barcode, activeField: 'is_active',
     empty: { product_variant_id: '', barcode_type: 'EAN13', barcode_value: '', is_primary: false, is_active: true },
-    fields: [{ id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'barcode_type', label: 'Tipo', type: 'select', options: ['EAN13', 'EAN8', 'UPC', 'CODE128', 'QR', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'barcode_value', label: 'Codigo', required: true }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Principal' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
+    fields: [{ id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options', required: true }, { id: 'barcode_type', label: 'Tipo', type: 'select', options: ['EAN13', 'EAN8', 'UPC', 'CODE128', 'QR'].map((value) => ({ value, label: value })) }, { id: 'barcode_value', label: 'Codigo', required: true }, { id: 'measurement_unit_id', label: 'Unidad', type: 'select', optionsResource: 'measurement-units-options' }, { id: 'is_primary', label: 'Principal', type: 'checkbox', checkLabel: 'Principal' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'barcode_value', label: 'Codigo', primary: true }, { id: 'product_variant_id', label: 'SKU', optionsResource: 'product-variants-options' }, { id: 'barcode_type', label: 'Tipo' }],
   },
 ];

@@ -247,7 +247,7 @@ CREATE TABLE product_measurement_units (
 CREATE TABLE product_barcodes (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     product_variant_id BIGINT UNSIGNED NOT NULL,
-    barcode_type ENUM('EAN13', 'EAN8', 'UPC', 'CODE128', 'QR', 'OTHER') NOT NULL,
+    barcode_type ENUM('EAN13', 'EAN8', 'UPC', 'CODE128', 'QR') NOT NULL,
     barcode_value VARCHAR(255) UNIQUE NOT NULL,
     measurement_unit_id BIGINT UNSIGNED NULL COMMENT 'Unidad que representa este código',
     is_primary BOOLEAN DEFAULT FALSE,
