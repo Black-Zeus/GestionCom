@@ -7,6 +7,7 @@ from sqlalchemy.orm import validates, relationship
 import enum
 
 from .base import BaseModel, CommonValidators
+from utils.phone import normalize_phone_for_storage
 
 
 class WarehouseType(enum.Enum):
@@ -176,17 +177,7 @@ class Warehouse(BaseModel):
         if not phone:
             return None
         
-        phone = phone.strip()
-        
-        # Formato chileno básico: +56912345678 o 912345678
-        import re
-        if not re.match(r'^(\+56)?[0-9]{8,9}$', phone):
-            raise ValueError("Formato de teléfono inválido (formato chileno)")
-        
-        if len(phone) > 20:
-            raise ValueError("Teléfono no puede tener más de 20 caracteres")
-        
-        return phone
+        return normalize_phone_for_storage(phone)
     
     @validates('email')
     def validate_email(self, key, email):

@@ -4,7 +4,9 @@ Schemas Pydantic para configuracion base de ventas e inventario.
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from utils.rut import validate_and_normalize_chilean_rut
 
 
 class TaxRateCreate(BaseModel):
@@ -150,8 +152,18 @@ class CompanyConfigCreate(BaseModel):
     economic_activity_code: str = Field(..., min_length=1, max_length=10)
     economic_activity_name: str = Field(..., min_length=2, max_length=255)
     dte_environment: str = Field(default="CERTIFICACION", pattern="^(CERTIFICACION|PRODUCCION)$")
+    default_customer_currency_code: str = Field(default="CLP", pattern="^[A-Z]{3}$")
+    default_supplier_currency_code: str = Field(default="CLP", pattern="^[A-Z]{3}$")
+    default_sales_currency_code: str = Field(default="CLP", pattern="^[A-Z]{3}$")
     sii_user: Optional[str] = Field(None, max_length=100)
     is_active: bool = True
+
+    @field_validator("company_rut")
+    @classmethod
+    def validate_company_rut(cls, value: str | None) -> str | None:
+        if value in (None, ""):
+            return value
+        return validate_and_normalize_chilean_rut(value)
 
 
 class CompanyConfigUpdate(CompanyConfigCreate):
@@ -165,4 +177,14 @@ class CompanyConfigUpdate(CompanyConfigCreate):
     economic_activity_code: Optional[str] = Field(None, min_length=1, max_length=10)
     economic_activity_name: Optional[str] = Field(None, min_length=2, max_length=255)
     dte_environment: Optional[str] = Field(None, pattern="^(CERTIFICACION|PRODUCCION)$")
+    default_customer_currency_code: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    default_supplier_currency_code: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    default_sales_currency_code: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
     is_active: Optional[bool] = None
+
+    @field_validator("company_rut")
+    @classmethod
+    def validate_optional_company_rut(cls, value: str | None) -> str | None:
+        if value in (None, ""):
+            return value
+        return validate_and_normalize_chilean_rut(value)

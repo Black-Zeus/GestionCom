@@ -14,6 +14,7 @@ from core.response import ResponseManager
 from database.database import db_manager
 from services.media_storage import media_storage
 from utils.permissions_utils import get_current_user
+from utils.phone import normalize_phone_for_storage
 
 router = APIRouter(tags=["Profile"])
 
@@ -198,10 +199,15 @@ async def get_profile(request: Request, user: dict = Depends(require_profile)):
 
 @router.put("/me", response_class=JSONResponse)
 async def update_profile(payload: dict, request: Request, user: dict = Depends(require_profile)):
+    try:
+        phone = normalize_phone_for_storage(payload.get("phone"))
+    except ValueError as exc:
+        return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
     data = {
         "first_name": str(payload.get("first_name", "")).strip(),
         "last_name": str(payload.get("last_name", "")).strip(),
-        "phone": str(payload.get("phone", "")).strip() or None,
+        "phone": phone,
         "user_id": _user_id(user),
     }
     if not data["first_name"] or not data["last_name"]:

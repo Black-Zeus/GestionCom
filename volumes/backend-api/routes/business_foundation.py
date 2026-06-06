@@ -261,6 +261,9 @@ def company_to_dict(company: DteCompanyConfig) -> dict:
         "economic_activity_code": company.economic_activity_code,
         "economic_activity_name": company.economic_activity_name,
         "dte_environment": company.dte_environment.value if company.dte_environment else None,
+        "default_customer_currency_code": company.default_customer_currency_code,
+        "default_supplier_currency_code": company.default_supplier_currency_code,
+        "default_sales_currency_code": company.default_sales_currency_code,
         "sii_user": company.sii_user,
         "logo_media_asset_id": company.logo_media_asset_id,
         "banner_media_asset_id": company.banner_media_asset_id,
@@ -626,6 +629,9 @@ async def create_company_config(data: CompanyConfigCreate, request: Request, use
     async with db_manager.get_async_session() as session:
         values = data.model_dump()
         values["dte_environment"] = DteEnvironment(values["dte_environment"])
+        values["default_customer_currency_code"] = values["default_customer_currency_code"].upper()
+        values["default_supplier_currency_code"] = values["default_supplier_currency_code"].upper()
+        values["default_sales_currency_code"] = values["default_sales_currency_code"].upper()
         await enforce_company_singletons(session, values)
         company = DteCompanyConfig(**values)
         session.add(company)
@@ -644,6 +650,12 @@ async def update_company_config(data: CompanyConfigUpdate, request: Request, com
         values = data.model_dump(exclude_unset=True)
         if "dte_environment" in values:
             values["dte_environment"] = DteEnvironment(values["dte_environment"])
+        if "default_customer_currency_code" in values and values["default_customer_currency_code"]:
+            values["default_customer_currency_code"] = values["default_customer_currency_code"].upper()
+        if "default_supplier_currency_code" in values and values["default_supplier_currency_code"]:
+            values["default_supplier_currency_code"] = values["default_supplier_currency_code"].upper()
+        if "default_sales_currency_code" in values and values["default_sales_currency_code"]:
+            values["default_sales_currency_code"] = values["default_sales_currency_code"].upper()
         await enforce_company_singletons(session, values, exclude_company_id=company_id)
         for field, value in values.items():
             setattr(company, field, value)

@@ -2,10 +2,12 @@
 volumes/backend-api/database/schemas/warehouses.py
 Schemas Pydantic para Warehouses - Compatible con Pydantic v2
 """
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+
+from utils.phone import normalize_phone_for_storage
 
 
 # ==========================================
@@ -43,6 +45,11 @@ class WarehouseBase(BaseModel):
     email: Optional[str] = Field(None, max_length=255, description="Email de contacto")
     is_active: bool = Field(default=True, description="Si la bodega está activa")
 
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        return normalize_phone_for_storage(value)
+
 
 class WarehouseCreate(WarehouseBase):
     """Schema para crear Warehouse"""
@@ -60,6 +67,11 @@ class WarehouseUpdate(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     email: Optional[str] = Field(None, max_length=255)
     is_active: Optional[bool] = None
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def validate_phone(cls, value: str | None) -> str | None:
+        return normalize_phone_for_storage(value)
 
 
 class WarehouseResponse(WarehouseBase):

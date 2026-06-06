@@ -13,6 +13,8 @@ from core.response import ResponseManager
 from database.database import db_manager
 from services.media_storage import media_storage
 from utils.permissions_utils import get_current_user
+from utils.phone import normalize_phone_for_storage
+from utils.rut import validate_and_normalize_chilean_rut
 
 router = APIRouter(tags=["Admin Maintainers"])
 
@@ -21,28 +23,28 @@ RESOURCES = {
     "customers": {
         "table": "customers", "code_field": "customer_code", "prefix": "CUS", "active_field": "status_id",
         "soft_delete": True,
-        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_id", "sales_rep_user_id", "status_id", "is_credit_customer", "registration_date", "notes", "internal_notes"],
-        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_id", "sales_rep_user_id", "status_id"], "date": ["registration_date"],
+        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "business_activity", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_id", "default_currency_code", "sales_rep_user_id", "status_id", "is_credit_customer", "registration_date", "notes", "internal_notes"],
+        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_id", "sales_rep_user_id", "status_id"], "date": ["registration_date"], "rut": ["tax_id"], "phone": ["phone", "mobile"],
     },
     "customer-authorized-users": {
         "table": "customer_authorized_users", "active_field": "is_active", "soft_delete": False,
-        "fields": ["customer_id", "authorized_name", "authorized_tax_id", "position", "email", "phone", "is_primary_contact", "authorization_level", "max_purchase_amount", "is_active"],
-        "required": ["customer_id", "authorized_name"], "bool": ["is_primary_contact", "is_active"], "int": ["customer_id"], "decimal": ["max_purchase_amount"],
+        "fields": ["customer_id", "authorized_name", "authorized_tax_id", "position", "email", "phone", "mobile", "is_primary_contact", "authorization_level", "max_purchase_amount", "max_purchase_currency_code", "is_active"],
+        "required": ["customer_id", "authorized_name"], "bool": ["is_primary_contact", "is_active"], "int": ["customer_id"], "decimal": ["max_purchase_amount"], "rut": ["authorized_tax_id"], "phone": ["phone", "mobile"],
     },
     "customer-credit-config": {
         "table": "customer_credit_config", "soft_delete": False,
-        "fields": ["customer_id", "credit_limit", "available_credit", "used_credit", "payment_terms_days", "grace_period_days", "minimum_payment_percentage", "penalty_rate", "max_overdue_amount", "allows_cash", "allows_check", "allows_postdated_check", "allows_transfer", "allows_installments", "risk_level", "requires_guarantor", "auto_block_on_overdue"],
-        "required": ["customer_id"], "bool": ["allows_cash", "allows_check", "allows_postdated_check", "allows_transfer", "allows_installments", "requires_guarantor", "auto_block_on_overdue"], "int": ["customer_id", "payment_terms_days", "grace_period_days"], "decimal": ["credit_limit", "available_credit", "used_credit", "minimum_payment_percentage", "penalty_rate", "max_overdue_amount"],
+        "fields": ["customer_id", "credit_limit", "available_credit", "used_credit", "payment_terms_days", "grace_period_days", "minimum_payment_percentage", "penalty_rate", "max_overdue_amount", "allows_cash", "allows_check", "allows_postdated_check", "allows_transfer", "allows_installments", "risk_level", "requires_guarantor", "auto_block_on_overdue", "is_active"],
+        "required": ["customer_id"], "bool": ["allows_cash", "allows_check", "allows_postdated_check", "allows_transfer", "allows_installments", "requires_guarantor", "auto_block_on_overdue", "is_active"], "int": ["customer_id", "payment_terms_days", "grace_period_days"], "decimal": ["credit_limit", "available_credit", "used_credit", "minimum_payment_percentage", "penalty_rate", "max_overdue_amount"],
     },
     "suppliers": {
         "table": "suppliers", "code_field": "supplier_code", "prefix": "SUP", "soft_delete": True,
         "fields": ["supplier_type", "tax_id", "legal_name", "commercial_name", "business_activity", "email", "phone", "mobile", "website", "default_currency_code", "default_payment_terms_days", "default_tax_rate", "credit_limit", "current_balance", "status_id", "notes", "internal_notes"],
-        "required": ["legal_name"], "int": ["default_payment_terms_days", "status_id"], "decimal": ["default_tax_rate", "credit_limit", "current_balance"],
+        "required": ["legal_name"], "int": ["default_payment_terms_days", "status_id"], "decimal": ["default_tax_rate", "credit_limit", "current_balance"], "rut": ["tax_id"], "phone": ["phone", "mobile"],
     },
     "supplier-contacts": {
         "table": "supplier_contacts", "active_field": "is_active", "soft_delete": True,
         "fields": ["supplier_id", "contact_name", "position", "email", "phone", "mobile", "is_primary", "is_purchase_contact", "is_payment_contact", "notes", "is_active"],
-        "required": ["supplier_id", "contact_name"], "bool": ["is_primary", "is_purchase_contact", "is_payment_contact", "is_active"], "int": ["supplier_id"],
+        "required": ["supplier_id", "contact_name"], "bool": ["is_primary", "is_purchase_contact", "is_payment_contact", "is_active"], "int": ["supplier_id"], "phone": ["phone", "mobile"],
     },
     "supplier-addresses": {
         "table": "supplier_addresses", "soft_delete": True,
@@ -196,6 +198,12 @@ RESOURCES = {
         "fields": ["status_group", "status_code", "status_name", "status_display_es", "status_color", "status_icon", "is_active", "sort_order"],
         "bool": ["is_active"], "int": ["sort_order"], "read_only": True,
     },
+    "supplier-statuses": {
+        "table": "system_statuses", "active_field": "is_active", "soft_delete": False,
+        "where": "status_group = 'SUPPLIER' AND is_active = TRUE",
+        "fields": ["status_group", "status_code", "status_name", "status_display_es", "status_color", "status_icon", "is_active", "sort_order"],
+        "bool": ["is_active"], "int": ["sort_order"], "read_only": True,
+    },
 }
 
 
@@ -291,6 +299,12 @@ def _normalize(config: dict, payload: dict, partial: bool = False) -> dict:
         if value == "":
             data[key] = None
             continue
+        if key in config.get("rut", []):
+            data[key] = validate_and_normalize_chilean_rut(value)
+            continue
+        if key in config.get("phone", []):
+            data[key] = normalize_phone_for_storage(value)
+            continue
         if key in config.get("bool", []):
             data[key] = bool(value)
         elif key in config.get("int", []):
@@ -360,6 +374,9 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
             if config["table"] == "customers" and data.get("status_id") in (None, ""):
                 status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'CUSTOMER' AND status_code = 'ACTIVE' LIMIT 1"))
                 data["status_id"] = status_result.scalar_one_or_none()
+            if config["table"] == "suppliers" and data.get("status_id") in (None, ""):
+                status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'SUPPLIER' AND status_code = 'ACTIVE' LIMIT 1"))
+                data["status_id"] = status_result.scalar_one_or_none()
             if config.get("code_field"):
                 data[config["code_field"]] = await _next_code(session, config["table"], config["code_field"], config["prefix"])
             if "created_by_user_id" in config["fields"] or config["table"] in {"customers", "suppliers"}:
@@ -398,6 +415,8 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
             return ResponseManager.success(data={key: _json_value(value) for key, value in row.items()}, message="Registro actualizado correctamente", request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+    except ValueError as exc:
+        return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al actualizar registro", details=str(exc), request=request)
 

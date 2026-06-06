@@ -8,6 +8,8 @@ from datetime import datetime
 from decimal import Decimal
 import re
 
+from utils.phone import normalize_phone_for_storage
+
 
 # ==========================================
 # USER SCHEMAS
@@ -42,20 +44,14 @@ class UserBase(BaseModel):
         
         return v
     
-    @field_validator('phone')
+    @field_validator('phone', mode='before')
     @classmethod
     def validate_phone(cls, v):
         """Validar formato del teléfono"""
         if not v:
             return None
         
-        v = v.strip()
-        
-        # Formato chileno básico: +56912345678 o 912345678
-        if not re.match(r'^(\+56)?[0-9]{8,9}$', v):
-            raise ValueError("Formato de teléfono inválido (formato chileno)")
-        
-        return v
+        return normalize_phone_for_storage(v)
     
     @field_validator('first_name', 'last_name')
     @classmethod
@@ -118,20 +114,14 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     petty_cash_limit: Optional[Decimal] = Field(None, ge=0)
     
-    @field_validator('phone')
+    @field_validator('phone', mode='before')
     @classmethod
     def validate_phone(cls, v):
         """Validar formato del teléfono"""
         if not v:
             return None
         
-        v = v.strip()
-        
-        # Formato chileno básico: +56912345678 o 912345678
-        if not re.match(r'^(\+56)?[0-9]{8,9}$', v):
-            raise ValueError("Formato de teléfono inválido (formato chileno)")
-        
-        return v
+        return normalize_phone_for_storage(v)
     
     @field_validator('first_name', 'last_name')
     @classmethod

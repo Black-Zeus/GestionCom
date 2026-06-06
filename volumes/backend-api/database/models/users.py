@@ -12,6 +12,7 @@ import bcrypt
 
 from .base import BaseModel, CommonValidators
 from sqlalchemy.orm import relationship
+from utils.phone import normalize_phone_for_storage
 
 
 class User(BaseModel):
@@ -190,16 +191,7 @@ class User(BaseModel):
         if not phone:
             return None
         
-        phone = phone.strip()
-        
-        # Formato chileno básico: +56912345678 o 912345678
-        if not re.match(r'^(\+56)?[0-9]{8,9}$', phone):
-            raise ValueError("Formato de teléfono inválido (formato chileno)")
-        
-        if len(phone) > 20:
-            raise ValueError("Teléfono no puede tener más de 20 caracteres")
-        
-        return phone
+        return normalize_phone_for_storage(phone)
     
     @validates('password_hash')
     def validate_password_hash(self, key, password_hash):
