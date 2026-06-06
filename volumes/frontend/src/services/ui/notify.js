@@ -23,15 +23,17 @@ export const sanitizeUiMessage = (message, fallback = 'No fue posible completar 
 };
 
 export const getBackendMessage = (error, fallback = 'No fue posible completar la operacion.') => {
+  const backendMessage = error?.response?.data?.message
+    || error?.response?.data?.error?.message
+    || error?.response?.data?.error?.details;
+  if (backendMessage) return sanitizeUiMessage(backendMessage, fallback);
+
   const errorCode = error?.response?.data?.error?.code || error?.response?.data?.error_code || error?.code;
   const catalogMessage = getErrorMessageByCode(errorCode);
   if (catalogMessage) return catalogMessage;
 
   return sanitizeUiMessage(
-    error?.response?.data?.message
-    || error?.response?.data?.error?.message
-    || error?.response?.data?.error?.details
-    || error?.message,
+    error?.message,
     fallback
   );
 };
