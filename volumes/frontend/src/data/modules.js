@@ -55,13 +55,12 @@ export const moduleGroups = [
   },
   {
     id: 'customers',
-    label: 'Clientes',
+    label: 'Clientes y proveedores',
     icon: Users,
     permissions: ['CUSTOMERS_VISIBLE'],
     items: [
       { id: 'customers', label: 'Listado de clientes', path: '/customers', icon: Users, weight: 10, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
-      { id: 'account-status', label: 'Estado de cuenta de clientes', path: '/customers/account-status', icon: FileText, weight: 20 },
-      { id: 'purchase-history', label: 'Historial de compras', path: '/customers/purchase-history', icon: Receipt, weight: 50 },
+      { id: 'suppliers', label: 'Listado de proveedores', path: '/suppliers', icon: Truck, weight: 10, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
     ],
   },
   {
@@ -96,20 +95,6 @@ export const moduleGroups = [
       { id: 'barcodes', label: 'Codigos de barra de productos', path: '/barcodes', icon: Receipt, weight: 80, permissions: ['INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE', 'FOUNDATION_MAINTAINERS_ACCESS'] },
       { id: 'product-units', label: 'Unidades por producto', path: '/products/units', icon: Ruler, weight: 82, permissions: ['INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE'] },
       { id: 'product-media', label: 'Media de productos', path: '/products/media', icon: Image, weight: 84, permissions: ['INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE'] },
-    ],
-  },
-  {
-    id: 'suppliers',
-    label: 'Proveedores',
-    icon: Truck,
-    permissions: ['SUPPLIERS_VISIBLE'],
-    items: [
-      { id: 'suppliers', label: 'Listado de proveedores', path: '/suppliers', icon: Truck, weight: 10, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
-      { id: 'purchase-orders', label: 'Ordenes de compra', path: '/suppliers/purchase-orders', icon: ClipboardList, weight: 20 },
-      { id: 'supplier-payable', label: 'Cuentas por pagar proveedor', path: '/suppliers/accounts-payable', icon: FileText, weight: 30 },
-      { id: 'supplier-products', label: 'Productos por proveedor', path: '/suppliers/products', icon: Package, weight: 40, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
-      { id: 'supplier-history', label: 'Historial de compras a proveedor', path: '/suppliers/purchase-history', icon: Receipt, weight: 50 },
-      { id: 'supplier-contacts', label: 'Contactos de proveedores', path: '/suppliers/contacts', icon: Users, weight: 60, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
     ],
   },
   {
@@ -165,6 +150,8 @@ export const moduleGroups = [
       { id: 'low-stock', label: 'Inventario bajo stock', path: '/reports/low-stock', icon: Boxes, weight: 40 },
       { id: 'cash-flow', label: 'Flujo de caja', path: '/reports/financial/cash-flow', icon: CircleDollarSign, weight: 50 },
       { id: 'profitability', label: 'Analisis de rentabilidad', path: '/reports/financial/profitability-analysis', icon: BarChart3, weight: 60 },
+      { id: 'account-status', label: 'Estado de cuenta de clientes', path: '/customers/account-status', icon: FileText, weight: 70 },
+      { id: 'purchase-history', label: 'Historial de compras de clientes', path: '/customers/purchase-history', icon: Receipt, weight: 80 },
     ],
   },
   {

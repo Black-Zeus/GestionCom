@@ -8,26 +8,17 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
-import { moduleGroups, navigablePages } from '@/data/modules';
+import { systemPages } from '@/data/modules';
+import { useMenuStore } from '@/store/useMenuStore';
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { getBackendMessage } from '@/services/ui/notify';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
-const pageByPath = new Map(navigablePages.map((page) => [page.path, page]));
 const hiddenSearchModulePaths = new Set(['/notifications']);
 const isHiddenSearchModule = (page) => hiddenSearchModulePaths.has(page?.path) || page?.id === 'notifications';
-const domainIcons = new Map([
-  ...moduleGroups.map((group) => [group.label, group.icon]),
-  ['Sistema', LucideIcons.Search],
-  ['Usuario', LucideIcons.UserCircle],
-]);
-const baseDomainOptions = [...new Set(navigablePages.map((page) => page.group || 'Sistema'))]
-  .filter(Boolean)
-  .sort()
-  .map((value) => ({ value, label: value, icon: domainIcons.get(value) || LucideIcons.Folder }));
 
-const destinationLabel = (path) => {
+const destinationLabel = (path, pageByPath) => {
   const page = pageByPath.get(path);
   if (!page) return path || '-';
   return [page.group, page.label].filter(Boolean).join(' >> ');
@@ -47,10 +38,10 @@ const metaText = (value) => (
   <span className="block truncate font-mono text-xs text-slate-500 dark:text-slate-400">{value || '-'}</span>
 );
 
-const moduleResults = (query) => {
+const moduleResults = (query, pages, pageByPath) => {
   const normalized = query.trim().toLowerCase();
   if (normalized.length < 2) return [];
-  return navigablePages
+  return pages
     .filter((page) => page.path && page.path !== '#')
     .filter((page) => !isHiddenSearchModule(page))
     .filter((page) => [page.label, page.group, page.description].filter(Boolean).some((value) => value.toLowerCase().includes(normalized)))
@@ -60,7 +51,7 @@ const moduleResults = (query) => {
       title: page.label,
       subtitle: page.description || '',
       path: page.path,
-      destination_label: destinationLabel(page.path),
+      destination_label: destinationLabel(page.path, pageByPath),
       icon: 'Search',
       meta: {},
     }));
@@ -68,6 +59,8 @@ const moduleResults = (query) => {
 
 const GlobalSearchResults = () => {
   const navigate = useNavigate();
+  const dbGroups = useMenuStore((state) => state.groups);
+  const dbPages = useMenuStore((state) => state.pages);
   const [searchParams, setSearchParams] = useSearchParams();
   const queryParam = searchParams.get('q') || '';
   const [search, setSearch] = useState(queryParam);
@@ -77,6 +70,20 @@ const GlobalSearchResults = () => {
   const [pageSize, setPageSize] = useState(25);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigablePages = useMemo(() => [...dbPages, ...systemPages].filter((page) => !isHiddenSearchModule(page)), [dbPages]);
+  const pageByPath = useMemo(() => new Map(navigablePages.map((page) => [page.path, page])), [navigablePages]);
+  const domainIcons = useMemo(() => new Map([
+    ...dbGroups.map((group) => {
+      const GroupIcon = group.icon || LucideIcons[group.iconName] || LucideIcons.Folder;
+      return [group.label, GroupIcon];
+    }),
+    ['Sistema', LucideIcons.Search],
+    ['Usuario', LucideIcons.UserCircle],
+  ]), [dbGroups]);
+  const baseDomainOptions = useMemo(() => [...new Set(navigablePages.map((page) => page.group || 'Sistema'))]
+    .filter(Boolean)
+    .sort()
+    .map((value) => ({ value, label: value, icon: domainIcons.get(value) || LucideIcons.Folder })), [domainIcons, navigablePages]);
 
   useEffect(() => {
     setSearch(queryParam);
@@ -108,11 +115,11 @@ const GlobalSearchResults = () => {
       setError('');
       try {
         const dataResults = await globalSearchService.search(query, { limit: 60 });
-        if (!cancelled) setResults([...moduleResults(query), ...dataResults]);
+        if (!cancelled) setResults([...moduleResults(query, navigablePages, pageByPath), ...dataResults]);
       } catch (requestError) {
         if (!cancelled) {
           setError(getBackendMessage(requestError, 'No fue posible ejecutar la busqueda global.'));
-          setResults(moduleResults(query));
+          setResults(moduleResults(query, navigablePages, pageByPath));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -122,7 +129,7 @@ const GlobalSearchResults = () => {
     return () => {
       cancelled = true;
     };
-  }, [queryParam]);
+  }, [navigablePages, pageByPath, queryParam]);
 
   useEffect(() => { setPages({}); }, [domain, pageSize]);
 
@@ -139,7 +146,7 @@ const GlobalSearchResults = () => {
       { value: 'all', label: 'Todos los dominios', icon: LucideIcons.Search },
       ...[...optionsByValue.values()].sort((left, right) => left.label.localeCompare(right.label)),
     ];
-  }, [results]);
+  }, [baseDomainOptions, domainIcons, results]);
 
   useEffect(() => {
     if (domain !== 'all' && !domainOptions.some((option) => option.value === domain)) {
@@ -223,7 +230,7 @@ const GlobalSearchResults = () => {
       },
       ...(contextualColumnsByGroup[group] || []),
       { id: 'entity', label: 'Tipo', sortable: true, headerClassName: fixedTailColumnClass.type, cellClassName: fixedTailColumnClass.type, render: (item) => <StatusBadge variant="info">{item.entity}</StatusBadge> },
-      { id: 'destination', label: 'Destino', headerClassName: fixedTailColumnClass.destination, cellClassName: fixedTailColumnClass.destination, render: (item) => <span className="block truncate text-sm text-slate-600 dark:text-slate-300">{item.destination_label || destinationLabel(item.path)}</span> },
+      { id: 'destination', label: 'Destino', headerClassName: fixedTailColumnClass.destination, cellClassName: fixedTailColumnClass.destination, render: (item) => <span className="block truncate text-sm text-slate-600 dark:text-slate-300">{item.destination_label || destinationLabel(item.path, pageByPath)}</span> },
       { id: 'actions', label: 'Acciones', align: 'right', headerClassName: fixedTailColumnClass.actions, cellClassName: fixedTailColumnClass.actions, render: (item) => <RowActionButton label="Abrir" icon={LucideIcons.ExternalLink} onClick={() => openResult(item)} /> },
     ];
   };

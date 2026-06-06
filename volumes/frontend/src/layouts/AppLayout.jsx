@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getMenuItemPermissions, moduleGroups as fallbackModuleGroups, navigablePages as fallbackNavigablePages } from '@/data/modules';
+import { systemPages } from '@/data/modules';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -455,7 +455,6 @@ const AppLayout = () => {
   const logout = useAuthStore((state) => state.logout);
   const syncSession = useAuthStore((state) => state.syncSession);
   const isDemoSession = useAuthStore((state) => state.isDemoSession);
-  const hasAnyPermission = useAuthStore((state) => state.hasAnyPermission);
   const locations = useSessionStore((state) => state.locations);
   const cashRegisters = useSessionStore((state) => state.cashRegisters);
   const activeLocation = useSessionStore((state) => state.activeLocation);
@@ -471,13 +470,10 @@ const AppLayout = () => {
   const clearMenu = useMenuStore((state) => state.clearMenu);
 
   const sidebarWidth = collapsed ? 'w-20' : 'w-80';
-  const usingDatabaseMenu = dbMenuGroups.length > 0;
-  const moduleGroups = usingDatabaseMenu ? dbMenuGroups : fallbackModuleGroups;
+  const moduleGroups = dbMenuGroups;
   const navigablePages = useMemo(() => (
-    usingDatabaseMenu
-      ? [...dbMenuPages, ...fallbackNavigablePages.filter((page) => page.groupId === 'system')].filter((page) => !isHiddenSidebarMenuItem(page))
-      : fallbackNavigablePages.filter((page) => !isHiddenSidebarMenuItem(page))
-  ), [dbMenuPages, usingDatabaseMenu]);
+    [...dbMenuPages, ...systemPages].filter((page) => !isHiddenSidebarMenuItem(page))
+  ), [dbMenuPages]);
   const currentDetailRoute = useMemo(
     () => getDetailNavigationRoute(location.pathname, new URLSearchParams(location.search)),
     [location.pathname, location.search]
@@ -504,7 +500,7 @@ const AppLayout = () => {
   const activeModule = detailNavigationModule || detailFallbackModule || exactActiveModule;
   const historyModule = detailNavigationModule || exactActiveModule;
   const currentLocationPath = `${location.pathname}${location.search || ''}`;
-  const activeGroupId = activeModule?.groupId || moduleGroups[0]?.id || fallbackModuleGroups[0]?.id;
+  const activeGroupId = activeModule?.groupId || moduleGroups[0]?.id;
   const [openGroupId, setOpenGroupId] = useState(activeGroupId);
   const topNavigationHistory = navigationHistory.slice(-5);
   const unreadNotifications = Number(notificationSummary.unread_count || 0);
@@ -802,25 +798,8 @@ const AppLayout = () => {
     });
   };
 
-  const canViewMenuItem = (group, item) => {
-    if (usingDatabaseMenu) return true;
-
-    const permissions = getMenuItemPermissions(group, item);
-
-    return (
-      isDemoSession
-      || !permissions.length
-      || hasAnyPermission(permissions)
-    );
-  };
-
-  const canViewMenuGroup = (group) => (
-    usingDatabaseMenu
-    ||
-    isDemoSession
-    || !group.permissions?.length
-    || hasAnyPermission(group.permissions)
-  );
+  const canViewMenuItem = () => true;
+  const canViewMenuGroup = () => true;
 
   const navigateSearchResult = (result) => {
     if (!result?.path || result.path === '#') return;
