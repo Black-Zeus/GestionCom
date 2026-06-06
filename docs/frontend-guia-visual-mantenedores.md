@@ -31,7 +31,7 @@ Columnas recomendadas:
 - Columna `Estado`: obligatoria cuando el registro tenga estado activo/inactivo, suspendido, cerrado, bloqueado o equivalente.
 - Columna `Actualizado`: usar cuando ayude a auditoria o revision operacional.
 - Columna `Acciones`: ultima columna, alineada a la derecha, usando `RowActionButton`.
-- La columna `Acciones` muestra maximo tres iconos por fila; si hay mas acciones, deben continuar en una segunda fila dentro de la misma celda.
+- La columna `Acciones` muestra maximo cuatro iconos por fila; si hay mas acciones, deben continuar en una segunda fila dentro de la misma celda.
 
 Reglas:
 
@@ -122,7 +122,7 @@ Acciones por fila:
 
 - Usar `RowActionButton`.
 - Orden: editar primero, acciones especiales despues, eliminar antes del cambio de estado y cambio de estado siempre al final.
-- No forzar acciones en una sola linea cuando superen tres iconos; `DataTable` debe permitir el salto de linea dentro de la celda.
+- No forzar acciones en una sola linea cuando superen cuatro iconos; `DataTable` debe permitir el salto de linea dentro de la celda.
 - Si el cambio de estado tiene mas de dos opciones, debe abrir modal con selector de estados y una descripcion visible del estado seleccionado.
 - Eliminar siempre usa variante visual de peligro.
 

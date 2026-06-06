@@ -38,7 +38,8 @@ const AdminSupplierProducts = lazy(() => import('@/pages/admin/AdminSupplierProd
 const AdminProductSupportMaintainers = lazy(() => import('@/pages/admin/AdminProductSupportMaintainers'));
 const AdminProductBarcodes = lazy(() => import('@/pages/admin/AdminProductBarcodes'));
 const AdminProductUnits = lazy(() => import('@/pages/admin/AdminProductUnits'));
-const AdminInventoryMaintainers = lazy(() => import('@/pages/admin/AdminInventoryMaintainers'));
+const AdminWarehouseZones = lazy(() => import('@/pages/admin/AdminWarehouseZones'));
+const AdminWarehouseZoneLocations = lazy(() => import('@/pages/admin/AdminWarehouseZoneLocations'));
 const AdminStockCriticalConfig = lazy(() => import('@/pages/admin/AdminStockCriticalConfig'));
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
@@ -80,7 +81,6 @@ const moduleComponents = {
   'product-brand-models': AdminProductSupportMaintainers,
   barcodes: AdminProductBarcodes,
   'product-units': AdminProductUnits,
-  'warehouse-zones': AdminInventoryMaintainers,
   'stock-critical-config': AdminStockCriticalConfig,
   'system-parameters': AdminSystemParameterMaintainers,
   promotions: AdminSalesConfigMaintainers,
@@ -236,6 +236,26 @@ const AppRouter = () => (
             <Page>
               <RequirePermission permissions={['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE']}>
                 <AdminSupplierProducts />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="inventory/warehouses/zones"
+          element={(
+            <Page>
+              <RequirePermission permissions={['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS', 'INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE']}>
+                <AdminWarehouseZones />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="inventory/warehouses/zones/locations"
+          element={(
+            <Page>
+              <RequirePermission permissions={['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS', 'INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE']}>
+                <AdminWarehouseZoneLocations />
               </RequirePermission>
             </Page>
           )}

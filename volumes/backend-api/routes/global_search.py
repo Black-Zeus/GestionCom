@@ -190,7 +190,7 @@ async def global_search(
                 {"term": term, "limit": limit},
             )
             for row in rows.mappings().all():
-                results.append(_result("Bodega", row["warehouse_name"], f"{row['warehouse_code']} / {row['warehouse_type']} / {row['city'] or 'Sin ciudad'}", _deep_path("/admin/warehouses", search=row["warehouse_code"], open="edit", id=row["id"]), "Store", {"is_active": row["is_active"]}, "Administracion", "Administracion >> Administracion de bodegas"))
+                results.append(_result("Bodega", row["warehouse_name"], f"{row['warehouse_code']} / {row['warehouse_type']} / {row['city'] or 'Sin ciudad'}", _deep_path("/inventory/warehouses", search=row["warehouse_code"], open="edit", id=row["id"]), "Store", {"is_active": row["is_active"]}, "Inventario", "Inventario >> Administracion de bodegas"))
 
         if _has_any_permission(user, ["PRICE_LISTS_ACCESS", "PRICE_LISTS_MANAGE"]):
             rows = await session.execute(

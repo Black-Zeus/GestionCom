@@ -192,6 +192,8 @@ const optionLabel = (row) => {
   if (row.bank_name) return `${row.bank_code ? `${row.bank_code} - ` : ''}${row.bank_name}`;
   if (row.account_name) return `${row.account_code ? `${row.account_code} - ` : ''}${row.account_name}`;
   if (row.warehouse_name) return `${row.warehouse_code ? `${row.warehouse_code} - ` : ''}${row.warehouse_name}`;
+  if (row.zone_name) return `${row.zone_code ? `${row.zone_code} - ` : ''}${row.zone_name}`;
+  if (row.location_name) return `${row.location_code ? `${row.location_code} - ` : ''}${row.location_name}`;
   if (row.product_name) return `${row.product_code ? `${row.product_code} - ` : ''}${row.product_name}`;
   if (row.brand_name) return `${row.brand_code ? `${row.brand_code} - ` : ''}${row.brand_name}`;
   if (row.variant_sku || row.variant_name) return `${row.variant_sku || row.id} - ${row.variant_name || 'SKU'}`;
@@ -206,7 +208,7 @@ const optionLabel = (row) => {
   return row.name || row.label || String(row.id);
 };
 
-const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+_[A-Z]+_\d+\s*-\s*/, '').trim();
+const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+(?:_[A-Z]+)*_\d+\s*-\s*/, '').trim();
 
 const filterItems = (items, config, search, status, optionData = {}) => {
   const term = search.trim().toLowerCase();
@@ -262,6 +264,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
         setOptionData(Object.fromEntries(optionEntries.map(([resource, rows]) => [
           resource,
           rows.filter((row) => row.is_active !== false).map((row) => ({
+            ...row,
             value: String(row.currency_code || row.id),
             label: optionLabel(row),
             code: row.status_code,
@@ -302,6 +305,12 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   }, [activeScope, optionData, routeFilterValues]);
   const pageTitle = scopedLabel ? `${title} - ${scopedLabel}` : title;
   const pageDescription = scopedLabel && activeConfig.detailDescription ? activeConfig.detailDescription : description;
+  const resolveBackPath = () => {
+    if (typeof activeScope?.backPath === 'function') {
+      return activeScope.backPath({ routeFilterValues, searchParams, optionData });
+    }
+    return activeScope?.backPath || '..';
+  };
   const renderTableValue = (item, field) => {
     const detailValue = typeof field.detailResolver === 'function'
       ? field.detailResolver(item, { relatedData, optionData })
@@ -344,6 +353,36 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       return;
     }
 
+    const initialValues = item ? { ...item } : { ...activeConfig.empty, ...routePrefill };
+    const savePayload = async (payload) => {
+      await notifyPromise(item ? adminMaintainersService.update(activeConfig.resource, item.id, payload) : adminMaintainersService.create(activeConfig.resource, payload), {
+        loading: 'Guardando registro...',
+        success: 'Registro guardado.',
+        error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.'),
+      });
+      await load();
+    };
+
+    if (activeConfig.formComponent) {
+      ModalManager.show({
+        type: 'custom',
+        title: item ? `Editar ${activeConfig.singular}` : `Nuevo ${activeConfig.singular}`,
+        icon: activeConfig.formIcon || activeConfig.icon,
+        size: activeConfig.size || 'large',
+        showFooter: false,
+        contentComponent: activeConfig.formComponent,
+        contentProps: {
+          mode: item ? 'edit' : 'create',
+          item,
+          initialValues,
+          optionData,
+          routePrefill,
+          onSubmit: savePayload,
+        },
+      });
+      return;
+    }
+
     ModalManager.show({
       type: 'custom',
       title: item ? `Editar ${activeConfig.singular}` : `Nuevo ${activeConfig.singular}`,
@@ -352,7 +391,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       showFooter: false,
       contentComponent: SimpleFormContent,
       contentProps: {
-        initialValues: item ? { ...item } : { ...activeConfig.empty, ...routePrefill },
+        initialValues,
         fields: buildFormFields(item),
         submitLabel: item ? 'Guardar cambios' : 'Crear registro',
         onSubmit: async (form) => {
@@ -364,12 +403,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
             else if (field.type === 'checkbox') payload[field.id] = Boolean(rawValue);
             else payload[field.id] = rawValue === '' ? null : rawValue;
           });
-          await notifyPromise(item ? adminMaintainersService.update(activeConfig.resource, item.id, payload) : adminMaintainersService.create(activeConfig.resource, payload), {
-            loading: 'Guardando registro...',
-            success: 'Registro guardado.',
-            error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.'),
-          });
-          await load();
+          await savePayload(payload);
         },
       },
     });
@@ -514,7 +548,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
         <div><h1 className="text-xl font-semibold">{pageTitle}</h1><p className="mt-1 text-sm text-slate-500">{pageDescription}</p></div>
         <div className="flex flex-wrap items-center gap-2">
           {scopedLabel && (
-            <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={() => navigate(activeScope?.backPath || '..')} />
+            <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={() => navigate(resolveBackPath())} />
           )}
           <ActionButton label={`Nuevo ${activeConfig.singular}`} icon={Plus} disabled={activeConfig.disabled} onClick={() => openForm()} />
         </div>

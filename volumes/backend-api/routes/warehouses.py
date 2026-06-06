@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Depends, Query, Path
 from fastapi.responses import JSONResponse
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 
 # Database imports
 from database.database import db_manager
@@ -103,7 +103,7 @@ async def require_access_grant_permission(request: Request) -> dict:
 # HELPER FUNCTIONS
 # ==========================================
 
-def warehouse_to_dict(warehouse: Warehouse) -> dict:
+def warehouse_to_dict(warehouse: Warehouse, zone_count: int = 0) -> dict:
     """Convertir modelo Warehouse a diccionario"""
     return {
         "id": warehouse.id,
@@ -123,6 +123,7 @@ def warehouse_to_dict(warehouse: Warehouse) -> dict:
         "is_store": warehouse.is_store,
         "is_warehouse": warehouse.is_warehouse,
         "is_outlet": warehouse.is_outlet,
+        "zone_count": zone_count,
         "created_at": warehouse.created_at.isoformat() if warehouse.created_at else None,
         "updated_at": warehouse.updated_at.isoformat() if warehouse.updated_at else None
     }
@@ -202,8 +203,21 @@ async def list_warehouses(
             
             result = await session.execute(stmt)
             warehouses = result.scalars().all()
-            
-            warehouse_data = [warehouse_to_dict(warehouse) for warehouse in warehouses]
+
+            warehouse_ids = [warehouse.id for warehouse in warehouses]
+            zone_counts = {}
+            if warehouse_ids:
+                counts_result = await session.execute(
+                    select(WarehouseZone.warehouse_id, func.count(WarehouseZone.id))
+                    .where(
+                        WarehouseZone.warehouse_id.in_(warehouse_ids),
+                        WarehouseZone.deleted_at.is_(None),
+                    )
+                    .group_by(WarehouseZone.warehouse_id)
+                )
+                zone_counts = {warehouse_id: int(count) for warehouse_id, count in counts_result.all()}
+
+            warehouse_data = [warehouse_to_dict(warehouse, zone_counts.get(warehouse.id, 0)) for warehouse in warehouses]
             
             logger.info(f"Usuario {user['username']} listó {len(warehouse_data)} bodegas")
             

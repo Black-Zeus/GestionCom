@@ -4,7 +4,7 @@ CRUD generico y controlado para mantenedores fundacionales no transaccionales.
 from datetime import date, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Path, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
@@ -57,9 +57,16 @@ RESOURCES = {
         "required": ["supplier_id", "product_variant_id"], "bool": ["is_preferred", "is_active"], "int": ["supplier_id", "product_variant_id", "measurement_unit_id", "lead_time_days"], "decimal": ["minimum_order_quantity", "package_quantity", "last_purchase_cost"],
     },
     "warehouse-zones": {
-        "table": "warehouse_zones", "active_field": "is_active", "soft_delete": True,
+        "table": "warehouse_zones", "code_field": "zone_code", "prefix": "ZON", "active_field": "is_active", "soft_delete": True,
         "fields": ["warehouse_id", "zone_code", "zone_name", "zone_description", "is_location_tracking_enabled", "is_active"],
-        "required": ["warehouse_id", "zone_code", "zone_name"], "bool": ["is_location_tracking_enabled", "is_active"], "int": ["warehouse_id"],
+        "required": ["warehouse_id", "zone_name"], "bool": ["is_location_tracking_enabled", "is_active"], "int": ["warehouse_id"],
+    },
+    "warehouse-zone-locations": {
+        "table": "warehouse_zone_locations", "code_field": "location_code", "prefix": "ZLOC", "active_field": "is_active", "soft_delete": True,
+        "fields": ["warehouse_zone_id", "location_code", "location_name", "location_description", "location_type", "sort_order", "is_active"],
+        "required": ["warehouse_zone_id", "location_name"], "bool": ["is_active"], "int": ["warehouse_zone_id", "sort_order"],
+        "enum": {"location_type": ["GENERAL", "AISLE", "RACK", "SHELF", "BIN", "DISPLAY", "OTHER"]},
+        "order_by": "sort_order ASC, id ASC",
     },
     "banks": {
         "table": "banks", "code_field": "bank_code", "prefix": "BNK", "active_field": "is_active", "soft_delete": True,
@@ -158,6 +165,11 @@ RESOURCES = {
         "fields": ["warehouse_code", "warehouse_name", "is_active"],
         "bool": ["is_active"], "read_only": True,
     },
+    "warehouse-zones-options": {
+        "table": "warehouse_zones", "active_field": "is_active", "soft_delete": True,
+        "fields": ["warehouse_id", "zone_code", "zone_name", "is_location_tracking_enabled", "is_active"],
+        "bool": ["is_location_tracking_enabled", "is_active"], "int": ["warehouse_id"], "read_only": True,
+    },
     "document-types-options": {
         "table": "document_types", "active_field": "is_active", "soft_delete": False,
         "fields": ["document_type_code", "document_type_name", "is_active"],
@@ -208,53 +220,129 @@ def _has_any_permission(user: dict, permissions: list[str]) -> bool:
     return any(permission.upper() in user_permissions for permission in permissions)
 
 
-async def require_read(request: Request) -> dict:
-    user = await get_current_user(request)
-    if _has_any_permission(user, [
-        "FOUNDATION_MAINTAINERS_ACCESS",
-        "FOUNDATION_MAINTAINERS_MANAGE",
-        "INVENTORY_MAINTAINERS_ACCESS",
-        "INVENTORY_MAINTAINERS_MANAGE",
-        "PRODUCT_BRAND_MODELS_ACCESS",
-        "PRODUCT_BRAND_MODELS_MANAGE",
-        "PRODUCT_BARCODES_ACCESS",
-        "PRODUCT_BARCODES_MANAGE",
-        "PRODUCT_UNITS_ACCESS",
-        "PRODUCT_UNITS_MANAGE",
-        "SALES_MAINTAINERS_ACCESS",
-        "SALES_MAINTAINERS_MANAGE",
-        "FINANCE_MAINTAINERS_ACCESS",
-        "FINANCE_MAINTAINERS_MANAGE",
-        "DOCUMENT_TEMPLATES_ACCESS",
-        "DOCUMENT_TEMPLATES_MANAGE",
-        "NOTIFICATION_SETTINGS_ACCESS",
-        "NOTIFICATION_SETTINGS_MANAGE",
-    ]):
-        return user
-    from fastapi import HTTPException
+DEFAULT_READ_PERMISSIONS = [
+    "FOUNDATION_MAINTAINERS_ACCESS",
+    "FOUNDATION_MAINTAINERS_MANAGE",
+    "INVENTORY_MAINTAINERS_ACCESS",
+    "INVENTORY_MAINTAINERS_MANAGE",
+    "PRODUCT_BRAND_MODELS_ACCESS",
+    "PRODUCT_BRAND_MODELS_MANAGE",
+    "PRODUCT_BARCODES_ACCESS",
+    "PRODUCT_BARCODES_MANAGE",
+    "PRODUCT_UNITS_ACCESS",
+    "PRODUCT_UNITS_MANAGE",
+    "SALES_MAINTAINERS_ACCESS",
+    "SALES_MAINTAINERS_MANAGE",
+    "FINANCE_MAINTAINERS_ACCESS",
+    "FINANCE_MAINTAINERS_MANAGE",
+    "DOCUMENT_TEMPLATES_ACCESS",
+    "DOCUMENT_TEMPLATES_MANAGE",
+    "NOTIFICATION_SETTINGS_ACCESS",
+    "NOTIFICATION_SETTINGS_MANAGE",
+]
+
+DEFAULT_WRITE_PERMISSIONS = [
+    "FOUNDATION_MAINTAINERS_MANAGE",
+    "INVENTORY_MAINTAINERS_MANAGE",
+    "PRODUCT_BRAND_MODELS_MANAGE",
+    "PRODUCT_BARCODES_MANAGE",
+    "PRODUCT_UNITS_MANAGE",
+    "SALES_MAINTAINERS_MANAGE",
+    "FINANCE_MAINTAINERS_MANAGE",
+    "DOCUMENT_TEMPLATES_MANAGE",
+    "NOTIFICATION_SETTINGS_MANAGE",
+]
+
+RESOURCE_PERMISSION_OVERRIDES = {
+    "warehouse-zones": {
+        "read": [
+            "INVENTORY_MAINTAINERS_ACCESS",
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_READ",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_SUPERVISOR",
+            "WAREHOUSE_ADMIN",
+            "WAREHOUSES_ACCESS",
+        ],
+        "write": [
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_ADMIN",
+        ],
+    },
+    "warehouses-options": {
+        "read": [
+            "INVENTORY_MAINTAINERS_ACCESS",
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_READ",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_SUPERVISOR",
+            "WAREHOUSE_ADMIN",
+            "WAREHOUSES_ACCESS",
+        ],
+    },
+    "warehouse-zone-locations": {
+        "read": [
+            "INVENTORY_MAINTAINERS_ACCESS",
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_READ",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_SUPERVISOR",
+            "WAREHOUSE_ADMIN",
+            "WAREHOUSES_ACCESS",
+        ],
+        "write": [
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_ADMIN",
+        ],
+    },
+    "warehouse-zones-options": {
+        "read": [
+            "INVENTORY_MAINTAINERS_ACCESS",
+            "INVENTORY_MAINTAINERS_MANAGE",
+            "WAREHOUSE_READ",
+            "WAREHOUSE_MANAGER",
+            "WAREHOUSE_SUPERVISOR",
+            "WAREHOUSE_ADMIN",
+            "WAREHOUSES_ACCESS",
+        ],
+    },
+}
+
+
+def _permission_error(request: Request):
     import json
     response = ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
     raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
+
+
+def _allowed_permissions(resource: str, mode: str) -> list[str]:
+    override = RESOURCE_PERMISSION_OVERRIDES.get(resource, {})
+    if override.get(mode):
+        return override[mode]
+    return DEFAULT_WRITE_PERMISSIONS if mode == "write" else DEFAULT_READ_PERMISSIONS
+
+
+def _ensure_resource_permission(user: dict, resource: str, mode: str, request: Request) -> None:
+    if not _has_any_permission(user, _allowed_permissions(resource, mode)):
+        _permission_error(request)
+
+
+async def require_read(request: Request) -> dict:
+    user = await get_current_user(request)
+    allowed_permissions = DEFAULT_READ_PERMISSIONS + RESOURCE_PERMISSION_OVERRIDES["warehouse-zones"]["read"]
+    if _has_any_permission(user, allowed_permissions):
+        return user
+    _permission_error(request)
 
 
 async def require_write(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, [
-        "FOUNDATION_MAINTAINERS_MANAGE",
-        "INVENTORY_MAINTAINERS_MANAGE",
-        "PRODUCT_BRAND_MODELS_MANAGE",
-        "PRODUCT_BARCODES_MANAGE",
-        "PRODUCT_UNITS_MANAGE",
-        "SALES_MAINTAINERS_MANAGE",
-        "FINANCE_MAINTAINERS_MANAGE",
-        "DOCUMENT_TEMPLATES_MANAGE",
-        "NOTIFICATION_SETTINGS_MANAGE",
-    ]):
+    allowed_permissions = DEFAULT_WRITE_PERMISSIONS + RESOURCE_PERMISSION_OVERRIDES["warehouse-zones"]["write"]
+    if _has_any_permission(user, allowed_permissions):
         return user
-    from fastapi import HTTPException
-    import json
-    response = ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
-    raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
+    _permission_error(request)
 
 
 def _config(resource: str) -> dict:
@@ -369,12 +457,18 @@ async def _next_code(session, table: str, field: str, prefix: str) -> str:
 
 @router.get("/", response_class=JSONResponse)
 async def list_resources(request: Request, user: dict = Depends(require_read)):
-    return ResponseManager.success(data=sorted(RESOURCES.keys()), request=request)
+    visible_resources = [
+        resource
+        for resource in RESOURCES.keys()
+        if _has_any_permission(user, _allowed_permissions(resource, "read"))
+    ]
+    return ResponseManager.success(data=sorted(visible_resources), request=request)
 
 
 @router.get("/{resource}", response_class=JSONResponse)
 async def list_items(request: Request, resource: str = Path(...), user: dict = Depends(require_read)):
     try:
+        _ensure_resource_permission(user, resource, "read", request)
         config = _config(resource)
         conditions = []
         if config.get("soft_delete"):
@@ -383,7 +477,7 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
             conditions.append(config["where"])
         where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
         async with db_manager.get_async_session() as session:
-            order_by = "sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC"
+            order_by = config.get("order_by") or ("sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC")
             result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT 1000"))
             rows = [_row(row) for row in result.mappings().all()]
             if config["table"] in {"customers", "suppliers"}:
@@ -391,6 +485,24 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
                 for row in rows:
                     row["logo"] = assets.get(row.get("logo_media_asset_id"))
                     row["banner"] = assets.get(row.get("banner_media_asset_id"))
+            if config["table"] == "warehouse_zones" and rows:
+                zone_ids = [int(item["id"]) for item in rows if item.get("id")]
+                placeholders = ", ".join(f":zone_id_{index}" for index, _ in enumerate(zone_ids))
+                params = {f"zone_id_{index}": zone_id for index, zone_id in enumerate(zone_ids)}
+                count_result = await session.execute(
+                    text(
+                        "SELECT warehouse_zone_id, COUNT(*) AS location_count "
+                        f"FROM warehouse_zone_locations WHERE deleted_at IS NULL AND warehouse_zone_id IN ({placeholders}) "
+                        "GROUP BY warehouse_zone_id"
+                    ),
+                    params,
+                )
+                location_counts = {
+                    int(row["warehouse_zone_id"]): int(row["location_count"])
+                    for row in count_result.mappings().all()
+                }
+                for row in rows:
+                    row["location_count"] = location_counts.get(int(row["id"]), 0)
             return ResponseManager.success(data=rows, request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
@@ -399,6 +511,7 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
 @router.post("/{resource}", response_class=JSONResponse)
 async def create_item(payload: dict, request: Request, resource: str = Path(...), user: dict = Depends(require_write)):
     try:
+        _ensure_resource_permission(user, resource, "write", request)
         config = _config(resource)
         if config.get("read_only"):
             return ResponseManager.error(message="Recurso solo disponible para seleccion", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
@@ -410,6 +523,16 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
             if config["table"] == "suppliers" and data.get("status_id") in (None, ""):
                 status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'SUPPLIER' AND status_code = 'ACTIVE' LIMIT 1"))
                 data["status_id"] = status_result.scalar_one_or_none()
+            if config["table"] == "warehouse_zone_locations":
+                zone_result = await session.execute(
+                    text("SELECT is_location_tracking_enabled FROM warehouse_zones WHERE id = :zone_id AND deleted_at IS NULL"),
+                    {"zone_id": data.get("warehouse_zone_id")},
+                )
+                zone_tracks_locations = zone_result.scalar_one_or_none()
+                if zone_tracks_locations is None:
+                    raise ValueError("Zona no encontrada")
+                if not zone_tracks_locations:
+                    raise ValueError("La zona no tiene habilitado el control de ubicaciones internas")
             if config.get("code_field"):
                 data[config["code_field"]] = await _next_code(session, config["table"], config["code_field"], config["prefix"])
             if "created_by_user_id" in config["fields"] or config["table"] in {"customers", "suppliers"}:
@@ -426,6 +549,8 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except ValueError as exc:
         return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
+    except HTTPException:
+        raise
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al crear registro", details=str(exc), request=request)
 
@@ -433,6 +558,7 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
 @router.put("/{resource}/{item_id}", response_class=JSONResponse)
 async def update_item(payload: dict, request: Request, resource: str = Path(...), item_id: int = Path(..., gt=0), user: dict = Depends(require_write)):
     try:
+        _ensure_resource_permission(user, resource, "write", request)
         config = _config(resource)
         if config.get("read_only"):
             return ResponseManager.error(message="Recurso solo disponible para seleccion", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
@@ -442,6 +568,16 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
         set_clause = ", ".join(f"{key} = :{key}" for key in data.keys())
         data["id"] = item_id
         async with db_manager.get_async_session() as session:
+            if config["table"] == "warehouse_zone_locations" and data.get("warehouse_zone_id"):
+                zone_result = await session.execute(
+                    text("SELECT is_location_tracking_enabled FROM warehouse_zones WHERE id = :zone_id AND deleted_at IS NULL"),
+                    {"zone_id": data.get("warehouse_zone_id")},
+                )
+                zone_tracks_locations = zone_result.scalar_one_or_none()
+                if zone_tracks_locations is None:
+                    raise ValueError("Zona no encontrada")
+                if not zone_tracks_locations:
+                    raise ValueError("La zona no tiene habilitado el control de ubicaciones internas")
             await session.execute(text(f"UPDATE {config['table']} SET {set_clause} WHERE id = :id"), data)
             await session.commit()
             result = await session.execute(text(f"SELECT * FROM {config['table']} WHERE id = :id"), {"id": item_id})
@@ -452,6 +588,8 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except ValueError as exc:
         return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
+    except HTTPException:
+        raise
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al actualizar registro", details=str(exc), request=request)
 
@@ -459,6 +597,7 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
 @router.delete("/{resource}/{item_id}", response_class=JSONResponse)
 async def delete_item(request: Request, resource: str = Path(...), item_id: int = Path(..., gt=0), user: dict = Depends(require_write)):
     try:
+        _ensure_resource_permission(user, resource, "write", request)
         config = _config(resource)
         if config.get("read_only"):
             return ResponseManager.error(message="Recurso solo disponible para seleccion", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
@@ -476,5 +615,7 @@ async def delete_item(request: Request, resource: str = Path(...), item_id: int 
             return ResponseManager.success(data={"id": item_id}, message="Registro eliminado correctamente", request=request)
     except KeyError:
         return ResponseManager.error(message="Mantenedor no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+    except HTTPException:
+        raise
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al eliminar registro", details=str(exc), request=request)

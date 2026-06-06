@@ -118,6 +118,9 @@ Habilitar la primera superficie operativa de `Administracion > Usuarios / Roles`
 - Cada agrupacion mayor debe permitir contraer/expandir su contenido con icono y animacion suave.
 - Las pantallas con acciones de guardado persistentes deben usar una barra inferior reutilizable al final real del contenido; no debe ser `fixed` ni `sticky` si existe scroll.
 - El layout principal debe mostrar un boton comun `Ir arriba` cuando el usuario baje en el scroll vertical del contenido. Debe ocultarse al estar arriba y aplicar a todos los modulos.
+- El menu lateral de runtime se lee desde la base de datos mediante `/api/user-menus/hierarchy`; la fuente de verdad de agrupacion, orden, visibilidad, permisos e items visibles es `menu_items` junto con sus permisos asociados.
+- `volumes/frontend/src/data/modules.js` no debe tratarse como fuente principal del menu lateral. Ese archivo mantiene soporte de rutas, componentes navegables y fallback frontend; cualquier alta, baja, movimiento o renombre visible en el sidebar debe incluir migracion/seed sobre `menu_items`.
+- Las rutas internas o submodulos navegables desde una fila, como zonas de bodega dentro de una bodega, no deben quedar visibles como item independiente de `menu_items` salvo que el negocio los exponga como mantenedor global.
 - Cada seccion principal del menu debe tener un permiso de visibilidad `*_VISIBLE` en su grupo funcional. Ejemplos: `SALES_VISIBLE`, `INVENTORY_VISIBLE`, `ADMIN_VISIBLE`.
 - El permiso `*_VISIBLE` siempre debe mostrarse primero dentro de su agrupacion.
 - Los titulos de agrupacion de permisos deben mostrarse en mayusculas.

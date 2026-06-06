@@ -51,6 +51,9 @@ Definición de bodegas y puntos de venta. Cada ubicación física donde se almac
 ### `warehouse_zones`
 Subdivisión de bodegas en zonas específicas (estanterías, pasillos). Permite ubicación precisa de productos dentro de una bodega.
 
+### `warehouse_zone_locations`
+Ubicaciones internas dentro de una zona de bodega. Se usa solo cuando la zona tiene habilitado el control de ubicaciones internas.
+
 ### `reorder_suggestions`
 Sugerencias automatizadas de reabastecimiento basadas en consumo histórico y tiempos de entrega. Optimiza gestión de compras.
 

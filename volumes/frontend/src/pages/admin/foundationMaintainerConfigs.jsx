@@ -1,6 +1,8 @@
 /* eslint-disable react/prop-types */
 import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Image, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, Smartphone, Truck, UserRound, Users } from 'lucide-react';
 import AdminGenericMaintainers from './AdminGenericMaintainers';
+import WarehouseZoneFormModal from './WarehouseZoneFormModal';
+import WarehouseZoneLocationFormModal from './WarehouseZoneLocationFormModal';
 
 const customerStatusChangeOptions = [
   { value: 'ACTIVE', label: 'Activo', variant: 'active', description: 'Habilitado para operar normalmente en ventas, credito y autorizaciones segun sus permisos comerciales.' },
@@ -53,6 +55,20 @@ const factorDisplay = (value) => {
   if (value === null || value === undefined || value === '') return '-';
   return new Intl.NumberFormat('es-CL', { maximumFractionDigits: 6 }).format(Number(value));
 };
+
+const internalLocationDisplay = (value) => (
+  Number(value) === 1 || value === true ? 'Con ubicaciones internas' : 'Sin ubicaciones internas'
+);
+
+const locationTypeOptions = [
+  { value: 'GENERAL', label: 'General' },
+  { value: 'AISLE', label: 'Pasillo' },
+  { value: 'RACK', label: 'Rack' },
+  { value: 'SHELF', label: 'Repisa' },
+  { value: 'BIN', label: 'Casillero' },
+  { value: 'DISPLAY', label: 'Exhibicion' },
+  { value: 'OTHER', label: 'Otro' },
+];
 
 const productUnitUses = (value, item = {}) => {
   const uses = [
@@ -336,9 +352,60 @@ const productUnitTabs = [
 const inventoryTabs = [
   {
     id: 'zones', resource: 'warehouse-zones', label: 'Zonas', singular: 'zona de bodega', icon: MapPin, activeField: 'is_active',
-    empty: { warehouse_id: '', zone_code: '', zone_name: '', is_location_tracking_enabled: false, is_active: true },
-    fields: [{ id: 'warehouse_id', label: 'Bodega', type: 'select', optionsResource: 'warehouses-options', required: true }, { id: 'zone_code', label: 'Codigo zona', required: true }, { id: 'zone_name', label: 'Zona', required: true }, { id: 'zone_description', label: 'Descripcion', wide: true }, { id: 'is_location_tracking_enabled', label: 'Ubicaciones', type: 'checkbox', checkLabel: 'Controla ubicaciones internas' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'zone_name', label: 'Zona', primary: true }, { id: 'warehouse_id', label: 'Bodega' }, { id: 'zone_code', label: 'Codigo' }, { id: 'is_location_tracking_enabled', label: 'Ubicaciones' }],
+    detailDescription: 'Submodulo de zonas asociado a la bodega seleccionada.',
+    size: 'large',
+    formComponent: WarehouseZoneFormModal,
+    routeFilters: [{ field: 'warehouse_id', param: 'warehouse_id' }],
+    scope: { field: 'warehouse_id', optionsResource: 'warehouses-options', fallback: 'Bodega', backPath: '/inventory/warehouses' },
+    searchFields: ['zone_name', 'zone_description'],
+    empty: { warehouse_id: '', zone_name: '', zone_description: '', is_location_tracking_enabled: false, is_active: true },
+    fields: [{ id: 'warehouse_id', label: 'Bodega', type: 'select', optionsResource: 'warehouses-options', required: true }, { id: 'zone_name', label: 'Nombre', required: true }, { id: 'zone_description', label: 'Descripcion' }, { id: 'is_location_tracking_enabled', label: 'Ubicaciones', type: 'checkbox' }, { id: 'is_active', label: 'Estado', type: 'checkbox' }],
+    tableFields: [
+      { id: 'zone_name', label: 'Zona', primary: true, detailField: 'zone_description' },
+      { id: 'is_location_tracking_enabled', label: 'Control ubicaciones', format: internalLocationDisplay },
+      { id: 'location_count', label: 'Locaciones', format: (value) => Number(value || 0) },
+    ],
+    rowActions: [
+      {
+        label: 'Ubicaciones internas',
+        disabledLabel: 'Zona sin ubicaciones internas',
+        icon: MapPin,
+        disabled: (row) => !(Number(row.is_location_tracking_enabled) === 1 || row.is_location_tracking_enabled === true),
+        path: '/inventory/warehouses/zones/locations',
+        params: (row) => ({ warehouse_zone_id: row.id, warehouse_id: row.warehouse_id }),
+      },
+    ],
+  },
+  {
+    id: 'zone-locations', resource: 'warehouse-zone-locations', label: 'Ubicaciones', singular: 'ubicacion interna', icon: MapPin, activeField: 'is_active',
+    detailDescription: 'Submodulo de ubicaciones internas asociado a la zona seleccionada.',
+    size: 'large',
+    formComponent: WarehouseZoneLocationFormModal,
+    routeFilters: [{ field: 'warehouse_zone_id', param: 'warehouse_zone_id' }],
+    scope: {
+      field: 'warehouse_zone_id',
+      optionsResource: 'warehouse-zones-options',
+      fallback: 'Zona',
+      backPath: ({ searchParams }) => {
+        const warehouseId = searchParams.get('warehouse_id');
+        return warehouseId ? `/inventory/warehouses/zones?warehouse_id=${warehouseId}` : '/inventory/warehouses/zones';
+      },
+    },
+    searchFields: ['location_name', 'location_description', 'location_type'],
+    empty: { warehouse_zone_id: '', location_name: '', location_description: '', location_type: 'GENERAL', sort_order: 0, is_active: true },
+    fields: [
+      { id: 'warehouse_zone_id', label: 'Zona', type: 'select', optionsResource: 'warehouse-zones-options', required: true },
+      { id: 'location_name', label: 'Nombre', required: true },
+      { id: 'location_description', label: 'Descripcion' },
+      { id: 'location_type', label: 'Tipo', type: 'select', options: locationTypeOptions },
+      { id: 'sort_order', label: 'Orden', type: 'number', min: 0 },
+      { id: 'is_active', label: 'Estado', type: 'checkbox' },
+    ],
+    tableFields: [
+      { id: 'location_name', label: 'Ubicacion', primary: true, detailField: 'location_description' },
+      { id: 'location_type', label: 'Tipo', options: locationTypeOptions },
+      { id: 'sort_order', label: 'Orden' },
+    ],
   },
   {
     id: 'stock', resource: 'stock-critical-config', label: 'Stock critico', singular: 'regla de stock', icon: Settings, activeField: 'is_active',
@@ -487,7 +554,20 @@ export const SuppliersMaintainers = ({ initialTab, visibleTabs }) => {
 };
 export const ProductBarcodeMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Codigos de barra de productos" description="Codigos asociados a SKU / Variaciones y unidades comerciales." tabs={productBarcodeTabs} initialTab={initialTab} />;
 export const ProductUnitMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Unidades por producto" description="Unidades alternativas de compra, venta e inventario por producto." tabs={productUnitTabs} initialTab={initialTab} />;
-export const InventoryMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores de inventario" description="Zonas de bodega y reglas de reposicion." tabs={inventoryTabs} initialTab={initialTab} />;
+export const InventoryMaintainers = ({ initialTab, visibleTabs }) => {
+  const scopedTabs = visibleTabs?.length ? inventoryTabs.filter((tab) => visibleTabs.includes(tab.id)) : inventoryTabs;
+  const singleTabTitles = {
+    stock: 'Stock critico y reposicion',
+    'zone-locations': 'Ubicaciones internas',
+  };
+  const singleTabDescriptions = {
+    stock: 'Reglas de stock minimo, seguridad y reorden por SKU y bodega.',
+    'zone-locations': 'Subdivisiones operativas dentro de una zona de bodega.',
+  };
+  const title = scopedTabs.length === 1 ? singleTabTitles[scopedTabs[0].id] || 'Mantenedores de inventario' : 'Mantenedores de inventario';
+  const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Zonas de bodega y reglas de reposicion.' : 'Zonas de bodega y reglas de reposicion.';
+  return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
+};
 export const SalesConfigMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores comerciales" description="Promociones y reglas de devolucion sin transaccionar ventas." tabs={salesConfigTabs} initialTab={initialTab} />;
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;

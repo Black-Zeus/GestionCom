@@ -172,9 +172,13 @@ async def build_user_menu_hierarchy(
     menus = []
     required_permission_by_menu_id = {}
     for menu, required_permission_code in rows:
+        if menu.menu_code == "warehouse_zones" or menu.menu_url == "/inventory/warehouse-zones":
+            continue
         menus.append(menu)
         if required_permission_code:
             required_permission_by_menu_id[menu.id] = required_permission_code.upper()
+
+    inventory_menu = next((menu for menu in menus if menu.menu_code == "inventory"), None)
 
     menu_ids = [menu.id for menu in menus]
     relation_permissions: Dict[int, Dict[str, List[str]]] = {}
@@ -203,6 +207,17 @@ async def build_user_menu_hierarchy(
                 {"REQUIRED": [], "ALTERNATIVE": [], "EXCLUDE": []},
             )
             permission_bucket[relation_type].append(permission_code.upper())
+
+    for menu in menus:
+        if menu.menu_code == "warehouses":
+            if inventory_menu:
+                menu.parent_id = inventory_menu.id
+                menu.menu_level = 2
+            menu.menu_name = "Administracion de bodegas"
+            menu.menu_description = "Bodegas, tiendas, outlets y zonas operativas."
+            menu.menu_url = "/inventory/warehouses"
+            menu.menu_path = "/inventory/warehouses"
+            menu.sort_order = 35
 
     children_by_parent: Dict[Optional[int], List[MenuItem]] = {}
     for menu in menus:

@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CheckCircle2, EyeOff, Mail, MapPin, Pencil, Phone, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, EyeOff, MapPin, Pencil, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
@@ -13,8 +13,7 @@ import { usersService } from '@/services/admin/usersService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
-import { formatDateTime } from '@/utils/dateTime';
-import { formatPhone, normalizePhoneForStorage } from '@/utils/phone';
+import { normalizePhoneForStorage } from '@/utils/phone';
 
 const warehouseTypes = [
   { value: 'WAREHOUSE', label: 'Bodega' },
@@ -202,6 +201,7 @@ const WarehouseFormModal = ({ mode = 'create', initialValues = emptyWarehouseFor
 };
 
 const AdminWarehouses = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledDeepLinkRef = useRef('');
   const [warehouses, setWarehouses] = useState([]);
@@ -214,7 +214,6 @@ const AdminWarehouses = () => {
   const [error, setError] = useState('');
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
-  const timezone = usePreferencesStore((state) => state.timezone);
 
   const usersById = useMemo(() => {
     const map = new Map();
@@ -240,7 +239,6 @@ const AdminWarehouses = () => {
         || (filters.status === 'inactive' && !warehouse.is_active);
       const matchesType = filters.type === 'all' || warehouse.warehouse_type === filters.type;
       const matchesSearch = !term || [
-        warehouse.warehouse_code,
         warehouse.warehouse_name,
         warehouse.city,
         warehouse.email,
@@ -431,6 +429,11 @@ const AdminWarehouses = () => {
     }
   };
 
+  const openWarehouseZones = (warehouse) => {
+    const params = new URLSearchParams({ warehouse_id: String(warehouse.id) });
+    navigate({ pathname: '/inventory/warehouses/zones', search: params.toString() });
+  };
+
   const kpiItems = [
     {
       id: 'total',
@@ -497,7 +500,7 @@ const AdminWarehouses = () => {
       render: (warehouse) => (
         <>
           <div className="font-medium text-slate-950 dark:text-white">{warehouse.warehouse_name}</div>
-          <div className="font-mono text-xs text-slate-500">{warehouse.warehouse_code}</div>
+          <div className="text-xs text-slate-500">{warehouse.location_summary || warehouse.city || getTypeLabel(warehouse.warehouse_type)}</div>
         </>
       ),
     },
@@ -535,21 +538,20 @@ const AdminWarehouses = () => {
       ),
     },
     {
-      id: 'contact',
-      label: 'Contacto',
+      id: 'zones',
+      label: 'Zonas',
       sortable: true,
-      sortValue: (warehouse) => warehouse.email || warehouse.phone || '',
+      align: 'center',
+      sortValue: (warehouse) => Number(warehouse.zone_count || 0),
       render: (warehouse) => (
-        <div className="space-y-1 text-slate-600 dark:text-slate-300">
-          <div className="flex items-center gap-1.5">
-            <Mail className="h-3.5 w-3.5 text-slate-400" />
-            <span>{warehouse.email || 'Sin email'}</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Phone className="h-3.5 w-3.5" />
-            <span>{warehouse.phone ? formatPhone(warehouse.phone) : 'Sin telefono'}</span>
-          </div>
-        </div>
+        <button
+          type="button"
+          className="inline-flex min-w-8 items-center justify-center text-sm font-semibold text-slate-700 transition hover:text-blue-700 dark:text-slate-200 dark:hover:text-blue-300"
+          onClick={() => openWarehouseZones(warehouse)}
+          aria-label={`Ver zonas de ${warehouse.warehouse_name}`}
+        >
+          {Number(warehouse.zone_count || 0)}
+        </button>
       ),
     },
     {
@@ -560,21 +562,15 @@ const AdminWarehouses = () => {
       render: (warehouse) => <StatusBadge variant={warehouse.is_active ? 'active' : 'inactive'}>{warehouse.is_active ? 'Activa' : 'Inactiva'}</StatusBadge>,
     },
     {
-      id: 'updated',
-      label: 'Actualizada',
-      sortable: true,
-      sortValue: (warehouse) => warehouse.updated_at || '',
-      render: (warehouse) => formatDateTime(warehouse.updated_at, timezone),
-    },
-    {
       id: 'actions',
       label: 'Acciones',
       align: 'right',
       render: (warehouse) => (
-        <div className="flex justify-end gap-2">
+        <div className="ml-auto grid w-max grid-cols-3 gap-2">
           <RowActionButton label="Editar bodega" icon={Pencil} disabled={busyWarehouseId === warehouse.id} onClick={() => openEditModal(warehouse)} />
-          <RowActionButton label={warehouse.is_active ? 'Desactivar bodega' : 'Activar bodega'} icon={warehouse.is_active ? EyeOff : CheckCircle2} disabled={busyWarehouseId === warehouse.id} variant={warehouse.is_active ? 'danger' : 'neutral'} onClick={() => toggleWarehouse(warehouse)} />
+          <RowActionButton label="Zonas de bodega" icon={MapPin} disabled={busyWarehouseId === warehouse.id} onClick={() => openWarehouseZones(warehouse)} />
           <RowActionButton label="Eliminar bodega" icon={Trash2} disabled={busyWarehouseId === warehouse.id} variant="danger" onClick={() => removeWarehouse(warehouse)} />
+          <RowActionButton label={warehouse.is_active ? 'Desactivar bodega' : 'Activar bodega'} icon={warehouse.is_active ? EyeOff : CheckCircle2} disabled={busyWarehouseId === warehouse.id} variant={warehouse.is_active ? 'danger' : 'neutral'} onClick={() => toggleWarehouse(warehouse)} />
         </div>
       ),
     },
@@ -598,7 +594,7 @@ const AdminWarehouses = () => {
         className="mb-4"
         gridClassName="lg:grid-cols-[minmax(280px,1fr)_190px_180px_auto_auto]"
         searchValue={search}
-        searchPlaceholder="Buscar codigo, bodega, responsable o ciudad"
+        searchPlaceholder="Buscar bodega, responsable o ciudad"
         onSearchChange={setSearch}
         onSearchSubmit={() => setPage(0)}
         fields={filterFields}

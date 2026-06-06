@@ -42,6 +42,49 @@ const toMenuGroup = (node) => {
   };
 };
 
+const normalizeWarehouseMenus = (hierarchy = []) => {
+  let warehouseItem = null;
+
+  const normalizeNode = (node) => {
+    const children = (node.children || [])
+      .map(normalizeNode)
+      .filter(Boolean);
+
+    if (node.code === 'warehouse_zones' || node.url === '/inventory/warehouse-zones') {
+      return null;
+    }
+
+    if (node.code === 'warehouses') {
+      warehouseItem = {
+        ...node,
+        name: 'Administracion de bodegas',
+        description: 'Bodegas, tiendas, outlets y zonas operativas.',
+        url: '/inventory/warehouses',
+        sort_order: 35,
+        children,
+      };
+      return null;
+    }
+
+    return { ...node, children };
+  };
+
+  const normalized = hierarchy
+    .map(normalizeNode)
+    .filter(Boolean);
+
+  if (!warehouseItem) return normalized;
+
+  return normalized.map((group) => {
+    if (group.code !== 'inventory') return group;
+    const currentChildren = (group.children || []).filter((item) => item.code !== 'warehouses');
+    return {
+      ...group,
+      children: [...currentChildren, warehouseItem].sort((left, right) => (left.sort_order || 0) - (right.sort_order || 0)),
+    };
+  });
+};
+
 const flattenItems = (groups) => groups.flatMap((group) => group.items.map((item) => ({
   ...item,
   group: group.label,
@@ -60,7 +103,7 @@ export const useMenuStore = create((set, get) => ({
     set({ status: 'loading', error: null });
 
     try {
-      const hierarchy = await menuService.getUserHierarchy();
+      const hierarchy = normalizeWarehouseMenus(await menuService.getUserHierarchy());
       const groups = hierarchy
         .map(toMenuGroup)
         .filter((group) => group.items.length > 0)
