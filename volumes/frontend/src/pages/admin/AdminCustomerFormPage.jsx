@@ -82,7 +82,7 @@ const buildPayload = (form) => {
   customerMaintainerConfig.fields.forEach((field) => {
     if (field.type === 'section' || field.type === 'custom') return;
     const rawValue = form[field.id];
-    if (field.type === 'number') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(rawValue);
+    if (field.type === 'number' || field.type === 'amount') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(String(rawValue).replace(/[^\d.-]/g, ''));
     else if (field.type === 'checkbox') payload[field.id] = Boolean(rawValue);
     else payload[field.id] = rawValue === '' ? null : rawValue;
   });

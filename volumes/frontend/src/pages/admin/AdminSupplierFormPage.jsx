@@ -17,27 +17,43 @@ const optionLabel = (row) => {
   return row.name || row.label || String(row.id);
 };
 
-const defaultFieldClass = (field, optionData = {}) => ({
-  id: field.id,
-  label: field.label,
-  type: field.type,
-  required: field.required,
-  options: field.optionsResource ? optionData[field.optionsResource] || [] : field.options || [],
-  min: field.min,
-  wide: field.wide,
-  placeholder: field.placeholder,
-  help: field.help,
-  rows: field.rows,
-  mono: field.mono,
-  span: field.span,
-  icon: field.icon,
-  leadingIcon: field.leadingIcon,
-  columns: field.columns,
-  description: field.description,
-  readOnly: field.readOnly,
-  disabled: field.disabled,
-  validation: field.validation,
+const mapSupplierContactOption = (row) => ({
+  value: row.contact_name,
+  label: [row.contact_name, row.position].filter(Boolean).join(' - '),
 });
+
+const defaultFieldClass = (field, optionData = {}) => {
+  const options = field.optionsResource ? optionData[field.optionsResource] || [] : field.options || [];
+  const contactWithoutOptions = field.id === 'contact_person' && options.length === 0;
+  return {
+    id: field.id,
+    label: field.label,
+    type: field.type,
+    required: field.required,
+    options,
+    min: field.min,
+    wide: field.wide,
+    placeholder: field.placeholder,
+    searchPlaceholder: field.searchPlaceholder,
+    help: field.help || (contactWithoutOptions ? 'Disponible cuando el proveedor tenga contactos registrados.' : undefined),
+    checkLabel: field.checkLabel,
+    clearable: field.clearable,
+    rows: field.rows,
+    mono: field.mono,
+    span: field.span,
+    icon: field.icon,
+    leadingIcon: field.leadingIcon,
+    columns: field.columns,
+    description: field.description,
+    readOnly: field.readOnly,
+    disabled: field.disabled || contactWithoutOptions,
+    validation: field.validation,
+    render: field.render,
+    localOptions: field.localOptions,
+    showIcons: field.showIcons,
+    showOptionDescription: field.showOptionDescription,
+  };
+};
 
 const buildFields = (item, optionData) => {
   const mappedFields = supplierMaintainerConfig.fields.map((field) => defaultFieldClass(field, optionData));
@@ -53,26 +69,15 @@ const buildFields = (item, optionData) => {
     return [...fields.slice(0, contactIndex), ...mediaSection, ...fields.slice(contactIndex)];
   };
 
-  if (!item) return insertMediaSection(mappedFields);
-
-  const codeField = {
-    id: supplierMaintainerConfig.codeField,
-    label: 'Codigo',
-    readOnly: true,
-    disabled: true,
-    mono: true,
-  };
-
-  const fieldsWithCode = mappedFields[0]?.type === 'section' ? [mappedFields[0], codeField, ...mappedFields.slice(1)] : [codeField, ...mappedFields];
-  return insertMediaSection(fieldsWithCode);
+  return insertMediaSection(mappedFields);
 };
 
 const buildPayload = (form) => {
   const payload = {};
   supplierMaintainerConfig.fields.forEach((field) => {
-    if (field.type === 'section') return;
+    if (field.type === 'section' || field.type === 'custom') return;
     const rawValue = form[field.id];
-    if (field.type === 'number') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(rawValue);
+    if (field.type === 'number' || field.type === 'amount') payload[field.id] = rawValue === '' || rawValue === undefined ? null : Number(String(rawValue).replace(/[^\d.-]/g, ''));
     else if (field.type === 'checkbox') payload[field.id] = Boolean(rawValue);
     else payload[field.id] = rawValue === '' ? null : rawValue;
   });
@@ -100,22 +105,23 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
       setLoading(true);
       setError('');
       try {
-        const optionResources = [...new Set(supplierMaintainerConfig.fields.map((field) => field.optionsResource).filter(Boolean))];
-        const [suppliers, companies, ...optionEntries] = await Promise.all([
+        const optionResources = [...new Set(supplierMaintainerConfig.fields.map((field) => (field.localOptions ? null : field.optionsResource)).filter(Boolean))];
+        const [suppliers, supplierContacts, companies, ...optionEntries] = await Promise.all([
           isEdit ? adminMaintainersService.list(supplierMaintainerConfig.resource) : Promise.resolve([]),
+          isEdit ? adminMaintainersService.list('supplier-contacts') : Promise.resolve([]),
           businessFoundationService.companies.list().catch(() => []),
           ...optionResources.map(async (resource) => [resource, await adminMaintainersService.list(resource)]),
         ]);
         if (!mounted) return;
 
-        setOptionData(Object.fromEntries(optionEntries.map(([resource, rows]) => [
+        const baseOptionData = Object.fromEntries(optionEntries.map(([resource, rows]) => [
           resource,
           rows.filter((row) => row.is_active !== false).map((row) => ({
             value: String(row.currency_code || row.id),
             label: optionLabel(row),
             code: row.status_code,
           })),
-        ])));
+        ]));
         setActiveCompany(companies.find((company) => company.is_active) || null);
 
         if (isEdit) {
@@ -125,8 +131,24 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
             setError('No existen datos para el codigo buscado.');
             return;
           }
-          setSupplier(target);
+          const targetContacts = supplierContacts
+            .filter((row) => String(row.supplier_id) === String(target.id) && row.is_active !== false);
+          const contactOptions = targetContacts.map(mapSupplierContactOption);
+          const hasStoredContact = contactOptions.some((option) => String(option.value) === String(target.contact_person || ''));
+          const primaryContact = targetContacts.find((row) => row.is_primary === true || Number(row.is_primary) === 1);
+          setOptionData({
+            ...baseOptionData,
+            'supplier-contact-options': contactOptions,
+          });
+          setSupplier({
+            ...target,
+            contact_person: hasStoredContact ? target.contact_person : primaryContact?.contact_name || '',
+          });
         } else {
+          setOptionData({
+            ...baseOptionData,
+            'supplier-contact-options': [],
+          });
           setSupplier(null);
         }
       } catch (requestError) {
@@ -163,7 +185,15 @@ const AdminSupplierFormPage = ({ mode = 'create' }) => {
   }, [pendingBannerFile]);
 
   const initialValues = useMemo(() => {
-    if (isEdit) return supplier ? { ...supplier } : null;
+    if (isEdit) {
+      if (!supplier) return null;
+      const contactOptions = optionData['supplier-contact-options'] || [];
+      const hasContact = contactOptions.some((option) => String(option.value) === String(supplier.contact_person || ''));
+      return {
+        ...supplier,
+        contact_person: hasContact ? supplier.contact_person : '',
+      };
+    }
     const activeStatus = optionData[supplierMaintainerConfig.statusOptionsResource]?.find((option) => option.code === supplierMaintainerConfig.activeValue);
     return {
       ...supplierMaintainerConfig.empty,

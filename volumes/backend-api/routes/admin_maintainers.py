@@ -38,7 +38,7 @@ RESOURCES = {
     },
     "suppliers": {
         "table": "suppliers", "code_field": "supplier_code", "prefix": "SUP", "soft_delete": True,
-        "fields": ["supplier_type", "tax_id", "legal_name", "commercial_name", "business_activity", "email", "phone", "mobile", "website", "default_currency_code", "default_payment_terms_days", "default_tax_rate", "credit_limit", "current_balance", "status_id", "notes", "internal_notes"],
+        "fields": ["supplier_type", "tax_id", "legal_name", "commercial_name", "business_activity", "contact_person", "email", "phone", "mobile", "website", "default_currency_code", "default_payment_terms_days", "default_tax_rate", "credit_limit", "current_balance", "status_id", "notes", "internal_notes"],
         "required": ["legal_name"], "int": ["default_payment_terms_days", "status_id"], "decimal": ["default_tax_rate", "credit_limit", "current_balance"], "rut": ["tax_id"], "phone": ["phone", "mobile"],
     },
     "supplier-contacts": {
