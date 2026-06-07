@@ -16,7 +16,7 @@ import { formatDateTime } from '@/utils/dateTime';
 const severityLabels = { INFO: 'Informacion', SUCCESS: 'Exito', WARNING: 'Alerta', ERROR: 'Error' };
 const severityVariant = { INFO: 'info', SUCCESS: 'active', WARNING: 'warning', ERROR: 'danger' };
 
-const NotificationDetail = ({ notification, timezone, onClose }) => (
+const NotificationDetail = ({ notification, timezone, hourFormat, onClose }) => (
   <div className="space-y-5">
     <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -29,7 +29,7 @@ const NotificationDetail = ({ notification, timezone, onClose }) => (
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>{notification.type_name || notification.type_code}</span>
               <span>{notification.source_label || notification.source_table || 'Sistema'}</span>
-              <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(notification.delivered_at, timezone)}</span>
+              <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" />{formatDateTime(notification.delivered_at, timezone, { hourFormat })}</span>
             </div>
           </div>
         </div>
@@ -64,6 +64,7 @@ const NotificationInbox = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
 
   const load = async () => {
     setLoading(true);
@@ -156,7 +157,7 @@ const NotificationInbox = () => {
       size: 'medium',
       showFooter: false,
       contentComponent: NotificationDetail,
-      contentProps: { notification: detail, timezone },
+    contentProps: { notification: detail, timezone, hourFormat },
     });
     await load();
     dispatchNotificationsUpdated();
@@ -261,7 +262,7 @@ const NotificationInbox = () => {
           { id: 'type', label: 'Tipo', render: (item) => <div><div className="font-medium">{item.type_name || item.type_code || 'General'}</div><StatusBadge variant={severityVariant[item.severity] || 'info'}>{severityLabels[item.severity] || item.severity}</StatusBadge></div> },
           { id: 'source', label: 'Origen', render: (item) => <div><div className="font-medium">{item.source_label || item.source_table || 'Sistema'}</div>{item.source_id && <div className="font-mono text-xs text-slate-500">#{item.source_id}</div>}</div> },
           { id: 'state', label: 'Estado', render: (item) => <StatusBadge variant={item.is_read ? 'inactive' : 'active'}>{item.is_read ? 'Leida' : 'Nueva'}</StatusBadge> },
-          { id: 'date', label: 'Recibida', render: (item) => formatDateTime(item.delivered_at, timezone) },
+          { id: 'date', label: 'Recibida', render: (item) => formatDateTime(item.delivered_at, timezone, { hourFormat }) },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <RowActionButton label="Ver notificacion" icon={Eye} onClick={() => openNotification(item)} /> },
         ]}
       />

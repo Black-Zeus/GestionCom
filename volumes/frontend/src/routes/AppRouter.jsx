@@ -43,6 +43,7 @@ const AdminWarehouseZoneLocations = lazy(() => import('@/pages/admin/AdminWareho
 const AdminStockCriticalConfig = lazy(() => import('@/pages/admin/AdminStockCriticalConfig'));
 const AdminPhysicalInventory = lazy(() => import('@/pages/admin/AdminPhysicalInventory'));
 const AdminStockTransfers = lazy(() => import('@/pages/admin/AdminStockTransfers'));
+const AdminStockMovements = lazy(() => import('@/pages/admin/AdminStockMovements'));
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
 const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
@@ -85,6 +86,7 @@ const moduleComponents = {
   'product-units': AdminProductUnits,
   'stock-critical-config': AdminStockCriticalConfig,
   'physical-inventory': AdminPhysicalInventory,
+  'stock-movements': AdminStockMovements,
   transfers: AdminStockTransfers,
   'system-parameters': AdminSystemParameterMaintainers,
   promotions: AdminSalesConfigMaintainers,

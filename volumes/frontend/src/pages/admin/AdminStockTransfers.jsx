@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, PackageCheck, PackagePlus, PackageSearch, Pencil, Plus, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, MapPin, PackageCheck, PackagePlus, PackageSearch, Pencil, Plus, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -54,9 +54,9 @@ const TransferStatusBadge = ({ status }) => {
   return <StatusBadge variant={meta.variant}>{meta.label}</StatusBadge>;
 };
 
-const ModalActions = ({ onClose, saving, submitLabel = 'Guardar' }) => (
+const ModalActions = ({ onClose, saving, submitLabel = 'Guardar', message = '', messageTone = 'neutral' }) => (
   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-    <div className="min-h-5" />
+    <div className={`min-h-5 text-sm ${messageTone === 'danger' ? 'text-red-600 dark:text-red-300' : messageTone === 'warning' ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400'}`}>{message}</div>
     <div className="flex justify-end gap-2">
       <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Cancelar</button>
       <button type="submit" disabled={saving} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{saving ? 'Guardando...' : submitLabel}</button>
@@ -139,14 +139,64 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const zoneOptions = zones.filter((zone) => String(zone.warehouse_id) === String(transfer.source_warehouse_id));
+  const [availability, setAvailability] = useState(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const zoneOptions = zones.filter((zone) => (
+    String(zone.warehouse_id) === String(transfer.source_warehouse_id)
+    && !String(zone.zone_code || '').startsWith('REC_')
+  ));
   const locationOptions = locations.filter((location) => !form.source_warehouse_zone_id || String(location.warehouse_zone_id) === String(form.source_warehouse_zone_id));
+  const availableQuantity = Number(availability?.available_quantity ?? 0);
+  const hasAvailability = Boolean(form.product_variant_id) && availability !== null;
+  const availabilityScope = form.source_warehouse_zone_location_id
+    ? 'ubicacion seleccionada'
+    : form.source_warehouse_zone_id
+      ? 'zona seleccionada'
+      : 'stock general';
+  const message = error
+    || (form.product_variant_id
+      ? loadingAvailability
+        ? 'Consultando stock disponible...'
+        : `Disponible origen (${availabilityScope}, base): ${quantity(availableQuantity)}`
+      : 'Selecciona SKU / Variacion para ver stock disponible.');
+  const messageTone = error ? 'danger' : hasAvailability && Number(form.quantity || 0) > availableQuantity ? 'warning' : 'neutral';
+
+  useEffect(() => {
+    if (!form.product_variant_id) {
+      setAvailability(null);
+      return undefined;
+    }
+    let active = true;
+    setLoadingAvailability(true);
+    stockTransfersService.getAvailableStock({
+      product_variant_id: Number(form.product_variant_id),
+      warehouse_id: Number(transfer.source_warehouse_id),
+      warehouse_zone_id: form.source_warehouse_zone_id ? Number(form.source_warehouse_zone_id) : undefined,
+      warehouse_zone_location_id: form.source_warehouse_zone_location_id ? Number(form.source_warehouse_zone_location_id) : undefined,
+    })
+      .then((nextAvailability) => {
+        if (active) setAvailability(nextAvailability);
+      })
+      .catch(() => {
+        if (active) setAvailability(null);
+      })
+      .finally(() => {
+        if (active) setLoadingAvailability(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [form.product_variant_id, form.source_warehouse_zone_id, form.source_warehouse_zone_location_id, transfer.source_warehouse_id]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
     if (!form.product_variant_id || Number(form.quantity) <= 0) {
       setError('Selecciona SKU / Variacion e indica cantidad.');
+      return;
+    }
+    if (hasAvailability && Number(form.quantity) > availableQuantity) {
+      setError(`La cantidad supera el stock disponible en origen (${quantity(availableQuantity)}).`);
       return;
     }
     setSaving(true);
@@ -210,23 +260,38 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
           <textarea className={textareaClassName} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
         </label>
       </div>
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-      <ModalActions onClose={onClose} saving={saving} submitLabel={item ? 'Guardar cambios' : 'Agregar item'} />
+      <ModalActions onClose={onClose} saving={saving} submitLabel={item ? 'Guardar cambios' : 'Agregar item'} message={message} messageTone={messageTone} />
     </form>
   );
 };
 
-const ReceiveModal = ({ transfer, onSubmit, onClose }) => {
-  const [items, setItems] = useState(() => (transfer.items || []).map((item) => ({ id: item.id, received_quantity: item.received_quantity ?? item.quantity })));
-  const [notes, setNotes] = useState('');
+const ObserveReceptionModal = ({ item, decision, onSave, onClose }) => {
+  const [form, setForm] = useState({
+    received_quantity: decision?.received_quantity ?? item.quantity,
+    reception_notes: decision?.reception_notes || '',
+  });
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const updateQuantity = (id, value) => setItems((current) => current.map((item) => (item.id === id ? { ...item, received_quantity: value } : item)));
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError('');
+    if (Number(form.received_quantity) < 0 || Number(form.received_quantity) > Number(item.quantity)) {
+      setError('La cantidad recibida debe estar entre 0 y lo despachado.');
+      return;
+    }
+    if (!form.reception_notes.trim()) {
+      setError('Indica la observacion de la linea.');
+      return;
+    }
     setSaving(true);
     try {
-      const ok = await onSubmit({ items: items.map((item) => ({ id: item.id, received_quantity: Number(item.received_quantity || 0) })), notes: notes || null });
+      const ok = await onSave?.({
+        id: item.id,
+        reception_status: 'OBSERVED',
+        received_quantity: Number(form.received_quantity || 0),
+        reception_notes: form.reception_notes.trim(),
+      });
       if (ok !== false) onClose?.();
     } finally {
       setSaving(false);
@@ -235,32 +300,127 @@ const ReceiveModal = ({ transfer, onSubmit, onClose }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="space-y-2">
-        {(transfer.items || []).map((item) => {
-          const current = items.find((row) => row.id === item.id);
-          return (
-            <div key={item.id} className="grid gap-3 rounded-md border border-slate-200 p-3 text-sm dark:border-slate-800 md:grid-cols-[minmax(0,1fr)_9rem_9rem]">
-              <div>
-                <div className="font-medium text-slate-950 dark:text-white">{item.variant_name}</div>
-                <div className="text-xs text-slate-500">{item.product_name}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-500">Despachado</div>
-                <div className="font-medium">{quantity(item.quantity)}</div>
-              </div>
-              <label className="space-y-1">
-                <span className="text-xs font-medium text-slate-700 dark:text-slate-200">Recibido</span>
-                <input className={fieldClassName} type="number" min="0" step="0.0001" value={current?.received_quantity || ''} onChange={(event) => updateQuantity(item.id, event.target.value)} />
-              </label>
-            </div>
-          );
-        })}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1 text-sm md:col-span-2">
+          <div className="font-medium text-slate-950 dark:text-white">{item.variant_name}</div>
+          <div className="text-xs text-slate-500">Despachado: {quantity(item.quantity)}</div>
+        </div>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad recibida</span>
+          <input className={fieldClassName} type="number" min="0" step="0.0001" max={item.quantity} value={form.received_quantity} onChange={(event) => setForm((current) => ({ ...current, received_quantity: event.target.value }))} required />
+        </label>
+        <label className="space-y-1 text-sm md:col-span-2">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Observacion</span>
+          <textarea className={textareaClassName} value={form.reception_notes} onChange={(event) => setForm((current) => ({ ...current, reception_notes: event.target.value }))} required />
+        </label>
       </div>
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Notas de recepcion</span>
-        <textarea className={textareaClassName} value={notes} onChange={(event) => setNotes(event.target.value)} />
-      </label>
-      <ModalActions onClose={onClose} saving={saving} submitLabel="Confirmar recepcion" />
+      <ModalActions onClose={onClose} saving={saving} submitLabel="Guardar observacion" message={error} messageTone={error ? 'danger' : 'neutral'} />
+    </form>
+  );
+};
+
+const ReceiveModal = ({ transfer, receptionDraft = {}, onSubmit, onClose }) => {
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const items = transfer.items || [];
+  const rows = items.map((item) => ({
+    ...item,
+    decision: receptionDraft[String(item.id)] || (item.reception_status ? {
+      reception_status: item.reception_status,
+      received_quantity: item.received_quantity,
+      reception_notes: item.reception_notes,
+    } : null),
+  }));
+  const pendingCount = rows.filter((item) => !item.decision).length;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (pendingCount > 0) {
+      setError('Debes aceptar u observar todas las lineas antes de recibir.');
+      return;
+    }
+    if (notes.trim().length < 3) {
+      setError('Indica una observacion general de recepcion.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const ok = await onSubmit({
+        items: rows.map((item) => ({
+          id: item.id,
+          reception_status: item.decision.reception_status,
+          received_quantity: Number(item.decision.received_quantity || 0),
+          reception_notes: item.decision.reception_notes || null,
+        })),
+        notes: notes.trim(),
+      });
+      if (ok !== false) onClose?.();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="rounded-md border border-slate-200 p-4 dark:border-slate-800">
+        <div className="mb-4 flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+            <PackageCheck className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-white">Resumen de recepcion</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Revisa las lineas confirmadas antes de procesar el ingreso a recepcion pendiente.</p>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-800">
+          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+            <thead className="bg-slate-100 text-xs uppercase text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+              <tr>
+                <th className="px-3 py-2 text-left font-semibold">SKU / Variacion</th>
+                <th className="px-3 py-2 text-right font-semibold">Despachado</th>
+                <th className="px-3 py-2 text-right font-semibold">Recibido</th>
+                <th className="px-3 py-2 text-center font-semibold">Confirmacion</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {rows.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-3 py-3">
+                    <div className="font-medium text-slate-950 dark:text-white">{item.variant_name}</div>
+                    <div className="text-xs text-slate-500">{item.product_name}</div>
+                    {item.decision?.reception_notes && <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">{item.decision.reception_notes}</div>}
+                  </td>
+                  <td className="px-3 py-3 text-right font-medium">{quantity(item.quantity)}</td>
+                  <td className="px-3 py-3 text-right font-medium">{item.decision ? quantity(item.decision.received_quantity) : '-'}</td>
+                  <td className="px-3 py-3 text-center">
+                    {item.decision?.reception_status === 'ACCEPTED' && <StatusBadge variant="active">Aceptada</StatusBadge>}
+                    {item.decision?.reception_status === 'OBSERVED' && <StatusBadge variant="warning">Observada</StatusBadge>}
+                    {!item.decision && <StatusBadge variant="inactive">Pendiente</StatusBadge>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="rounded-md border border-slate-200 p-4 dark:border-slate-800">
+        <div className="mb-3 flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-950 dark:text-white">Cierre de recepcion</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Registra la observacion general que acompana la confirmacion.</p>
+          </div>
+        </div>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Observacion general</span>
+          <textarea className={textareaClassName} value={notes} onChange={(event) => setNotes(event.target.value)} required />
+        </label>
+      </div>
+      <ModalActions onClose={onClose} saving={saving} submitLabel="Procesar recepcion" message={error || (pendingCount > 0 ? `${pendingCount} linea(s) pendiente(s) de confirmar.` : 'Las lineas confirmadas actualizaran stock en recepcion pendiente.')} messageTone={error ? 'danger' : pendingCount > 0 ? 'warning' : 'neutral'} />
     </form>
   );
 };
@@ -341,7 +501,7 @@ const PutawayModal = ({ transfer, zones = [], locations = [], onSubmit, onClose 
   );
 };
 
-const TransferDetailView = ({ transferId, variants, units, zones, locations, onChanged, refreshToken = 0 }) => {
+const TransferDetailView = ({ transferId, variants, units, zones, locations, receptionDraft = {}, onReceptionDraftChange, onChanged, refreshToken = 0 }) => {
   const [transfer, setTransfer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [itemSearch, setItemSearch] = useState('');
@@ -393,6 +553,61 @@ const TransferDetailView = ({ transferId, variants, units, zones, locations, onC
       await refreshAll();
     });
   };
+  const acceptReceptionLine = async (item) => {
+    if (!await ModalManager.confirm({
+      title: 'Aceptar linea recibida',
+      message: `Confirma aceptar la recepcion completa de ${item.variant_name || 'esta linea'}.`,
+      buttons: { cancel: 'Volver', confirm: 'Aceptar linea' },
+    })) return;
+    await ignoreRejected(async () => {
+      await notifyPromise(
+        stockTransfersService.saveReceptionLine(transfer.id, item.id, {
+          reception_status: 'ACCEPTED',
+          received_quantity: Number(item.quantity || 0),
+          reception_notes: null,
+        }),
+        { loading: 'Guardando linea...', success: 'Linea aceptada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible aceptar la linea.') }
+      );
+      onReceptionDraftChange?.((current) => {
+        const next = { ...current };
+        delete next[String(item.id)];
+        return next;
+      });
+      await refreshAll();
+    });
+  };
+  const observeReceptionLine = (item) => ModalManager.show({
+    type: 'custom',
+    title: 'Observar linea recibida',
+    size: 'large',
+    showFooter: false,
+    contentComponent: ObserveReceptionModal,
+    contentProps: {
+      item,
+      decision: receptionDecision(item),
+      onSave: async (decision) => ignoreRejected(async () => {
+        await notifyPromise(
+          stockTransfersService.saveReceptionLine(transfer.id, item.id, {
+            reception_status: decision.reception_status,
+            received_quantity: Number(decision.received_quantity || 0),
+            reception_notes: decision.reception_notes || null,
+          }),
+          { loading: 'Guardando observacion...', success: 'Linea observada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible observar la linea.') }
+        );
+        onReceptionDraftChange?.((current) => {
+          const next = { ...current };
+          delete next[String(item.id)];
+          return next;
+        });
+        await refreshAll();
+      }),
+    },
+  });
+  const receptionDecision = (item) => receptionDraft[String(item.id)] || (item.reception_status ? {
+    reception_status: item.reception_status,
+    received_quantity: item.received_quantity,
+    reception_notes: item.reception_notes,
+  } : null);
 
   return (
     <div className="space-y-5">
@@ -428,12 +643,20 @@ const TransferDetailView = ({ transferId, variants, units, zones, locations, onC
           { id: 'origin', label: 'Origen stock', render: (item) => [item.source_zone_name, item.source_location_name].filter(Boolean).join(' / ') || 'Stock general' },
           { id: 'quantity', label: 'Despachado', align: 'right', render: (item) => quantity(item.quantity) },
           { id: 'received', label: 'Recibido', align: 'right', render: (item) => quantity(item.received_quantity) },
+          { id: 'reception_status', label: 'Recepcion', render: (item) => {
+            const decision = receptionDecision(item);
+            if (decision?.reception_status === 'ACCEPTED') return <StatusBadge variant="active">Aceptada</StatusBadge>;
+            if (decision?.reception_status === 'OBSERVED') return <StatusBadge variant="warning">Observada</StatusBadge>;
+            return <StatusBadge variant="inactive">Pendiente</StatusBadge>;
+          } },
           { id: 'pending', label: 'Pendiente ubicar', align: 'right', render: (item) => <span className={Number(item.pending_putaway_quantity || 0) > 0 ? 'font-medium text-amber-700 dark:text-amber-300' : ''}>{quantity(item.pending_putaway_quantity)}</span> },
           { id: 'pending_location', label: 'Recepcion', render: (item) => [item.pending_zone_name, item.pending_location_name].filter(Boolean).join(' / ') || '-' },
           { id: 'actions', label: 'Acciones', align: 'right', render: (item) => (
             <>
               <RowActionButton label="Editar" icon={Pencil} disabled={transfer.status !== 'DRAFT'} onClick={() => openEditItem(item)} />
               <RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={transfer.status !== 'DRAFT'} onClick={() => removeItem(item)} />
+              <RowActionButton label="Aceptar recepcion" icon={CheckCircle2} disabled={transfer.status !== 'SHIPPED'} onClick={() => acceptReceptionLine(item)} />
+              <RowActionButton label="Observar recepcion" icon={AlertTriangle} variant="neutral" disabled={transfer.status !== 'SHIPPED'} onClick={() => observeReceptionLine(item)} />
             </>
           ) },
         ]}
@@ -446,6 +669,7 @@ const AdminStockTransfers = () => {
   const navigate = useNavigate();
   const { transferId } = useParams();
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
   const [transfers, setTransfers] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [zones, setZones] = useState([]);
@@ -458,6 +682,7 @@ const AdminStockTransfers = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
+  const [receptionDraft, setReceptionDraft] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -487,6 +712,7 @@ const AdminStockTransfers = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setReceptionDraft({}); }, [transferId]);
   useEffect(() => { setPage(0); }, [search, status, warehouseFilter, pageSize]);
 
   const filtered = useMemo(() => {
@@ -645,9 +871,11 @@ const AdminStockTransfers = () => {
         contentComponent: ReceiveModal,
         contentProps: {
           transfer,
+          receptionDraft,
           onSubmit: async (payload) => {
             return ignoreRejected(async () => {
               await notifyPromise(stockTransfersService.receive(transfer.id, payload), { loading: 'Confirmando recepcion...', success: 'Transferencia recibida.', error: (requestError) => getBackendMessage(requestError, 'No fue posible recibir.') });
+              setReceptionDraft({});
               await refreshDetail();
             });
           },
@@ -704,7 +932,7 @@ const AdminStockTransfers = () => {
         </div>
         <KpiBar items={detailKpis} className="mb-4" />
         {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-        <TransferDetailView transferId={decodedTransferKey} variants={variants} units={units} zones={zones} locations={locations} onChanged={load} refreshToken={detailRefreshToken} />
+        <TransferDetailView transferId={decodedTransferKey} variants={variants} units={units} zones={zones} locations={locations} receptionDraft={receptionDraft} onReceptionDraftChange={setReceptionDraft} onChanged={load} refreshToken={detailRefreshToken} />
       </section>
     );
   }
@@ -743,7 +971,7 @@ const AdminStockTransfers = () => {
         data={visibleData}
         footer={tableFooter({ page, pageSize, total: filtered.length, loading, setPage, setPageSize })}
         columns={[
-          { id: 'transfer', label: 'Transferencia', sortable: true, sortValue: (item) => item.requested_at || item.created_at || '', render: (item) => <div><div className="font-medium">{item.target_warehouse_name || warehouseMap[String(item.target_warehouse_id)]?.warehouse_name || '-'}</div><div className="text-xs text-slate-500">{formatDateTime(item.requested_at || item.created_at, timezone)}</div></div> },
+          { id: 'transfer', label: 'Transferencia', sortable: true, sortValue: (item) => item.requested_at || item.created_at || '', render: (item) => <div><div className="font-medium">{item.target_warehouse_name || warehouseMap[String(item.target_warehouse_id)]?.warehouse_name || '-'}</div><div className="text-xs text-slate-500">{formatDateTime(item.requested_at || item.created_at, timezone, { hourFormat })}</div></div> },
           { id: 'route', label: 'Ruta', render: (item) => <div><div>{item.source_warehouse_name || warehouseMap[String(item.source_warehouse_id)]?.warehouse_name || '-'}</div><div className="text-xs text-slate-500">a {item.target_warehouse_name || warehouseMap[String(item.target_warehouse_id)]?.warehouse_name || '-'}</div></div> },
           { id: 'items', label: 'Items', align: 'right', render: (item) => quantity(item.item_count) },
           { id: 'quantity', label: 'Despachado', align: 'right', render: (item) => quantity(item.total_quantity) },

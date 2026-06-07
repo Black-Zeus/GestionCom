@@ -6,6 +6,7 @@ import uuid
 import secrets
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, TYPE_CHECKING
+import re
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -42,6 +43,66 @@ def extract_bearer_token(request: Request) -> Optional[str]:
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
     return auth_header.split("Bearer ")[-1].strip()
+
+def get_client_context(request: Request) -> Dict[str, Any]:
+    """Recuperar contexto del navegador sin instalar componentes en el cliente."""
+    headers = request.headers
+    hardware = headers.get("X-Client-Hardware-Concurrency")
+    try:
+        hardware_concurrency = int(hardware) if hardware else None
+    except ValueError:
+        hardware_concurrency = None
+
+    return {
+        "client_timezone": headers.get("X-Client-Timezone"),
+        "client_language": headers.get("X-Client-Language") or headers.get("Accept-Language"),
+        "client_platform": headers.get("X-Client-Platform"),
+        "client_vendor": headers.get("X-Client-Vendor"),
+        "hardware_concurrency": hardware_concurrency,
+    }
+
+def parse_user_agent(user_agent: str) -> Dict[str, Optional[str]]:
+    value = (user_agent or "").strip()
+    browser_name = "Desconocido"
+    browser_version = None
+
+    browser_patterns = [
+        ("Edge", r"Edg/([0-9.]+)"),
+        ("Chrome", r"Chrome/([0-9.]+)"),
+        ("Firefox", r"Firefox/([0-9.]+)"),
+        ("Safari", r"Version/([0-9.]+).*Safari/"),
+    ]
+    for name, pattern in browser_patterns:
+        match = re.search(pattern, value)
+        if match:
+            browser_name = name
+            browser_version = match.group(1)
+            break
+
+    os_name = "Desconocido"
+    if "Windows NT" in value:
+        os_name = "Windows"
+    elif "Mac OS X" in value:
+        os_name = "macOS"
+    elif "Android" in value:
+        os_name = "Android"
+    elif "iPhone" in value or "iPad" in value:
+        os_name = "iOS"
+    elif "Linux" in value:
+        os_name = "Linux"
+
+    device_type = "Escritorio"
+    if re.search(r"Mobile|iPhone|Android", value):
+        device_type = "Movil"
+    if re.search(r"Tablet|iPad", value):
+        device_type = "Tablet"
+
+    return {
+        "browser_name": browser_name,
+        "browser_version": browser_version,
+        "os_name": os_name,
+        "device_type": device_type,
+    }
 
 # ==========================================
 # CLASE PRINCIPAL DE AUTENTICACIÓN
@@ -122,6 +183,7 @@ class AuthHelper:
             
             # Actualizar datos del usuario
             await self._update_user_login_data(user_data["id"], client_ip)
+            await self._record_session_login(user_data, tokens, client_ip, user_agent, request)
             
             # Limpiar intentos fallidos
             await self._clear_failed_attempts(client_ip, username)
@@ -443,7 +505,8 @@ class AuthHelper:
             refresh_token = jwt_manager.create_refresh_token(
                 user_id=user_data["id"],
                 user_secret=user_secret,
-                username=user_data["username"]
+                username=user_data["username"],
+                extra_claims={"session_id": session_id}
             )
             
             expires_in = 30 * 60 if not login_data.remember_me else 24 * 60 * 60
@@ -512,6 +575,165 @@ class AuthHelper:
                     
         except Exception as e:
             logger.warning(f"No se pudo actualizar último login: {e}")
+
+    async def _record_session_login(self, user_data: Dict[str, Any], tokens: Dict[str, Any], client_ip: str, user_agent: str, request: Request):
+        """Registrar historial de login con datos recuperables desde HTTP/navegador."""
+        try:
+            if not self.modules['database']:
+                return
+
+            from database.database import db_manager
+            from sqlalchemy import text
+
+            session_id = tokens.get("session_id")
+            if not session_id:
+                return
+
+            parsed_agent = parse_user_agent(user_agent)
+            context = get_client_context(request)
+            params = {
+                "session_id": str(session_id),
+                "user_id": int(user_data["id"]),
+                "login_method": "PASSWORD",
+                "ip_address": (client_ip or "")[:45],
+                "user_agent": (user_agent or "")[:1000],
+                **parsed_agent,
+                **context,
+            }
+
+            async with db_manager.get_async_session() as session:
+                await session.execute(
+                    text(
+                        """
+                        INSERT INTO user_session_history (
+                          session_id, user_id, login_at, last_seen_at, login_method,
+                          ip_address, user_agent, browser_name, browser_version, os_name,
+                          device_type, client_timezone, client_language, client_platform,
+                          client_vendor, hardware_concurrency, is_active
+                        ) VALUES (
+                          :session_id, :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :login_method,
+                          :ip_address, :user_agent, :browser_name, :browser_version, :os_name,
+                          :device_type, :client_timezone, :client_language, :client_platform,
+                          :client_vendor, :hardware_concurrency, TRUE
+                        )
+                        ON DUPLICATE KEY UPDATE
+                          last_seen_at = CURRENT_TIMESTAMP,
+                          ip_address = VALUES(ip_address),
+                          user_agent = VALUES(user_agent),
+                          browser_name = VALUES(browser_name),
+                          browser_version = VALUES(browser_version),
+                          os_name = VALUES(os_name),
+                          device_type = VALUES(device_type),
+                          client_timezone = VALUES(client_timezone),
+                          client_language = VALUES(client_language),
+                          client_platform = VALUES(client_platform),
+                          client_vendor = VALUES(client_vendor),
+                          hardware_concurrency = VALUES(hardware_concurrency),
+                          is_active = TRUE
+                        """
+                    ),
+                    params,
+                )
+                await session.commit()
+        except Exception as e:
+            logger.warning(f"No se pudo registrar historial de login: {e}")
+
+    async def touch_session_history(self, user_id: int, session_id: str | None, client_ip: str, user_agent: str, request: Request | None = None):
+        """Actualizar ultima actividad de una sesion conocida."""
+        try:
+            if not self.modules['database'] or not user_id or not session_id:
+                return
+
+            from database.database import db_manager
+            from sqlalchemy import text
+
+            parsed_agent = parse_user_agent(user_agent)
+            context = get_client_context(request) if request else {}
+            params = {
+                "session_id": str(session_id),
+                "user_id": int(user_id),
+                "ip_address": (client_ip or "")[:45],
+                "user_agent": (user_agent or "")[:1000],
+                **parsed_agent,
+                **context,
+            }
+            async with db_manager.get_async_session() as session:
+                await session.execute(
+                    text(
+                        """
+                        UPDATE user_session_history
+                        SET last_seen_at = CURRENT_TIMESTAMP,
+                            ip_address = COALESCE(:ip_address, ip_address),
+                            user_agent = COALESCE(:user_agent, user_agent),
+                            browser_name = COALESCE(:browser_name, browser_name),
+                            browser_version = COALESCE(:browser_version, browser_version),
+                            os_name = COALESCE(:os_name, os_name),
+                            device_type = COALESCE(:device_type, device_type),
+                            client_timezone = COALESCE(:client_timezone, client_timezone),
+                            client_language = COALESCE(:client_language, client_language),
+                            client_platform = COALESCE(:client_platform, client_platform),
+                            client_vendor = COALESCE(:client_vendor, client_vendor),
+                            hardware_concurrency = COALESCE(:hardware_concurrency, hardware_concurrency)
+                        WHERE user_id = :user_id AND session_id = :session_id
+                        """
+                    ),
+                    params,
+                )
+                await session.commit()
+        except Exception as e:
+            logger.warning(f"No se pudo actualizar historial de sesion: {e}")
+
+    async def record_session_logout(self, user_id: int | None, session_id: str | None, client_ip: str, logout_method: str = "USER_LOGOUT"):
+        """Cerrar el registro de historial asociado al logout."""
+        try:
+            if not self.modules['database'] or not user_id:
+                return
+
+            from database.database import db_manager
+            from sqlalchemy import text
+
+            params = {
+                "user_id": int(user_id),
+                "session_id": str(session_id) if session_id else None,
+                "ip_address": (client_ip or "")[:45],
+                "logout_method": logout_method,
+            }
+            async with db_manager.get_async_session() as session:
+                if session_id:
+                    await session.execute(
+                        text(
+                            """
+                            UPDATE user_session_history
+                            SET logout_at = CURRENT_TIMESTAMP,
+                                last_seen_at = CURRENT_TIMESTAMP,
+                                logout_method = :logout_method,
+                                ip_address = COALESCE(:ip_address, ip_address),
+                                is_active = FALSE
+                            WHERE user_id = :user_id AND session_id = :session_id
+                            """
+                        ),
+                        params,
+                    )
+                else:
+                    await session.execute(
+                        text(
+                            """
+                            UPDATE user_session_history
+                            SET logout_at = CURRENT_TIMESTAMP,
+                                last_seen_at = CURRENT_TIMESTAMP,
+                                logout_method = :logout_method,
+                                ip_address = COALESCE(:ip_address, ip_address),
+                                is_active = FALSE
+                            WHERE user_id = :user_id AND is_active = TRUE
+                            ORDER BY login_at DESC
+                            LIMIT 1
+                            """
+                        ),
+                        params,
+                    )
+                await session.commit()
+        except Exception as e:
+            logger.warning(f"No se pudo registrar logout en historial: {e}")
     
     async def _clear_failed_attempts(self, client_ip: str, username: str):
         """Limpiar intentos fallidos"""
@@ -608,15 +830,16 @@ class AuthHelper:
         user_data: Dict[str, Any],
         client_ip: str,
         user_agent: str,
-        user_secret: str
+        user_secret: str,
+        session_id: str | None = None
     ) -> Dict[str, Any]:
         """Generar nuevos tokens para refresh"""
         
         try:
             from core.security import jwt_manager
             
-            # Generar nuevo session ID
-            session_id = str(uuid.uuid4())
+            # Mantener el mismo session ID entre refreshes para cerrar bien el historial.
+            session_id = session_id or str(uuid.uuid4())
             
             # Crear nuevo access token
             access_token = jwt_manager.create_access_token(
@@ -639,7 +862,8 @@ class AuthHelper:
             refresh_token = jwt_manager.create_refresh_token(
                 user_id=user_data["id"],
                 user_secret=user_secret,
-                username=user_data["username"]
+                username=user_data["username"],
+                extra_claims={"session_id": session_id}
             )
             
             # Tiempo de expiración del access token
@@ -842,8 +1066,9 @@ class AuthHelper:
             await self._revoke_old_refresh_token(refresh_token)
             
             # Generar nuevos tokens
+            session_id = payload.get("session_id")
             new_tokens = await self._generate_refresh_tokens(
-                user_data, client_ip, user_agent, user_secret
+                user_data, client_ip, user_agent, user_secret, session_id=session_id
             )
             
             logger.info(f"Token renovado exitosamente para usuario: {user_data['username']}")
@@ -853,6 +1078,8 @@ class AuthHelper:
                 "access_token": new_tokens["access_token"],
                 "refresh_token": new_tokens["refresh_token"],
                 "expires_in": new_tokens["expires_in"],
+                "session_id": new_tokens["session_id"],
+                "user_id": user_data["id"],
                 "username": user_data["username"]
             }
             

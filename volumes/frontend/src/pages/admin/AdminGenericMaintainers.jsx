@@ -15,6 +15,8 @@ import { adminMaintainersService } from '@/services/admin/adminMaintainersServic
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { formatPhone } from '@/utils/phone';
 import { formatRut } from '@/utils/rut';
+import { formatDate, formatDateTime } from '@/utils/formats';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { fieldOptions, filterActions, statusCell, tableFooter } from './businessFoundationShared';
 
 const defaultFieldClass = (field, optionData = {}) => ({
@@ -60,7 +62,7 @@ const getStatus = (item, config, optionData = {}) => {
 
 const displayLabelWithoutCode = (value = '') => String(value).replace(/^[A-Z]+(?:_[A-Z]+)*_\d+\s*-\s*/, '').trim();
 
-const formatValue = (item, field, optionData = {}) => {
+const formatValue = (item, field, optionData = {}, timezone, hourFormat) => {
   const value = item[field.id] ?? (field.fallbackField ? item[field.fallbackField] : undefined);
   if (field.optionsResource) {
     const option = (optionData[field.optionsResource] || []).find((entry) => String(entry.value) === String(value));
@@ -70,6 +72,8 @@ const formatValue = (item, field, optionData = {}) => {
   if (field.options) return field.options.find((option) => String(option.value) === String(value))?.label || value || '-';
   if (field.validation === 'rut' || /(^|_)tax_id$/.test(field.id) || field.id === 'company_rut') return formatRut(value);
   if (field.validation === 'phone' || field.id === 'phone' || field.id === 'mobile') return formatPhone(value);
+  if (field.type === 'date') return formatDate(value, timezone);
+  if (field.type === 'datetime-local' || field.type === 'datetime') return formatDateTime(value, timezone, { hourFormat });
   if (typeof value === 'boolean') return value ? 'Si' : 'No';
   if (value === null || value === undefined || value === '') return '-';
   return String(value);
@@ -223,6 +227,8 @@ const filterItems = (items, config, search, status, optionData = {}) => {
 const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
   const handledDeepLinkRef = useRef('');
   const initialTabId = searchParams.get('tab') || initialTab || tabs[0].id;
   const [activeTab, setActiveTab] = useState(tabs.some((tab) => tab.id === initialTabId) ? initialTabId : tabs[0].id);
@@ -317,7 +323,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       : (field.detailField ? item[field.detailField] : '');
     return (
       <>
-        <div className={field.primary ? 'font-medium' : ''}>{formatValue(item, field, optionData)}</div>
+        <div className={field.primary ? 'font-medium' : ''}>{formatValue(item, field, optionData, timezone, hourFormat)}</div>
         {detailValue && <div className="text-xs text-slate-500">{detailValue}</div>}
         {field.primary && !detailValue && activeConfig.codeField && <div className="font-mono text-xs text-slate-500">{item[activeConfig.codeField]}</div>}
       </>
@@ -493,7 +499,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
   };
 
   const openMedia = (item) => {
-    const title = formatValue(item, activeConfig.tableFields.find((field) => field.primary) || activeConfig.tableFields[0], optionData);
+    const title = formatValue(item, activeConfig.tableFields.find((field) => field.primary) || activeConfig.tableFields[0], optionData, timezone, hourFormat);
     ModalManager.show({
       type: 'custom',
       title: `Media de ${title}`,
@@ -565,7 +571,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
           ...activeConfig.tableFields.map((field) => ({
             id: field.id,
             label: field.label,
-            render: (item) => (field.primary || field.detailField || field.detailResolver ? renderTableValue(item, field) : formatValue(item, field, optionData)),
+            render: (item) => (field.primary || field.detailField || field.detailResolver ? renderTableValue(item, field) : formatValue(item, field, optionData, timezone, hourFormat)),
           })),
           ...(activeConfig.showStatus === false ? [] : [{ id: 'status', label: 'Estado', render: renderStatus }]),
           {

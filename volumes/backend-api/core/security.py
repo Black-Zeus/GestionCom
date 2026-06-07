@@ -162,7 +162,8 @@ class JWTManager:
         user_id: int,
         user_secret: str,
         username: str,
-        jti_access_token: Optional[str] = None
+        jti_access_token: Optional[str] = None,
+        extra_claims: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Crear refresh token JWT
@@ -185,6 +186,9 @@ class JWTManager:
         # Referenciar access token si se proporciona
         if jti_access_token:
             payload["access_jti"] = jti_access_token
+
+        if extra_claims:
+            payload.update(extra_claims)
         
         try:
             jwt_key = self._create_jwt_key(user_secret)

@@ -162,6 +162,7 @@ const AdminMeasurementUnits = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
 
   const stats = useMemo(() => {
     const total = units.length;
@@ -321,7 +322,7 @@ const AdminMeasurementUnits = () => {
     { id: 'factor', label: 'Factor', sortable: true, sortValue: (unit) => unit.conversion_factor, render: (unit) => Number(unit.conversion_factor || 1).toLocaleString('es-CL', { maximumFractionDigits: 6 }) },
     { id: 'decimals', label: 'Decimales', sortable: true, sortValue: (unit) => unit.allow_decimals, render: (unit) => unit.allow_decimals ? 'Si' : 'No' },
     { id: 'status', label: 'Estado', sortable: true, sortValue: (unit) => unit.is_active, render: (unit) => <StatusBadge variant={unit.is_active ? 'active' : 'inactive'}>{unit.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
-    { id: 'updated', label: 'Actualizada', sortable: true, sortValue: (unit) => unit.updated_at || '', render: (unit) => formatDateTime(unit.updated_at, timezone) },
+    { id: 'updated', label: 'Actualizada', sortable: true, sortValue: (unit) => unit.updated_at || '', render: (unit) => formatDateTime(unit.updated_at, timezone, { hourFormat }) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (unit) => <div className="flex justify-end gap-2"><RowActionButton label="Editar unidad" icon={Pencil} disabled={busyUnitId === unit.id} onClick={() => openEditModal(unit)} /><RowActionButton label={unit.is_active ? 'Desactivar unidad' : 'Activar unidad'} icon={unit.is_active ? EyeOff : CheckCircle2} disabled={busyUnitId === unit.id} variant={unit.is_active ? 'danger' : 'neutral'} onClick={() => toggleUnit(unit)} /><RowActionButton label="Eliminar unidad" icon={Trash2} disabled={busyUnitId === unit.id} variant="danger" onClick={() => removeUnit(unit)} /></div> },
   ];
 

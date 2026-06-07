@@ -48,6 +48,12 @@ class ReceiveTransferPayload(BaseModel):
     notes: str | None = None
 
 
+class ReceptionLineDecision(BaseModel):
+    reception_status: str = Field(min_length=1, max_length=20)
+    received_quantity: Decimal = Field(ge=0)
+    reception_notes: str | None = None
+
+
 class PutawayPayload(BaseModel):
     stock_transfer_item_id: int = Field(gt=0)
     warehouse_zone_id: int | None = Field(default=None, gt=0)
@@ -58,6 +64,9 @@ class PutawayPayload(BaseModel):
 
 class NotesPayload(BaseModel):
     notes: str | None = None
+
+
+RECEPTION_STATUSES = {"ACCEPTED", "OBSERVED"}
 
 
 def _json_value(value):
@@ -367,6 +376,37 @@ async def list_transfers(request: Request, user: dict = Depends(require_transfer
         return ResponseManager.internal_server_error(message="Error al listar transferencias", details=str(exc), request=request)
 
 
+@router.get("/available-stock", response_class=JSONResponse)
+async def get_available_stock(
+    request: Request,
+    product_variant_id: int = Query(..., gt=0),
+    warehouse_id: int = Query(..., gt=0),
+    warehouse_zone_id: int | None = Query(None, gt=0),
+    warehouse_zone_location_id: int | None = Query(None, gt=0),
+    user: dict = Depends(require_transfer_read),
+):
+    try:
+        async with db_manager.get_async_session() as session:
+            stock = await _stock_row(session, product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id)
+            current_quantity = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
+            reserved_quantity = Decimal(str(stock["reserved_quantity"])) if stock else Decimal("0")
+            available_quantity = current_quantity - reserved_quantity
+            return ResponseManager.success(
+                data={
+                    "product_variant_id": product_variant_id,
+                    "warehouse_id": warehouse_id,
+                    "warehouse_zone_id": warehouse_zone_id,
+                    "warehouse_zone_location_id": warehouse_zone_location_id,
+                    "current_quantity": _json_value(current_quantity),
+                    "reserved_quantity": _json_value(reserved_quantity),
+                    "available_quantity": _json_value(available_quantity),
+                },
+                request=request,
+            )
+    except Exception as exc:
+        return ResponseManager.internal_server_error(message="Error al consultar stock disponible", details=str(exc), request=request)
+
+
 @router.post("/transfers", response_class=JSONResponse)
 async def create_transfer(data: TransferCreate, request: Request, user: dict = Depends(require_transfer_write)):
     try:
@@ -575,6 +615,55 @@ async def update_transfer_item(data: TransferItemCreate, request: Request, trans
         return ResponseManager.internal_server_error(message="Error al actualizar item", details=str(exc), request=request)
 
 
+@router.put("/transfers/{transfer_id}/items/{item_id}/reception", response_class=JSONResponse)
+async def save_reception_line_decision(data: ReceptionLineDecision, request: Request, transfer_id: int = Path(..., gt=0), item_id: int = Path(..., gt=0), user: dict = Depends(require_transfer_write)):
+    try:
+        async with db_manager.get_async_session() as session:
+            try:
+                transfer = await _get_transfer(session, transfer_id)
+                if not transfer:
+                    return ResponseManager.error(message="Transferencia no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+                if transfer["status"] != "SHIPPED":
+                    raise ValueError("Solo se pueden confirmar lineas de una transferencia despachada")
+                item_result = await session.execute(
+                    text("SELECT id, quantity FROM stock_transfer_items WHERE id = :item_id AND stock_transfer_id = :transfer_id LIMIT 1"),
+                    {"item_id": item_id, "transfer_id": transfer_id},
+                )
+                item = item_result.mappings().first()
+                if not item:
+                    return ResponseManager.error(message="Item de transferencia no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+                reception_status = data.reception_status.upper()
+                if reception_status not in RECEPTION_STATUSES:
+                    raise ValueError("La linea debe estar marcada como aceptada u observada")
+                if data.received_quantity > Decimal(str(item["quantity"])):
+                    raise ValueError("La cantidad recibida no puede superar la cantidad despachada")
+                reception_notes = (data.reception_notes or "").strip() or None
+                if reception_status == "OBSERVED" and not reception_notes:
+                    raise ValueError("Las lineas observadas deben incluir una observacion")
+                await session.execute(
+                    text(
+                        "UPDATE stock_transfer_items "
+                        "SET reception_status = :reception_status, received_quantity = :received_quantity, reception_notes = :reception_notes "
+                        "WHERE id = :item_id"
+                    ),
+                    {
+                        "reception_status": reception_status,
+                        "received_quantity": data.received_quantity,
+                        "reception_notes": reception_notes,
+                        "item_id": item_id,
+                    },
+                )
+                await session.commit()
+                transfer = await _get_transfer(session, transfer_id)
+                transfer["items"] = await _items(session, transfer_id)
+                return ResponseManager.success(data=transfer, message="Linea de recepcion guardada", request=request)
+            except ValueError as exc:
+                await session.rollback()
+                return _validation_response(str(exc), request)
+    except Exception as exc:
+        return ResponseManager.internal_server_error(message="Error al guardar linea de recepcion", details=str(exc), request=request)
+
+
 @router.post("/transfers/{transfer_id}/ship", response_class=JSONResponse)
 async def ship_transfer(request: Request, transfer_id: int = Path(..., gt=0), user: dict = Depends(require_transfer_write)):
     try:
@@ -630,14 +719,34 @@ async def receive_transfer(data: ReceiveTransferPayload, request: Request, trans
                 item_overrides = {int(item.get("id")): item for item in data.items if item.get("id")}
                 user_id = user.get("user_id") or user.get("id")
                 for item in await _items(session, transfer_id):
-                    received_quantity = Decimal(str(item_overrides.get(int(item["id"]), {}).get("received_quantity", item["quantity"])))
+                    override = item_overrides.get(int(item["id"]))
+                    if not override:
+                        raise ValueError("Debes aceptar u observar cada linea antes de recibir la transferencia")
+                    reception_status = str(override.get("reception_status") or "").upper()
+                    if reception_status not in RECEPTION_STATUSES:
+                        raise ValueError("Cada linea debe estar marcada como aceptada u observada")
+                    received_quantity = Decimal(str(override.get("received_quantity", item["quantity"])))
                     if received_quantity < 0:
                         raise ValueError("La cantidad recibida no puede ser negativa")
+                    if received_quantity > Decimal(str(item["quantity"])):
+                        raise ValueError("La cantidad recibida no puede superar la cantidad despachada")
+                    if reception_status == "OBSERVED" and not str(override.get("reception_notes") or "").strip():
+                        raise ValueError("Las lineas observadas deben incluir una observacion")
                     await session.execute(
                         text(
-                            "UPDATE stock_transfer_items SET received_quantity = :received, target_pending_warehouse_zone_id = :zone_id, target_pending_warehouse_zone_location_id = :location_id WHERE id = :id"
+                            "UPDATE stock_transfer_items "
+                            "SET received_quantity = :received, reception_status = :reception_status, reception_notes = :reception_notes, "
+                            "target_pending_warehouse_zone_id = :zone_id, target_pending_warehouse_zone_location_id = :location_id "
+                            "WHERE id = :id"
                         ),
-                        {"received": received_quantity, "zone_id": target_zone_id, "location_id": target_location_id, "id": item["id"]},
+                        {
+                            "received": received_quantity,
+                            "reception_status": reception_status,
+                            "reception_notes": str(override.get("reception_notes") or "").strip() or None,
+                            "zone_id": target_zone_id,
+                            "location_id": target_location_id,
+                            "id": item["id"],
+                        },
                     )
                     if received_quantity > 0:
                         await _apply_stock_delta(

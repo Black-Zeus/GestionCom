@@ -31,7 +31,7 @@ except ValueError as e:
         CONFIG_AVAILABLE = True
 
 # Imports de SQLAlchemy
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker, Session
 from typing import AsyncGenerator, Generator
@@ -99,6 +99,27 @@ class DatabaseManager:
                     "charset": "utf8mb4"
                 }
             )
+
+            def configure_mysql_connection(dbapi_connection):
+                cursor = None
+                try:
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("SET time_zone = '+00:00'")
+                    cursor.execute("SET sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'")
+                    cursor.execute("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci")
+                except Exception as e:
+                    logger.warning(f"Failed to configure MySQL connection: {e}")
+                finally:
+                    if cursor is not None and hasattr(cursor, "close"):
+                        cursor.close()
+
+            @event.listens_for(self._engine, "connect")
+            def set_mysql_mode(dbapi_connection, connection_record):
+                configure_mysql_connection(dbapi_connection)
+
+            @event.listens_for(self._async_engine.sync_engine, "connect")
+            def set_async_mysql_mode(dbapi_connection, connection_record):
+                configure_mysql_connection(dbapi_connection)
             
             # Session factories
             self._session_factory = sessionmaker(

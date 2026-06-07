@@ -159,6 +159,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Stock Transfers"]
     },
     {
+        "name": "stock_movements",
+        "prefix": "/stock-movements",
+        "tags": ["Stock Movements"]
+    },
+    {
         "name": "measurement_units",
         "prefix": "/measurement-units",
         "tags": ["Measurement Units"]

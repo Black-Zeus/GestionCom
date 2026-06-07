@@ -263,6 +263,7 @@ const AdminPettyCash = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
 
   const warehousesById = useMemo(() => new Map(warehouses.map((warehouse) => [Number(warehouse.id), warehouse])), [warehouses]);
   const usersById = useMemo(() => new Map(users.map((user) => [Number(user.id), user])), [users]);
@@ -531,7 +532,7 @@ const AdminPettyCash = () => {
     { id: 'balance', label: 'Saldo', sortable: true, sortValue: (fund) => fund.current_balance, render: (fund) => <><div className="font-medium">{formatCurrency(fund.current_balance)}</div><div className="text-xs text-slate-500">Inicial {formatCurrency(fund.initial_amount)}</div></> },
     { id: 'activity', label: 'Movimientos', sortable: true, sortValue: (fund) => fund.total_expenses, render: (fund) => <><div>Gastos {formatCurrency(fund.total_expenses)}</div><div className="text-xs text-slate-500">Reposiciones {formatCurrency(fund.total_replenishments)}</div></> },
     { id: 'status', label: 'Estado', sortable: true, sortValue: (fund) => fund.fund_status, render: (fund) => <StatusBadge variant={getFundStatusVariant(fund.fund_status)}>{getFundStatusLabel(fund.fund_status)}</StatusBadge> },
-    { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (fund) => fund.updated_at || '', render: (fund) => formatDateTime(fund.updated_at, timezone) },
+    { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (fund) => fund.updated_at || '', render: (fund) => formatDateTime(fund.updated_at, timezone, { hourFormat }) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => <div className="flex justify-end gap-2"><RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}`} onClick={() => openFundModal(fund)} /><RowActionButton label={fund.fund_status === 'ACTIVE' ? 'Suspender fondo' : 'Activar fondo'} icon={fund.fund_status === 'ACTIVE' ? EyeOff : ShieldCheck} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'ACTIVE' ? 'danger' : 'neutral'} onClick={() => changeFundStatus(fund, fund.fund_status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')} /><RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => deleteFund(fund)} /></div> },
   ];
 

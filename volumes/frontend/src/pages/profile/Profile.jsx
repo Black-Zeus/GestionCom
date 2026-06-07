@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Camera, Check, KeyRound, MonitorSmartphone, Palette, RefreshCw, RotateCcw, Save, UserCircle } from 'lucide-react';
+import { Camera, Check, History, KeyRound, MonitorSmartphone, Palette, RefreshCw, RotateCcw, Save, UserCircle } from 'lucide-react';
 import { ActionButton } from '@/components/common/actions/ActionButton';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
@@ -21,6 +21,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [profile, setProfile] = useState(null);
   const [sessions, setSessions] = useState([]);
+  const [accessHistory, setAccessHistory] = useState([]);
   const [form, setForm] = useState({ first_name: '', last_name: '', phone: '' });
   const [password, setPassword] = useState({ current_password: '', new_password: '', confirm_password: '' });
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
@@ -33,25 +34,30 @@ const Profile = () => {
   const setTheme = usePreferencesStore((state) => state.setTheme);
   const timezone = usePreferencesStore((state) => state.timezone);
   const setTimezone = usePreferencesStore((state) => state.setTimezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
+  const setHourFormat = usePreferencesStore((state) => state.setHourFormat);
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
+  const hydratePreferences = usePreferencesStore((state) => state.hydratePreferences);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextProfile, nextSessions] = await Promise.all([profileService.get(), profileService.sessions()]);
+      const [nextProfile, nextSessions, nextAccessHistory] = await Promise.all([profileService.get(), profileService.sessions(), profileService.accessHistory()]);
       setProfile(nextProfile);
       setSessions(nextSessions);
+      setAccessHistory(nextAccessHistory);
       setForm({ first_name: nextProfile.first_name || '', last_name: nextProfile.last_name || '', phone: nextProfile.phone || '' });
       setPendingAvatarFile(null);
+      hydratePreferences(nextProfile.preferences);
       mergeUserProfile(nextProfile);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar el perfil.'));
     } finally {
       setLoading(false);
     }
-  }, [mergeUserProfile]);
+  }, [hydratePreferences, mergeUserProfile]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -72,8 +78,9 @@ const Profile = () => {
     { id: 'profile', label: 'Datos personales', icon: UserCircle },
     { id: 'password', label: 'Cambiar contraseña', icon: KeyRound },
     { id: 'sessions', label: 'Sesiones activas', icon: MonitorSmartphone, count: sessions.length },
+    { id: 'access-history', label: 'Historial de accesos', icon: History, count: accessHistory.length },
     { id: 'preferences', label: 'Personalizacion', icon: Palette },
-  ], [sessions.length]);
+  ], [accessHistory.length, sessions.length]);
 
   const hasProfileChanges = useMemo(() => (
     Boolean(pendingAvatarFile)
@@ -119,7 +126,7 @@ const Profile = () => {
   };
 
   const savePreferences = async () => {
-    await notifyPromise(profileService.updatePreferences({ theme, timezone, table_page_size: tablePageSize }), {
+    await notifyPromise(profileService.updatePreferences({ theme, timezone, hour_format: hourFormat, table_page_size: tablePageSize }), {
       loading: 'Guardando preferencias...',
       success: 'Preferencias guardadas.',
       error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar preferencias.'),
@@ -204,16 +211,70 @@ const Profile = () => {
           columns={[
             { id: 'device', label: 'Dispositivo', render: (item) => <><div className="font-medium">{item.device}</div><div className="text-xs text-slate-500">{item.ip_address}</div></> },
             { id: 'state', label: 'Estado', render: (item) => <StatusBadge variant="active">{item.is_current ? 'Actual' : item.status}</StatusBadge> },
-            { id: 'date', label: 'Ultima actividad', render: (item) => formatDateTime(item.last_seen_at, timezone) },
+            { id: 'date', label: 'Ultima actividad', render: (item) => formatDateTime(item.last_seen_at, timezone, { hourFormat }) },
+          ]}
+        />
+      )}
+
+      {activeTab === 'access-history' && (
+        <DataTable
+          data={accessHistory}
+          loading={loading}
+          emptyMessage="No hay accesos registrados para mostrar."
+          columns={[
+            {
+              id: 'session',
+              label: 'Sesion',
+              render: (item) => (
+                <>
+                  <div className="font-medium">{item.is_active ? 'Activa' : 'Finalizada'}</div>
+                  <div className="text-xs text-slate-500">{item.session_id ? String(item.session_id).slice(0, 8) : '-'}</div>
+                </>
+              ),
+            },
+            { id: 'login', label: 'Login', render: (item) => formatDateTime(item.login_at, timezone, { hourFormat }) },
+            { id: 'logout', label: 'Logout', render: (item) => (item.logout_at ? formatDateTime(item.logout_at, timezone, { hourFormat }) : '-') },
+            { id: 'last_seen', label: 'Ultima actividad', render: (item) => formatDateTime(item.last_seen_at || item.login_at, timezone, { hourFormat }) },
+            {
+              id: 'client',
+              label: 'Cliente',
+              render: (item) => (
+                <>
+                  <div className="font-medium">{[item.browser_name, item.browser_version].filter(Boolean).join(' ') || '-'}</div>
+                  <div className="text-xs text-slate-500">{[item.os_name, item.device_type].filter(Boolean).join(' / ') || '-'}</div>
+                </>
+              ),
+            },
+            {
+              id: 'network',
+              label: 'Red',
+              render: (item) => (
+                <>
+                  <div className="font-medium">{item.ip_address || '-'}</div>
+                  <div className="text-xs text-slate-500">{item.client_timezone || '-'}</div>
+                </>
+              ),
+            },
+            {
+              id: 'browser',
+              label: 'Navegador',
+              render: (item) => (
+                <>
+                  <div className="font-medium">{item.client_language || '-'}</div>
+                  <div className="text-xs text-slate-500">{[item.client_platform, item.client_vendor].filter(Boolean).join(' / ') || '-'}</div>
+                </>
+              ),
+            },
           ]}
         />
       )}
 
       {activeTab === 'preferences' && (
         <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <label className="space-y-1 text-sm"><span className="font-medium">Tema</span><select className={fieldClassName} value={theme} onChange={(event) => setTheme(event.target.value)}><option value="light">Claro</option><option value="dark">Oscuro</option></select></label>
             <label className="space-y-1 text-sm"><span className="font-medium">Zona horaria</span><input className={fieldClassName} value={timezone} onChange={(event) => setTimezone(event.target.value)} /></label>
+            <label className="space-y-1 text-sm"><span className="font-medium">Formato horario</span><select className={fieldClassName} value={hourFormat} onChange={(event) => setHourFormat(event.target.value)}><option value="24h">24 horas</option><option value="12h">AM/PM</option></select></label>
             <label className="space-y-1 text-sm"><span className="font-medium">Filas por pagina</span><select className={fieldClassName} value={tablePageSize} onChange={(event) => setTablePageSize(Number(event.target.value))}>{PAGE_SIZE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
           </div>
           <div className="mt-4 flex justify-end"><ActionButton label="Guardar preferencias" icon={Check} onClick={savePreferences} /></div>

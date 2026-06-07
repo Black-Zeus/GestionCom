@@ -25,6 +25,7 @@ import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useMenuStore } from '@/store/useMenuStore';
 import { useNavigationHistoryStore } from '@/store/useNavigationHistoryStore';
+import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { appConfig } from '@/config/appConfig';
 import ProductInfoModalContent from '@/components/product/ProductInfoModalContent';
@@ -34,16 +35,18 @@ import { adminMaintainersService } from '@/services/admin/adminMaintainersServic
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { notificationService } from '@/services/notifications/notificationService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
+import { formatDateTime } from '@/utils/dateTime';
 
-const formatNotificationTime = (value) => {
+const formatNotificationTime = (value, timezone, hourFormat) => {
   if (!value) return '';
   try {
-    return new Intl.DateTimeFormat('es-CL', {
+    return formatDateTime(value, timezone, {
+      hourFormat,
       day: '2-digit',
       month: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(value));
+    });
   } catch {
     return '';
   }
@@ -152,6 +155,15 @@ const detailNavigationRoutes = [
     fallbackLabel: 'Proveedor',
     getLabel: (record) => `Productos - ${record?.commercial_name || record?.legal_name || record?.supplier_code}`,
     getTooltip: (record) => `Productos de proveedor: ${record?.legal_name || record?.supplier_code || 'registro'}`,
+  },
+  {
+    id: 'stock-transfer-detail',
+    pattern: /^\/stock\/transfers\/([^/?#]+)/,
+    basePath: '/stock/transfers',
+    group: 'Transferencias de stock',
+    fallbackLabel: 'Transferencia',
+    getLabelFromCode: (code) => `Transferencia ${code}`,
+    getTooltipFromCode: (code) => `Detalle de transferencia: ${code}`,
   },
 ];
 
@@ -332,7 +344,7 @@ const notificationSeverityClasses = {
   ERROR: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200',
 };
 
-const NotificationPreviewDetail = ({ notification, onClose }) => (
+const NotificationPreviewDetail = ({ notification, timezone, hourFormat, onClose }) => (
   <div className="space-y-5">
     <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -346,7 +358,7 @@ const NotificationPreviewDetail = ({ notification, onClose }) => (
               <span>{notification.type_name || notification.type_code}</span>
               <span className="inline-flex items-center gap-1">
                 <LucideIcons.Clock3 className="h-3.5 w-3.5" />
-                {formatNotificationTime(notification.delivered_at)}
+                {formatNotificationTime(notification.delivered_at, timezone, hourFormat)}
               </span>
             </div>
           </div>
@@ -459,6 +471,8 @@ const AppLayout = () => {
   const cashRegisters = useSessionStore((state) => state.cashRegisters);
   const activeLocation = useSessionStore((state) => state.activeLocation);
   const activeCashRegister = useSessionStore((state) => state.activeCashRegister);
+  const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
   const setActiveLocation = useSessionStore((state) => state.setActiveLocation);
   const setActiveCashRegister = useSessionStore((state) => state.setActiveCashRegister);
   const initializeFromUser = useSessionStore((state) => state.initializeFromUser);
@@ -519,7 +533,7 @@ const AppLayout = () => {
   );
   const displayUserSubtitle = displayUser.email || 'Sin correo';
   const displayUserAvatar = displayUser.avatar?.thumb_url || displayUser.avatar_thumb_url;
-  const displayTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Zona horaria local';
+  const displayTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Zona horaria local';
   const displayUserProfile = (
     displayUser.profile
     || displayUser.role_name
@@ -596,6 +610,21 @@ const AppLayout = () => {
       || navigablePages.find((module) => module.path === config.parentPath);
 
     setDetailNavigationModule(null);
+
+    if (!config.resource) {
+      const label = config.getLabelFromCode?.(code) || code || config.fallbackLabel;
+      setDetailNavigationModule({
+        ...(parentModule || {}),
+        id: config.id,
+        label,
+        path: location.pathname,
+        group: parentModule?.group || config.group,
+        groupId: parentModule?.groupId,
+        description: config.group,
+        tooltip: config.getTooltipFromCode?.(code) || config.group,
+      });
+      return undefined;
+    }
 
     adminMaintainersService.list(config.resource)
       .then((rows) => {
@@ -738,6 +767,8 @@ const AppLayout = () => {
           contentComponent: NotificationPreviewDetail,
           contentProps: {
             notification: detail,
+            timezone,
+            hourFormat,
             onClose: () => ModalManager.close(modalId),
           },
         });
@@ -1197,7 +1228,7 @@ const AppLayout = () => {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{notification.title}</span>
                         <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">{notification.message}</span>
-                        <span className="mt-2 block text-[11px] font-medium uppercase text-slate-400">{formatNotificationTime(notification.delivered_at)}</span>
+                        <span className="mt-2 block text-[11px] font-medium uppercase text-slate-400">{formatNotificationTime(notification.delivered_at, timezone, hourFormat)}</span>
                       </span>
                     </button>
                   ))}

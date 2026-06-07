@@ -25,6 +25,10 @@ export const profileService = {
     const data = unwrap(await apiClient.get('/profile/sessions'));
     return Array.isArray(data) ? data : [];
   },
+  async accessHistory() {
+    const data = unwrap(await apiClient.get('/profile/access-history'));
+    return Array.isArray(data) ? data : [];
+  },
   uploadAvatar(file) {
     return upload('/profile/avatar', file);
   },

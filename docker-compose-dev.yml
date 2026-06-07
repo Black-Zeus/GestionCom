@@ -415,12 +415,13 @@ services:
       - ./scripts/mariadb/entrypoint:/docker-entrypoint-initdb.d:ro
       - ./Shared/mariadb:/shared
     environment:
-      <<: *timezone-env
+      TZ: UTC
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
       MYSQL_INITDB_SKIP_TZINFO: 1
+    command: ["mysqld", "--default-time-zone=+00:00"]
     secrets:
       - mysql_root_password
       - mysql_password

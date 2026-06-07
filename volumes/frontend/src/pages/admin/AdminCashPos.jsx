@@ -201,6 +201,7 @@ const AdminCashPos = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
 
   const warehousesById = useMemo(() => {
     const map = new Map();
@@ -544,7 +545,7 @@ const AdminCashPos = () => {
       label: 'Actualizada',
       sortable: true,
       sortValue: (cashRegister) => cashRegister.updated_at || '',
-      render: (cashRegister) => formatDateTime(cashRegister.updated_at, timezone),
+      render: (cashRegister) => formatDateTime(cashRegister.updated_at, timezone, { hourFormat }),
     },
     {
       id: 'actions',

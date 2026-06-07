@@ -178,7 +178,7 @@ async def get_profile(request: Request, user: dict = Depends(require_profile)):
                 """
                 SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.phone,
                        u.last_login_at, u.last_login_ip, u.password_changed_at,
-                       u.avatar_media_asset_id, up.theme, up.timezone, up.table_page_size
+                       u.avatar_media_asset_id, up.theme, up.timezone, up.hour_format, up.table_page_size
                 FROM users u
                 LEFT JOIN user_preferences up ON up.user_id = u.id
                 WHERE u.id = :user_id AND u.deleted_at IS NULL
@@ -195,6 +195,7 @@ async def get_profile(request: Request, user: dict = Depends(require_profile)):
         profile["preferences"] = {
             "theme": profile.pop("theme", None),
             "timezone": profile.pop("timezone", None),
+            "hour_format": profile.pop("hour_format", None),
             "table_page_size": profile.pop("table_page_size", None),
         }
         return ResponseManager.success(data=profile, request=request)
@@ -223,19 +224,24 @@ async def update_profile(payload: dict, request: Request, user: dict = Depends(r
 
 @router.put("/preferences", response_class=JSONResponse)
 async def update_preferences(payload: dict, request: Request, user: dict = Depends(require_profile)):
+    hour_format = str(payload.get("hour_format") or "24h").strip().lower()
+    if hour_format not in {"24h", "12h"}:
+        return ResponseManager.error(message="Formato horario no valido", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
     data = {
         "user_id": _user_id(user),
         "theme": payload.get("theme"),
         "timezone": payload.get("timezone"),
+        "hour_format": hour_format,
         "table_page_size": int(payload["table_page_size"]) if payload.get("table_page_size") else None,
     }
     async with db_manager.get_async_session() as session:
         await session.execute(
             text(
                 """
-                INSERT INTO user_preferences (user_id, theme, timezone, table_page_size)
-                VALUES (:user_id, :theme, :timezone, :table_page_size)
-                ON DUPLICATE KEY UPDATE theme = VALUES(theme), timezone = VALUES(timezone), table_page_size = VALUES(table_page_size)
+                INSERT INTO user_preferences (user_id, theme, timezone, hour_format, table_page_size)
+                VALUES (:user_id, :theme, :timezone, :hour_format, :table_page_size)
+                ON DUPLICATE KEY UPDATE theme = VALUES(theme), timezone = VALUES(timezone), hour_format = VALUES(hour_format), table_page_size = VALUES(table_page_size)
                 """
             ),
             data,
@@ -255,6 +261,44 @@ async def list_sessions(request: Request, user: dict = Depends(require_profile))
         "is_current": True,
     }]
     return ResponseManager.success(data=data, request=request)
+
+
+@router.get("/access-history", response_class=JSONResponse)
+async def list_access_history(request: Request, user: dict = Depends(require_profile)):
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            text(
+                """
+                SELECT
+                  id,
+                  session_id,
+                  login_at,
+                  logout_at,
+                  last_seen_at,
+                  login_method,
+                  logout_method,
+                  ip_address,
+                  user_agent,
+                  browser_name,
+                  browser_version,
+                  os_name,
+                  device_type,
+                  client_timezone,
+                  client_language,
+                  client_platform,
+                  client_vendor,
+                  hardware_concurrency,
+                  is_active
+                FROM user_session_history
+                WHERE user_id = :user_id
+                ORDER BY login_at DESC, id DESC
+                LIMIT 100
+                """
+            ),
+            {"user_id": _user_id(user)},
+        )
+        rows = [_row(row) for row in result.mappings().all()]
+        return ResponseManager.success(data=rows, request=request)
 
 
 @router.post("/avatar", response_class=JSONResponse)

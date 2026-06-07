@@ -753,6 +753,7 @@ const AdminUsers = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
   const [loading, setLoading] = useState(false);
   const [busyUserId, setBusyUserId] = useState(null);
   const [error, setError] = useState('');
@@ -1150,7 +1151,7 @@ const AdminUsers = () => {
       sortable: true,
       cellClassName: 'text-slate-600 dark:text-slate-300',
       sortValue: (user) => user.last_login_at || '',
-      render: (user) => formatDateTime(user.last_login_at, timezone),
+      render: (user) => formatDateTime(user.last_login_at, timezone, { hourFormat }),
     },
     {
       id: 'actions',

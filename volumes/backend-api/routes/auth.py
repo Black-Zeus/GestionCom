@@ -266,11 +266,19 @@ async def refresh_token(request: Request):
         )
         
         if refresh_result["success"]:
+            await auth_helper.touch_session_history(
+                refresh_result.get("user_id"),
+                refresh_result.get("session_id"),
+                client_ip,
+                user_agent,
+                request,
+            )
             response_data = {
                 "access_token": refresh_result["access_token"],
                 "refresh_token": refresh_result["refresh_token"], 
                 "token_type": "bearer",
                 "expires_in": settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "session_id": refresh_result.get("session_id"),
                 "refreshed_at": datetime.now(timezone.utc).isoformat()
             }
             
@@ -346,8 +354,10 @@ async def sync_session(
             user_data=user_data,
             client_ip=client_ip,
             user_agent=user_agent,
-            user_secret=user_secret
+            user_secret=user_secret,
+            session_id=current_user.get("session_id")
         )
+        await auth_helper.touch_session_history(user_id, tokens.get("session_id"), client_ip, user_agent, request)
 
         user_info = {
             "id": user_data["id"],
@@ -403,9 +413,16 @@ async def logout(request: Request):
 
     try:
         client_ip = get_client_ip(request)
+        validation_result = await auth_helper.validate_token(access_token)
+        payload = validation_result.get("payload") if validation_result.get("valid") else {}
         logout_result = await auth_helper.logout_user(access_token, client_ip)
         
         if logout_result["success"]:
+            await auth_helper.record_session_logout(
+                logout_result.get("user_id") or payload.get("user_id"),
+                payload.get("session_id"),
+                client_ip,
+            )
             response_data = {
                 "logged_out": True,
                 "logout_at": datetime.now(timezone.utc).isoformat(),

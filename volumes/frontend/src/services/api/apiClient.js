@@ -88,6 +88,24 @@ const refreshSession = async () => {
   return accessToken;
 };
 
+const getClientContextHeaders = () => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return {};
+  const headers = {};
+
+  try {
+    headers['X-Client-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  } catch {
+    headers['X-Client-Timezone'] = '';
+  }
+
+  if (navigator.language) headers['X-Client-Language'] = navigator.language;
+  if (navigator.platform) headers['X-Client-Platform'] = navigator.platform;
+  if (navigator.vendor) headers['X-Client-Vendor'] = navigator.vendor;
+  if (navigator.hardwareConcurrency) headers['X-Client-Hardware-Concurrency'] = String(navigator.hardwareConcurrency);
+
+  return Object.fromEntries(Object.entries(headers).filter(([, value]) => value));
+};
+
 apiClient.interceptors.request.use(async (config) => {
   let accessToken = tokenStorage.getAccessToken();
 
@@ -101,6 +119,10 @@ apiClient.interceptors.request.use(async (config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
+
+  Object.entries(getClientContextHeaders()).forEach(([key, value]) => {
+    config.headers[key] = value;
+  });
 
   return config;
 });

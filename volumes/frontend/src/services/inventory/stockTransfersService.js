@@ -19,11 +19,17 @@ export const stockTransfersService = {
   async getTransfer(id) {
     return unwrap(await apiClient.get(`/stock-transfers/transfers/${id}`));
   },
+  async getAvailableStock(params) {
+    return unwrap(await apiClient.get('/stock-transfers/available-stock', { params }));
+  },
   async addItem(id, payload) {
     return unwrap(await apiClient.post(`/stock-transfers/transfers/${id}/items`, payload));
   },
   async updateItem(id, itemId, payload) {
     return unwrap(await apiClient.put(`/stock-transfers/transfers/${id}/items/${itemId}`, payload));
+  },
+  async saveReceptionLine(id, itemId, payload) {
+    return unwrap(await apiClient.put(`/stock-transfers/transfers/${id}/items/${itemId}/reception`, payload));
   },
   async removeItem(id, itemId) {
     return unwrap(await apiClient.delete(`/stock-transfers/transfers/${id}/items/${itemId}`));

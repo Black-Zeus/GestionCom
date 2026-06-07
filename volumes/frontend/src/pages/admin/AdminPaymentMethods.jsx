@@ -168,6 +168,7 @@ const AdminPaymentMethods = () => {
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
   const timezone = usePreferencesStore((state) => state.timezone);
+  const hourFormat = usePreferencesStore((state) => state.hourFormat);
 
   const stats = useMemo(() => {
     const total = methods.length;
@@ -352,7 +353,7 @@ const AdminPaymentMethods = () => {
       },
     },
     { id: 'status', label: 'Estado', sortable: true, sortValue: (method) => method.is_active, render: (method) => <StatusBadge variant={method.is_active ? 'active' : 'inactive'}>{method.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
-    { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (method) => method.updated_at || '', render: (method) => formatDateTime(method.updated_at, timezone) },
+    { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (method) => method.updated_at || '', render: (method) => formatDateTime(method.updated_at, timezone, { hourFormat }) },
     { id: 'actions', label: 'Acciones', align: 'right', render: (method) => <div className="flex justify-end gap-2"><RowActionButton label="Editar metodo" icon={Pencil} disabled={busyMethodId === method.id} onClick={() => openEditModal(method)} /><RowActionButton label={method.is_active ? 'Desactivar metodo' : 'Activar metodo'} icon={method.is_active ? EyeOff : CheckCircle2} disabled={busyMethodId === method.id} variant={method.is_active ? 'danger' : 'neutral'} onClick={() => toggleMethod(method)} /><RowActionButton label="Eliminar metodo" icon={Trash2} disabled={busyMethodId === method.id} variant="danger" onClick={() => removeMethod(method)} /></div> },
   ];
 
