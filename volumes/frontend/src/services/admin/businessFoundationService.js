@@ -21,13 +21,29 @@ const crud = (basePath) => ({
 export const businessFoundationService = {
   taxes: crud('/business-foundation/tax-rates'),
   priceGroups: crud('/business-foundation/price-list-groups'),
+  priceCategories: {
+    async list(params = {}) {
+      return list(unwrap(await apiClient.get('/business-foundation/price-list-categories', { params })));
+    },
+  },
   priceLists: crud('/business-foundation/price-lists'),
-  priceItems: crud('/business-foundation/price-list-items'),
+  priceItems: {
+    ...crud('/business-foundation/price-list-items'),
+    async resolve(params = {}) {
+      return unwrap(await apiClient.get('/business-foundation/pricing/resolve', { params }));
+    },
+  },
   products: crud('/business-foundation/products'),
   variants: {
     ...crud('/business-foundation/product-variants'),
     async listSkuAttributes() {
       return list(unwrap(await apiClient.get('/business-foundation/product-variants/sku-attributes')));
+    },
+    async units(variantId) {
+      return list(unwrap(await apiClient.get(`/business-foundation/product-variants/${variantId}/units`)));
+    },
+    async pricingReference(variantId, params = {}) {
+      return unwrap(await apiClient.get(`/business-foundation/product-variants/${variantId}/pricing-reference`, { params }));
     },
     async generate(payload) {
       return unwrap(await apiClient.post('/business-foundation/product-variants/generate', payload));
