@@ -147,14 +147,14 @@ const SimpleFormContent = ({
 
     return (
       <div key={field.id} className={`space-y-1.5 text-sm ${fieldSpanClass(field, columns)}`}>
-        {field.hideLabel ? (
+        {field.collapseLabel ? null : field.hideLabel ? (
           <span aria-hidden="true" className="block invisible font-medium">Campo</span>
         ) : (
           <span className="font-medium text-slate-800 dark:text-slate-100">{field.label}</span>
         )}
         {field.type === 'select' ? (
           <select className={`${fieldClassName} ${inputStateClass} bg-white dark:bg-slate-950`} value={form[field.id] ?? ''} onChange={(event) => setField(field.id, event.target.value)} required={field.required} disabled={field.disabled}>
-            <option value="">{field.required ? 'Seleccione una opcion' : 'Sin seleccion'}</option>
+            <option value="">{field.emptyLabel || (field.required ? 'Seleccione una opcion' : 'Sin seleccion')}</option>
             {field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         ) : field.type === 'autocomplete' ? (
@@ -200,8 +200,10 @@ const SimpleFormContent = ({
         ) : (
           <div className="relative">
             {LeadingIcon && <LeadingIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />}
+            {field.prefix && !LeadingIcon && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">{field.prefix}</span>}
+            {field.suffix && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">{field.suffix}</span>}
             <input
-              className={`${fieldClassName} ${inputStateClass} ${LeadingIcon ? 'pl-10' : ''} ${field.mono ? 'font-mono' : ''}`}
+              className={`${fieldClassName} ${inputStateClass} ${LeadingIcon || field.prefix ? 'pl-10' : ''} ${field.suffix ? 'pr-9' : ''} ${field.mono ? 'font-mono' : ''}`}
               type={field.type || 'text'}
               value={form[field.id] ?? ''}
               onChange={(event) => setField(field.id, event.target.value)}
