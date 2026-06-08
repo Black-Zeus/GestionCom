@@ -91,6 +91,35 @@ INSERT INTO attribute_values (attribute_id, value_code, value_name, sort_order, 
 SELECT @demo_attr_temp, 'DEMO_VERANO', 'Verano', 10, TRUE
 WHERE NOT EXISTS (SELECT 1 FROM attribute_values WHERE attribute_id = @demo_attr_temp AND value_code = 'DEMO_VERANO');
 
+SET @demo_unit_un := (SELECT id FROM measurement_units WHERE unit_code = 'DEMO_UN');
+SET @demo_cat_ropa := (SELECT id FROM categories WHERE category_code = 'DEMO_CAT_ROPA');
+SET @demo_cat_acc := (SELECT id FROM categories WHERE category_code = 'DEMO_CAT_ACC');
+
+INSERT IGNORE INTO products (
+  category_id, product_code, product_name, product_description, brand, model,
+  base_measurement_unit_id, has_variants, is_active
+) VALUES
+(@demo_cat_ropa, 'DEMO_PROD_POLERA', 'Polera demo', 'Producto demo para vestuario.', 'Ceci Chic Demo', 'Polera basica', @demo_unit_un, TRUE, TRUE),
+(@demo_cat_ropa, 'DEMO_PROD_BLAZER', 'Blazer demo', 'Producto demo para vestuario formal.', 'Ceci Chic Demo', 'Blazer urbano', @demo_unit_un, TRUE, TRUE),
+(@demo_cat_acc, 'DEMO_PROD_CARTERA', 'Cartera demo', 'Producto demo para accesorios.', 'Ceci Chic Demo', 'Cartera urbana', @demo_unit_un, TRUE, TRUE);
+
+SET @demo_prod_polera := (SELECT id FROM products WHERE product_code = 'DEMO_PROD_POLERA');
+SET @demo_prod_blazer := (SELECT id FROM products WHERE product_code = 'DEMO_PROD_BLAZER');
+SET @demo_prod_cartera := (SELECT id FROM products WHERE product_code = 'DEMO_PROD_CARTERA');
+
+INSERT IGNORE INTO product_variants (
+  product_id, variant_sku, variant_name, variant_description, is_default_variant, is_active
+) VALUES
+(@demo_prod_polera, 'DEMO_SKU_POL_NEG_S', 'Polera negra S demo', 'Variante demo color negro talla S.', TRUE, TRUE),
+(@demo_prod_polera, 'DEMO_SKU_POL_BEI_M', 'Polera beige M demo', 'Variante demo color beige talla M.', FALSE, TRUE),
+(@demo_prod_blazer, 'DEMO_SKU_BLAZER_NEG_M', 'Blazer negro M demo', 'Variante demo color negro talla M.', TRUE, TRUE),
+(@demo_prod_cartera, 'DEMO_SKU_CARTERA_URB', 'Cartera urbana demo', 'Variante demo de accesorio.', TRUE, TRUE);
+
+SET @demo_sku_pol_neg := (SELECT id FROM product_variants WHERE variant_sku = 'DEMO_SKU_POL_NEG_S');
+SET @demo_sku_pol_bei := (SELECT id FROM product_variants WHERE variant_sku = 'DEMO_SKU_POL_BEI_M');
+SET @demo_sku_blazer := (SELECT id FROM product_variants WHERE variant_sku = 'DEMO_SKU_BLAZER_NEG_M');
+SET @demo_sku_cartera := (SELECT id FROM product_variants WHERE variant_sku = 'DEMO_SKU_CARTERA_URB');
+
 -- Bodegas / zonas / cajas / caja chica
 INSERT IGNORE INTO warehouses (
   warehouse_code, warehouse_name, warehouse_type, responsible_user_id, address, city, country, phone, email, is_active

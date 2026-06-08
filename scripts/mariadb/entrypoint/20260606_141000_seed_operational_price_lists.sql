@@ -9,6 +9,9 @@ SET @internal_category_code := 'PLC_INTERNAL';
 SET @retail_list_code := 'PRL_RETAIL';
 SET @wholesale_list_code := 'PRL_WHOLESALE';
 
+ALTER TABLE price_list_items
+  ADD COLUMN IF NOT EXISTS product_id BIGINT UNSIGNED NULL AFTER price_list_id;
+
 UPDATE customers SET price_list_id = NULL WHERE price_list_id IS NOT NULL;
 
 DELETE FROM price_list_items;
