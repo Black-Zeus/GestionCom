@@ -20,6 +20,8 @@ Thumbs.db
 node_modules/
 dist/
 build/
+.vite/
+**/.vite/
 target/
 bin/
 obj/
