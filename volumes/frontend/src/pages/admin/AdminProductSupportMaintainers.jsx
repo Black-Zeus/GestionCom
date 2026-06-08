@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
@@ -240,16 +241,14 @@ const AdminProductSupportMaintainers = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">{activeLevel === 'models' ? `Modelos - ${selectedBrand?.brand_name || 'marca'}` : 'Marcas y modelos de productos'}</h1>
-          <p className="mt-1 text-sm text-slate-500">{activeLevel === 'models' ? 'Modelos disponibles para la marca seleccionada.' : 'Catalogo de marcas reutilizables en productos.'}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {activeLevel === 'models' && <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={goBack} />}
-          <ActionButton label={activeLevel === 'models' ? 'Nuevo modelo' : 'Nueva marca'} icon={activeLevel === 'models' ? ListTree : Tags} disabled={activeLevel === 'models' && !selectedBrand} onClick={() => (activeLevel === 'models' ? openModelModal() : openBrandModal())} />
-        </div>
-      </div>
+      <ModuleHeader
+        title={activeLevel === 'models' ? `Modelos - ${selectedBrand?.brand_name || 'marca'}` : 'Marcas y modelos de productos'}
+        description={activeLevel === 'models' ? 'Modelos disponibles para la marca seleccionada.' : 'Catalogo de marcas reutilizables en productos.'}
+        actions={[
+          activeLevel === 'models' && { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: goBack },
+          { id: 'primary', label: activeLevel === 'models' ? 'Nuevo modelo' : 'Nueva marca', icon: activeLevel === 'models' ? ListTree : Tags, disabled: activeLevel === 'models' && !selectedBrand, onClick: () => (activeLevel === 'models' ? openModelModal() : openBrandModal()) },
+        ]}
+      />
 
       <KpiBar
         className="mb-4"

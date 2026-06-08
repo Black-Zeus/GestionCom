@@ -9,6 +9,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import KpiBar from '@/components/common/data/KpiBar';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { productConfigService } from '@/services/admin/productConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -280,13 +281,14 @@ const AdminProductAttributes = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div>
-        <div className="flex flex-wrap gap-2">
-          {activeLevel !== 'groups' && <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={goBack} />}
-          <ActionButton label={actionConfig.label} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
-        </div>
-      </div>
+      <ModuleHeader
+        title={title}
+        description={description}
+        actions={[
+          activeLevel !== 'groups' && { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: goBack },
+          { id: 'primary', label: actionConfig.label, disabled: actionConfig.disabled, onClick: actionConfig.onClick },
+        ]}
+      />
       <KpiBar items={[{ label: 'Grupos', value: groups.length }, { label: 'Atributos', value: attributes.length }, { label: 'Valores', value: values.length }, { label: 'Afectan SKU', value: attributes.filter((item) => item.affects_sku).length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar

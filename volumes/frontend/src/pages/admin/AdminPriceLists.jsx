@@ -3,10 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, BadgeDollarSign, CalendarDays, CheckCircle2, EyeOff, ListChecks, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
@@ -668,13 +669,14 @@ const AdminPriceLists = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div>
-        <div className="flex flex-wrap gap-2">
-          {isScopedPriceView && <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={closePriceView} />}
-          <ActionButton label={actionConfig.label} icon={Plus} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
-        </div>
-      </div>
+      <ModuleHeader
+        title={title}
+        description={description}
+        actions={[
+          isScopedPriceView && { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: closePriceView },
+          { id: 'primary', label: actionConfig.label, icon: Plus, disabled: actionConfig.disabled, onClick: actionConfig.onClick },
+        ]}
+      />
       <KpiBar items={[{ label: 'Categorias', value: categories.filter((item) => item.is_active).length }, { label: 'Listas', value: lists.length }, { label: 'Activas', value: lists.filter((item) => item.is_active).length }, { label: 'Precios', value: items.length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder={searchPlaceholder} onSearchChange={setSearch} fields={filterFields} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); setCategoryFilter('all'); } })} />

@@ -3,11 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Image, Pencil, Plus, Power, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import StatusBadge from '@/components/common/data/StatusBadge';
@@ -550,15 +551,14 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">{pageTitle}</h1><p className="mt-1 text-sm text-slate-500">{pageDescription}</p></div>
-        <div className="flex flex-wrap items-center gap-2">
-          {scopedLabel && (
-            <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={() => navigate(resolveBackPath())} />
-          )}
-          <ActionButton label={`Nuevo ${activeConfig.singular}`} icon={Plus} disabled={activeConfig.disabled} onClick={() => openForm()} />
-        </div>
-      </div>
+      <ModuleHeader
+        title={pageTitle}
+        description={pageDescription}
+        actions={[
+          scopedLabel && { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(resolveBackPath()) },
+          { id: 'primary', label: `Nuevo ${activeConfig.singular}`, icon: Plus, disabled: activeConfig.disabled, onClick: () => openForm() },
+        ]}
+      />
       <KpiBar items={kpis} className="mb-4" />
       {tabs.length > 1 && <ModuleTabs className="mb-4" activeTab={activeTab} onChange={setActiveTab} tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label, icon: tab.icon, count: (data[tab.id] || []).length }))} />}
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

@@ -10,10 +10,13 @@ Los iconos deben respetar la guia de [iconografia UI](frontend-iconografia-ui.md
 
 Si una pagina contiene mas de un mantenedor interno, debe usar `ModuleTabs` para separar las vistas. No crear selectores de pestanas locales.
 
+Todas las paginas de modulo, submodulo o navegacion interna deben usar `ModuleHeader` para la cabecera. No duplicar manualmente la estructura de titulo, descripcion y acciones.
+
 Todas las tablas de datos deben usar `DataTable` con `DataTablePagination` en el `footer`, salvo que se solicite expresamente que esa tabla no lleve paginador.
 
 ## Componentes vigentes
 
+- `ModuleHeader`: cabecera obligatoria para modulos, submodulos y vistas internas. Renderiza titulo, descripcion y acciones de cabecera con `ActionButton`.
 - `ModuleTabs`: pestanas para paginas con dos o mas mantenedores internos. Soporta icono, contador y estado deshabilitado.
 - `DataTable`: tabla comun para listados de mantenedores. Usar columnas configurables con `sortable`, `sortValue`, `render`, `align` y `cellClassName`.
 - `DataTablePagination`: paginacion comun para tablas con colecciones medianas o grandes.
@@ -31,7 +34,7 @@ Todas las tablas de datos deben usar `DataTable` con `DataTablePagination` en el
 ## Patrones por tipo de pantalla
 
 Mantenedor simple:
-- Encabezado con titulo y `ActionButton`.
+- Encabezado con `ModuleHeader`.
 - `KpiBar` si aporta lectura operacional.
 - `FilterBar` para busqueda/filtros.
 - `DataTable` para listado.
@@ -39,16 +42,31 @@ Mantenedor simple:
 - `ModalManager` para alta/edicion si el formulario es acotado. Si se reutiliza un formulario generico, usar `SimpleFormContent` como `contentComponent`.
 
 Mantenedor compuesto:
-- Encabezado con accion contextual segun pestana activa.
+- Encabezado con `ModuleHeader` y accion contextual segun pestana activa.
 - `ModuleTabs` inmediatamente bajo el bloque superior.
 - Cada pestana debe reutilizar `DataTable`, `FilterBar`, `KpiBar` o formularios comunes segun aplique.
 
 Pantallas de permisos/asignaciones:
+- Usar `ModuleHeader` para titulo, descripcion, volver, refrescar o guardar cuando corresponda.
 - Usar `BottomActionBar` para guardar cambios acumulados.
 - Usar componentes especificos ya existentes, como `PermissionMatrix`, antes de crear variantes.
 
+Ejemplo:
+
+```jsx
+<ModuleHeader
+  title="Permisos de perfil - Administrador"
+  description="Permisos asignados al perfil seleccionado."
+  actions={[
+    { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: goBack },
+    { id: 'save', label: 'Guardar permisos', icon: Save, disabled: !hasChanges, onClick: savePermissions },
+  ]}
+/>
+```
+
 ## Ubicaciones
 
+- `volumes/frontend/src/components/common/navigation/ModuleHeader.jsx`
 - `volumes/frontend/src/components/common/navigation/ModuleTabs.jsx`
 - `volumes/frontend/src/components/common/data/DataTable.jsx`
 - `volumes/frontend/src/components/common/data/DataTablePagination.jsx`

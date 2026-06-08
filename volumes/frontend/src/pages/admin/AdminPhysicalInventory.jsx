@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { physicalInventoryService } from '@/services/inventory/physicalInventoryService';
@@ -465,15 +466,11 @@ const AdminPhysicalInventory = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Inventario fisico</h1>
-          <p className="mt-1 text-sm text-slate-500">Conteos fisicos, diferencias y conciliacion de stock.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ActionButton label="Nuevo inventario" icon={Plus} disabled={!warehouses.length} onClick={openCreate} />
-        </div>
-      </div>
+      <ModuleHeader
+        title="Inventario fisico"
+        description="Conteos fisicos, diferencias y conciliacion de stock."
+        actions={[{ id: 'new-count', label: 'Nuevo inventario', icon: Plus, disabled: !warehouses.length, onClick: openCreate }]}
+      />
 
       <KpiBar items={kpis} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

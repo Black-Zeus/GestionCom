@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { pettyCashAdminService } from '@/services/admin/pettyCashAdminService';
@@ -547,13 +548,11 @@ const AdminPettyCash = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Administracion de caja chica</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Configuracion de fondos, responsables y categorias de gasto menor.</p>
-        </div>
-        <ActionButton label={activeTab === 'funds' ? 'Nuevo fondo' : 'Nueva categoria'} icon={activeTab === 'funds' ? WalletCards : Tags} onClick={() => (activeTab === 'funds' ? openFundModal() : openCategoryModal())} />
-      </div>
+      <ModuleHeader
+        title="Administracion de caja chica"
+        description="Configuracion de fondos, responsables y categorias de gasto menor."
+        actions={[{ id: 'primary', label: activeTab === 'funds' ? 'Nuevo fondo' : 'Nueva categoria', icon: activeTab === 'funds' ? WalletCards : Tags, onClick: () => (activeTab === 'funds' ? openFundModal() : openCategoryModal()) }]}
+      />
 
       <ModuleTabs
         className="mb-4"

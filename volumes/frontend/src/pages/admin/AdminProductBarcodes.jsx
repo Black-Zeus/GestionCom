@@ -9,6 +9,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -499,13 +500,11 @@ const AdminProductBarcodes = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Codigos de barra de productos</h1>
-          <p className="mt-1 text-sm text-slate-500">Codigos estandar asociados a SKU / Variaciones y unidades comerciales.</p>
-        </div>
-        <ActionButton label="Nuevo codigo" icon={Barcode} onClick={() => openForm()} />
-      </div>
+      <ModuleHeader
+        title="Codigos de barra de productos"
+        description="Codigos estandar asociados a SKU / Variaciones y unidades comerciales."
+        actions={[{ id: 'new-barcode', label: 'Nuevo codigo', icon: Barcode, onClick: () => openForm() }]}
+      />
 
       <KpiBar items={stats} />
 

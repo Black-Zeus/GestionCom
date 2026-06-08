@@ -10,7 +10,7 @@ Cuando exista duda entre una solucion local y esta guia, aplicar esta guia. Si u
 
 Todo mantenedor debe componerse en este orden:
 
-1. Encabezado de pagina con titulo, descripcion breve y accion principal.
+1. Encabezado de pagina con `ModuleHeader`.
 2. `KpiBar` cuando los indicadores aporten lectura operacional o filtrado rapido.
 3. `ModuleTabs` si la pantalla contiene dos o mas mantenedores internos.
 4. `FilterBar` inmediatamente antes de cada tabla visible.
@@ -19,6 +19,34 @@ Todo mantenedor debe componerse en este orden:
 7. `ModalManager` para creacion/edicion acotada, o pagina completa cuando el formulario sea extenso.
 
 No crear variantes locales de estos bloques si el componente comun cubre el caso.
+
+## Encabezado de modulo
+
+Todos los modulos, submodulos y vistas de navegacion interna deben usar `ModuleHeader`.
+
+No construir cabeceras locales con `<h1>`, descripcion y botones manuales. La excepcion debe estar justificada en la tarea o documentada junto al componente afectado.
+
+Formato esperado:
+
+```jsx
+<ModuleHeader
+  title="SKU / Variaciones - Producto"
+  description="SKU vendibles asociados al producto seleccionado."
+  actions={[
+    { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: goBack },
+    { id: 'primary', label: 'Generar SKU', icon: Wand2, onClick: generateSku },
+  ]}
+/>
+```
+
+Reglas:
+
+- El titulo debe expresar el contexto actual. En submodulos usar el formato `Modulo / Submodulo - Registro` cuando aplique.
+- La descripcion debe ser breve y explicar el alcance de la vista, no instrucciones de uso.
+- Las acciones de navegacion interna, como `Volver`, van dentro de `actions` antes de la accion principal.
+- La accion principal del modulo o submodulo debe estar en la cabecera mediante `actions`.
+- Si la vista tambien requiere una barra inferior por cambios pendientes, puede mantener `BottomActionBar`, pero la cabecera debe seguir usando `ModuleHeader`.
+- El marcador visual de auditoria de `ModuleHeader` solo debe usarse mientras se revisa adopcion visual; cuando la revision termine debe apagarse desde el componente o por prop.
 
 ## Tablas
 
@@ -114,7 +142,7 @@ Resumen obligatorio:
 
 Accion principal:
 
-- Debe estar en el encabezado.
+- Debe estar en el encabezado mediante `ModuleHeader`.
 - Usar `ActionButton`.
 - Texto corto: `Nuevo`, `Nueva`, `Nuevo fondo`, `Nueva serie`.
 
@@ -130,6 +158,7 @@ Acciones por fila:
 
 Antes de terminar un mantenedor, validar:
 
+- Usa `ModuleHeader` para el encabezado principal y para submodulos/vistas internas.
 - Usa `KpiBar` si corresponde.
 - Usa `ModuleTabs` si contiene mas de un mantenedor.
 - Cada tabla usa `FilterBar`, `DataTable` y `DataTablePagination`.

@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { cashRegistersService } from '@/services/admin/cashRegistersService';
 import { warehousesService } from '@/services/admin/warehousesService';
@@ -563,15 +564,11 @@ const AdminCashPos = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Configuracion de caja POS</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Mantenedor de terminales, ubicaciones y reglas de aprobacion de cajas.
-          </p>
-        </div>
-        <ActionButton label="Nueva" onClick={openCreateModal} />
-      </div>
+      <ModuleHeader
+        title="Configuracion de caja POS"
+        description="Mantenedor de terminales, ubicaciones y reglas de aprobacion de cajas."
+        actions={[{ id: 'new-cash-register', label: 'Nueva', onClick: openCreateModal }]}
+      />
 
       <KpiBar items={kpiItems} className="mb-4" />
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, RefreshCw, Save, Search, ShieldCheck, UserCircle } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import PermissionMatrix from '@/components/common/permissions/PermissionMatrix';
 import { usersService } from '@/services/admin/usersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -112,34 +113,20 @@ const AdminUserPermissions = () => {
     }
   };
 
+  const selectedUserName = selectedUser?.display_name || selectedUser?.username || '';
+  const selectedUserDetail = selectedUser?.email || selectedUser?.username || 'Excepciones de acceso por usuario.';
+
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/users')}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label="Volver a usuarios"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold">Permisos especiales</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {selectedUser ? `${selectedUser.display_name || selectedUser.username} - ${selectedUser.email}` : 'Excepciones de acceso por usuario.'}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={loadPermissions}
-          className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refrescar
-        </button>
-      </div>
+      <ModuleHeader
+        title={selectedUserName ? `Permisos especiales - ${selectedUserName}` : 'Permisos especiales'}
+        description={selectedUserDetail}
+        actions={[
+          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/admin/users') },
+          { id: 'refresh', label: 'Refrescar', icon: RefreshCw, variant: 'neutral', onClick: loadPermissions, className: loading ? '[&>svg]:animate-spin' : '' },
+          { id: 'save', label: saving ? 'Guardando...' : 'Guardar permisos', icon: Save, disabled: !hasChanges || saving || loading || !selectedUser, onClick: savePermissions },
+        ]}
+      />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         {[

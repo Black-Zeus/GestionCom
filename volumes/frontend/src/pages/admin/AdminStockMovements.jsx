@@ -6,6 +6,7 @@ import { ActionButton, RowActionButton } from '@/components/common/actions/Actio
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { stockMovementsService } from '@/services/inventory/stockMovementsService';
@@ -338,13 +339,11 @@ const AdminStockMovements = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Movimientos de stock</h1>
-          <p className="mt-1 text-sm text-slate-500">Ingresos, egresos y ajustes manuales controlados por bodega y ubicacion.</p>
-        </div>
-        <ActionButton label="Nuevo movimiento" icon={Plus} disabled={!warehouses.length || !variants.length} onClick={openCreate} />
-      </div>
+      <ModuleHeader
+        title="Movimientos de stock"
+        description="Ingresos, egresos y ajustes manuales controlados por bodega y ubicacion."
+        actions={[{ id: 'new-movement', label: 'Nuevo movimiento', icon: Plus, disabled: !warehouses.length || !variants.length, onClick: openCreate }]}
+      />
 
       <KpiBar
         className="mb-4"

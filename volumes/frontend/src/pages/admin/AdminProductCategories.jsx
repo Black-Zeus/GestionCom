@@ -8,6 +8,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { productConfigService } from '@/services/admin/productConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -168,13 +169,11 @@ const AdminProductCategories = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Categorias de productos</h1>
-          <p className="mt-1 text-sm text-slate-500">Mantenedor jerarquico para clasificar productos.</p>
-        </div>
-        <ActionButton label="Nueva" onClick={() => openModal()} />
-      </div>
+      <ModuleHeader
+        title="Categorias de productos"
+        description="Mantenedor jerarquico para clasificar productos."
+        actions={[{ id: 'new-category', label: 'Nueva', onClick: () => openModal() }]}
+      />
 
       <KpiBar
         items={[

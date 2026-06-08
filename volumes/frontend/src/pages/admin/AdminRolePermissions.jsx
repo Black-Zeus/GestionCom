@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { rolesService } from '@/services/admin/rolesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 
@@ -453,34 +454,22 @@ const AdminRolePermissions = () => {
     }
   };
 
+  const selectedRoleName = selectedRole?.role_name || selectedRole?.role_code || '';
+  const selectedRoleDetail = selectedRole
+    ? selectedRole.role_description || selectedRole.role_code
+    : 'Selecciona un perfil desde Administracion > Roles.';
+
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/roles')}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            aria-label="Volver a roles"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold">Permisos de perfil</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {selectedRole ? `${selectedRole.role_name} - ${selectedRole.role_code}` : 'Selecciona un perfil desde Administracion > Roles.'}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => loadRoles()}
-          className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refrescar
-        </button>
-      </div>
+      <ModuleHeader
+        title={selectedRoleName ? `Permisos de perfil - ${selectedRoleName}` : 'Permisos de perfil'}
+        description={selectedRoleDetail}
+        actions={[
+          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/admin/roles') },
+          { id: 'refresh', label: 'Refrescar', icon: RefreshCw, variant: 'neutral', onClick: () => loadRoles(), className: loading ? '[&>svg]:animate-spin' : '' },
+          !isSystemRoleReadOnly && { id: 'save', label: savingPermissions ? 'Guardando...' : 'Guardar permisos', icon: Save, disabled: !hasPermissionChanges || savingPermissions || permissionsLoading, onClick: savePermissions },
+        ]}
+      />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         {[

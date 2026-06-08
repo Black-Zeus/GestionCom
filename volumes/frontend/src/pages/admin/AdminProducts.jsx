@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Boxes, ImagePlus, Package, Pencil, Plus, Trash2, Wand2, X } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { measurementUnitsService } from '@/services/admin/measurementUnitsService';
@@ -674,13 +675,14 @@ const AdminProducts = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">{title}</h1><p className="mt-1 text-sm text-slate-500">{description}</p></div>
-        <div className="flex flex-wrap gap-2">
-          {activeTab === 'variants' && <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={closeSkuView} />}
-          <ActionButton label={actionConfig.label} icon={actionConfig.icon || Plus} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
-        </div>
-      </div>
+      <ModuleHeader
+        title={title}
+        description={description}
+        actions={[
+          activeTab === 'variants' && { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: closeSkuView },
+          { id: 'primary', label: actionConfig.label, icon: actionConfig.icon || Plus, disabled: actionConfig.disabled, onClick: actionConfig.onClick },
+        ]}
+      />
       <KpiBar items={[{ label: 'Productos', value: products.length }, { label: 'SKU', value: variants.length }, { label: 'Marcas', value: brands.length }, { label: 'Modelos', value: models.length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeTab === 'products' ? 'Buscar producto, codigo o marca' : 'Buscar SKU / Variacion'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />

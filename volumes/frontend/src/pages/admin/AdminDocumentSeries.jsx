@@ -7,6 +7,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { documentConfigService } from '@/services/admin/documentConfigService';
@@ -179,10 +180,13 @@ const AdminDocumentSeries = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Tipos y series de documentos</h1><p className="mt-1 text-sm text-slate-500">Catalogo funcional de tipos y numeracion operacional.</p></div>
-        {activeTab === 'series' && <ActionButton label="Nueva serie" onClick={() => openSeries()} />}
-      </div>
+      <ModuleHeader
+        title="Tipos y series de documentos"
+        description="Catalogo funcional de tipos y numeracion operacional."
+        actions={[
+          activeTab === 'series' && { id: 'new-series', label: 'Nueva serie', onClick: () => openSeries() },
+        ]}
+      />
       <KpiBar items={[{ label: 'Tipos', value: stats.types }, { label: 'Tipos activos', value: stats.activeTypes }, { label: 'Series', value: stats.series }, { label: 'Series activas', value: stats.activeSeries }]} className="mb-4" />
       <ModuleTabs
         className="mb-4"

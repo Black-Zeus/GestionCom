@@ -7,6 +7,7 @@ import { ActionButton, RowActionButton } from '@/components/common/actions/Actio
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { stockTransfersService } from '@/services/inventory/stockTransfersService';
@@ -915,21 +916,21 @@ const AdminStockTransfers = () => {
     ];
     return (
       <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-        <div className="mb-5 flex flex-wrap justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">{currentTransfer ? `Transferencia a ${currentTransfer.target_warehouse_name || 'bodega destino'}` : 'Transferencia de stock'}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+        <ModuleHeader
+          title={currentTransfer ? `Transferencia a ${currentTransfer.target_warehouse_name || 'bodega destino'}` : 'Transferencia de stock'}
+          description={(
+            <div className="flex flex-wrap items-center gap-2">
               <span>{detailRoute}</span>
               {currentTransfer && <TransferStatusBadge status={currentTransfer.status} />}
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <ActionButton label="Volver" icon={ArrowLeft} variant="neutral" onClick={() => navigate('/stock/transfers')} />
-            <ActionButton label="Nuevo item" icon={PackagePlus} disabled={!currentTransfer || currentTransfer.status !== 'DRAFT'} onClick={openAddItemFromHeader} />
-            {currentTransfer?.status === 'SHIPPED' && <ActionButton label="Recibir" icon={PackageCheck} variant="neutral" onClick={openReceiveFromHeader} />}
-            {currentTransfer?.status === 'RECEIVED' && <ActionButton label="Ubicar" icon={MapPin} variant="neutral" onClick={openPutawayFromHeader} />}
-          </div>
-        </div>
+          )}
+          actions={[
+            { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/stock/transfers') },
+            { id: 'new-item', label: 'Nuevo item', icon: PackagePlus, disabled: !currentTransfer || currentTransfer.status !== 'DRAFT', onClick: openAddItemFromHeader },
+            currentTransfer?.status === 'SHIPPED' && { id: 'receive', label: 'Recibir', icon: PackageCheck, variant: 'neutral', onClick: openReceiveFromHeader },
+            currentTransfer?.status === 'RECEIVED' && { id: 'putaway', label: 'Ubicar', icon: MapPin, variant: 'neutral', onClick: openPutawayFromHeader },
+          ]}
+        />
         <KpiBar items={detailKpis} className="mb-4" />
         {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         <TransferDetailView transferId={decodedTransferKey} variants={variants} units={units} zones={zones} locations={locations} receptionDraft={receptionDraft} onReceptionDraftChange={setReceptionDraft} onChanged={load} refreshToken={detailRefreshToken} />
@@ -939,13 +940,11 @@ const AdminStockTransfers = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Transferencias de stock</h1>
-          <p className="mt-1 text-sm text-slate-500">Despacho entre bodegas, recepcion en destino y ubicacion interna final.</p>
-        </div>
-        <ActionButton label="Nueva transferencia" icon={Plus} disabled={!warehouses.length} onClick={openCreate} />
-      </div>
+      <ModuleHeader
+        title="Transferencias de stock"
+        description="Despacho entre bodegas, recepcion en destino y ubicacion interna final."
+        actions={[{ id: 'new-transfer', label: 'Nueva transferencia', icon: Plus, disabled: !warehouses.length, onClick: openCreate }]}
+      />
 
       <KpiBar items={kpis} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

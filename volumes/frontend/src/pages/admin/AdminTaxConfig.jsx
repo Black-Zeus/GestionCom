@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -83,10 +84,11 @@ const AdminTaxConfig = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Configuracion de impuestos</h1><p className="mt-1 text-sm text-slate-500">Tasas y vigencias para ventas y documentos.</p></div>
-        <ActionButton label="Nuevo impuesto" icon={Plus} onClick={() => openForm()} />
-      </div>
+      <ModuleHeader
+        title="Configuracion de impuestos"
+        description="Tasas y vigencias para ventas y documentos."
+        actions={[{ id: 'new-tax', label: 'Nuevo impuesto', icon: Plus, onClick: () => openForm() }]}
+      />
       <KpiBar items={[{ label: 'Total', value: taxes.length }, { label: 'Activos', value: taxes.filter((item) => item.is_active).length }, { label: 'Defecto', value: taxes.filter((item) => item.is_default).length }, { label: 'IVA', value: taxes.filter((item) => item.tax_type === 'VAT').length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder="Buscar impuesto o codigo" onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />

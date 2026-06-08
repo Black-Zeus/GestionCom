@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Building2, Image, Pencil, Plus, Power, ServerCog, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { formatRut } from '@/utils/rut';
@@ -163,10 +164,11 @@ const AdminCompanyConfig = () => {
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <div className="mb-5 flex flex-wrap justify-between gap-3">
-        <div><h1 className="text-xl font-semibold">Configuracion de empresa</h1><p className="mt-1 text-sm text-slate-500">Datos legales y parametros DTE base.</p></div>
-        <ActionButton label="Nueva empresa" icon={Plus} onClick={() => openForm()} />
-      </div>
+      <ModuleHeader
+        title="Configuracion de empresa"
+        description="Datos legales y parametros DTE base."
+        actions={[{ id: 'new-company', label: 'Nueva empresa', icon: Plus, onClick: () => openForm() }]}
+      />
       <KpiBar items={[{ label: 'Empresas', value: companies.length }, { label: 'Activa actual', value: activeCompany?.company_name || '-' }, { label: 'Produccion', value: productionCompany?.company_name || '-' }, { label: 'Certificacion', value: companies.filter((item) => item.dte_environment === 'CERTIFICACION').length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder="Buscar empresa, RUT o ciudad" onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
