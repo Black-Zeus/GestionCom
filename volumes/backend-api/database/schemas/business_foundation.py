@@ -71,7 +71,8 @@ class PriceListUpdate(BaseModel):
 
 class PriceListItemCreate(BaseModel):
     price_list_id: int = Field(..., gt=0)
-    product_variant_id: int = Field(..., gt=0)
+    product_id: int = Field(..., gt=0)
+    product_variant_id: Optional[int] = Field(None, gt=0)
     measurement_unit_id: int = Field(..., gt=0)
     base_price: float = Field(..., ge=0)
     sale_price: float = Field(..., ge=0)
@@ -82,6 +83,7 @@ class PriceListItemCreate(BaseModel):
 
 class PriceListItemUpdate(BaseModel):
     price_list_id: Optional[int] = Field(None, gt=0)
+    product_id: Optional[int] = Field(None, gt=0)
     product_variant_id: Optional[int] = Field(None, gt=0)
     measurement_unit_id: Optional[int] = Field(None, gt=0)
     base_price: Optional[float] = Field(None, ge=0)
@@ -100,6 +102,8 @@ class ProductCreate(BaseModel):
     product_model_id: Optional[int] = Field(None, gt=0)
     model: Optional[str] = Field(None, max_length=100)
     base_measurement_unit_id: int = Field(..., gt=0)
+    base_price: Optional[float] = Field(None, ge=0)
+    cost_price: Optional[float] = Field(None, ge=0)
     has_variants: bool = False
     is_active: bool = True
     has_batch_control: bool = False
@@ -117,6 +121,8 @@ class ProductUpdate(BaseModel):
     product_model_id: Optional[int] = Field(None, gt=0)
     model: Optional[str] = Field(None, max_length=100)
     base_measurement_unit_id: Optional[int] = Field(None, gt=0)
+    base_price: Optional[float] = Field(None, ge=0)
+    cost_price: Optional[float] = Field(None, ge=0)
     has_variants: Optional[bool] = None
     is_active: Optional[bool] = None
     has_batch_control: Optional[bool] = None

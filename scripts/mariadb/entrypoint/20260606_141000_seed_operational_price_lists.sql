@@ -49,6 +49,7 @@ SET @wholesale_list_id := (SELECT id FROM price_lists WHERE price_list_code = @w
 
 INSERT INTO price_list_items (
   price_list_id,
+  product_id,
   product_variant_id,
   measurement_unit_id,
   base_price,
@@ -59,6 +60,7 @@ INSERT INTO price_list_items (
 )
 SELECT
   @retail_list_id,
+  p.id,
   pv.id,
   p.base_measurement_unit_id,
   14990.0000,
@@ -83,6 +85,7 @@ WHERE pv.deleted_at IS NULL
 
 INSERT INTO price_list_items (
   price_list_id,
+  product_id,
   product_variant_id,
   measurement_unit_id,
   base_price,
@@ -93,6 +96,7 @@ INSERT INTO price_list_items (
 )
 SELECT
   @wholesale_list_id,
+  p.id,
   pv.id,
   p.base_measurement_unit_id,
   12990.0000,

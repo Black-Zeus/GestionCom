@@ -33,7 +33,12 @@ export const businessFoundationService = {
       return unwrap(await apiClient.get('/business-foundation/pricing/resolve', { params }));
     },
   },
-  products: crud('/business-foundation/products'),
+  products: {
+    ...crud('/business-foundation/products'),
+    async units(productId) {
+      return list(unwrap(await apiClient.get(`/business-foundation/products/${productId}/units`)));
+    },
+  },
   variants: {
     ...crud('/business-foundation/product-variants'),
     async listSkuAttributes() {

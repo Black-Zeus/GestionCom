@@ -101,7 +101,8 @@ class PriceListItem(BaseModel):
     __tablename__ = "price_list_items"
 
     price_list_id = Column(BigInteger, ForeignKey("price_lists.id", ondelete="CASCADE"), nullable=False)
-    product_variant_id = Column(BigInteger, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(BigInteger, ForeignKey("products.id", ondelete="CASCADE"), nullable=True)
+    product_variant_id = Column(BigInteger, ForeignKey("product_variants.id", ondelete="CASCADE"), nullable=True)
     measurement_unit_id = Column(BigInteger, ForeignKey("measurement_units.id", ondelete="CASCADE"), nullable=False)
     base_price = Column(Numeric(15, 4), nullable=False)
     sale_price = Column(Numeric(15, 4), nullable=False)
@@ -110,6 +111,7 @@ class PriceListItem(BaseModel):
     is_active = Column(Boolean, nullable=False, default=True)
 
     price_list = relationship("PriceList")
+    product = relationship("Product")
     product_variant = relationship("ProductVariant")
     measurement_unit = relationship("MeasurementUnit")
 
@@ -127,6 +129,8 @@ class Product(BaseModel):
     product_model_id = Column(BigInteger, ForeignKey("product_models.id", ondelete="SET NULL"), nullable=True)
     model = Column(String(100), nullable=True)
     base_measurement_unit_id = Column(BigInteger, ForeignKey("measurement_units.id", ondelete="RESTRICT"), nullable=False)
+    base_price = Column(Numeric(15, 4), nullable=True)
+    cost_price = Column(Numeric(15, 4), nullable=True)
     has_variants = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
     has_batch_control = Column(Boolean, nullable=False, default=False)

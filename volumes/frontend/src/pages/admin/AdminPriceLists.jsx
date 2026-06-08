@@ -33,6 +33,7 @@ const nextMonth = () => {
   return localDate(date);
 };
 const formatMoney = (value) => Number(value || 0).toLocaleString('es-CL');
+const hasNumericReference = (value) => value !== null && value !== undefined && value !== '' && Number(value) > 0;
 const calculateMarginPercentage = (salePrice, costPrice) => {
   const sale = Number(salePrice || 0);
   const cost = Number(costPrice || 0);
@@ -40,12 +41,21 @@ const calculateMarginPercentage = (salePrice, costPrice) => {
   return ((sale - cost) / sale) * 100;
 };
 
-const CostReferenceInput = ({ form, setField, symbol }) => {
+const CostReferenceInput = ({ form, setField, symbol, products }) => {
   const [reference, setReference] = useState(null);
   const [loadingReference, setLoadingReference] = useState(false);
+  const product = products.find((item) => String(item.id) === String(form.product_id));
+  const hasProductReference = hasNumericReference(product?.cost_price);
 
   useEffect(() => {
     let active = true;
+    if (hasProductReference) {
+      setReference(null);
+      setLoadingReference(false);
+      setField('cost_price', product.cost_price);
+      return undefined;
+    }
+
     const variantId = form.product_variant_id;
     const unitId = form.measurement_unit_id;
     if (!variantId || !unitId) {
@@ -71,14 +81,16 @@ const CostReferenceInput = ({ form, setField, symbol }) => {
 
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.product_variant_id, form.measurement_unit_id]);
+  }, [form.product_id, form.product_variant_id, form.measurement_unit_id, product?.cost_price]);
 
   const hasReference = reference?.suggested_cost !== null && reference?.suggested_cost !== undefined;
   const costLabel = loadingReference
-    ? 'Costo (Buscando referencia)'
-    : hasReference
-      ? `Costo (${reference.cost_source_label})`
-      : 'Costo (Sin costo de referencia)';
+    ? 'Precio costo (Buscando referencia)'
+    : hasProductReference
+      ? 'Precio costo (Producto)'
+      : hasReference
+      ? `Precio costo (${reference.cost_source_label})`
+      : 'Precio costo (Sin costo de referencia)';
 
   return (
     <div className="space-y-1.5">
@@ -91,37 +103,46 @@ const CostReferenceInput = ({ form, setField, symbol }) => {
           min="0"
           value={form.cost_price ?? ''}
           onChange={(event) => setField('cost_price', event.target.value)}
-          readOnly={hasReference || loadingReference}
+          readOnly={hasProductReference || hasReference || loadingReference}
         />
       </div>
     </div>
   );
 };
 
-const BasePriceReferenceInput = ({ form, setField, symbol, lists, items }) => {
+const BasePriceReferenceInput = ({ form, setField, symbol, lists, items, products }) => {
   const activeList = lists.find((list) => String(list.id) === String(form.price_list_id));
   const baseList = activeList?.base_price_list_id ? lists.find((list) => Number(list.id) === Number(activeList.base_price_list_id)) : null;
+  const product = products.find((item) => String(item.id) === String(form.product_id));
   const baseItem = baseList
     ? items.find((item) => (
       Number(item.price_list_id) === Number(baseList.id)
-      && Number(item.product_variant_id) === Number(form.product_variant_id)
+      && Number(item.product_id) === Number(form.product_id)
+      && (form.product_variant_id
+        ? Number(item.product_variant_id) === Number(form.product_variant_id)
+        : !item.product_variant_id)
       && Number(item.measurement_unit_id) === Number(form.measurement_unit_id)
       && item.is_active !== false
     ))
     : null;
-  const hasReference = Boolean(baseItem);
-  const label = hasReference
+  const hasListReference = Boolean(baseItem);
+  const hasProductReference = !hasListReference && hasNumericReference(product?.base_price);
+  const label = hasListReference
     ? `Precio base (${baseList.price_list_name})`
-    : activeList?.base_price_list_id
+    : hasProductReference
+      ? 'Precio base (Producto)'
+      : activeList?.base_price_list_id
       ? 'Precio base (Sin referencia en lista base)'
       : 'Precio base (Manual)';
 
   useEffect(() => {
     if (baseItem?.sale_price !== null && baseItem?.sale_price !== undefined) {
       setField('base_price', baseItem.sale_price);
+    } else if (hasProductReference) {
+      setField('base_price', product.base_price);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseItem?.id]);
+  }, [baseItem?.id, form.product_id, product?.base_price]);
 
   return (
     <div className="space-y-1.5">
@@ -134,7 +155,7 @@ const BasePriceReferenceInput = ({ form, setField, symbol, lists, items }) => {
           min="0"
           value={form.base_price ?? ''}
           onChange={(event) => setField('base_price', event.target.value)}
-          readOnly={hasReference}
+          readOnly={hasListReference || hasProductReference}
           required
         />
       </div>
@@ -148,9 +169,10 @@ const AdminPriceLists = () => {
   const [categories, setCategories] = useState([]);
   const [lists, setLists] = useState([]);
   const [items, setItems] = useState([]);
+  const [products, setProducts] = useState([]);
   const [variants, setVariants] = useState([]);
   const [units, setUnits] = useState([]);
-  const [unitsByVariant, setUnitsByVariant] = useState({});
+  const [unitsByProduct, setUnitsByProduct] = useState({});
   const [currencies, setCurrencies] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [status, setStatus] = useState('all');
@@ -164,10 +186,11 @@ const AdminPriceLists = () => {
     setLoading(true);
     setError('');
     try {
-      const [nextCategories, nextLists, nextItems, nextVariants, nextUnits, nextCurrencies] = await Promise.all([
+      const [nextCategories, nextLists, nextItems, nextProducts, nextVariants, nextUnits, nextCurrencies] = await Promise.all([
         businessFoundationService.priceCategories.list({ active_only: false }),
         businessFoundationService.priceLists.list({ active_only: false }),
         businessFoundationService.priceItems.list({ active_only: false }),
+        businessFoundationService.products.list({ active_only: false }),
         businessFoundationService.variants.list({ active_only: false }),
         measurementUnitsService.list({ active_only: false, limit: 1000 }),
         adminMaintainersService.list('currencies'),
@@ -175,18 +198,19 @@ const AdminPriceLists = () => {
       setCategories(nextCategories);
       setLists(nextLists);
       setItems(nextItems);
+      setProducts(nextProducts);
       setVariants(nextVariants);
       setUnits(nextUnits);
       setCurrencies(nextCurrencies);
 
-      const variantUnitsEntries = await Promise.all(nextVariants.map(async (variant) => {
+      const productUnitsEntries = await Promise.all(nextProducts.map(async (product) => {
         try {
-          return [String(variant.id), await businessFoundationService.variants.units(variant.id)];
+          return [String(product.id), await businessFoundationService.products.units(product.id)];
         } catch {
-          return [String(variant.id), []];
+          return [String(product.id), []];
         }
       }));
-      setUnitsByVariant(Object.fromEntries(variantUnitsEntries));
+      setUnitsByProduct(Object.fromEntries(productUnitsEntries));
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar listas de precios.'));
     } finally {
@@ -208,17 +232,19 @@ const AdminPriceLists = () => {
   const isScopedPriceView = Boolean(selectedListId);
   const categoryOptions = categories.map((category) => ({ value: String(category.id), label: category.category_name || category.group_name, description: category.category_description || category.group_description || '' }));
   const listOptions = lists.map((list) => ({ value: String(list.id), label: list.price_list_name }));
-  const variantOptions = variants.map((variant) => ({ value: String(variant.id), label: variant.variant_name }));
+  const productOptions = products.map((product) => ({ value: String(product.id), label: `${product.product_code} - ${product.product_name}` }));
+  const variantOptions = variants.map((variant) => ({ value: String(variant.id), productId: String(variant.product_id), label: `${variant.variant_sku} - ${variant.variant_name}` }));
   const unitOptions = units.map((unit) => ({ value: String(unit.id), label: `${unit.unit_code} - ${unit.unit_name}` }));
   const currencyOptions = currencies.filter((currency) => currency.is_active !== false).map((currency) => ({ value: currency.currency_code, label: `${currency.currency_code} - ${currency.currency_symbol} - ${currency.currency_name}` }));
   const currencySymbolFor = (currencyCode) => currencies.find((currency) => currency.currency_code === currencyCode)?.currency_symbol || currencyCode || '$';
 
-  const unitOptionsForVariant = (variantId) => {
-    const scopedUnits = unitsByVariant[String(variantId)] || [];
+  const unitOptionsForProduct = (productId) => {
+    const scopedUnits = unitsByProduct[String(productId)] || [];
     return scopedUnits.length
       ? scopedUnits.map((unit) => ({ value: String(unit.measurement_unit_id || unit.id), label: `${unit.unit_code} - ${unit.unit_name}` }))
       : unitOptions;
   };
+  const variantOptionsForProduct = (productId) => variantOptions.filter((option) => String(option.productId) === String(productId));
 
   const openList = (list = null) => ModalManager.show({
     type: 'custom',
@@ -362,29 +388,46 @@ const AdminPriceLists = () => {
     contentComponent: SimpleFormContent,
     contentProps: {
       initialValues: item
-        ? { price_list_id: String(item.price_list_id), product_variant_id: String(item.product_variant_id), measurement_unit_id: String(item.measurement_unit_id), base_price: item.base_price, sale_price: item.sale_price, cost_price: item.cost_price ?? '', is_active: item.is_active }
-        : { price_list_id: selectedListId || listOptions[0]?.value || '', product_variant_id: variantOptions[0]?.value || '', measurement_unit_id: unitOptionsForVariant(variantOptions[0]?.value || '')[0]?.value || unitOptions[0]?.value || '', base_price: '', sale_price: '', cost_price: '', is_active: true },
+        ? { price_list_id: String(item.price_list_id), product_id: String(item.product_id), product_variant_id: item.product_variant_id ? String(item.product_variant_id) : '', measurement_unit_id: String(item.measurement_unit_id), base_price: item.base_price, sale_price: item.sale_price, cost_price: item.cost_price ?? '', is_active: item.is_active }
+        : { price_list_id: selectedListId || listOptions[0]?.value || '', product_id: productOptions[0]?.value || '', product_variant_id: '', measurement_unit_id: unitOptionsForProduct(productOptions[0]?.value || '')[0]?.value || unitOptions[0]?.value || '', base_price: '', sale_price: '', cost_price: '', is_active: true },
       fields: [
-        { type: 'section', id: 'context', label: 'Datos del precio', description: 'Selecciona el SKU y unidad comercial que recibira el precio.', icon: ListChecks, columns: 3 },
+        { type: 'section', id: 'context', label: 'Datos del precio', description: 'Selecciona producto base, SKU opcional y unidad comercial que recibira el precio.', icon: ListChecks, columns: 3 },
         ...(!selectedListId ? [{ id: 'price_list_id', label: 'Lista', type: 'select', required: true, options: listOptions }] : []),
         {
-          id: 'product_variant_id',
-          label: 'SKU',
+          id: 'product_id',
+          label: 'Producto',
           type: 'custom',
           render: ({ form, setField }) => (
             <select
               className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950"
-              value={form.product_variant_id || ''}
+              value={form.product_id || ''}
               onChange={(event) => {
-                const nextVariantId = event.target.value;
-                setField('product_variant_id', nextVariantId);
-                const firstUnit = unitOptionsForVariant(nextVariantId)[0]?.value || '';
+                const nextProductId = event.target.value;
+                setField('product_id', nextProductId);
+                setField('product_variant_id', '');
+                const firstUnit = unitOptionsForProduct(nextProductId)[0]?.value || '';
                 setField('measurement_unit_id', firstUnit);
               }}
               required
             >
-              <option value="">Seleccione SKU</option>
-              {variantOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              <option value="">Seleccione producto</option>
+              {productOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          ),
+        },
+        {
+          id: 'product_variant_id',
+          label: 'SKU / Variacion',
+          type: 'custom',
+          render: ({ form, setField }) => (
+            <select
+              className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:disabled:bg-slate-900 dark:focus:border-blue-500 dark:focus:ring-blue-950"
+              value={form.product_variant_id || ''}
+              onChange={(event) => setField('product_variant_id', event.target.value)}
+              disabled={!form.product_id}
+            >
+              <option value="">Todo el producto base</option>
+              {variantOptionsForProduct(form.product_id).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           ),
         },
@@ -393,14 +436,14 @@ const AdminPriceLists = () => {
           label: 'Unidad',
           type: 'custom',
           render: ({ form, setField }) => {
-            const options = unitOptionsForVariant(form.product_variant_id);
+            const options = form.product_id ? unitOptionsForProduct(form.product_id) : unitOptions;
             return (
               <select
                 className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950"
                 value={form.measurement_unit_id || ''}
                 onChange={(event) => setField('measurement_unit_id', event.target.value)}
                 required
-                disabled={!form.product_variant_id}
+                disabled={!form.product_id}
               >
                 <option value="">Seleccione unidad</option>
                 {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -418,18 +461,18 @@ const AdminPriceLists = () => {
           render: ({ form, setField }) => {
             const activeList = lists.find((list) => String(list.id) === String(form.price_list_id));
             const symbol = currencySymbolFor(activeList?.currency_code || 'CLP');
-            return <BasePriceReferenceInput form={form} setField={setField} symbol={symbol} lists={lists} items={items} />;
+            return <BasePriceReferenceInput form={form} setField={setField} symbol={symbol} lists={lists} items={items} products={products} />;
           },
         },
         {
           id: 'cost_price',
-          label: 'Costo',
+          label: 'Precio costo',
           collapseLabel: true,
           type: 'custom',
           render: ({ form, setField }) => {
             const activeList = lists.find((list) => String(list.id) === String(form.price_list_id));
             const symbol = currencySymbolFor(activeList?.currency_code || 'CLP');
-            return <CostReferenceInput form={form} setField={setField} symbol={symbol} />;
+            return <CostReferenceInput form={form} setField={setField} symbol={symbol} products={products} />;
           },
         },
         {
@@ -476,11 +519,21 @@ const AdminPriceLists = () => {
         },
       ],
       onSubmit: async (form) => {
-        if (!form.product_variant_id || !form.measurement_unit_id) {
-          throw new Error('SKU y unidad son requeridos.');
+        if (!form.product_id || !form.measurement_unit_id) {
+          throw new Error('Producto y unidad son requeridos.');
         }
         const marginPercentage = calculateMarginPercentage(form.sale_price, form.cost_price);
-        const payload = { price_list_id: Number(form.price_list_id || selectedListId), product_variant_id: Number(form.product_variant_id), measurement_unit_id: Number(form.measurement_unit_id), base_price: Number(form.base_price || 0), sale_price: Number(form.sale_price || 0), cost_price: form.cost_price === '' ? null : Number(form.cost_price), margin_percentage: marginPercentage === null ? null : Number(marginPercentage.toFixed(2)), is_active: Boolean(form.is_active) };
+        const payload = {
+          price_list_id: Number(form.price_list_id || selectedListId),
+          product_id: Number(form.product_id),
+          product_variant_id: form.product_variant_id ? Number(form.product_variant_id) : null,
+          measurement_unit_id: Number(form.measurement_unit_id),
+          base_price: Number(form.base_price || 0),
+          sale_price: Number(form.sale_price || 0),
+          cost_price: form.cost_price === '' ? null : Number(form.cost_price),
+          margin_percentage: marginPercentage === null ? null : Number(marginPercentage.toFixed(2)),
+          is_active: Boolean(form.is_active),
+        };
         await notifyPromise(
           item ? businessFoundationService.priceItems.update(item.id, payload) : businessFoundationService.priceItems.create(payload),
           { loading: 'Guardando precio...', success: 'Precio guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') },
@@ -592,7 +645,7 @@ const AdminPriceLists = () => {
     const matchesSearch = includesTerm(item, ['price_list_name', 'category_name', 'group_name', 'currency_code'], search.trim().toLowerCase());
     return matchesStatus && matchesCategory && matchesSearch;
   });
-  const filteredItems = items.filter((item) => (!selectedListId || String(item.price_list_id) === String(selectedListId)) && activeFilter(status)(item) && includesTerm(item, ['price_list_name', 'variant_name', 'product_name', 'unit_code'], search.trim().toLowerCase()));
+  const filteredItems = items.filter((item) => (!selectedListId || String(item.price_list_id) === String(selectedListId)) && activeFilter(status)(item) && includesTerm(item, ['price_list_name', 'product_code', 'product_name', 'variant_sku', 'variant_name', 'unit_code'], search.trim().toLowerCase()));
   const activeItemCountByList = items.reduce((current, item) => {
     if (item.is_active === false) return current;
     const listId = String(item.price_list_id);
@@ -601,10 +654,10 @@ const AdminPriceLists = () => {
   const activeData = isScopedPriceView ? filteredItems : filteredLists;
   const visibleData = activeData.slice(page * pageSize, page * pageSize + pageSize);
   const actionConfig = isScopedPriceView
-    ? { label: 'Nuevo precio', onClick: () => openItem(), disabled: !selectedList || !variantOptions.length || !unitOptions.length }
+    ? { label: 'Nuevo precio', onClick: () => openItem(), disabled: !selectedList || !productOptions.length || !unitOptions.length }
     : { label: 'Nueva lista', onClick: () => openList(), disabled: !categoryOptions.length };
-  const title = isScopedPriceView ? `Precios SKU - ${selectedList?.price_list_name || 'Lista no encontrada'}` : 'Listas de precios';
-  const description = isScopedPriceView ? 'Precios vigentes por SKU y unidad para la lista seleccionada.' : 'Categorias comerciales fijas, listas vigentes y precios por SKU.';
+  const title = isScopedPriceView ? `Precios de productos - ${selectedList?.price_list_name || 'Lista no encontrada'}` : 'Listas de precios';
+  const description = isScopedPriceView ? 'Precios vigentes por producto base o SKU especifico para la lista seleccionada.' : 'Categorias comerciales fijas, listas vigentes y precios por producto o SKU.';
   const searchPlaceholder = isScopedPriceView ? 'Buscar producto, SKU o unidad' : 'Buscar lista, categoria o moneda';
   const filterFields = isScopedPriceView
     ? [{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]
@@ -622,11 +675,11 @@ const AdminPriceLists = () => {
           <ActionButton label={actionConfig.label} icon={Plus} disabled={actionConfig.disabled} onClick={actionConfig.onClick} />
         </div>
       </div>
-      <KpiBar items={[{ label: 'Categorias', value: categories.filter((item) => item.is_active).length }, { label: 'Listas', value: lists.length }, { label: 'Activas', value: lists.filter((item) => item.is_active).length }, { label: 'Precios SKU', value: items.length }]} className="mb-4" />
+      <KpiBar items={[{ label: 'Categorias', value: categories.filter((item) => item.is_active).length }, { label: 'Listas', value: lists.length }, { label: 'Activas', value: lists.filter((item) => item.is_active).length }, { label: 'Precios', value: items.length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder={searchPlaceholder} onSearchChange={setSearch} fields={filterFields} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); setCategoryFilter('all'); } })} />
-      {!isScopedPriceView && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'list', label: 'Lista', headerClassName: 'w-[18rem]', cellClassName: 'w-[18rem]', render: (item) => <div className="font-medium">{item.price_list_name}</div> }, { id: 'category', label: 'Categoria', headerClassName: 'w-[11rem]', cellClassName: 'w-[11rem]', render: (item) => item.category_name || item.group_name || '-' }, { id: 'currency', label: 'Moneda', headerClassName: 'w-[8rem]', cellClassName: 'w-[8rem]', render: (item) => item.currency_code }, { id: 'items', label: 'Productos', align: 'center', headerClassName: 'w-[7rem]', cellClassName: 'w-[7rem] tabular-nums', render: (item) => activeItemCountByList[String(item.id)] || 0 }, { id: 'validity', label: 'Vigencia', headerClassName: 'w-[16rem]', cellClassName: 'w-[16rem] whitespace-nowrap', render: (item) => `${item.valid_from || '-'} / ${item.valid_to || 'sin termino'}` }, { id: 'status', label: 'Estado', headerClassName: 'w-[9rem]', cellClassName: 'w-[9rem]', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openList(item)} /><RowActionButton label="Precios SKU" icon={ListChecks} onClick={() => openPriceView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('lista', () => businessFoundationService.priceLists.remove(item.id))} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} onClick={() => toggleListStatus(item)} /></div> }]} />}
-      {isScopedPriceView && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variacion', render: (item) => <><div className="font-medium">{item.variant_name}</div><div className="text-xs text-slate-500">{item.product_name || '-'}</div></> }, { id: 'unit', label: 'Unidad', render: (item) => item.unit_code }, { id: 'base', label: 'Base', align: 'right', render: (item) => formatMoney(item.base_price) }, { id: 'sale', label: 'Venta', align: 'right', render: (item) => formatMoney(item.sale_price) }, { id: 'cost', label: 'Costo', align: 'right', render: (item) => item.cost_price === null || item.cost_price === undefined ? '-' : formatMoney(item.cost_price) }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openItem(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('precio', () => businessFoundationService.priceItems.remove(item.id))} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} onClick={() => toggleItemStatus(item)} /></div> }]} />}
+      {!isScopedPriceView && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'list', label: 'Lista', headerClassName: 'w-[18rem]', cellClassName: 'w-[18rem]', render: (item) => <div className="font-medium">{item.price_list_name}</div> }, { id: 'category', label: 'Categoria', headerClassName: 'w-[11rem]', cellClassName: 'w-[11rem]', render: (item) => item.category_name || item.group_name || '-' }, { id: 'currency', label: 'Moneda', headerClassName: 'w-[8rem]', cellClassName: 'w-[8rem]', render: (item) => item.currency_code }, { id: 'items', label: 'Productos', align: 'center', headerClassName: 'w-[7rem]', cellClassName: 'w-[7rem] tabular-nums', render: (item) => activeItemCountByList[String(item.id)] || 0 }, { id: 'validity', label: 'Vigencia', headerClassName: 'w-[16rem]', cellClassName: 'w-[16rem] whitespace-nowrap', render: (item) => `${item.valid_from || '-'} / ${item.valid_to || 'sin termino'}` }, { id: 'status', label: 'Estado', headerClassName: 'w-[9rem]', cellClassName: 'w-[9rem]', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openList(item)} /><RowActionButton label="Precios de productos" icon={ListChecks} onClick={() => openPriceView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('lista', () => businessFoundationService.priceLists.remove(item.id))} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} onClick={() => toggleListStatus(item)} /></div> }]} />}
+      {isScopedPriceView && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <><div className="font-medium">{item.product_name || '-'}</div><div className="text-xs text-slate-500">{item.product_code || '-'}</div></> }, { id: 'sku', label: 'SKU / Variacion', render: (item) => item.product_variant_id ? <><div className="font-medium">{item.variant_name}</div><div className="text-xs text-slate-500">{item.variant_sku}</div></> : <span className="text-sm text-slate-500">Todo el producto</span> }, { id: 'unit', label: 'Unidad', render: (item) => item.unit_code }, { id: 'base', label: 'Base', align: 'right', render: (item) => formatMoney(item.base_price) }, { id: 'sale', label: 'Venta', align: 'right', render: (item) => formatMoney(item.sale_price) }, { id: 'cost', label: 'Precio costo', align: 'right', render: (item) => item.cost_price === null || item.cost_price === undefined ? '-' : formatMoney(item.cost_price) }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openItem(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('precio', () => businessFoundationService.priceItems.remove(item.id))} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} onClick={() => toggleItemStatus(item)} /></div> }]} />}
     </section>
   );
 };

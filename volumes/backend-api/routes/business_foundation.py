@@ -201,6 +201,8 @@ def product_to_dict(product: Product) -> dict:
         "base_measurement_unit_id": product.base_measurement_unit_id,
         "base_unit_code": base_unit.unit_code if base_unit else None,
         "base_unit_name": base_unit.unit_name if base_unit else None,
+        "base_price": _decimal(product.base_price),
+        "cost_price": _decimal(product.cost_price),
         "has_variants": product.has_variants,
         "is_active": product.is_active,
         "has_batch_control": product.has_batch_control,
@@ -276,18 +278,22 @@ async def _variant_attribute_map(session, variant_ids: list[int]) -> dict[int, l
 
 def price_item_to_dict(item: PriceListItem) -> dict:
     price_list = _rel(item, "price_list")
+    item_product = _rel(item, "product")
     variant = _rel(item, "product_variant")
     measurement_unit = _rel(item, "measurement_unit")
-    product = _rel(variant, "product") if variant else None
+    product = item_product or (_rel(variant, "product") if variant else None)
     return {
         "id": item.id,
         "price_list_id": item.price_list_id,
         "price_list_code": price_list.price_list_code if price_list else None,
         "price_list_name": price_list.price_list_name if price_list else None,
+        "price_scope": "VARIANT" if item.product_variant_id else "PRODUCT",
+        "product_id": item.product_id,
+        "product_code": product.product_code if product else None,
+        "product_name": product.product_name if product else None,
         "product_variant_id": item.product_variant_id,
         "variant_sku": variant.variant_sku if variant else None,
         "variant_name": variant.variant_name if variant else None,
-        "product_name": product.product_name if product else None,
         "measurement_unit_id": item.measurement_unit_id,
         "unit_code": measurement_unit.unit_code if measurement_unit else None,
         "unit_name": measurement_unit.unit_name if measurement_unit else None,
@@ -332,6 +338,35 @@ async def _variant_unit_rows(session, product_variant_id: int) -> list[dict]:
     return [dict(row) for row in result.mappings().all()]
 
 
+async def _product_unit_rows(session, product_id: int) -> list[dict]:
+    result = await session.execute(
+        text(
+            """
+            SELECT
+              pmu.measurement_unit_id AS id,
+              mu.unit_code,
+              mu.unit_name,
+              mu.unit_symbol,
+              pmu.conversion_factor,
+              pmu.is_sale_unit,
+              pmu.is_inventory_unit,
+              CASE WHEN p.base_measurement_unit_id = mu.id THEN TRUE ELSE FALSE END AS is_base_unit
+            FROM products p
+            JOIN product_measurement_units pmu ON pmu.product_id = p.id
+            JOIN measurement_units mu ON mu.id = pmu.measurement_unit_id
+            WHERE p.id = :product_id
+              AND p.deleted_at IS NULL
+              AND pmu.is_active = TRUE
+              AND mu.deleted_at IS NULL
+              AND mu.is_active = TRUE
+            ORDER BY CASE WHEN p.base_measurement_unit_id = mu.id THEN 0 ELSE 1 END, mu.unit_name
+            """
+        ),
+        {"product_id": product_id},
+    )
+    return [dict(row) for row in result.mappings().all()]
+
+
 async def _resolve_price_row(
     session,
     *,
@@ -364,6 +399,23 @@ async def _resolve_price_row(
     units = await _variant_unit_rows(session, product_variant_id)
     if not units:
         return None
+    variant_result = await session.execute(
+        text(
+            """
+            SELECT pv.product_id
+            FROM product_variants pv
+            JOIN products p ON p.id = pv.product_id
+            WHERE pv.id = :product_variant_id
+              AND pv.deleted_at IS NULL
+              AND p.deleted_at IS NULL
+            """
+        ),
+        {"product_variant_id": product_variant_id},
+    )
+    variant_row = variant_result.mappings().first()
+    if not variant_row:
+        return None
+    product_id = int(variant_row["product_id"])
     valid_unit_ids = {int(unit["id"]) for unit in units}
     selected_unit_id = int(measurement_unit_id or units[0]["id"])
     if selected_unit_id not in valid_unit_ids:
@@ -371,6 +423,7 @@ async def _resolve_price_row(
 
     params = {
         "product_variant_id": product_variant_id,
+        "product_id": product_id,
         "measurement_unit_id": selected_unit_id,
         "price_date": price_date,
         "currency_code": selected_currency,
@@ -402,7 +455,9 @@ async def _resolve_price_row(
           pl.base_price_list_id,
           pl.base_adjustment_type,
           pl.base_adjustment_value,
-          pli.product_variant_id,
+          pli.product_id AS price_product_id,
+          pli.product_variant_id AS price_product_variant_id,
+          :product_variant_id AS product_variant_id,
           pli.measurement_unit_id,
           pli.base_price,
           pli.sale_price,
@@ -413,19 +468,21 @@ async def _resolve_price_row(
           p.product_name,
           mu.unit_code,
           mu.unit_name,
-          'DIRECT' AS resolution_source
+          CASE WHEN pli.product_variant_id IS NULL THEN 'PRODUCT' ELSE 'VARIANT' END AS price_scope,
+          CASE WHEN pli.product_variant_id IS NULL THEN 'PRODUCT_DIRECT' ELSE 'VARIANT_DIRECT' END AS resolution_source
         FROM price_lists pl
         JOIN price_list_items pli
           ON pli.price_list_id = pl.id
          AND pli.deleted_at IS NULL
          AND pli.is_active = TRUE
-         AND pli.product_variant_id = :product_variant_id
+         AND pli.product_id = :product_id
+         AND (pli.product_variant_id = :product_variant_id OR pli.product_variant_id IS NULL)
          AND pli.measurement_unit_id = :measurement_unit_id
-        JOIN product_variants pv ON pv.id = pli.product_variant_id
+        JOIN product_variants pv ON pv.id = :product_variant_id
         JOIN products p ON p.id = pv.product_id
         JOIN measurement_units mu ON mu.id = pli.measurement_unit_id
         WHERE {' AND '.join(list_filters)}
-        ORDER BY pl.priority ASC, pl.id ASC
+        ORDER BY CASE WHEN pli.product_variant_id = :product_variant_id THEN 0 ELSE 1 END, pl.priority ASC, pl.id ASC
         LIMIT 1
     """
     result = await session.execute(text(base_query), params)
@@ -444,7 +501,9 @@ async def _resolve_price_row(
           pl.base_price_list_id,
           pl.base_adjustment_type,
           pl.base_adjustment_value,
-          base_pli.product_variant_id,
+          base_pli.product_id AS price_product_id,
+          base_pli.product_variant_id AS price_product_variant_id,
+          :product_variant_id AS product_variant_id,
           base_pli.measurement_unit_id,
           base_pli.base_price,
           CASE
@@ -459,7 +518,8 @@ async def _resolve_price_row(
           p.product_name,
           mu.unit_code,
           mu.unit_name,
-          'DERIVED' AS resolution_source
+          CASE WHEN base_pli.product_variant_id IS NULL THEN 'PRODUCT' ELSE 'VARIANT' END AS price_scope,
+          CASE WHEN base_pli.product_variant_id IS NULL THEN 'PRODUCT_DERIVED' ELSE 'VARIANT_DERIVED' END AS resolution_source
         FROM price_lists pl
         JOIN price_lists base_pl
           ON base_pl.id = pl.base_price_list_id
@@ -469,14 +529,15 @@ async def _resolve_price_row(
           ON base_pli.price_list_id = base_pl.id
          AND base_pli.deleted_at IS NULL
          AND base_pli.is_active = TRUE
-         AND base_pli.product_variant_id = :product_variant_id
+         AND base_pli.product_id = :product_id
+         AND (base_pli.product_variant_id = :product_variant_id OR base_pli.product_variant_id IS NULL)
          AND base_pli.measurement_unit_id = :measurement_unit_id
-        JOIN product_variants pv ON pv.id = base_pli.product_variant_id
+        JOIN product_variants pv ON pv.id = :product_variant_id
         JOIN products p ON p.id = pv.product_id
         JOIN measurement_units mu ON mu.id = base_pli.measurement_unit_id
         WHERE {' AND '.join(list_filters)}
           AND pl.base_price_list_id IS NOT NULL
-        ORDER BY pl.priority ASC, pl.id ASC
+        ORDER BY CASE WHEN base_pli.product_variant_id = :product_variant_id THEN 0 ELSE 1 END, pl.priority ASC, pl.id ASC
         LIMIT 1
     """
     result = await session.execute(text(derived_query), params)
@@ -484,12 +545,53 @@ async def _resolve_price_row(
     return dict(derived) if derived else None
 
 
-async def _validate_price_item_payload(session, *, product_variant_id: int, measurement_unit_id: int) -> str | None:
-    units = await _variant_unit_rows(session, product_variant_id)
+async def _validate_price_item_payload(session, *, product_id: int, product_variant_id: int | None, measurement_unit_id: int) -> str | None:
+    product_result = await session.execute(
+        select(Product).where(and_(Product.id == product_id, Product.deleted_at.is_(None)))
+    )
+    if not product_result.scalar_one_or_none():
+        return "Producto no encontrado"
+    if product_variant_id:
+        variant_result = await session.execute(
+            select(ProductVariant).where(and_(ProductVariant.id == product_variant_id, ProductVariant.deleted_at.is_(None)))
+        )
+        variant = variant_result.scalar_one_or_none()
+        if not variant:
+            return "SKU no encontrado"
+        if int(variant.product_id) != int(product_id):
+            return "El SKU seleccionado no pertenece al producto base"
+    units = await _product_unit_rows(session, product_id)
     if not units:
-        return "SKU no encontrado o sin unidades configuradas"
+        return "Producto sin unidades configuradas"
     if int(measurement_unit_id) not in {int(unit["id"]) for unit in units if unit.get("is_sale_unit") or unit.get("is_base_unit")}:
-        return "La unidad seleccionada no esta habilitada para venta en este SKU"
+        return "La unidad seleccionada no esta habilitada para venta en este producto"
+    return None
+
+
+async def _validate_price_item_duplicate(
+    session,
+    *,
+    price_list_id: int,
+    product_id: int,
+    product_variant_id: int | None,
+    measurement_unit_id: int,
+    exclude_item_id: int | None = None,
+) -> str | None:
+    conditions = [
+        PriceListItem.price_list_id == price_list_id,
+        PriceListItem.product_id == product_id,
+        PriceListItem.measurement_unit_id == measurement_unit_id,
+        PriceListItem.deleted_at.is_(None),
+    ]
+    if product_variant_id:
+        conditions.append(PriceListItem.product_variant_id == product_variant_id)
+    else:
+        conditions.append(PriceListItem.product_variant_id.is_(None))
+    if exclude_item_id:
+        conditions.append(PriceListItem.id != exclude_item_id)
+    result = await session.execute(select(PriceListItem.id).where(and_(*conditions)).limit(1))
+    if result.scalar_one_or_none():
+        return "Ya existe un precio para la lista, producto, SKU y unidad seleccionados"
     return None
 
 
@@ -729,17 +831,25 @@ async def delete_price_list(request: Request, price_list_id: int = Path(..., gt=
 @router.get("/price-list-items", response_class=JSONResponse)
 async def list_price_list_items(request: Request, user: dict = Depends(require_prices_read), active_only: bool = Query(False)):
     async with db_manager.get_async_session() as session:
-        stmt = select(PriceListItem).options(selectinload(PriceListItem.price_list), selectinload(PriceListItem.product_variant).selectinload(ProductVariant.product), selectinload(PriceListItem.measurement_unit)).where(PriceListItem.deleted_at.is_(None))
+        stmt = select(PriceListItem).options(selectinload(PriceListItem.price_list), selectinload(PriceListItem.product), selectinload(PriceListItem.product_variant).selectinload(ProductVariant.product), selectinload(PriceListItem.measurement_unit)).where(PriceListItem.deleted_at.is_(None))
         if active_only:
             stmt = stmt.where(PriceListItem.is_active == True)
-        result = await session.execute(stmt.order_by(PriceListItem.price_list_id, PriceListItem.product_variant_id))
+        result = await session.execute(stmt.order_by(PriceListItem.price_list_id, PriceListItem.product_id, PriceListItem.product_variant_id))
         return ResponseManager.success(data=[price_item_to_dict(item) for item in result.scalars().all()], request=request)
 
 
 @router.post("/price-list-items", response_class=JSONResponse)
 async def create_price_list_item(data: PriceListItemCreate, request: Request, user: dict = Depends(require_prices_write)):
     async with db_manager.get_async_session() as session:
-        validation_error = await _validate_price_item_payload(session, product_variant_id=data.product_variant_id, measurement_unit_id=data.measurement_unit_id)
+        validation_error = await _validate_price_item_payload(session, product_id=data.product_id, product_variant_id=data.product_variant_id, measurement_unit_id=data.measurement_unit_id)
+        if not validation_error:
+            validation_error = await _validate_price_item_duplicate(
+                session,
+                price_list_id=data.price_list_id,
+                product_id=data.product_id,
+                product_variant_id=data.product_variant_id,
+                measurement_unit_id=data.measurement_unit_id,
+            )
         if validation_error:
             return ResponseManager.error(message=validation_error, status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         item = PriceListItem(**data.model_dump())
@@ -756,9 +866,20 @@ async def update_price_list_item(data: PriceListItemUpdate, request: Request, it
         item = result.scalar_one_or_none()
         if not item:
             return ResponseManager.error(message="Precio no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
-        next_variant_id = data.product_variant_id or item.product_variant_id
+        next_product_id = data.product_id or item.product_id
+        next_variant_id = data.product_variant_id if "product_variant_id" in data.model_fields_set else item.product_variant_id
         next_unit_id = data.measurement_unit_id or item.measurement_unit_id
-        validation_error = await _validate_price_item_payload(session, product_variant_id=next_variant_id, measurement_unit_id=next_unit_id)
+        next_price_list_id = data.price_list_id or item.price_list_id
+        validation_error = await _validate_price_item_payload(session, product_id=next_product_id, product_variant_id=next_variant_id, measurement_unit_id=next_unit_id)
+        if not validation_error:
+            validation_error = await _validate_price_item_duplicate(
+                session,
+                price_list_id=next_price_list_id,
+                product_id=next_product_id,
+                product_variant_id=next_variant_id,
+                measurement_unit_id=next_unit_id,
+                exclude_item_id=item_id,
+            )
         if validation_error:
             return ResponseManager.error(message=validation_error, status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         for field, value in data.model_dump(exclude_unset=True).items():
@@ -779,6 +900,26 @@ async def delete_price_list_item(request: Request, item_id: int = Path(..., gt=0
         item.is_active = False
         await session.commit()
         return ResponseManager.success(data=price_item_to_dict(item), message="Precio eliminado correctamente", request=request)
+
+
+@router.get("/products/{product_id}/units", response_class=JSONResponse)
+async def list_product_units(request: Request, product_id: int = Path(..., gt=0), user: dict = Depends(require_prices_read)):
+    async with db_manager.get_async_session() as session:
+        rows = await _product_unit_rows(session, product_id)
+        if not rows:
+            return ResponseManager.error(message="Producto sin unidades de venta configuradas", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        data = [{
+            "id": int(row["id"]),
+            "measurement_unit_id": int(row["id"]),
+            "unit_code": row["unit_code"],
+            "unit_name": row["unit_name"],
+            "unit_symbol": row["unit_symbol"],
+            "conversion_factor": _decimal(row["conversion_factor"]),
+            "is_sale_unit": bool(row["is_sale_unit"]),
+            "is_inventory_unit": bool(row["is_inventory_unit"]),
+            "is_base_unit": bool(row["is_base_unit"]),
+        } for row in rows if row.get("is_sale_unit") or row.get("is_base_unit")]
+        return ResponseManager.success(data=data, request=request)
 
 
 @router.get("/product-variants/{variant_id}/units", response_class=JSONResponse)
@@ -939,7 +1080,10 @@ async def resolve_price(
             "price_list_code": row["price_list_code"],
             "price_list_name": row["price_list_name"],
             "currency_code": row["currency_code"],
+            "price_scope": row["price_scope"],
+            "product_id": row["price_product_id"],
             "product_variant_id": row["product_variant_id"],
+            "price_product_variant_id": row["price_product_variant_id"],
             "variant_sku": row["variant_sku"],
             "variant_name": row["variant_name"],
             "product_name": row["product_name"],
