@@ -165,6 +165,36 @@ const detailNavigationRoutes = [
     getLabelFromCode: (code) => `Transferencia ${code}`,
     getTooltipFromCode: (code) => `Detalle de transferencia: ${code}`,
   },
+  {
+    id: 'price-list-products-detail',
+    pathname: '/price-lists',
+    queryParam: 'price_list_id',
+    basePath: '/price-lists',
+    group: 'Listas de precios',
+    fallbackLabel: 'Precios de productos',
+    getLabelFromCode: () => 'Precios de productos',
+    getTooltipFromCode: () => 'Precios de productos por lista de precios',
+  },
+  {
+    id: 'role-permissions-detail',
+    pathname: '/admin/roles/permissions',
+    queryParam: 'roleId',
+    basePath: '/admin/roles',
+    group: 'Administracion de roles y permisos',
+    fallbackLabel: 'Permisos de perfil',
+    getLabelFromCode: () => 'Permisos de perfil',
+    getTooltipFromCode: () => 'Permisos del perfil seleccionado',
+  },
+  {
+    id: 'user-permissions-detail',
+    pathname: '/admin/users/permissions',
+    queryParam: 'userId',
+    basePath: '/admin/users',
+    group: 'Administracion de usuarios',
+    fallbackLabel: 'Permisos especiales',
+    getLabelFromCode: () => 'Permisos especiales',
+    getTooltipFromCode: () => 'Permisos especiales del usuario seleccionado',
+  },
 ];
 
 const getDetailNavigationRoute = (pathname, searchParams) => {
@@ -504,6 +534,7 @@ const AppLayout = () => {
       id: config.id,
       label: parentModule?.label || config.group || config.fallbackLabel,
       path: location.pathname,
+      menuPath: parentModule?.path || config.basePath || config.parentPath || location.pathname,
       group: parentModule?.group || config.group,
       groupId: parentModule?.groupId,
       description: config.group,
@@ -618,6 +649,7 @@ const AppLayout = () => {
         id: config.id,
         label,
         path: location.pathname,
+        menuPath: parentModule?.path || config.basePath || config.parentPath || location.pathname,
         group: parentModule?.group || config.group,
         groupId: parentModule?.groupId,
         description: config.group,
@@ -637,6 +669,7 @@ const AppLayout = () => {
           id: config.id,
           label,
           path: location.pathname,
+          menuPath: parentModule?.path || config.basePath || config.parentPath || location.pathname,
           group: parentModule?.group || config.group,
           groupId: parentModule?.groupId,
           description: config.group,
@@ -995,6 +1028,7 @@ const AppLayout = () => {
                       <div className="mt-1 space-y-1 border-l border-slate-200 pl-3 dark:border-white/10">
                       {sortedItems.map((item) => {
                   const Icon = item.icon || resolveMenuIcon(item.iconName, LucideIcons.Circle);
+                  const isItemActive = item.path === location.pathname || item.path === activeModule?.menuPath;
                   return (
                     <NavLink
                       key={item.id}
@@ -1003,7 +1037,7 @@ const AppLayout = () => {
                       title={item.label}
                       className={({ isActive }) => cn(
                         'flex min-h-9 items-center gap-3 rounded-md px-3 py-1.5 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-white/65 dark:hover:bg-white/10 dark:hover:text-white',
-                        isActive && 'bg-blue-600 text-white shadow-sm dark:bg-blue-600 dark:text-white'
+                        (isActive || isItemActive) && 'bg-blue-600 text-white shadow-sm dark:bg-blue-600 dark:text-white'
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
