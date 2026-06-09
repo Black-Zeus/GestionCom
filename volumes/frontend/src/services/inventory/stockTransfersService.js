@@ -22,6 +22,9 @@ export const stockTransfersService = {
   async getAvailableStock(params) {
     return unwrap(await apiClient.get('/stock-transfers/available-stock', { params }));
   },
+  async listVariantOptions() {
+    return list(unwrap(await apiClient.get('/stock-movements/variants-options')));
+  },
   async addItem(id, payload) {
     return unwrap(await apiClient.post(`/stock-transfers/transfers/${id}/items`, payload));
   },

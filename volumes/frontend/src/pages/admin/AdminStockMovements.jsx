@@ -63,6 +63,8 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
     warehouse_id: '',
     warehouse_zone_id: '',
     warehouse_zone_location_id: '',
+    batch_lot_number: '',
+    expiry_date: '',
     quantity: '1',
     unit_cost: '',
     notes: '',
@@ -73,6 +75,10 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
   const [error, setError] = useState('');
   const zoneOptions = zones.filter((zone) => !form.warehouse_id || String(zone.warehouse_id) === String(form.warehouse_id));
   const locationOptions = locations.filter((location) => !form.warehouse_zone_id || String(location.warehouse_zone_id) === String(form.warehouse_zone_id));
+  const selectedVariant = variants.find((variant) => String(variant.id) === String(form.product_variant_id));
+  const needsLocation = Boolean(selectedVariant?.has_location_tracking);
+  const needsBatch = Boolean(selectedVariant?.has_batch_control || selectedVariant?.has_expiry_date);
+  const needsExpiry = Boolean(selectedVariant?.has_expiry_date);
   const selectedType = movementTypeMap[form.manual_movement_type];
 
   useEffect(() => {
@@ -115,6 +121,18 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
       setError('Selecciona producto, unidad, bodega, cantidad y motivo.');
       return;
     }
+    if (needsLocation && !form.warehouse_zone_location_id) {
+      setError('Este producto controla ubicacion; selecciona una ubicacion interna.');
+      return;
+    }
+    if (needsBatch && !form.batch_lot_number.trim()) {
+      setError('Este producto controla lote/vencimiento; indica el lote.');
+      return;
+    }
+    if (needsExpiry && !form.expiry_date) {
+      setError('Este producto controla vencimiento; indica la fecha de vencimiento.');
+      return;
+    }
     setSaving(true);
     try {
       const ok = await onSubmit({
@@ -124,6 +142,8 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
         warehouse_id: Number(form.warehouse_id),
         warehouse_zone_id: form.warehouse_zone_id ? Number(form.warehouse_zone_id) : null,
         warehouse_zone_location_id: form.warehouse_zone_location_id ? Number(form.warehouse_zone_location_id) : null,
+        batch_lot_number: form.batch_lot_number.trim() || null,
+        expiry_date: form.expiry_date || null,
         quantity: Number(form.quantity),
         unit_cost: form.unit_cost ? Number(form.unit_cost) : null,
         notes: form.notes.trim(),
@@ -145,9 +165,9 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
         </label>
         <label className="space-y-1 text-sm md:col-span-2">
           <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variacion</span>
-          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => setForm((current) => ({ ...current, product_variant_id: event.target.value, measurement_unit_id: '' }))} required>
+          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => setForm((current) => ({ ...current, product_variant_id: event.target.value, measurement_unit_id: '', batch_lot_number: '', expiry_date: '' }))} required>
             <option value="">Selecciona SKU</option>
-            {variants.map((variant) => <option key={variant.id} value={variant.id}>{nameLabel(variant, 'variant_name', 'variant_sku')}</option>)}
+            {variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.product_name, nameLabel(variant, 'variant_name', 'variant_sku')].filter(Boolean).join(' / ')}</option>)}
           </select>
         </label>
         <label className="space-y-1 text-sm">
@@ -165,12 +185,24 @@ const StockMovementModal = ({ variants = [], warehouses = [], zones = [], locati
           </select>
         </label>
         <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion interna</span>
+          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion interna{needsLocation ? ' *' : ''}</span>
           <select className={selectClassName} value={form.warehouse_zone_location_id} onChange={(event) => setForm((current) => ({ ...current, warehouse_zone_location_id: event.target.value }))} disabled={!form.warehouse_zone_id}>
             <option value="">Sin ubicacion interna</option>
             {locationOptions.map((location) => <option key={location.id} value={location.id}>{nameLabel(location, 'location_name', 'location_code')}</option>)}
           </select>
         </label>
+        {needsBatch && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Lote *</span>
+            <input className={fieldClassName} value={form.batch_lot_number} onChange={(event) => setForm((current) => ({ ...current, batch_lot_number: event.target.value.toUpperCase() }))} maxLength={100} required />
+          </label>
+        )}
+        {needsExpiry && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Vencimiento *</span>
+            <input className={fieldClassName} type="date" value={form.expiry_date} onChange={(event) => setForm((current) => ({ ...current, expiry_date: event.target.value }))} required />
+          </label>
+        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad</span>
           <input className={fieldClassName} type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} required />
@@ -210,6 +242,8 @@ const StockMovementDetail = ({ movement, timezone, hourFormat, onClose }) => {
     ['Producto base', movement.product_name || '-'],
     ['Tipo', movementLabel(movement)],
     ['Ubicacion', locationLabel(movement)],
+    ['Lote', movement.batch_lot_number || '-'],
+    ['Vencimiento', movement.expiry_date || '-'],
     ['Cantidad', `${quantity(movementUnitQuantity(movement))} ${unitLabel(movement)}`.trim()],
     ['Cantidad base', quantity(Math.abs(Number(movement.quantity || 0)))],
     ['Saldo anterior', quantity(movement.quantity_before)],
@@ -267,7 +301,7 @@ const AdminStockMovements = () => {
         adminMaintainersService.list('warehouses-options'),
         adminMaintainersService.list('warehouse-zones-options'),
         adminMaintainersService.list('warehouse-zone-locations-options'),
-        adminMaintainersService.list('product-variants-options'),
+        stockMovementsService.listVariantOptions(),
       ]);
       setMovements(nextMovements);
       setWarehouses(nextWarehouses);
@@ -289,7 +323,7 @@ const AdminStockMovements = () => {
     return movements.filter((movement) => {
       const matchesType = typeFilter === 'all' || movement.manual_movement_type === typeFilter || movementDirection(movement) === typeFilter;
       const matchesWarehouse = warehouseFilter === 'all' || String(movement.warehouse_id) === String(warehouseFilter);
-      const haystack = [movement.product_name, movement.variant_name, movement.warehouse_name, movement.zone_name, movement.location_name, movement.notes].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [movement.product_name, movement.variant_name, movement.warehouse_name, movement.zone_name, movement.location_name, movement.batch_lot_number, movement.expiry_date, movement.notes].filter(Boolean).join(' ').toLowerCase();
       return matchesType && matchesWarehouse && (!term || haystack.includes(term));
     });
   }, [movements, search, typeFilter, warehouseFilter]);
@@ -381,6 +415,7 @@ const AdminStockMovements = () => {
           { id: 'product', label: 'Producto', render: (item) => <div><div className="font-medium">{item.variant_name}</div><div className="text-xs text-slate-500">{item.product_name}</div></div> },
           { id: 'type', label: 'Tipo', render: (item) => <MovementTypeBadge movement={item} /> },
           { id: 'warehouse', label: 'Ubicacion', render: (item) => <div><div>{item.warehouse_name}</div><div className="text-xs text-slate-500">{[item.zone_name, item.location_name].filter(Boolean).join(' / ') || 'Stock general'}</div></div> },
+          { id: 'tracking', label: 'Lote / venc.', render: (item) => [item.batch_lot_number, item.expiry_date].filter(Boolean).join(' / ') || '-' },
           { id: 'quantity', label: 'Cantidad', align: 'right', render: (item) => <span className={movementDirection(item) === 'in' ? 'font-medium text-emerald-700 dark:text-emerald-300' : 'font-medium text-red-700 dark:text-red-300'}>{movementDirection(item) === 'in' ? <ArrowUpCircle className="mr-1 inline h-4 w-4" /> : <ArrowDownCircle className="mr-1 inline h-4 w-4" />}{quantity(movementUnitQuantity(item))} {unitLabel(item)}</span> },
           { id: 'balance', label: 'Saldo base', align: 'right', render: (item) => quantity(item.quantity_after) },
           { id: 'cost', label: 'Costo total', align: 'right', render: (item) => item.total_cost ? money(item.total_cost) : '-' },

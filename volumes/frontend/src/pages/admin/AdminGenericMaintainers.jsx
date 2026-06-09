@@ -331,7 +331,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
     );
   };
 
-  const buildFormFields = (item) => {
+  const buildFormFields = () => {
     const mappedFields = [];
     activeConfig.fields.forEach((field, index) => {
       if (routePrefill[field.id]) {
@@ -342,13 +342,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       }
       mappedFields.push(defaultFieldClass(field, optionData));
     });
-    const codeField = item && activeConfig.codeField
-      ? { id: activeConfig.codeField, label: 'Codigo', readOnly: true, disabled: true, mono: true }
-      : null;
-
-    if (!codeField) return mappedFields;
-    if (mappedFields[0]?.type === 'section') return [mappedFields[0], codeField, ...mappedFields.slice(1)];
-    return [codeField, ...mappedFields];
+    return mappedFields;
   };
 
   const openForm = (item = null) => {

@@ -103,12 +103,6 @@ const UnitFormModal = ({ mode = 'create', initialValues = emptyUnitForm, baseUni
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {isEdit && (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.unit_code} disabled readOnly />
-          </label>
-        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
           <input className={fieldClassName} value={form.unit_name} onChange={(event) => updateField('unit_name', event.target.value)} minLength={2} required />

@@ -54,7 +54,6 @@ const AdminTaxConfig = () => {
     contentProps: {
       initialValues: tax ? { tax_code: tax.tax_code, tax_name: tax.tax_name, tax_type: tax.tax_type, rate_percentage: tax.rate_percentage, valid_from: tax.valid_from, valid_to: tax.valid_to || '', is_default: tax.is_default, is_active: tax.is_active } : { tax_name: '', tax_type: 'VAT', rate_percentage: 0, valid_from: today(), valid_to: '', is_default: false, is_active: true },
       fields: [
-        ...(tax ? [{ id: 'tax_code', label: 'Codigo', readOnly: true, disabled: true }] : []),
         { id: 'tax_name', label: 'Nombre', required: true },
         { id: 'tax_type', label: 'Tipo', type: 'select', options: Object.entries(taxTypeLabels).map(([value, label]) => ({ value, label })) },
         { id: 'rate_percentage', label: 'Tasa %', type: 'number', min: 0, required: true },

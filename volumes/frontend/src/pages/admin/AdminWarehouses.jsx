@@ -134,12 +134,6 @@ const WarehouseFormModal = ({ mode = 'create', initialValues = emptyWarehouseFor
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {isEdit && (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.warehouse_code} disabled readOnly />
-          </label>
-        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Tipo</span>
           <select className={selectClassName} value={form.warehouse_type} onChange={(event) => updateField('warehouse_type', event.target.value)}>

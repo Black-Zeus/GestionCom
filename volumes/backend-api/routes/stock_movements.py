@@ -13,6 +13,7 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
+from utils.inventory_tracking import validate_tracking_dimensions
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Stock Movements"])
@@ -39,6 +40,8 @@ class StockMovementCreate(BaseModel):
     warehouse_zone_location_id: int | None = Field(default=None, gt=0)
     quantity: Decimal = Field(gt=0)
     unit_cost: Decimal | None = Field(default=None, ge=0)
+    batch_lot_number: str | None = Field(default=None, max_length=100)
+    expiry_date: date | None = None
     notes: str = Field(min_length=3, max_length=500)
 
 
@@ -173,13 +176,29 @@ async def _validate_variant_unit(session, product_variant_id: int, measurement_u
     }
 
 
-async def _stock_row(session, product_variant_id: int, warehouse_id: int, zone_id: int | None, location_id: int | None) -> dict | None:
+async def _stock_row(
+    session,
+    product_variant_id: int,
+    warehouse_id: int,
+    zone_id: int | None,
+    location_id: int | None,
+    batch_lot_number: str | None,
+    expiry_date: date | None,
+) -> dict | None:
     result = await session.execute(
         text(
             "SELECT * FROM stock WHERE product_variant_id = :product_variant_id AND warehouse_id = :warehouse_id "
-            "AND warehouse_zone_id <=> :zone_id AND warehouse_zone_location_id <=> :location_id LIMIT 1"
+            "AND warehouse_zone_id <=> :zone_id AND warehouse_zone_location_id <=> :location_id "
+            "AND batch_lot_number <=> :batch_lot_number AND expiry_date <=> :expiry_date LIMIT 1"
         ),
-        {"product_variant_id": product_variant_id, "warehouse_id": warehouse_id, "zone_id": zone_id, "location_id": location_id},
+        {
+            "product_variant_id": product_variant_id,
+            "warehouse_id": warehouse_id,
+            "zone_id": zone_id,
+            "location_id": location_id,
+            "batch_lot_number": batch_lot_number,
+            "expiry_date": expiry_date,
+        },
     )
     return _row(result.mappings().first())
 
@@ -191,8 +210,11 @@ async def _apply_manual_movement(session, data: StockMovementCreate, user_id: in
 
     zone_id, location_id = await _validate_location(session, data.warehouse_id, data.warehouse_zone_id, data.warehouse_zone_location_id)
     unit = await _validate_variant_unit(session, data.product_variant_id, data.measurement_unit_id)
+    tracking = await validate_tracking_dimensions(session, data.product_variant_id, location_id, data.batch_lot_number, data.expiry_date)
+    batch_lot_number = tracking["batch_lot_number"]
+    expiry_date = tracking["expiry_date"]
 
-    stock = await _stock_row(session, data.product_variant_id, data.warehouse_id, zone_id, location_id)
+    stock = await _stock_row(session, data.product_variant_id, data.warehouse_id, zone_id, location_id, batch_lot_number, expiry_date)
     quantity_before = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
     base_quantity = Decimal(str(data.quantity)) * unit["conversion_factor"]
     signed_quantity = base_quantity * movement_config["sign"]
@@ -211,15 +233,17 @@ async def _apply_manual_movement(session, data: StockMovementCreate, user_id: in
     else:
         await session.execute(
             text(
-                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, "
+                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, "
                 "current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
-                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :quantity_after, 0, CURRENT_TIMESTAMP, :movement_type)"
+                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :batch_lot_number, :expiry_date, :quantity_after, 0, CURRENT_TIMESTAMP, :movement_type)"
             ),
             {
                 "product_variant_id": data.product_variant_id,
                 "warehouse_id": data.warehouse_id,
                 "zone_id": zone_id,
                 "location_id": location_id,
+                "batch_lot_number": batch_lot_number,
+                "expiry_date": expiry_date,
                 "quantity_after": quantity_after,
                 "movement_type": movement_config["movement_type"],
             },
@@ -229,9 +253,9 @@ async def _apply_manual_movement(session, data: StockMovementCreate, user_id: in
     await session.execute(
         text(
             "INSERT INTO stock_movements (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, "
-            "movement_type, reference_type, manual_movement_type, measurement_unit_id, movement_unit_quantity, quantity, quantity_before, quantity_after, unit_cost, total_cost, notes, created_by_user_id) "
+            "movement_type, reference_type, manual_movement_type, measurement_unit_id, movement_unit_quantity, quantity, quantity_before, quantity_after, unit_cost, total_cost, batch_lot_number, expiry_date, notes, created_by_user_id) "
             "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :movement_type, :reference_type, :manual_movement_type, :measurement_unit_id, "
-            ":movement_unit_quantity, :quantity, :quantity_before, :quantity_after, :unit_cost, :total_cost, :notes, :user_id)"
+            ":movement_unit_quantity, :quantity, :quantity_before, :quantity_after, :unit_cost, :total_cost, :batch_lot_number, :expiry_date, :notes, :user_id)"
         ),
         {
             "product_variant_id": data.product_variant_id,
@@ -248,6 +272,8 @@ async def _apply_manual_movement(session, data: StockMovementCreate, user_id: in
             "quantity_after": quantity_after,
             "unit_cost": data.unit_cost,
             "total_cost": total_cost,
+            "batch_lot_number": batch_lot_number,
+            "expiry_date": expiry_date,
             "notes": data.notes,
             "user_id": user_id,
         },
@@ -342,6 +368,25 @@ async def list_variant_units(product_variant_id: int, request: Request, user: di
             return ResponseManager.success(data=units, request=request)
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al listar unidades del SKU", details=str(exc), request=request)
+
+
+@router.get("/variants-options", response_class=JSONResponse)
+async def list_inventory_variant_options(request: Request, user: dict = Depends(require_stock_movements_read)):
+    try:
+        async with db_manager.get_async_session() as session:
+            result = await session.execute(
+                text(
+                    "SELECT pv.id, pv.product_id, pv.variant_sku, pv.variant_name, pv.is_active, "
+                    "p.product_code, p.product_name, p.has_location_tracking, p.has_batch_control, p.has_expiry_date, p.has_serial_numbers "
+                    "FROM product_variants pv "
+                    "JOIN products p ON p.id = pv.product_id "
+                    "WHERE pv.deleted_at IS NULL AND p.deleted_at IS NULL AND pv.is_active = TRUE AND p.is_active = TRUE "
+                    "ORDER BY p.product_name, pv.variant_name, pv.variant_sku"
+                )
+            )
+            return ResponseManager.success(data=[_row(row) for row in result.mappings().all()], request=request)
+    except Exception as exc:
+        return ResponseManager.internal_server_error(message="Error al listar SKU para inventario", details=str(exc), request=request)
 
 
 @router.post("/movements", response_class=JSONResponse)

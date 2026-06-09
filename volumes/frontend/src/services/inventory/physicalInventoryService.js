@@ -1,8 +1,12 @@
 import apiClient from '@/services/api/apiClient';
 
 const unwrap = (response) => response.data?.data || response.data;
+const list = (data) => (Array.isArray(data) ? data : []);
 
 export const physicalInventoryService = {
+  async listVariantOptions() {
+    return list(unwrap(await apiClient.get('/stock-movements/variants-options')));
+  },
   async listCounts(params = {}) {
     return unwrap(await apiClient.get('/physical-inventory/counts', { params }));
   },

@@ -10,6 +10,9 @@ export const stockMovementsService = {
   async listVariantUnits(productVariantId) {
     return list(unwrap(await apiClient.get(`/stock-movements/variant-units/${productVariantId}`)));
   },
+  async listVariantOptions() {
+    return list(unwrap(await apiClient.get('/stock-movements/variants-options')));
+  },
   async createMovement(payload) {
     return unwrap(await apiClient.post('/stock-movements/movements', payload));
   },

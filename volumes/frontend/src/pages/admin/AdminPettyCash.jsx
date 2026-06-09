@@ -109,11 +109,10 @@ const toCategoryPayload = (form) => {
   return payload;
 };
 
-const FundFormModal = ({ mode = 'create', initialValues = emptyFundForm, warehouses = [], users = [], onSubmit, onClose }) => {
+const FundFormModal = ({ initialValues = emptyFundForm, warehouses = [], users = [], onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const isEdit = mode === 'edit';
   const activeUsers = useMemo(() => users.filter((user) => user.is_active !== false), [users]);
 
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
@@ -139,12 +138,6 @@ const FundFormModal = ({ mode = 'create', initialValues = emptyFundForm, warehou
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        {isEdit && (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.fund_code} disabled readOnly />
-          </label>
-        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Estado</span>
           <select className={selectClassName} value={form.fund_status} onChange={(event) => updateField('fund_status', event.target.value)}>
@@ -185,12 +178,10 @@ const FundFormModal = ({ mode = 'create', initialValues = emptyFundForm, warehou
   );
 };
 
-const CategoryFormModal = ({ mode = 'create', initialValues = emptyCategoryForm, onSubmit, onClose }) => {
+const CategoryFormModal = ({ initialValues = emptyCategoryForm, onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
-  const isEdit = mode === 'edit';
-
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const handleSubmit = async (event) => {
@@ -209,12 +200,6 @@ const CategoryFormModal = ({ mode = 'create', initialValues = emptyCategoryForm,
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        {isEdit && (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Codigo</span>
-            <input className={`${fieldClassName} font-mono uppercase disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-900`} value={form.category_code} disabled readOnly />
-          </label>
-        )}
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
           <input className={fieldClassName} value={form.category_name} onChange={(event) => updateField('category_name', event.target.value)} minLength={3} required />

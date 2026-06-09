@@ -193,7 +193,7 @@ const ProductFormModal = ({ product = null, initialValues, categories = [], unit
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:col-span-2">
-          <label className="space-y-1 text-sm">
+          <label className="space-y-1 text-sm md:col-span-2">
             <span className="font-medium text-slate-700 dark:text-slate-200">Nombre</span>
             <input className={fieldClassName} value={form.product_name} onChange={(event) => updateField('product_name', event.target.value)} minLength={2} required />
           </label>
@@ -212,12 +212,12 @@ const ProductFormModal = ({ product = null, initialValues, categories = [], unit
             </select>
           </label>
           <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Precio base</span>
-            <input className={fieldClassName} type="number" min="0" step="0.01" value={form.base_price} onChange={(event) => updateField('base_price', event.target.value)} />
-          </label>
-          <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">Precio costo</span>
             <input className={fieldClassName} type="number" min="0" step="0.01" value={form.cost_price} onChange={(event) => updateField('cost_price', event.target.value)} />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Precio base</span>
+            <input className={fieldClassName} type="number" min="0" step="0.01" value={form.base_price} onChange={(event) => updateField('base_price', event.target.value)} />
           </label>
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">Marca</span>

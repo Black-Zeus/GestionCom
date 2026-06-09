@@ -46,7 +46,6 @@ const SeriesModal = ({ initialValues, types, warehouses, onSubmit, onClose }) =>
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        {form.series_code && <label className="space-y-1 text-sm"><span className="font-medium">Codigo</span><input className={`${fieldClassName} font-mono`} value={form.series_code} disabled readOnly /></label>}
         <label className="space-y-1 text-sm"><span className="font-medium">Tipo documento</span><select className={`${fieldClassName} bg-white dark:bg-slate-950`} value={form.document_type_id} onChange={(event) => setField('document_type_id', event.target.value)} required><option value="">Selecciona tipo</option>{types.map((type) => <option key={type.id} value={type.id}>{type.document_type_code} - {type.document_type_name}</option>)}</select></label>
         <label className="space-y-1 text-sm"><span className="font-medium">Bodega</span><select className={`${fieldClassName} bg-white dark:bg-slate-950`} value={form.warehouse_id} onChange={(event) => setField('warehouse_id', event.target.value)}><option value="">Global</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.warehouse_code} - {warehouse.warehouse_name}</option>)}</select></label>
         <label className="space-y-1 text-sm"><span className="font-medium">Prefijo</span><input className={fieldClassName} value={form.series_prefix} onChange={(event) => setField('series_prefix', event.target.value.toUpperCase())} maxLength={10} /></label>
@@ -78,7 +77,6 @@ const TypeModal = ({ initialValues, onSubmit, onClose }) => {
   return (
     <form onSubmit={submit} className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2">
-        <label className="space-y-1 text-sm"><span className="font-medium">Codigo</span><input className={`${fieldClassName} font-mono`} value={form.document_type_code} disabled readOnly /></label>
         <label className="space-y-1 text-sm"><span className="font-medium">Nombre</span><input className={fieldClassName} value={form.document_type_name} onChange={(event) => setField('document_type_name', event.target.value)} required /></label>
         <label className="space-y-1 text-sm"><span className="font-medium">Categoria</span><select className={`${fieldClassName} bg-white dark:bg-slate-950`} value={form.document_category} onChange={(event) => setField('document_category', event.target.value)}>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="space-y-1 text-sm"><span className="font-medium">Movimiento</span><select className={`${fieldClassName} bg-white dark:bg-slate-950`} value={form.movement_type || ''} onChange={(event) => setField('movement_type', event.target.value)} disabled={!form.generates_movement}><option value="">Sin movimiento</option>{Object.entries(movementLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>

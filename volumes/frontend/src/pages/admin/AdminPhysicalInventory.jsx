@@ -206,11 +206,11 @@ const CreateCountModal = ({ warehouses = [], zones = [], locations = [], onSubmi
   );
 };
 
-const CountDetailModal = ({ countId, variants = [], onChanged, onClose }) => {
+const CountDetailModal = ({ countId, variants = [], zones = [], locations = [], onChanged, onClose }) => {
   const [count, setCount] = useState(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [itemForm, setItemForm] = useState({ product_variant_id: '', counted_quantity: '', notes: '' });
+  const [itemForm, setItemForm] = useState({ product_variant_id: '', warehouse_zone_id: '', warehouse_zone_location_id: '', batch_lot_number: '', expiry_date: '', counted_quantity: '', notes: '' });
   const [countDrafts, setCountDrafts] = useState({});
   const [formError, setFormError] = useState('');
 
@@ -236,6 +236,12 @@ const CountDetailModal = ({ countId, variants = [], onChanged, onClose }) => {
   const canApprove = count?.status_code === 'REVIEW';
   const canPost = count?.status_code === 'APPROVED';
   const canCancel = count && count.status_code !== 'POSTED' && count.status_code !== 'CANCELLED';
+  const selectedVariant = variants.find((variant) => String(variant.id) === String(itemForm.product_variant_id));
+  const needsLocation = Boolean(selectedVariant?.has_location_tracking);
+  const needsBatch = Boolean(selectedVariant?.has_batch_control || selectedVariant?.has_expiry_date);
+  const needsExpiry = Boolean(selectedVariant?.has_expiry_date);
+  const zoneOptions = zones.filter((zone) => !count?.warehouse_id || String(zone.warehouse_id) === String(count.warehouse_id));
+  const locationOptions = locations.filter((location) => !itemForm.warehouse_zone_id || String(location.warehouse_zone_id) === String(itemForm.warehouse_zone_id));
 
   const runAction = async (promiseFactory, messages) => {
     setBusy(true);
@@ -255,15 +261,31 @@ const CountDetailModal = ({ countId, variants = [], onChanged, onClose }) => {
       setFormError('Selecciona un SKU / Variacion.');
       return;
     }
+    if (needsBatch && !itemForm.batch_lot_number.trim()) {
+      setFormError('Este producto controla lote/vencimiento; indica el lote.');
+      return;
+    }
+    if (needsLocation && !count?.warehouse_zone_location_id && !itemForm.warehouse_zone_location_id) {
+      setFormError('Este producto controla ubicacion; selecciona una ubicacion interna.');
+      return;
+    }
+    if (needsExpiry && !itemForm.expiry_date) {
+      setFormError('Este producto controla vencimiento; indica la fecha.');
+      return;
+    }
     await runAction(
       () => physicalInventoryService.addItem(countId, {
         product_variant_id: Number(itemForm.product_variant_id),
+        warehouse_zone_id: itemForm.warehouse_zone_id ? Number(itemForm.warehouse_zone_id) : null,
+        warehouse_zone_location_id: itemForm.warehouse_zone_location_id ? Number(itemForm.warehouse_zone_location_id) : null,
+        batch_lot_number: itemForm.batch_lot_number.trim() || null,
+        expiry_date: itemForm.expiry_date || null,
         counted_quantity: itemForm.counted_quantity === '' ? null : Number(itemForm.counted_quantity),
         notes: itemForm.notes || null,
       }),
       { loading: 'Agregando item...', success: 'Item agregado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible agregar item.') },
     );
-    setItemForm({ product_variant_id: '', counted_quantity: '', notes: '' });
+    setItemForm({ product_variant_id: '', warehouse_zone_id: '', warehouse_zone_location_id: '', batch_lot_number: '', expiry_date: '', counted_quantity: '', notes: '' });
   };
 
   const updateItemCount = async (item) => {
@@ -301,14 +323,44 @@ const CountDetailModal = ({ countId, variants = [], onChanged, onClose }) => {
       </div>
 
       {canAddItems && (
-        <form onSubmit={addItem} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60 md:grid-cols-[minmax(0,1fr)_9rem_auto]">
+        <form onSubmit={addItem} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60 md:grid-cols-4">
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variacion</span>
-            <select className={selectClassName} value={itemForm.product_variant_id} onChange={(event) => setItemForm((current) => ({ ...current, product_variant_id: event.target.value }))}>
+            <select className={selectClassName} value={itemForm.product_variant_id} onChange={(event) => setItemForm((current) => ({ ...current, product_variant_id: event.target.value, batch_lot_number: '', expiry_date: '' }))}>
               <option value="">Selecciona SKU</option>
-              {variants.map((variant) => <option key={variant.id} value={variant.id}>{variant.variant_name || variant.product_name}</option>)}
+              {variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.product_name, variant.variant_name || variant.variant_sku].filter(Boolean).join(' / ')}</option>)}
             </select>
           </label>
+          {needsBatch && (
+            <label className="space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">Lote *</span>
+              <input className={fieldClassName} value={itemForm.batch_lot_number} onChange={(event) => setItemForm((current) => ({ ...current, batch_lot_number: event.target.value.toUpperCase() }))} maxLength={100} required />
+            </label>
+          )}
+          {needsExpiry && (
+            <label className="space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">Vencimiento *</span>
+              <input className={fieldClassName} type="date" value={itemForm.expiry_date} onChange={(event) => setItemForm((current) => ({ ...current, expiry_date: event.target.value }))} required />
+            </label>
+          )}
+          {needsLocation && !count?.warehouse_zone_location_id && (
+            <>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Zona</span>
+                <select className={selectClassName} value={itemForm.warehouse_zone_id} onChange={(event) => setItemForm((current) => ({ ...current, warehouse_zone_id: event.target.value, warehouse_zone_location_id: '' }))}>
+                  <option value="">Selecciona zona</option>
+                  {zoneOptions.map((zone) => <option key={zone.id} value={zone.id}>{optionLabel(zone, 'zone_code', 'zone_name')}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion *</span>
+                <select className={selectClassName} value={itemForm.warehouse_zone_location_id} onChange={(event) => setItemForm((current) => ({ ...current, warehouse_zone_location_id: event.target.value }))} disabled={!itemForm.warehouse_zone_id} required>
+                  <option value="">Selecciona ubicacion</option>
+                  {locationOptions.map((location) => <option key={location.id} value={location.id}>{optionLabel(location, 'location_code', 'location_name')}</option>)}
+                </select>
+              </label>
+            </>
+          )}
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad</span>
             <input className={fieldClassName} type="number" min="0" step="0.0001" value={itemForm.counted_quantity} onChange={(event) => setItemForm((current) => ({ ...current, counted_quantity: event.target.value }))} placeholder={canCount ? 'Contada' : 'Opcional'} />
@@ -328,6 +380,7 @@ const CountDetailModal = ({ countId, variants = [], onChanged, onClose }) => {
         columns={[
           { id: 'product', label: 'SKU / Variacion', render: (item) => <div><div className="font-medium">{item.variant_name}</div><div className="text-xs text-slate-500">{item.product_name}</div></div> },
           { id: 'location', label: 'Ubicacion', render: (item) => [item.zone_name, item.location_name].filter(Boolean).join(' / ') || '-' },
+          { id: 'tracking', label: 'Lote / venc.', render: (item) => [item.batch_lot_number, item.expiry_date].filter(Boolean).join(' / ') || '-' },
           { id: 'system_quantity', label: 'Sistema', align: 'right', render: (item) => quantity(item.system_quantity) },
           {
             id: 'counted_quantity',
@@ -390,7 +443,7 @@ const AdminPhysicalInventory = () => {
         adminMaintainersService.list('warehouses-options'),
         adminMaintainersService.list('warehouse-zones-options'),
         adminMaintainersService.list('warehouse-zone-locations-options'),
-        adminMaintainersService.list('product-variants-options'),
+        physicalInventoryService.listVariantOptions(),
       ]);
       setCounts(nextCounts);
       setWarehouses(nextWarehouses);
@@ -453,6 +506,8 @@ const AdminPhysicalInventory = () => {
     contentProps: {
       countId: item.id,
       variants,
+      zones,
+      locations,
       onChanged: load,
     },
   });
