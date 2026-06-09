@@ -10,7 +10,7 @@ x-runtime: &runtime-defaults
     - no-new-privileges:true
 
 x-timezone-env: &timezone-env
-  TZ: ${TZ:-America/Santiago}
+  TZ: ${TZ}
 
 x-deploy-tiny: &deploy-tiny
   resources:
@@ -175,13 +175,13 @@ services:
       EVENTS_PUBLISH_TOKEN: ${EVENTS_PUBLISH_TOKEN}
       MINIO_HOST: ${MINIO_HOST}
       MINIO_PORT: ${MINIO_PORT}
-      MINIO_PUBLIC_HOST: ${MINIO_PUBLIC_HOST:-localhost}
-      MINIO_PUBLIC_PORT: ${MINIO_PUBLIC_PORT:-9000}
-      MINIO_PUBLIC_SECURE: ${MINIO_PUBLIC_SECURE:-false}
-      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_PUBLIC_HOST: ${MINIO_PUBLIC_HOST}
+      MINIO_PUBLIC_PORT: ${MINIO_PUBLIC_PORT}
+      MINIO_PUBLIC_SECURE: ${MINIO_PUBLIC_SECURE}
+      MINIO_REGION: ${MINIO_REGION}
       MINIO_ROOT_USER_FILE: /run/secrets/minio_root_user
       MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
-      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET:-gestioncom-media}
+      MINIO_MEDIA_BUCKET: ${MINIO_MEDIA_BUCKET}
       ERROR_CATALOG_PATH: /shared/common/error-catalog.json
     secrets:
       - backend_api_secret_key
@@ -529,17 +529,17 @@ networks:
 
 secrets:
   backend_api_secret_key:
-    file: ${BACKEND_API_SECRET_KEY_FILE:-./secrets/dev/backend_api_secret_key.txt}
+    file: ${BACKEND_API_SECRET_KEY_FILE}
   mysql_root_password:
-    file: ${MYSQL_ROOT_PASSWORD_FILE:-./secrets/dev/mysql_root_password.txt}
+    file: ${MYSQL_ROOT_PASSWORD_FILE}
   mysql_password:
-    file: ${MYSQL_PASSWORD_FILE:-./secrets/dev/mysql_password.txt}
+    file: ${MYSQL_PASSWORD_FILE}
   redis_password:
-    file: ${REDIS_PASSWORD_FILE:-./secrets/dev/redis_password.txt}
+    file: ${REDIS_PASSWORD_FILE}
   minio_root_user:
-    file: ${MINIO_ROOT_USER_FILE:-./secrets/dev/minio_root_user.txt}
+    file: ${MINIO_ROOT_USER_FILE}
   minio_root_password:
-    file: ${MINIO_ROOT_PASSWORD_FILE:-./secrets/dev/minio_root_password.txt}
+    file: ${MINIO_ROOT_PASSWORD_FILE}
 
 volumes:
   frontend_node_modules:

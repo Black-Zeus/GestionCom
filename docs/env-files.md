@@ -53,6 +53,8 @@ Los archivos bajo `volumes/*/.env` son configuracion runtime del contenedor. Pue
 - `MINIO_ACCESS_KEY_FILE`
 - `MINIO_SECRET_KEY_FILE`
 
+El bucket funcional usado por media debe declararse como `MINIO_MEDIA_BUCKET`; en desarrollo el valor esperado es `gestioncom-media`.
+
 ### `volumes/frontend/.env`
 
 Define variables expuestas a Vite. Todo nombre visible de producto debe venir desde `VITE_FRONTEND_NAME`; el codigo no debe hardcodear la marca.

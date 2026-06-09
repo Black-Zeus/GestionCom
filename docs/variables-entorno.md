@@ -172,6 +172,9 @@ MINIO_PORT=9000
 
 # Puerto de la consola web de administración
 MINIO_CONSOLE_PORT=9001
+
+# Bucket usado por el servicio de media/imagenes
+MINIO_MEDIA_BUCKET=gestioncom-media
 ```
 
 ### Mailpit (Testing de Emails)
