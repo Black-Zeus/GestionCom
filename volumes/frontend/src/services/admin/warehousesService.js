@@ -48,4 +48,24 @@ export const warehousesService = {
     const response = await apiClient.delete(`/warehouses/${warehouseId}`);
     return unwrap(response);
   },
+
+  async listAccess(warehouseId) {
+    const response = await apiClient.get(`/warehouses/${warehouseId}/access`);
+    return unwrap(response);
+  },
+
+  async grantAccess(warehouseId, payload) {
+    const response = await apiClient.post(`/warehouses/${warehouseId}/access`, payload);
+    return unwrap(response);
+  },
+
+  async updateAccess(warehouseId, userId, payload) {
+    const response = await apiClient.put(`/warehouses/${warehouseId}/access/${userId}`, payload);
+    return unwrap(response);
+  },
+
+  async revokeAccess(warehouseId, userId) {
+    const response = await apiClient.delete(`/warehouses/${warehouseId}/access/${userId}`);
+    return unwrap(response);
+  },
 };

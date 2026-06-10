@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CheckCircle2, EyeOff, MapPin, Pencil, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { Building2, CheckCircle2, EyeOff, MapPin, Pencil, RefreshCw, ShieldCheck, Trash2, UserMinus, Users, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -10,11 +10,13 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import { usersService } from '@/services/admin/usersService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesStore';
 import { normalizePhoneForStorage } from '@/utils/phone';
+import { formatDateTime } from '@/utils/dateTime';
 
 const warehouseTypes = [
   { value: 'WAREHOUSE', label: 'Bodega' },
@@ -37,6 +39,187 @@ const emptyWarehouseForm = {
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
+
+const ACCESS_TYPE_OPTIONS = [
+  { value: 'READ_ONLY', label: 'Solo lectura' },
+  { value: 'FULL', label: 'Acceso completo' },
+];
+
+const WarehousePersonnelModal = ({ warehouse, allUsers = [], onClose }) => {
+  const [accessList, setAccessList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [addUserId, setAddUserId] = useState('');
+  const [addAccessType, setAddAccessType] = useState('READ_ONLY');
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadAccess = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await warehousesService.listAccess(warehouse.id);
+      setAccessList(data.access_list || []);
+    } catch (err) {
+      setError(getBackendMessage(err, 'No fue posible cargar el personal asignado.'));
+    } finally {
+      setLoading(false);
+    }
+  }, [warehouse.id]);
+
+  useEffect(() => { loadAccess(); }, [loadAccess]);
+
+  const assignedIds = useMemo(() => new Set(accessList.map((a) => String(a.user_id))), [accessList]);
+
+  const userOptions = useMemo(
+    () => allUsers
+      .filter((u) => u.is_active !== false && !assignedIds.has(String(u.id)))
+      .map((u) => ({ value: String(u.id), label: getUserLabel(u) })),
+    [allUsers, assignedIds],
+  );
+
+  const handleAdd = async () => {
+    if (!addUserId) return;
+    setAdding(true);
+    try {
+      await notifyPromise(
+        warehousesService.grantAccess(warehouse.id, { user_id: Number(addUserId), access_type: addAccessType }),
+        { loading: 'Asignando acceso...', success: 'Acceso otorgado.', error: (e) => getBackendMessage(e, 'No fue posible otorgar acceso.') },
+      );
+      setAddUserId('');
+      await loadAccess();
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleChangeAccess = async (userId, newType) => {
+    try {
+      await warehousesService.updateAccess(warehouse.id, userId, { access_type: newType });
+      setAccessList((prev) => prev.map((a) => String(a.user_id) === String(userId) ? { ...a, access_type: newType } : a));
+    } catch (err) {
+      setError(getBackendMessage(err, 'No fue posible actualizar el acceso.'));
+    }
+  };
+
+  const handleRevoke = async (access) => {
+    const confirmed = await ModalManager.confirm({
+      title: 'Revocar acceso',
+      message: `¿Confirmas que deseas revocar el acceso de ${access.user_full_name} a ${warehouse.warehouse_name}?`,
+      buttons: { cancel: 'Cancelar', confirm: 'Revocar' },
+    });
+    if (!confirmed) return;
+    try {
+      await notifyPromise(
+        warehousesService.revokeAccess(warehouse.id, access.user_id),
+        { loading: 'Revocando acceso...', success: 'Acceso revocado.', error: (e) => getBackendMessage(e, 'No fue posible revocar el acceso.') },
+      );
+      await loadAccess();
+    } catch {}
+  };
+
+  return (
+    <div className="space-y-5">
+      {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
+
+      <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-800">
+        {loading ? (
+          <div className="px-4 py-8 text-center text-sm text-slate-400">Cargando personal...</div>
+        ) : accessList.length === 0 ? (
+          <div className="px-4 py-8 text-center text-sm text-slate-400">
+            <Users className="mx-auto mb-2 h-8 w-8 opacity-30" />
+            No hay personal asignado a esta bodega.
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-900">
+              <tr>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Persona</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nivel de acceso</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Desde</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {accessList.map((access) => (
+                <tr key={access.user_id} className="bg-white dark:bg-slate-950">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900 dark:text-slate-100">{access.user_full_name}</div>
+                    <div className="text-xs text-slate-500">{access.user_username}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={access.access_type}
+                      onChange={(e) => handleChangeAccess(access.user_id, e.target.value)}
+                      className="h-8 rounded border border-slate-200 bg-white px-2 text-xs dark:border-slate-700 dark:bg-slate-950"
+                    >
+                      {ACCESS_TYPE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {access.granted_at ? formatDateTime(access.granted_at) : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleRevoke(access)}
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+                    >
+                      <UserMinus className="h-3.5 w-3.5" />
+                      Revocar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <ShieldCheck className="h-4 w-4" />
+          Agregar persona
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <div className="min-w-0 flex-1">
+            <AutocompleteSelect
+              value={addUserId}
+              onChange={setAddUserId}
+              options={userOptions}
+              placeholder="Buscar persona..."
+              searchPlaceholder="Escribir nombre o usuario"
+              buttonClassName="h-10 w-full"
+            />
+          </div>
+          <select
+            value={addAccessType}
+            onChange={(e) => setAddAccessType(e.target.value)}
+            className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            {ACCESS_TYPE_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={!addUserId || adding}
+            className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-slate-950"
+          >
+            {adding ? 'Agregando...' : 'Agregar'}
+          </button>
+        </div>
+        {userOptions.length === 0 && !loading && (
+          <p className="mt-2 text-xs text-slate-400">Todos los usuarios activos ya tienen acceso asignado.</p>
+        )}
+      </div>
+
+      <div className="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-800">
+        <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const getTypeLabel = (type) => warehouseTypes.find((item) => item.value === type)?.label || type || 'Bodega';
 
@@ -281,7 +464,7 @@ const AdminWarehouses = () => {
     }
   }, []);
 
-  useEffect(() => { loadMeta(); }, [loadMeta]);
+  useEffect(() => { loadMeta(); ensureFormData(); }, [loadMeta, ensureFormData]);
 
   useEffect(() => {
     const nextSearch = searchParams.get('search') || '';
@@ -427,6 +610,18 @@ const AdminWarehouses = () => {
     }
   };
 
+  const openPersonnelModal = async (warehouse) => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom',
+      title: `Personal asignado — ${warehouse.warehouse_name}`,
+      size: 'large',
+      showFooter: false,
+      contentComponent: WarehousePersonnelModal,
+      contentProps: { warehouse, allUsers: users },
+    });
+  };
+
   const openWarehouseZones = (warehouse) => {
     const params = new URLSearchParams({ warehouse_id: String(warehouse.id) });
     navigate({ pathname: '/inventory/warehouses/zones', search: params.toString() });
@@ -564,8 +759,9 @@ const AdminWarehouses = () => {
       label: 'Acciones',
       align: 'right',
       render: (warehouse) => (
-        <div className="ml-auto grid w-max grid-cols-3 gap-2">
+        <div className="ml-auto grid w-max grid-cols-4 gap-2">
           <RowActionButton label="Editar bodega" icon={Pencil} disabled={busyWarehouseId === warehouse.id} onClick={() => openEditModal(warehouse)} />
+          <RowActionButton label="Personal asignado" icon={Users} disabled={busyWarehouseId === warehouse.id} onClick={() => openPersonnelModal(warehouse)} />
           <RowActionButton label="Zonas de bodega" icon={MapPin} disabled={busyWarehouseId === warehouse.id} onClick={() => openWarehouseZones(warehouse)} />
           <RowActionButton label="Eliminar bodega" icon={Trash2} disabled={busyWarehouseId === warehouse.id} variant="danger" onClick={() => removeWarehouse(warehouse)} />
           <RowActionButton label={warehouse.is_active ? 'Desactivar bodega' : 'Activar bodega'} icon={warehouse.is_active ? EyeOff : CheckCircle2} disabled={busyWarehouseId === warehouse.id} variant={warehouse.is_active ? 'danger' : 'neutral'} onClick={() => toggleWarehouse(warehouse)} />
