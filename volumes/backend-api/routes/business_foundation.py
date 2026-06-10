@@ -45,6 +45,7 @@ from database.schemas.business_foundation import (
     TaxRateUpdate,
 )
 from utils.code_generator import generate_sequential_code
+from utils.product_feature_flags import apply_product_flag_visibility, product_flag_visibility
 from utils.permissions_utils import get_current_user
 from services.media_storage import media_storage
 
@@ -274,6 +275,75 @@ async def _variant_attribute_map(session, variant_ids: list[int]) -> dict[int, l
             "text_value": row["text_value"],
         })
     return mapped
+
+
+async def _product_stock_history(session, product_id: int) -> dict:
+    result = await session.execute(
+        text(
+            """
+            SELECT
+              (
+                SELECT COALESCE(SUM(ABS(s.current_quantity)), 0)
+                FROM stock s
+                JOIN product_variants pv_stock ON pv_stock.id = s.product_variant_id
+                WHERE pv_stock.product_id = :product_id
+                  AND pv_stock.deleted_at IS NULL
+              ) AS stock_quantity,
+              (
+                SELECT COUNT(*)
+                FROM stock_movements sm
+                JOIN product_variants pv_mov ON pv_mov.id = sm.product_variant_id
+                WHERE pv_mov.product_id = :product_id
+                  AND pv_mov.deleted_at IS NULL
+              ) AS movement_count
+            """
+        ),
+        {"product_id": product_id},
+    )
+    row = result.mappings().first() or {}
+    return {"stock_quantity": float(row.get("stock_quantity") or 0), "movement_count": int(row.get("movement_count") or 0)}
+
+
+async def _variant_stock_history(session, variant_id: int) -> dict:
+    result = await session.execute(
+        text(
+            """
+            SELECT
+              (SELECT COALESCE(SUM(ABS(current_quantity)), 0) FROM stock WHERE product_variant_id = :variant_id) AS stock_quantity,
+              (SELECT COUNT(*) FROM stock_movements WHERE product_variant_id = :variant_id) AS movement_count
+            """
+        ),
+        {"variant_id": variant_id},
+    )
+    row = result.mappings().first() or {}
+    return {"stock_quantity": float(row.get("stock_quantity") or 0), "movement_count": int(row.get("movement_count") or 0)}
+
+
+async def _ensure_default_variant_for_simple_product(session, product: Product) -> None:
+    if product.has_variants:
+        return
+    result = await session.execute(
+        select(ProductVariant).where(and_(ProductVariant.product_id == product.id, ProductVariant.deleted_at.is_(None))).order_by(ProductVariant.id)
+    )
+    variants = result.scalars().all()
+    if variants:
+        default_variant = next((item for item in variants if item.is_default_variant), variants[0])
+        for variant in variants:
+            variant.is_default_variant = variant.id == default_variant.id
+            if variant.id == default_variant.id:
+                variant.variant_name = product.product_name
+                variant.is_active = product.is_active
+        return
+    session.add(
+        ProductVariant(
+            product_id=product.id,
+            variant_sku=await generate_sequential_code(session, ProductVariant, "variant_sku", "SKU"),
+            variant_name=product.product_name,
+            variant_description=product.product_description,
+            is_default_variant=True,
+            is_active=product.is_active,
+        )
+    )
 
 
 def price_item_to_dict(item: PriceListItem) -> dict:
@@ -774,7 +844,17 @@ async def list_price_lists(request: Request, user: dict = Depends(require_prices
         if active_only:
             stmt = stmt.where(PriceList.is_active == True)
         result = await session.execute(stmt.order_by(PriceList.priority, PriceList.price_list_code))
-        return ResponseManager.success(data=[price_list_to_dict(item) for item in result.scalars().all()], request=request)
+        price_lists = result.scalars().all()
+        counts_result = await session.execute(
+            text("SELECT price_list_id, COUNT(*) AS item_count FROM price_list_items WHERE deleted_at IS NULL AND is_active = TRUE GROUP BY price_list_id")
+        )
+        item_counts = {int(r["price_list_id"]): int(r["item_count"]) for r in counts_result.mappings().all()}
+        data = []
+        for pl in price_lists:
+            d = price_list_to_dict(pl)
+            d["item_count"] = item_counts.get(pl.id, 0)
+            data.append(d)
+        return ResponseManager.success(data=data, request=request)
 
 
 @router.post("/price-lists", response_class=JSONResponse)
@@ -782,9 +862,43 @@ async def create_price_list(data: PriceListCreate, request: Request, user: dict 
     async with db_manager.get_async_session() as session:
         price_list = PriceList(price_list_code=await generate_sequential_code(session, PriceList, "price_list_code", "PRL"), price_list_group_id=data.price_list_group_id, price_list_name=data.price_list_name, base_price_list_id=data.base_price_list_id, base_adjustment_type=BaseAdjustmentType(data.base_adjustment_type) if data.base_adjustment_type else None, base_adjustment_value=data.base_adjustment_value, currency_code=data.currency_code.upper(), valid_from=data.valid_from, valid_to=data.valid_to, priority=data.priority, applies_to=PriceListScope(data.applies_to), is_active=data.is_active)
         session.add(price_list)
+        await session.flush()
+        new_list_id = price_list.id
+
+        if data.base_price_list_id:
+            if data.base_adjustment_type and data.base_adjustment_value is not None:
+                adj_type = data.base_adjustment_type
+                adj_value = float(data.base_adjustment_value)
+                if adj_type == "PERCENTAGE":
+                    price_expr = f"ROUND(sale_price * (1 + {adj_value} / 100), 0)"
+                    base_expr = f"ROUND(base_price * (1 + {adj_value} / 100), 0)"
+                else:
+                    price_expr = f"ROUND(sale_price + {adj_value}, 0)"
+                    base_expr = f"ROUND(base_price + {adj_value}, 0)"
+            else:
+                price_expr = "sale_price"
+                base_expr = "base_price"
+            await session.execute(
+                text(
+                    f"INSERT INTO price_list_items "
+                    f"(price_list_id, product_id, product_variant_id, measurement_unit_id, "
+                    f" base_price, sale_price, cost_price, margin_percentage, is_active) "
+                    f"SELECT :new_id, product_id, product_variant_id, measurement_unit_id, "
+                    f" {base_expr}, {price_expr}, cost_price, "
+                    f" CASE WHEN {price_expr} > 0 AND cost_price IS NOT NULL "
+                    f"      THEN ROUND(({price_expr} - cost_price) / {price_expr} * 100, 2) "
+                    f"      ELSE NULL END, "
+                    f" TRUE "
+                    f"FROM price_list_items "
+                    f"WHERE price_list_id = :base_id AND deleted_at IS NULL AND is_active = TRUE"
+                ),
+                {"new_id": new_list_id, "base_id": data.base_price_list_id},
+            )
+
         await session.commit()
         await session.refresh(price_list)
-        return ResponseManager.success(data=price_list_to_dict(price_list), message="Lista creada correctamente", request=request)
+        msg = "Lista creada y precios clonados correctamente." if data.base_price_list_id else "Lista creada correctamente."
+        return ResponseManager.success(data=price_list_to_dict(price_list), message=msg, request=request)
 
 
 @router.put("/price-lists/{price_list_id}", response_class=JSONResponse)
@@ -829,13 +943,65 @@ async def delete_price_list(request: Request, price_list_id: int = Path(..., gt=
 
 
 @router.get("/price-list-items", response_class=JSONResponse)
-async def list_price_list_items(request: Request, user: dict = Depends(require_prices_read), active_only: bool = Query(False)):
+async def list_price_list_items(request: Request, user: dict = Depends(require_prices_read), active_only: bool = Query(False), price_list_id: int | None = Query(None, gt=0)):
     async with db_manager.get_async_session() as session:
-        stmt = select(PriceListItem).options(selectinload(PriceListItem.price_list), selectinload(PriceListItem.product), selectinload(PriceListItem.product_variant).selectinload(ProductVariant.product), selectinload(PriceListItem.measurement_unit)).where(PriceListItem.deleted_at.is_(None))
+        conditions = ["pli.deleted_at IS NULL"]
+        params: dict = {}
         if active_only:
-            stmt = stmt.where(PriceListItem.is_active == True)
-        result = await session.execute(stmt.order_by(PriceListItem.price_list_id, PriceListItem.product_id, PriceListItem.product_variant_id))
-        return ResponseManager.success(data=[price_item_to_dict(item) for item in result.scalars().all()], request=request)
+            conditions.append("pli.is_active = TRUE")
+        if price_list_id:
+            conditions.append("pli.price_list_id = :price_list_id")
+            params["price_list_id"] = price_list_id
+        where_clause = " AND ".join(conditions)
+        result = await session.execute(
+            text(
+                f"SELECT pli.id, pli.price_list_id, pli.product_id, pli.product_variant_id, "
+                f"pli.measurement_unit_id, pli.base_price, pli.sale_price, pli.cost_price, "
+                f"pli.margin_percentage, pli.is_active, pli.created_at, pli.updated_at, "
+                f"pl.price_list_code, pl.price_list_name, "
+                f"COALESCE(p.product_code, vp.product_code) AS product_code, "
+                f"COALESCE(p.product_name, vp.product_name) AS product_name, "
+                f"pv.variant_sku, pv.variant_name, "
+                f"mu.unit_code, mu.unit_name "
+                f"FROM price_list_items pli "
+                f"JOIN price_lists pl ON pl.id = pli.price_list_id "
+                f"LEFT JOIN products p ON p.id = pli.product_id AND pli.product_variant_id IS NULL "
+                f"LEFT JOIN product_variants pv ON pv.id = pli.product_variant_id "
+                f"LEFT JOIN products vp ON vp.id = pv.product_id "
+                f"LEFT JOIN measurement_units mu ON mu.id = pli.measurement_unit_id "
+                f"WHERE {where_clause} "
+                f"ORDER BY pli.price_list_id, COALESCE(p.product_code, vp.product_code), pli.product_variant_id"
+            ),
+            params,
+        )
+        rows = result.mappings().all()
+        data = [
+            {
+                "id": r["id"],
+                "price_list_id": r["price_list_id"],
+                "price_list_code": r["price_list_code"],
+                "price_list_name": r["price_list_name"],
+                "price_scope": "VARIANT" if r["product_variant_id"] else "PRODUCT",
+                "product_id": r["product_id"],
+                "product_code": r["product_code"],
+                "product_name": r["product_name"],
+                "product_variant_id": r["product_variant_id"],
+                "variant_sku": r["variant_sku"],
+                "variant_name": r["variant_name"],
+                "measurement_unit_id": r["measurement_unit_id"],
+                "unit_code": r["unit_code"],
+                "unit_name": r["unit_name"],
+                "base_price": _decimal(r["base_price"]),
+                "sale_price": _decimal(r["sale_price"]),
+                "cost_price": _decimal(r["cost_price"]),
+                "margin_percentage": _decimal(r["margin_percentage"]),
+                "is_active": bool(r["is_active"]),
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+            }
+            for r in rows
+        ]
+        return ResponseManager.success(data=data, request=request)
 
 
 @router.post("/price-list-items", response_class=JSONResponse)
@@ -1051,6 +1217,108 @@ async def get_variant_pricing_reference(
         return ResponseManager.success(data=data, request=request)
 
 
+@router.get("/price-query", response_class=JSONResponse)
+async def price_query(
+    request: Request,
+    search: str = Query("", max_length=200),
+    category_id: int | None = Query(None, gt=0),
+    user: dict = Depends(require_prices_read),
+):
+    if not category_id:
+        return ResponseManager.success(data=[], request=request)
+
+    term = f"%{search.strip()}%" if search.strip() else "%%"
+    async with db_manager.get_async_session() as session:
+        # Resolve the highest-priority active price list for the given category
+        pl_result = await session.execute(
+            text(
+                "SELECT id, price_list_name FROM price_lists "
+                "WHERE price_list_group_id = :category_id AND is_active = TRUE AND deleted_at IS NULL "
+                "ORDER BY priority ASC, id ASC LIMIT 1"
+            ),
+            {"category_id": category_id},
+        )
+        pl_row = pl_result.mappings().first()
+        if not pl_row:
+            return ResponseManager.success(data=[], request=request)
+
+        price_list_id = int(pl_row["id"])
+        price_list_name = pl_row["price_list_name"]
+
+        result = await session.execute(
+            text(
+                "SELECT p.id AS product_id, p.product_code, p.product_name, p.has_variants, "
+                "pv.id AS variant_id, pv.variant_sku, pv.variant_name, "
+                "pli.id AS price_item_id, pli.sale_price, pli.base_price, pli.cost_price, pli.margin_percentage, "
+                "mu.id AS unit_id, mu.unit_code, mu.unit_name, mu.unit_symbol "
+                "FROM products p "
+                "JOIN product_variants pv ON pv.product_id = p.id AND pv.deleted_at IS NULL AND pv.is_active = TRUE "
+                "JOIN price_list_items pli ON pli.product_variant_id = pv.id "
+                "  AND pli.price_list_id = :price_list_id AND pli.deleted_at IS NULL AND pli.is_active = TRUE "
+                "LEFT JOIN measurement_units mu ON mu.id = pli.measurement_unit_id "
+                "WHERE p.deleted_at IS NULL AND p.is_active = TRUE "
+                "AND (p.product_code LIKE :search OR p.product_name LIKE :search "
+                "     OR pv.variant_sku LIKE :search OR pv.variant_name LIKE :search) "
+                "ORDER BY p.product_code, pv.id LIMIT 200"
+            ),
+            {"price_list_id": price_list_id, "search": term},
+        )
+        rows = [dict(r) for r in result.mappings().all()]
+
+        variant_ids = list({r["variant_id"] for r in rows if r.get("variant_id")})
+        stock_map: dict[int, list[dict]] = {}
+        if variant_ids:
+            placeholders = ", ".join(f":vid{i}" for i in range(len(variant_ids)))
+            vid_params = {f"vid{i}": v for i, v in enumerate(variant_ids)}
+            stock_result = await session.execute(
+                text(
+                    f"SELECT s.product_variant_id, w.id AS warehouse_id, w.warehouse_name, "
+                    f"COALESCE(SUM(s.current_quantity), 0) AS stock_quantity "
+                    f"FROM stock s JOIN warehouses w ON w.id = s.warehouse_id AND w.deleted_at IS NULL "
+                    f"WHERE s.product_variant_id IN ({placeholders}) "
+                    f"GROUP BY s.product_variant_id, w.id, w.warehouse_name "
+                    f"HAVING stock_quantity > 0 ORDER BY w.warehouse_name"
+                ),
+                vid_params,
+            )
+            for srow in stock_result.mappings().all():
+                vid = int(srow["product_variant_id"])
+                stock_map.setdefault(vid, []).append({
+                    "warehouse_id": int(srow["warehouse_id"]),
+                    "warehouse_name": srow["warehouse_name"],
+                    "stock_quantity": float(srow["stock_quantity"]),
+                })
+
+        data = []
+        for row in rows:
+            vid = row.get("variant_id")
+            warehouses = stock_map.get(vid, []) if vid else []
+            data.append({
+                "product_id": row["product_id"],
+                "product_code": row["product_code"],
+                "product_name": row["product_name"],
+                "has_variants": bool(row["has_variants"]),
+                "variant_id": vid,
+                "variant_sku": row["variant_sku"],
+                "variant_name": row["variant_name"],
+                "price_list_id": price_list_id,
+                "price_list_name": price_list_name,
+                "price_item_id": row.get("price_item_id"),
+                "sale_price": _decimal(row.get("sale_price")),
+                "base_price": _decimal(row.get("base_price")),
+                "cost_price": _decimal(row.get("cost_price")),
+                "margin_percentage": _decimal(row.get("margin_percentage")),
+                "unit_id": row.get("unit_id"),
+                "unit_code": row.get("unit_code"),
+                "unit_name": row.get("unit_name"),
+                "unit_symbol": row.get("unit_symbol"),
+                "stock_by_warehouse": warehouses,
+                "total_stock": sum(w["stock_quantity"] for w in warehouses),
+            })
+
+        return ResponseManager.success(data=data, request=request)
+
+
 @router.get("/pricing/resolve", response_class=JSONResponse)
 async def resolve_price(
     request: Request,
@@ -1118,8 +1386,11 @@ async def list_products(request: Request, user: dict = Depends(require_products_
 @router.post("/products", response_class=JSONResponse)
 async def create_product(data: ProductCreate, request: Request, user: dict = Depends(require_products_write)):
     async with db_manager.get_async_session() as session:
-        product = Product(product_code=await generate_sequential_code(session, Product, "product_code", "PRD"), **data.model_dump())
+        values = await apply_product_flag_visibility(session, data.model_dump(), include_unset=True)
+        product = Product(product_code=await generate_sequential_code(session, Product, "product_code", "PRD"), **values)
         session.add(product)
+        await session.flush()
+        await _ensure_default_variant_for_simple_product(session, product)
         await session.commit()
         await session.refresh(product)
         return ResponseManager.success(data=product_to_dict(product), message="Producto creado correctamente", request=request)
@@ -1132,8 +1403,16 @@ async def update_product(data: ProductUpdate, request: Request, product_id: int 
         product = result.scalar_one_or_none()
         if not product:
             return ResponseManager.error(message="Producto no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
-        for field, value in data.model_dump(exclude_unset=True).items():
+        values = await apply_product_flag_visibility(session, data.model_dump(exclude_unset=True), include_unset=False)
+        if values.get("is_active") is False and product.is_active:
+            history = await _product_stock_history(session, product_id)
+            if history["stock_quantity"] > 0:
+                return ResponseManager.error(message="No se puede desactivar un producto con stock actual", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+        for field, value in values.items():
             setattr(product, field, value)
+        await _ensure_default_variant_for_simple_product(session, product)
+        if values.get("is_active") is False:
+            await session.execute(ProductVariant.__table__.update().where(ProductVariant.product_id == product.id).values(is_active=False))
         await session.commit()
         await session.refresh(product)
         return ResponseManager.success(data=product_to_dict(product), message="Producto actualizado correctamente", request=request)
@@ -1146,8 +1425,12 @@ async def delete_product(request: Request, product_id: int = Path(..., gt=0), us
         product = result.scalar_one_or_none()
         if not product:
             return ResponseManager.error(message="Producto no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        history = await _product_stock_history(session, product_id)
+        if history["stock_quantity"] > 0 or history["movement_count"] > 0:
+            return ResponseManager.error(message="No se puede eliminar un producto con stock o movimientos historicos; desactivalo cuando no tenga stock", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         product.deleted_at = datetime.now(timezone.utc)
         product.is_active = False
+        await session.execute(ProductVariant.__table__.update().where(ProductVariant.product_id == product.id).values(is_active=False, deleted_at=datetime.now(timezone.utc)))
         await session.commit()
         return ResponseManager.success(data=product_to_dict(product), message="Producto eliminado correctamente", request=request)
 
@@ -1220,6 +1503,9 @@ async def list_sku_attributes(request: Request, user: dict = Depends(require_pro
 @router.post("/product-variants", response_class=JSONResponse)
 async def create_product_variant(data: ProductVariantCreate, request: Request, user: dict = Depends(require_products_write)):
     async with db_manager.get_async_session() as session:
+        flags = await product_flag_visibility(session)
+        if not flags.get("has_variants", True):
+            return ResponseManager.error(message="La funcionalidad de variantes esta deshabilitada", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         variant = ProductVariant(variant_sku=await generate_sequential_code(session, ProductVariant, "variant_sku", "SKU"), **data.model_dump())
         if data.is_default_variant:
             await session.execute(ProductVariant.__table__.update().where(ProductVariant.product_id == data.product_id).values(is_default_variant=False))
@@ -1232,6 +1518,9 @@ async def create_product_variant(data: ProductVariantCreate, request: Request, u
 @router.post("/product-variants/generate", response_class=JSONResponse)
 async def generate_product_variants(data: ProductVariantGenerate, request: Request, user: dict = Depends(require_products_write)):
     async with db_manager.get_async_session() as session:
+        flags = await product_flag_visibility(session)
+        if not flags.get("has_variants", True):
+            return ResponseManager.error(message="La funcionalidad de variantes esta deshabilitada", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         product_result = await session.execute(select(Product).where(and_(Product.id == data.product_id, Product.deleted_at.is_(None))))
         base_product = product_result.scalar_one_or_none()
         if not base_product:
@@ -1358,6 +1647,10 @@ async def update_product_variant(data: ProductVariantUpdate, request: Request, v
         if not variant:
             return ResponseManager.error(message="SKU no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
         values = data.model_dump(exclude_unset=True)
+        if values.get("is_active") is False and variant.is_active:
+            history = await _variant_stock_history(session, variant_id)
+            if history["stock_quantity"] > 0:
+                return ResponseManager.error(message="No se puede desactivar un SKU con stock actual", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         target_product_id = values.get("product_id", variant.product_id)
         if values.get("is_default_variant") is True:
             await session.execute(ProductVariant.__table__.update().where(ProductVariant.product_id == target_product_id).values(is_default_variant=False))
@@ -1375,6 +1668,9 @@ async def delete_product_variant(request: Request, variant_id: int = Path(..., g
         variant = result.scalar_one_or_none()
         if not variant:
             return ResponseManager.error(message="SKU no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        history = await _variant_stock_history(session, variant_id)
+        if history["stock_quantity"] > 0 or history["movement_count"] > 0:
+            return ResponseManager.error(message="No se puede eliminar un SKU con stock o movimientos historicos; desactivalo cuando no tenga stock", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         variant.deleted_at = datetime.now(timezone.utc)
         variant.is_active = False
         await session.commit()

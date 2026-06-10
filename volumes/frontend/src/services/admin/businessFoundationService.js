@@ -27,6 +27,11 @@ export const businessFoundationService = {
     },
   },
   priceLists: crud('/business-foundation/price-lists'),
+  priceQuery: {
+    async list(params = {}) {
+      return list(unwrap(await apiClient.get('/business-foundation/price-query', { params })));
+    },
+  },
   priceItems: {
     ...crud('/business-foundation/price-list-items'),
     async resolve(params = {}) {
