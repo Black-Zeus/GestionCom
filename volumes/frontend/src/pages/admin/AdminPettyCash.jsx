@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, EyeOff, Pencil, ReceiptText, RefreshCw, ShieldCheck, Tags, Trash2, WalletCards, XCircle } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, EyeOff, Lock, Pencil, ReceiptText, RefreshCw, RotateCcw, ShieldCheck, Tags, Trash2, WalletCards, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -18,7 +18,8 @@ import { PAGE_SIZE_OPTIONS, usePreferencesStore } from '@/store/usePreferencesSt
 import { formatDateTime } from '@/utils/dateTime';
 
 const fundStatuses = [
-  { value: 'ACTIVE', label: 'Activo' },
+  { value: 'UNDECLARED', label: 'No declarado' },
+  { value: 'DECLARED', label: 'Declarado' },
   { value: 'SUSPENDED', label: 'Suspendido' },
   { value: 'CLOSED', label: 'Cerrado' },
 ];
@@ -29,7 +30,7 @@ const emptyFundForm = {
   responsible_user_id: '',
   initial_amount: '50000',
   current_balance: '',
-  fund_status: 'ACTIVE',
+  fund_status: 'UNDECLARED',
 };
 
 const emptyCategoryForm = {
@@ -50,7 +51,23 @@ const formatCurrency = (value) => new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 0,
 }).format(Number(value || 0));
 
-const getWarehouseLabel = (warehouse) => (warehouse ? `${warehouse.warehouse_code} - ${warehouse.warehouse_name}` : 'Sin bodega');
+const parseLocalizedAmount = (value) => {
+  if (typeof value === 'number') return value;
+  const text = String(value || '').trim().replace(/\$/g, '').replace(/CLP/gi, '').replace(/\s/g, '');
+  if (!text) return 0;
+  let normalized = text;
+  if (normalized.includes(',')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.');
+  } else if (normalized.includes('.')) {
+    const parts = normalized.split('.');
+    if (parts.length > 1 && parts.slice(1).every((part) => part.length === 3)) {
+      normalized = parts.join('');
+    }
+  }
+  return Number(normalized);
+};
+
+const getWarehouseLabel = (warehouse) => warehouse?.warehouse_name || 'Sin bodega';
 
 const getUserLabel = (user) => (
   user?.display_name
@@ -60,9 +77,34 @@ const getUserLabel = (user) => (
   || 'Usuario'
 );
 
+const getFundHumanDetails = (fund, warehousesById, usersById) => ({
+  warehouse: fund.warehouse_name || getWarehouseLabel(warehousesById.get(Number(fund.warehouse_id))),
+  responsible: fund.responsible_name || fund.responsible_username || getUserLabel(usersById.get(Number(fund.responsible_user_id))),
+});
+
+const FundConfirmMessage = ({ actionDetail, fund, warehousesById, usersById }) => {
+  const details = getFundHumanDetails(fund, warehousesById, usersById);
+  return (
+    <>
+      <span className="block">Esta accion va a {actionDetail} el fondo asignado a:</span>
+      <span className="mt-3 block">
+        <span className="font-semibold text-slate-700 dark:text-slate-200">Usuario:</span>
+        {' '}
+        {details.responsible}
+      </span>
+      <span className="mt-1 block">
+        <span className="font-semibold text-slate-700 dark:text-slate-200">Bodega / Local:</span>
+        {' '}
+        {details.warehouse}
+      </span>
+    </>
+  );
+};
+
 const getFundStatusLabel = (status) => fundStatuses.find((item) => item.value === status)?.label || status || 'Activo';
 const getFundStatusVariant = (status) => {
-  if (status === 'ACTIVE') return 'active';
+  if (status === 'UNDECLARED') return 'warning';
+  if (status === 'DECLARED') return 'active';
   if (status === 'SUSPENDED') return 'warning';
   return 'inactive';
 };
@@ -73,7 +115,7 @@ const fundToForm = (fund) => ({
   responsible_user_id: fund.responsible_user_id ? String(fund.responsible_user_id) : '',
   initial_amount: String(fund.initial_amount ?? ''),
   current_balance: String(fund.current_balance ?? ''),
-  fund_status: fund.fund_status || 'ACTIVE',
+  fund_status: fund.fund_status || 'UNDECLARED',
 });
 
 const categoryToForm = (category) => ({
@@ -89,8 +131,8 @@ const toFundPayload = (form) => {
   const payload = {
     warehouse_id: Number(form.warehouse_id),
     responsible_user_id: Number(form.responsible_user_id),
-    initial_amount: Number(form.initial_amount || 0),
-    current_balance: form.current_balance === '' ? undefined : Number(form.current_balance || 0),
+    initial_amount: parseLocalizedAmount(form.initial_amount),
+    current_balance: form.current_balance === '' ? undefined : parseLocalizedAmount(form.current_balance),
     fund_status: form.fund_status,
   };
 
@@ -101,7 +143,7 @@ const toCategoryPayload = (form) => {
   const payload = {
     category_name: form.category_name.trim(),
     category_description: form.category_description.trim() || null,
-    max_amount_per_expense: form.max_amount_per_expense === '' ? null : Number(form.max_amount_per_expense || 0),
+    max_amount_per_expense: form.max_amount_per_expense === '' ? null : parseLocalizedAmount(form.max_amount_per_expense),
     requires_evidence: Boolean(form.requires_evidence),
     is_active: Boolean(form.is_active),
   };
@@ -160,11 +202,11 @@ const FundFormModal = ({ initialValues = emptyFundForm, warehouses = [], users =
         </label>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Monto inicial</span>
-          <input className={fieldClassName} type="number" min="0" step="1" value={form.initial_amount} onChange={(event) => updateField('initial_amount', event.target.value)} required />
+          <input className={fieldClassName} type="text" inputMode="numeric" value={form.initial_amount} onChange={(event) => updateField('initial_amount', event.target.value)} placeholder="Ej: 50.000" required />
         </label>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Saldo actual</span>
-          <input className={fieldClassName} type="number" min="0" step="1" value={form.current_balance} onChange={(event) => updateField('current_balance', event.target.value)} placeholder="Usa monto inicial si queda vacio" />
+          <input className={fieldClassName} type="text" inputMode="numeric" value={form.current_balance} onChange={(event) => updateField('current_balance', event.target.value)} placeholder="Usa monto inicial si queda vacio" />
         </label>
       </div>
 
@@ -210,7 +252,7 @@ const CategoryFormModal = ({ initialValues = emptyCategoryForm, onSubmit, onClos
         </label>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Monto maximo por gasto</span>
-          <input className={fieldClassName} type="number" min="0" step="1" value={form.max_amount_per_expense} onChange={(event) => updateField('max_amount_per_expense', event.target.value)} />
+          <input className={fieldClassName} type="text" inputMode="numeric" value={form.max_amount_per_expense} onChange={(event) => updateField('max_amount_per_expense', event.target.value)} placeholder="Ej: 15.000" />
         </label>
         <div className="grid gap-2 self-end sm:grid-cols-2">
           <label className="flex h-11 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
@@ -234,14 +276,15 @@ const CategoryFormModal = ({ initialValues = emptyCategoryForm, onSubmit, onClos
   );
 };
 
-const AdminPettyCash = () => {
-  const [activeTab, setActiveTab] = useState('funds');
+const AdminPettyCash = ({ scope = 'all', readOnlyFunds = false }) => {
+  const [activeTab, setActiveTab] = useState(scope === 'categories' ? 'categories' : 'funds');
   const [funds, setFunds] = useState([]);
   const [categories, setCategories] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ fundStatus: 'all', categoryStatus: 'all', evidence: 'all' });
+  const [selectedFundId, setSelectedFundId] = useState('');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
@@ -254,36 +297,39 @@ const AdminPettyCash = () => {
   const warehousesById = useMemo(() => new Map(warehouses.map((warehouse) => [Number(warehouse.id), warehouse])), [warehouses]);
   const usersById = useMemo(() => new Map(users.map((user) => [Number(user.id), user])), [users]);
 
-  const loadReferenceData = async () => {
+  const loadReferenceData = useCallback(async () => {
     const [warehouseData, userData] = await Promise.all([
       warehousesService.list({ active_only: true, limit: 1000 }).catch(() => []),
       usersService.list({ status: 'all', active_only: false, limit: 1000 }).catch(() => ({ users: [] })),
     ]);
     setWarehouses(warehouseData);
     setUsers(userData.users || []);
-  };
+  }, []);
 
-  const loadPettyCash = async () => {
+  const loadPettyCash = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const [fundData, categoryData] = await Promise.all([
-        pettyCashAdminService.listFunds({ active_only: false, limit: 1000 }),
-        pettyCashAdminService.listCategories({ active_only: false, limit: 1000 }),
+        pettyCashAdminService.listFunds({ active_only: readOnlyFunds, assigned_to_me: readOnlyFunds, limit: 1000 }),
+        scope === 'funds' && readOnlyFunds ? Promise.resolve([]) : pettyCashAdminService.listCategories({ active_only: false, limit: 1000 }),
       ]);
       setFunds(fundData);
       setCategories(categoryData);
+      if (readOnlyFunds) {
+        setSelectedFundId((current) => (fundData.some((fund) => String(fund.id) === String(current)) ? current : String(fundData[0]?.id || '')));
+      }
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar caja chica.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [readOnlyFunds, scope]);
 
   useEffect(() => {
     loadReferenceData();
     loadPettyCash();
-  }, []);
+  }, [loadPettyCash, loadReferenceData]);
 
   useEffect(() => {
     setPage(0);
@@ -347,6 +393,19 @@ const AdminPettyCash = () => {
   };
 
   const changeFundStatus = async (fund, status) => {
+    const actionByStatus = {
+      UNDECLARED: { title: 'Volver a no declarado', confirm: 'No declarado', detail: 'volver a no declarado' },
+      DECLARED: { title: 'Marcar declarado', confirm: 'Marcar declarado', detail: 'marcar como declarado' },
+      SUSPENDED: { title: 'Suspender fondo', confirm: 'Suspender', detail: 'suspender' },
+      CLOSED: { title: 'Cerrar fondo', confirm: 'Cerrar', detail: 'cerrar' },
+    };
+    const action = actionByStatus[status] || { title: 'Cambiar estado', confirm: 'Confirmar', detail: `cambiar a ${getFundStatusLabel(status).toLowerCase()}` };
+    const confirmed = await ModalManager.confirm({
+      title: action.title,
+      message: <FundConfirmMessage actionDetail={action.detail} fund={fund} warehousesById={warehousesById} usersById={usersById} />,
+      buttons: { cancel: 'Cancelar', confirm: action.confirm },
+    });
+    if (!confirmed) return;
     setBusyId(`fund-${fund.id}`);
     try {
       await notifyPromise(
@@ -364,7 +423,11 @@ const AdminPettyCash = () => {
   };
 
   const deleteFund = async (fund) => {
-    const confirmed = await ModalManager.confirm({ title: 'Eliminar fondo', message: `Esta accion cerrara y eliminara ${fund.fund_code} del mantenedor.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } });
+    const confirmed = await ModalManager.confirm({
+      title: 'Eliminar fondo',
+      message: <FundConfirmMessage actionDetail="cerrar y eliminar" fund={fund} warehousesById={warehousesById} usersById={usersById} />,
+      buttons: { cancel: 'Cancelar', confirm: 'Eliminar' },
+    });
     if (!confirmed) return;
     setBusyId(`fund-${fund.id}`);
     try {
@@ -380,6 +443,13 @@ const AdminPettyCash = () => {
   };
 
   const toggleCategory = async (category) => {
+    const nextState = category.is_active ? 'desactivar' : 'activar';
+    const confirmed = await ModalManager.confirm({
+      title: category.is_active ? 'Desactivar categoria' : 'Activar categoria',
+      message: `Esta accion va a ${nextState} la categoria ${category.category_name}.`,
+      buttons: { cancel: 'Cancelar', confirm: category.is_active ? 'Desactivar' : 'Activar' },
+    });
+    if (!confirmed) return;
     setBusyId(`category-${category.id}`);
     try {
       await notifyPromise(
@@ -418,6 +488,7 @@ const AdminPettyCash = () => {
       const warehouse = warehousesById.get(Number(fund.warehouse_id));
       const responsible = usersById.get(Number(fund.responsible_user_id));
       const matchesStatus = filters.fundStatus === 'all' || fund.fund_status === filters.fundStatus;
+      const matchesSelected = !readOnlyFunds || !selectedFundId || String(fund.id) === String(selectedFundId);
       const matchesSearch = !term || [
         fund.fund_code,
         fund.warehouse_name,
@@ -426,9 +497,9 @@ const AdminPettyCash = () => {
         fund.responsible_name,
         getUserLabel(responsible),
       ].filter(Boolean).some((value) => value.toLowerCase().includes(term));
-      return matchesStatus && matchesSearch;
+      return matchesStatus && matchesSelected && matchesSearch;
     });
-  }, [filters.fundStatus, funds, search, usersById, warehousesById]);
+  }, [filters.fundStatus, funds, readOnlyFunds, search, selectedFundId, usersById, warehousesById]);
 
   const filteredCategories = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -452,7 +523,8 @@ const AdminPettyCash = () => {
 
   const fundStats = useMemo(() => ({
     total: funds.length,
-    active: funds.filter((fund) => fund.fund_status === 'ACTIVE').length,
+    undeclared: funds.filter((fund) => fund.fund_status === 'UNDECLARED').length,
+    declared: funds.filter((fund) => fund.fund_status === 'DECLARED').length,
     suspended: funds.filter((fund) => fund.fund_status === 'SUSPENDED').length,
     balance: funds.reduce((total, fund) => total + Number(fund.current_balance || 0), 0),
   }), [funds]);
@@ -467,7 +539,8 @@ const AdminPettyCash = () => {
   const kpiItems = activeTab === 'funds'
     ? [
       { id: 'total', label: 'Fondos', value: fundStats.total, active: filters.fundStatus === 'all', onClick: () => setFilters((current) => ({ ...current, fundStatus: 'all' })) },
-      { id: 'active', label: 'Activos', value: fundStats.active, active: filters.fundStatus === 'ACTIVE', onClick: () => setFilters((current) => ({ ...current, fundStatus: 'ACTIVE' })) },
+      { id: 'undeclared', label: 'No declarados', value: fundStats.undeclared, active: filters.fundStatus === 'UNDECLARED', onClick: () => setFilters((current) => ({ ...current, fundStatus: 'UNDECLARED' })) },
+      { id: 'declared', label: 'Declarados', value: fundStats.declared, active: filters.fundStatus === 'DECLARED', onClick: () => setFilters((current) => ({ ...current, fundStatus: 'DECLARED' })) },
       { id: 'suspended', label: 'Suspendidos', value: fundStats.suspended, active: filters.fundStatus === 'SUSPENDED', onClick: () => setFilters((current) => ({ ...current, fundStatus: 'SUSPENDED' })) },
       { id: 'balance', label: 'Saldo total', value: formatCurrency(fundStats.balance), disabled: true },
     ]
@@ -479,7 +552,7 @@ const AdminPettyCash = () => {
     ];
 
   const filterFields = activeTab === 'funds'
-    ? [
+    ? (readOnlyFunds ? [] : [
       {
         id: 'fundStatus',
         value: filters.fundStatus,
@@ -489,7 +562,7 @@ const AdminPettyCash = () => {
         },
         options: [{ value: 'all', label: 'Todos los estados' }, ...fundStatuses.map((status) => ({ value: status.value, label: status.label }))],
       },
-    ]
+    ])
     : [
       {
         id: 'categoryStatus',
@@ -512,15 +585,24 @@ const AdminPettyCash = () => {
     ];
 
   const fundColumns = [
-    { id: 'fund', label: 'Fondo', sortable: true, sortValue: (fund) => fund.fund_code, render: (fund) => <><div className="font-medium text-slate-950 dark:text-white">{fund.fund_code}</div><div className="text-xs text-slate-500">{fund.fund_name || 'Fondo de caja chica'}</div></> },
-    { id: 'warehouse', label: 'Bodega', sortable: true, sortValue: (fund) => fund.warehouse_name || '', render: (fund) => <><div>{fund.warehouse_name || getWarehouseLabel(warehousesById.get(Number(fund.warehouse_id)))}</div><div className="font-mono text-xs text-slate-500">{fund.warehouse_code || warehousesById.get(Number(fund.warehouse_id))?.warehouse_code || ''}</div></> },
+    { id: 'fund', label: 'Fondo', sortable: true, sortValue: (fund) => fund.responsible_name || fund.responsible_username || '', render: (fund) => <><div className="font-medium text-slate-950 dark:text-white">Fondo asignado</div><div className="text-xs text-slate-500">{fund.responsible_name || fund.responsible_username || getUserLabel(usersById.get(Number(fund.responsible_user_id)))}</div></> },
+    { id: 'warehouse', label: 'Bodega', sortable: true, sortValue: (fund) => fund.warehouse_name || '', render: (fund) => <div>{fund.warehouse_name || getWarehouseLabel(warehousesById.get(Number(fund.warehouse_id)))}</div> },
     { id: 'responsible', label: 'Responsable', sortable: true, sortValue: (fund) => fund.responsible_name || fund.responsible_username || '', render: (fund) => fund.responsible_name || fund.responsible_username || getUserLabel(usersById.get(Number(fund.responsible_user_id))) },
     { id: 'balance', label: 'Saldo', sortable: true, sortValue: (fund) => fund.current_balance, render: (fund) => <><div className="font-medium">{formatCurrency(fund.current_balance)}</div><div className="text-xs text-slate-500">Inicial {formatCurrency(fund.initial_amount)}</div></> },
     { id: 'activity', label: 'Movimientos', sortable: true, sortValue: (fund) => fund.total_expenses, render: (fund) => <><div>Gastos {formatCurrency(fund.total_expenses)}</div><div className="text-xs text-slate-500">Reposiciones {formatCurrency(fund.total_replenishments)}</div></> },
-    { id: 'status', label: 'Estado', sortable: true, sortValue: (fund) => fund.fund_status, render: (fund) => <StatusBadge variant={getFundStatusVariant(fund.fund_status)}>{getFundStatusLabel(fund.fund_status)}</StatusBadge> },
+    { id: 'status', label: 'Subestado', sortable: true, sortValue: (fund) => fund.fund_status, render: (fund) => <StatusBadge variant={getFundStatusVariant(fund.fund_status)}>{getFundStatusLabel(fund.fund_status)}</StatusBadge> },
     { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (fund) => fund.updated_at || '', render: (fund) => formatDateTime(fund.updated_at, timezone, { hourFormat }) },
-    { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => <div className="flex justify-end gap-2"><RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}`} onClick={() => openFundModal(fund)} /><RowActionButton label={fund.fund_status === 'ACTIVE' ? 'Suspender fondo' : 'Activar fondo'} icon={fund.fund_status === 'ACTIVE' ? EyeOff : ShieldCheck} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'ACTIVE' ? 'danger' : 'neutral'} onClick={() => changeFundStatus(fund, fund.fund_status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')} /><RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => deleteFund(fund)} /></div> },
-  ];
+    !readOnlyFunds && { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => (
+      <div className="flex justify-end gap-2">
+        <RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}` || fund.fund_status === 'CLOSED'} onClick={() => openFundModal(fund)} />
+        {fund.fund_status === 'UNDECLARED' && <RowActionButton label="Marcar declarado" icon={CheckCircle2} disabled={busyId === `fund-${fund.id}`} onClick={() => changeFundStatus(fund, 'DECLARED')} />}
+        {fund.fund_status === 'DECLARED' && <RowActionButton label="Volver a no declarado" icon={RotateCcw} disabled={busyId === `fund-${fund.id}`} onClick={() => changeFundStatus(fund, 'UNDECLARED')} />}
+        {fund.fund_status !== 'CLOSED' && <RowActionButton label={fund.fund_status === 'SUSPENDED' ? 'Reactivar fondo' : 'Suspender fondo'} icon={fund.fund_status === 'SUSPENDED' ? ShieldCheck : EyeOff} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'SUSPENDED' ? 'neutral' : 'danger'} onClick={() => changeFundStatus(fund, fund.fund_status === 'SUSPENDED' ? 'UNDECLARED' : 'SUSPENDED')} />}
+        {fund.fund_status !== 'CLOSED' && <RowActionButton label="Cerrar fondo" icon={Lock} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => changeFundStatus(fund, 'CLOSED')} />}
+        <RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => deleteFund(fund)} />
+      </div>
+    ) },
+  ].filter(Boolean);
 
   const categoryColumns = [
     { id: 'category', label: 'Categoria', sortable: true, sortValue: (category) => category.category_name, render: (category) => <><div className="font-medium text-slate-950 dark:text-white">{category.category_name}</div><div className="font-mono text-xs text-slate-500">{category.category_code}</div></> },
@@ -534,26 +616,43 @@ const AdminPettyCash = () => {
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
-        title="Administracion de caja chica"
-        description="Configuracion de fondos, responsables y categorias de gasto menor."
-        actions={[{ id: 'primary', label: activeTab === 'funds' ? 'Nuevo fondo' : 'Nueva categoria', icon: activeTab === 'funds' ? WalletCards : Tags, onClick: () => (activeTab === 'funds' ? openFundModal() : openCategoryModal()) }]}
+        title={activeTab === 'funds' ? 'Fondos de caja chica' : 'Categorias de caja chica'}
+        description={activeTab === 'funds' ? (readOnlyFunds ? 'Consulta del fondo activo asignado al usuario conectado.' : 'Asignacion y liquidacion de fondos menores por responsable y punto de venta.') : 'Configuracion de categorias, limites y comprobantes para gastos menores.'}
+        actions={readOnlyFunds && activeTab === 'funds' ? [] : [{ id: 'primary', label: activeTab === 'funds' ? 'Nuevo fondo' : 'Nueva categoria', icon: activeTab === 'funds' ? WalletCards : Tags, onClick: () => (activeTab === 'funds' ? openFundModal() : openCategoryModal()) }]}
       />
 
-      <ModuleTabs
-        className="mb-4"
-        activeTab={activeTab}
-        onChange={setActiveTab}
-        tabs={[
-          { id: 'funds', label: 'Fondos', icon: WalletCards, count: funds.length },
-          { id: 'categories', label: 'Categorias', icon: Tags, count: categories.length },
-        ]}
-      />
+      {scope === 'all' && (
+        <ModuleTabs
+          className="mb-4"
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={[
+            { id: 'funds', label: 'Fondos', icon: WalletCards, count: funds.length },
+            { id: 'categories', label: 'Categorias', icon: Tags, count: categories.length },
+          ]}
+        />
+      )}
 
       <KpiBar items={kpiItems} className="mb-4" />
 
+      {readOnlyFunds && activeTab === 'funds' && funds.length > 1 && (
+        <div className="mb-4 max-w-xl">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Fondo asignado</span>
+            <select className={selectClassName} value={selectedFundId} onChange={(event) => setSelectedFundId(event.target.value)}>
+              {funds.map((fund) => (
+                <option key={fund.id} value={fund.id}>
+                  {[fund.warehouse_name || getWarehouseLabel(warehousesById.get(Number(fund.warehouse_id))), formatCurrency(fund.current_balance)].filter(Boolean).join(' / ')}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
       <FilterBar
         className="mb-4"
-        gridClassName={activeTab === 'funds' ? 'lg:grid-cols-[minmax(280px,1fr)_190px_auto_auto]' : 'lg:grid-cols-[minmax(280px,1fr)_180px_210px_auto_auto]'}
+        gridClassName={activeTab === 'funds' && readOnlyFunds ? 'lg:grid-cols-[minmax(280px,1fr)_auto_auto]' : activeTab === 'funds' ? 'lg:grid-cols-[minmax(280px,1fr)_190px_auto_auto]' : 'lg:grid-cols-[minmax(280px,1fr)_180px_210px_auto_auto]'}
         searchValue={search}
         searchPlaceholder={activeTab === 'funds' ? 'Buscar fondo, bodega o responsable' : 'Buscar categoria o descripcion'}
         onSearchChange={setSearch}

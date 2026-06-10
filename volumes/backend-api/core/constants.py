@@ -359,6 +359,7 @@ PRIVATE_ROUTES = [
     "/warehouses",                  # Gestión de almacenes y bodegas
     "/cash-registers",              # Configuración de cajas POS
     "/petty-cash-admin",            # Administración de caja chica
+    "/petty-cash",                  # Operacion de caja chica
     "/payment-methods",             # Mantenedor de metodos de pago
     "/physical-inventory",          # Inventario fisico y conciliacion de stock
     "/stock-transfers",             # Transferencias, recepcion y ubicacion de stock

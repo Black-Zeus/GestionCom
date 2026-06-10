@@ -14,6 +14,7 @@ from middleware.main_middleware import TraceMiddleware, SimpleAuthMiddleware
 from core.response import ResponseManager
 from core.constants import RESPONSE_MANAGER_AVAILABLE, PRIVATE_ROUTES, HTTPStatus
 from core.config import settings
+from services.inventory_expiry_scheduler import start_inventory_expiry_alert_scheduler, stop_inventory_expiry_alert_scheduler
 from utils.router_loader import load_routers
 
 # ==========================================
@@ -144,6 +145,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Petty Cash Admin"]
     },
     {
+        "name": "petty_cash",
+        "prefix": "/petty-cash",
+        "tags": ["Petty Cash"]
+    },
+    {
         "name": "payment_methods",
         "prefix": "/payment-methods",
         "tags": ["Payment Methods"]
@@ -260,6 +266,7 @@ async def root(request: Request):
             "warehouses": "/warehouses",
             "cash_registers": "/cash-registers",
             "petty_cash_admin": "/petty-cash-admin",
+            "petty_cash": "/petty-cash",
             "system": "/system"
         }
     }
@@ -342,6 +349,12 @@ async def startup_event():
             
     except Exception as e:
         print(f"⚠️  Redis no disponible: {e}")
+
+    try:
+        start_inventory_expiry_alert_scheduler()
+        print("✅ Scheduler de alertas de vencimiento activo")
+    except Exception as e:
+        print(f"⚠️  Scheduler de alertas de vencimiento no disponible: {e}")
     
     print("✅ API iniciada correctamente")
     print(f"🔒 Rutas protegidas configuradas: {PRIVATE_ROUTES}")
@@ -356,6 +369,11 @@ async def shutdown_event():
         from cache.redis_client import close_redis
         await close_redis()
         print("✅ Redis desconectado")
+    except Exception:
+        pass
+
+    try:
+        await stop_inventory_expiry_alert_scheduler()
     except Exception:
         pass
     

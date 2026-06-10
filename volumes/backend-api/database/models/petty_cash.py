@@ -11,7 +11,8 @@ from .base import BaseModel, CommonValidators
 
 
 class PettyCashFundStatus(enum.Enum):
-    ACTIVE = "ACTIVE"
+    UNDECLARED = "UNDECLARED"
+    DECLARED = "DECLARED"
     SUSPENDED = "SUSPENDED"
     CLOSED = "CLOSED"
 
@@ -65,7 +66,7 @@ class PettyCashFund(BaseModel):
     current_balance = Column(DECIMAL(15, 2), nullable=False)
     total_expenses = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     total_replenishments = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
-    fund_status = Column(Enum(PettyCashFundStatus), nullable=False, default=PettyCashFundStatus.ACTIVE)
+    fund_status = Column(Enum(PettyCashFundStatus), nullable=False, default=PettyCashFundStatus.UNDECLARED)
     last_replenishment_date = Column(TIMESTAMP, nullable=True)
 
     warehouse = relationship("Warehouse")

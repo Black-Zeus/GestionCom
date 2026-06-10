@@ -55,18 +55,32 @@ def _deny(request: Request, user: dict, details: str):
     raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
 
 
-async def require_petty_cash_read(request: Request) -> dict:
+async def require_petty_cash_category_read(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["PETTY_CASH_ADMIN_ACCESS", "PETTY_CASH_MANAGE", "PETTY_CASH_APPROVE"]):
+    if _has_any_permission(user, ["PETTY_CASH_CATEGORIES_ACCESS", "PETTY_CASH_ADMIN_ACCESS", "PETTY_CASH_MANAGE"]):
         return user
-    _deny(request, user, "Se requiere permiso para administrar caja chica")
+    _deny(request, user, "Se requiere permiso para administrar categorias de caja chica")
 
 
-async def require_petty_cash_write(request: Request) -> dict:
+async def require_petty_cash_category_write(request: Request) -> dict:
     user = await get_current_user(request)
-    if _has_any_permission(user, ["PETTY_CASH_MANAGE", "PETTY_CASH_APPROVE"]):
+    if _has_any_permission(user, ["PETTY_CASH_CATEGORIES_MANAGE", "PETTY_CASH_MANAGE"]):
         return user
-    _deny(request, user, "Se requiere permiso para gestionar caja chica")
+    _deny(request, user, "Se requiere permiso para gestionar categorias de caja chica")
+
+
+async def require_petty_cash_fund_read(request: Request) -> dict:
+    user = await get_current_user(request)
+    if _has_any_permission(user, ["PETTY_CASH_FUNDS_ACCESS", "PETTY_CASH_ACCESS", "PETTY_CASH_ADMIN_ACCESS", "PETTY_CASH_MANAGE", "PETTY_CASH_APPROVE"]):
+        return user
+    _deny(request, user, "Se requiere permiso para acceder a fondos de caja chica")
+
+
+async def require_petty_cash_fund_write(request: Request) -> dict:
+    user = await get_current_user(request)
+    if _has_any_permission(user, ["PETTY_CASH_FUNDS_MANAGE", "PETTY_CASH_MANAGE", "PETTY_CASH_APPROVE", "PETTY_CASH_REPLENISH"]):
+        return user
+    _deny(request, user, "Se requiere permiso para gestionar fondos de caja chica")
 
 
 def category_to_dict(category: PettyCashCategory) -> dict:
@@ -123,7 +137,7 @@ async def get_active_user(session, user_id: int):
 @router.get("/categories", response_class=JSONResponse)
 async def list_categories(
     request: Request,
-    user: dict = Depends(require_petty_cash_read),
+    user: dict = Depends(require_petty_cash_category_read),
     active_only: bool = Query(False),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
@@ -147,7 +161,7 @@ async def list_categories(
 async def create_category(
     category_data: PettyCashCategoryCreate,
     request: Request,
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_category_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
@@ -187,7 +201,7 @@ async def update_category(
     category_data: PettyCashCategoryUpdate,
     request: Request,
     category_id: int = Path(..., gt=0),
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_category_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
@@ -220,7 +234,7 @@ async def update_category(
 async def delete_category(
     request: Request,
     category_id: int = Path(..., gt=0),
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_category_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
@@ -249,8 +263,9 @@ async def delete_category(
 @router.get("/funds", response_class=JSONResponse)
 async def list_funds(
     request: Request,
-    user: dict = Depends(require_petty_cash_read),
+    user: dict = Depends(require_petty_cash_fund_read),
     active_only: bool = Query(False),
+    assigned_to_me: bool = Query(False),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
 ):
@@ -262,7 +277,9 @@ async def list_funds(
                 .where(PettyCashFund.deleted_at.is_(None))
             )
             if active_only:
-                stmt = stmt.where(PettyCashFund.fund_status == PettyCashFundStatus.ACTIVE)
+                stmt = stmt.where(PettyCashFund.fund_status.in_([PettyCashFundStatus.UNDECLARED, PettyCashFundStatus.DECLARED]))
+            if assigned_to_me:
+                stmt = stmt.where(PettyCashFund.responsible_user_id == (user.get("user_id") or user.get("id")))
             stmt = stmt.order_by(PettyCashFund.fund_code).offset(skip).limit(limit)
             result = await session.execute(stmt)
             data = [fund_to_dict(fund) for fund in result.scalars().all()]
@@ -277,7 +294,7 @@ async def list_funds(
 async def create_fund(
     fund_data: PettyCashFundCreate,
     request: Request,
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_fund_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
@@ -331,7 +348,7 @@ async def update_fund(
     fund_data: PettyCashFundUpdate,
     request: Request,
     fund_id: int = Path(..., gt=0),
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_fund_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
@@ -375,7 +392,7 @@ async def update_fund(
 async def delete_fund(
     request: Request,
     fund_id: int = Path(..., gt=0),
-    user: dict = Depends(require_petty_cash_write),
+    user: dict = Depends(require_petty_cash_fund_write),
 ):
     try:
         async with db_manager.get_async_session() as session:
