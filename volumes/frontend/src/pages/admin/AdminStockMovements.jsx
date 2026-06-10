@@ -8,7 +8,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
-import DateRangePicker from '@/components/common/forms/DateRangePicker';
+import DatePicker from '@/components/common/forms/DatePicker';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { stockMovementsService } from '@/services/inventory/stockMovementsService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -310,6 +310,7 @@ const AdminStockMovements = () => {
   const [warehouseFilter, setWarehouseFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [dateError, setDateError] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -359,11 +360,16 @@ const AdminStockMovements = () => {
   useEffect(() => {
     if (!dateChangedRef.current) return;
     if (dateFrom && dateTo) {
+      const diff = (new Date(`${dateTo}T00:00:00`) - new Date(`${dateFrom}T00:00:00`)) / 86400000;
+      if (dateTo < dateFrom) { setDateError('La fecha hasta debe ser mayor o igual a la fecha desde.'); validDateParamsRef.current = {}; return; }
+      if (diff > 31) { setDateError('El rango no puede superar 31 días.'); validDateParamsRef.current = {}; return; }
+      setDateError('');
       validDateParamsRef.current = { date_from: dateFrom, date_to: dateTo };
       loadMeta({ date_from: dateFrom, date_to: dateTo });
-    } else if (!dateFrom && !dateTo) {
+    } else {
+      setDateError('');
       validDateParamsRef.current = {};
-      loadMeta();
+      if (!dateFrom && !dateTo) loadMeta();
     }
   }, [dateFrom, dateTo]);
 
@@ -424,6 +430,7 @@ const AdminStockMovements = () => {
     setWarehouseFilter('all');
     setDateFrom('');
     setDateTo('');
+    setDateError('');
     validDateParamsRef.current = {};
     setPage(0);
     loadMeta();
@@ -452,28 +459,31 @@ const AdminStockMovements = () => {
         searchValue={search}
         searchPlaceholder="Buscar producto, bodega, ubicacion o motivo"
         onSearchChange={setSearch}
-        gridClassName="lg:grid-cols-[minmax(280px,1fr)_190px_190px_auto_auto_auto]"
+        gridClassName="lg:grid-cols-[minmax(280px,1fr)_180px_180px_auto_auto_auto_auto]"
         fields={[
           { id: 'type', value: typeFilter, onChange: setTypeFilter, options: [{ value: 'all', label: 'Todos los tipos' }, { value: 'in', label: 'Ingresos' }, { value: 'out', label: 'Egresos' }, ...movementTypeOptions] },
           { id: 'warehouse', value: warehouseFilter, onChange: setWarehouseFilter, options: [{ value: 'all', label: 'Todas las bodegas' }, ...warehouses.map((warehouse) => ({ value: String(warehouse.id), label: warehouse.warehouse_name || warehouse.warehouse_code || String(warehouse.id) }))] },
         ]}
         actions={(
           <>
-            <DateRangePicker
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              maxDays={31}
-              onChange={({ from, to }) => {
-                dateChangedRef.current = true;
-                setDateFrom(from);
-                setDateTo(to);
-              }}
+            <DatePicker
+              value={dateFrom}
+              placeholder="Desde"
+              maxDate={dateTo || undefined}
+              onChange={(v) => { dateChangedRef.current = true; setDateFrom(v); }}
+            />
+            <DatePicker
+              value={dateTo}
+              placeholder="Hasta"
+              minDate={dateFrom || undefined}
+              onChange={(v) => { dateChangedRef.current = true; setDateTo(v); }}
             />
             <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={handleRefresh} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={resetFilters} />
           </>
         )}
       />
+      {dateError && <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">{dateError}</div>}
 
       <DataTable
         loading={loading}
