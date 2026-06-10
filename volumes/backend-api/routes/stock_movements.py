@@ -707,25 +707,56 @@ async def list_movements(
     request: Request,
     user: dict = Depends(require_stock_movements_read),
     limit: int = Query(500, ge=1, le=1000),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
 ):
     try:
+        if bool(date_from) != bool(date_to):
+            return ResponseManager.bad_request(message="Debe indicar date_from y date_to juntos.", request=request)
+        if date_from and date_to:
+            try:
+                d_from = date.fromisoformat(date_from)
+                d_to = date.fromisoformat(date_to)
+            except ValueError:
+                return ResponseManager.bad_request(message="Formato de fecha invalido. Use YYYY-MM-DD.", request=request)
+            if d_to < d_from:
+                return ResponseManager.bad_request(message="date_to debe ser mayor o igual a date_from.", request=request)
+            if (d_to - d_from).days > 31:
+                return ResponseManager.bad_request(message="El rango de fechas no puede superar 31 dias.", request=request)
+
         async with db_manager.get_async_session() as session:
-            result = await session.execute(
-                text(
-                    "SELECT sm.*, pv.variant_name, p.product_name, w.warehouse_name, wz.zone_name, wzl.location_name, "
-                    "mu.unit_name, mu.unit_symbol, pmu.conversion_factor AS unit_conversion_factor, u.username AS created_by_username "
-                    "FROM (SELECT * FROM stock_movements ORDER BY created_at DESC, id DESC LIMIT :limit) sm "
-                    "JOIN product_variants pv ON pv.id = sm.product_variant_id "
-                    "JOIN products p ON p.id = pv.product_id "
-                    "JOIN warehouses w ON w.id = sm.warehouse_id "
-                    "LEFT JOIN measurement_units mu ON mu.id = sm.measurement_unit_id "
-                    "LEFT JOIN product_measurement_units pmu ON pmu.product_id = p.id AND pmu.measurement_unit_id = sm.measurement_unit_id "
-                    "LEFT JOIN warehouse_zones wz ON wz.id = sm.warehouse_zone_id "
-                    "LEFT JOIN warehouse_zone_locations wzl ON wzl.id = sm.warehouse_zone_location_id "
-                    "LEFT JOIN users u ON u.id = sm.created_by_user_id "
-                ),
-                {"limit": limit},
+            joins = (
+                "JOIN product_variants pv ON pv.id = sm.product_variant_id "
+                "JOIN products p ON p.id = pv.product_id "
+                "JOIN warehouses w ON w.id = sm.warehouse_id "
+                "LEFT JOIN measurement_units mu ON mu.id = sm.measurement_unit_id "
+                "LEFT JOIN product_measurement_units pmu ON pmu.product_id = p.id AND pmu.measurement_unit_id = sm.measurement_unit_id "
+                "LEFT JOIN warehouse_zones wz ON wz.id = sm.warehouse_zone_id "
+                "LEFT JOIN warehouse_zone_locations wzl ON wzl.id = sm.warehouse_zone_location_id "
+                "LEFT JOIN users u ON u.id = sm.created_by_user_id "
             )
+            select = (
+                "SELECT sm.*, pv.variant_name, p.product_name, w.warehouse_name, wz.zone_name, wzl.location_name, "
+                "mu.unit_name, mu.unit_symbol, pmu.conversion_factor AS unit_conversion_factor, u.username AS created_by_username "
+            )
+            if date_from and date_to:
+                sql = (
+                    f"{select}"
+                    "FROM (SELECT * FROM stock_movements "
+                    "WHERE created_at >= :date_from AND created_at < DATE_ADD(:date_to, INTERVAL 1 DAY) "
+                    "ORDER BY created_at DESC, id DESC) sm "
+                    f"{joins}"
+                )
+                params = {"date_from": date_from, "date_to": date_to}
+            else:
+                sql = (
+                    f"{select}"
+                    "FROM (SELECT * FROM stock_movements ORDER BY created_at DESC, id DESC LIMIT :limit) sm "
+                    f"{joins}"
+                )
+                params = {"limit": limit}
+
+            result = await session.execute(text(sql), params)
             return ResponseManager.success(data=[_row(row) for row in result.mappings().all()], request=request)
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al listar movimientos de stock", details=str(exc), request=request)

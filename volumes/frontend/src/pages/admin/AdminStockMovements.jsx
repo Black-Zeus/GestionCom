@@ -296,6 +296,8 @@ const StockMovementDetail = ({ movement, timezone, hourFormat, onClose }) => {
   );
 };
 
+const dateInputClass = 'h-10 rounded-md border border-slate-200 bg-white px-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
+
 const AdminStockMovements = () => {
   const timezone = usePreferencesStore((state) => state.timezone);
   const hourFormat = usePreferencesStore((state) => state.hourFormat);
@@ -307,18 +309,23 @@ const AdminStockMovements = () => {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [warehouseFilter, setWarehouseFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [dateError, setDateError] = useState('');
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const formDataLoadedRef = useRef(false);
+  const dateChangedRef = useRef(false);
+  const validDateParamsRef = useRef({});
 
-  const loadMeta = useCallback(async () => {
+  const loadMeta = useCallback(async (params = {}) => {
     setLoading(true);
     setError('');
     try {
       const [nextMovements, nextWarehouses] = await Promise.all([
-        stockMovementsService.listMovements(),
+        stockMovementsService.listMovements(params),
         adminMaintainersService.list('warehouses-options'),
       ]);
       setMovements(nextMovements);
@@ -348,7 +355,27 @@ const AdminStockMovements = () => {
   }, []);
 
   useEffect(() => { loadMeta(); ensureFormData(); }, [loadMeta, ensureFormData]);
-  useEffect(() => { setPage(0); }, [search, typeFilter, warehouseFilter, pageSize]);
+  useEffect(() => { setPage(0); }, [search, typeFilter, warehouseFilter, dateFrom, dateTo, pageSize]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!dateChangedRef.current) return;
+    if (!dateFrom && !dateTo) {
+      setDateError('');
+      validDateParamsRef.current = {};
+      loadMeta();
+      return;
+    }
+    if (!dateFrom || !dateTo) { setDateError(''); return; }
+    const from = new Date(`${dateFrom}T00:00:00`);
+    const to = new Date(`${dateTo}T00:00:00`);
+    if (to < from) { setDateError('La fecha hasta debe ser mayor o igual a la fecha desde.'); validDateParamsRef.current = {}; return; }
+    const diff = (to - from) / 86400000;
+    if (diff > 31) { setDateError('El rango no puede superar 31 días.'); validDateParamsRef.current = {}; return; }
+    setDateError('');
+    validDateParamsRef.current = { date_from: dateFrom, date_to: dateTo };
+    loadMeta({ date_from: dateFrom, date_to: dateTo });
+  }, [dateFrom, dateTo]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -399,11 +426,18 @@ const AdminStockMovements = () => {
     contentProps: { movement, timezone, hourFormat },
   });
 
+  const handleRefresh = useCallback(() => loadMeta(validDateParamsRef.current), [loadMeta]);
+
   const resetFilters = () => {
     setSearch('');
     setTypeFilter('all');
     setWarehouseFilter('all');
+    setDateFrom('');
+    setDateTo('');
+    setDateError('');
+    validDateParamsRef.current = {};
     setPage(0);
+    loadMeta();
   };
 
   return (
@@ -429,18 +463,37 @@ const AdminStockMovements = () => {
         searchValue={search}
         searchPlaceholder="Buscar producto, bodega, ubicacion o motivo"
         onSearchChange={setSearch}
-        gridClassName="lg:grid-cols-[minmax(280px,1fr)_210px_220px_auto_auto]"
+        gridClassName="lg:grid-cols-[minmax(280px,1fr)_190px_190px_auto_auto_auto]"
         fields={[
           { id: 'type', value: typeFilter, onChange: setTypeFilter, options: [{ value: 'all', label: 'Todos los tipos' }, { value: 'in', label: 'Ingresos' }, { value: 'out', label: 'Egresos' }, ...movementTypeOptions] },
           { id: 'warehouse', value: warehouseFilter, onChange: setWarehouseFilter, options: [{ value: 'all', label: 'Todas las bodegas' }, ...warehouses.map((warehouse) => ({ value: String(warehouse.id), label: warehouse.warehouse_name || warehouse.warehouse_code || String(warehouse.id) }))] },
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <div className="flex items-center gap-1">
+              <input
+                type="date"
+                className={dateInputClass}
+                value={dateFrom}
+                title="Fecha desde"
+                onChange={(e) => { dateChangedRef.current = true; setDateFrom(e.target.value); }}
+              />
+              <span className="shrink-0 text-xs text-slate-400">—</span>
+              <input
+                type="date"
+                className={dateInputClass}
+                value={dateTo}
+                title="Fecha hasta"
+                min={dateFrom || undefined}
+                onChange={(e) => { dateChangedRef.current = true; setDateTo(e.target.value); }}
+              />
+            </div>
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={handleRefresh} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={resetFilters} />
           </>
         )}
       />
+      {dateError && <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">{dateError}</div>}
 
       <DataTable
         loading={loading}
