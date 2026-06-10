@@ -714,7 +714,7 @@ async def list_movements(
                 text(
                     "SELECT sm.*, pv.variant_name, p.product_name, w.warehouse_name, wz.zone_name, wzl.location_name, "
                     "mu.unit_name, mu.unit_symbol, pmu.conversion_factor AS unit_conversion_factor, u.username AS created_by_username "
-                    "FROM stock_movements sm "
+                    "FROM (SELECT * FROM stock_movements ORDER BY created_at DESC, id DESC LIMIT :limit) sm "
                     "JOIN product_variants pv ON pv.id = sm.product_variant_id "
                     "JOIN products p ON p.id = pv.product_id "
                     "JOIN warehouses w ON w.id = sm.warehouse_id "
@@ -723,7 +723,6 @@ async def list_movements(
                     "LEFT JOIN warehouse_zones wz ON wz.id = sm.warehouse_zone_id "
                     "LEFT JOIN warehouse_zone_locations wzl ON wzl.id = sm.warehouse_zone_location_id "
                     "LEFT JOIN users u ON u.id = sm.created_by_user_id "
-                    "ORDER BY sm.created_at DESC, sm.id DESC LIMIT :limit"
                 ),
                 {"limit": limit},
             )
