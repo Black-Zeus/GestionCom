@@ -158,8 +158,8 @@ const detailNavigationRoutes = [
   },
   {
     id: 'stock-transfer-detail',
-    pattern: /^\/stock\/transfers\/([^/?#]+)/,
-    basePath: '/stock/transfers',
+    pattern: /^\/inventory\/stock\/transfers\/([^/?#]+)/,
+    basePath: '/inventory/stock/transfers',
     group: 'Transferencias de stock',
     fallbackLabel: 'Transferencia',
     getLabelFromCode: (code) => `Transferencia ${code}`,
@@ -167,9 +167,9 @@ const detailNavigationRoutes = [
   },
   {
     id: 'price-list-products-detail',
-    pathname: '/price-lists',
+    pathname: '/inventory/pricing/price-lists',
     queryParam: 'price_list_id',
-    basePath: '/price-lists',
+    basePath: '/inventory/pricing/price-lists',
     group: 'Listas de precios',
     fallbackLabel: 'Precios de productos',
     getLabelFromCode: () => 'Precios de productos',

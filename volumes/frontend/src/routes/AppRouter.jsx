@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import ModuleSpinner from '@/components/common/loading/ModuleSpinner';
 import AppLayout from '@/layouts/AppLayout';
 import { navigablePages } from '@/data/modules';
@@ -77,6 +77,7 @@ const moduleComponents = {
   'petty-cash': AdminPettyCashFunds,
   'petty-cash-expenses': PettyCashExpenses,
   'price-query': SalesPriceQuery,
+  'petty-cash-admin': AdminPettyCashCategories,
   'petty-cash-categories': AdminPettyCashCategories,
   'payment-methods': AdminPaymentMethods,
   'measurement-units': AdminMeasurementUnits,
@@ -114,6 +115,40 @@ const moduleComponents = {
   'notification-settings': AdminNotificationSettings,
   notifications: NotificationInbox,
   profile: Profile,
+};
+
+const routeAliases = [
+  { from: 'admin/sales-points', to: '/cash/sales-points' },
+  { from: 'admin/operator-assignments', to: '/cash/operator-assignments' },
+  { from: 'products', to: '/inventory/products' },
+  { from: 'stock/movements', to: '/inventory/stock/movements' },
+  { from: 'stock/conversions', to: '/inventory/stock/conversions' },
+  { from: 'stock/physical', to: '/inventory/stock/physical' },
+  { from: 'stock/tracking-reports', to: '/inventory/stock/tracking-reports' },
+  { from: 'stock/adjustments', to: '/inventory/stock/adjustments' },
+  { from: 'stock/transfers', to: '/inventory/stock/transfers' },
+  { from: 'stock/transfers/:transferId', to: '/inventory/stock/transfers', param: 'transferId' },
+  { from: 'inventory/stock-critical', to: '/inventory/stock/critical' },
+  { from: 'price-lists', to: '/inventory/pricing/price-lists' },
+  { from: 'categories', to: '/inventory/products/categories' },
+  { from: 'product-attributes', to: '/inventory/products/attributes' },
+  { from: 'products/brands-models', to: '/inventory/products/brands-models' },
+  { from: 'barcodes', to: '/inventory/products/barcodes' },
+  { from: 'products/units', to: '/inventory/products/units' },
+  { from: 'returns', to: '/documents/returns' },
+  { from: 'returns/reasons', to: '/documents/returns/reasons' },
+  { from: 'returns/credit-notes', to: '/documents/returns/credit-notes' },
+  { from: 'config/document-templates', to: '/documents/templates' },
+  { from: 'admin/cash-pos', to: '/admin/cash/pos' },
+  { from: 'admin/cash-petty', to: '/admin/cash/petty-cash-categories' },
+  { from: 'admin/petty-cash-categories', to: '/admin/cash/petty-cash-categories' },
+];
+
+const RedirectTo = ({ to, param }) => {
+  const location = useLocation();
+  const params = useParams();
+  const paramSuffix = param && params[param] ? `/${encodeURIComponent(params[param])}` : '';
+  return <Navigate to={`${to}${paramSuffix}${location.search}${location.hash}`} replace />;
 };
 
 const Page = ({ children }) => (
@@ -283,7 +318,7 @@ const AppRouter = () => (
           )}
         />
         <Route
-          path="stock/transfers/:transferId"
+          path="inventory/stock/transfers/:transferId"
           element={(
             <Page>
               <RequirePermission permissions={['TRANSFERS_ACCESS', 'STOCK_TRANSFER', 'TRANSFER_RECEPTIONS_MANAGE']}>
@@ -292,6 +327,13 @@ const AppRouter = () => (
             </Page>
           )}
         />
+        {routeAliases.map((alias) => (
+          <Route
+            key={alias.from}
+            path={alias.from}
+            element={<RedirectTo to={alias.to} param={alias.param} />}
+          />
+        ))}
         {navigablePages.map((module) => {
           const ModuleComponent = moduleComponents[module.id] || UnderConstruction;
           const moduleContent = <ModuleComponent />;

@@ -833,7 +833,7 @@ const AdminStockTransfers = () => {
       },
     });
   };
-  const openDetail = (transfer) => navigate(`/stock/transfers/${encodeURIComponent(transfer.transfer_code || transfer.id)}`);
+  const openDetail = (transfer) => navigate(`/inventory/stock/transfers/${encodeURIComponent(transfer.transfer_code || transfer.id)}`);
   const deleteTransfer = async (transfer) => {
     if (!await ModalManager.confirm({ title: 'Eliminar transferencia', message: `Confirma eliminar la transferencia hacia ${transfer.target_warehouse_name || 'la bodega destino'}.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } })) return;
     await ignoreRejected(async () => {
@@ -1006,7 +1006,7 @@ const AdminStockTransfers = () => {
             </div>
           )}
           actions={[
-            { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/stock/transfers') },
+            { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/inventory/stock/transfers') },
             { id: 'new-item', label: 'Nuevo item', icon: PackagePlus, disabled: !currentTransfer || currentTransfer.status !== 'DRAFT', onClick: openAddItemFromHeader },
             currentTransfer?.status === 'SHIPPED' && { id: 'receive', label: 'Recibir', icon: PackageCheck, variant: 'neutral', onClick: openReceiveFromHeader },
             currentTransfer?.status === 'RECEIVED' && { id: 'putaway', label: 'Ubicar', icon: MapPin, variant: 'neutral', onClick: openPutawayFromHeader },
