@@ -15,6 +15,8 @@ const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminRoles = lazy(() => import('@/pages/admin/AdminRoles'));
 const AdminWarehouses = lazy(() => import('@/pages/admin/AdminWarehouses'));
 const AdminCashPos = lazy(() => import('@/pages/admin/AdminCashPos'));
+const AdminSalesPoints = lazy(() => import('@/pages/admin/AdminSalesPoints'));
+const AdminOperatorAssignments = lazy(() => import('@/pages/admin/AdminOperatorAssignments'));
 const AdminPettyCashCategories = lazy(() => import('@/pages/admin/AdminPettyCashCategories'));
 const AdminPettyCashFunds = lazy(() => import('@/pages/admin/AdminPettyCashFunds'));
 const PettyCashExpenses = lazy(() => import('@/pages/cash/PettyCashExpenses'));
@@ -70,6 +72,8 @@ const moduleComponents = {
   roles: AdminRoles,
   warehouses: AdminWarehouses,
   'cash-pos-admin': AdminCashPos,
+  'sales-points-admin': AdminSalesPoints,
+  'operator-assignments-admin': AdminOperatorAssignments,
   'petty-cash': AdminPettyCashFunds,
   'petty-cash-expenses': PettyCashExpenses,
   'price-query': SalesPriceQuery,
