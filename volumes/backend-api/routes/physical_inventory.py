@@ -13,7 +13,7 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
-from utils.inventory_tracking import validate_tracking_dimensions
+from utils.inventory_tracking import validate_serial_quantity, validate_tracking_dimensions
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Physical Inventory"])
@@ -163,9 +163,11 @@ async def _get_count(session, count_id: int) -> dict | None:
 async def _get_item(session, item_id: int) -> dict | None:
     result = await session.execute(
         text(
-            "SELECT pici.*, pic.status_id, ss.status_code "
+            "SELECT pici.*, pic.status_id, ss.status_code, p.has_serial_numbers "
             "FROM physical_inventory_count_items pici "
             "JOIN physical_inventory_counts pic ON pic.id = pici.physical_inventory_count_id "
+            "JOIN product_variants pv ON pv.id = pici.product_variant_id "
+            "JOIN products p ON p.id = pv.product_id "
             "LEFT JOIN system_statuses ss ON ss.id = pic.status_id "
             "WHERE pici.id = :item_id AND pic.deleted_at IS NULL"
         ),
@@ -246,6 +248,7 @@ async def _system_quantity(
     warehouse_zone_location_id: int | None,
     batch_lot_number: str | None,
     expiry_date: date | None,
+    serial_number: str | None,
 ) -> Decimal:
     result = await session.execute(
         text(
@@ -256,7 +259,8 @@ async def _system_quantity(
             "AND (:warehouse_zone_id IS NULL OR warehouse_zone_id = :warehouse_zone_id) "
             "AND (:warehouse_zone_location_id IS NULL OR warehouse_zone_location_id = :warehouse_zone_location_id) "
             "AND batch_lot_number <=> :batch_lot_number "
-            "AND expiry_date <=> :expiry_date"
+            "AND expiry_date <=> :expiry_date "
+            "AND serial_number <=> :serial_number"
         ),
         {
             "product_variant_id": product_variant_id,
@@ -265,6 +269,7 @@ async def _system_quantity(
             "warehouse_zone_location_id": warehouse_zone_location_id,
             "batch_lot_number": batch_lot_number,
             "expiry_date": expiry_date,
+            "serial_number": serial_number,
         },
     )
     return result.scalar_one_or_none() or Decimal("0")
@@ -275,10 +280,11 @@ async def _insert_count_item(session, count: dict, item: PhysicalCountItemCreate
     location_id = item.warehouse_zone_location_id if item.warehouse_zone_location_id is not None else count.get("warehouse_zone_location_id")
     zone_id, location_id = await _validate_scope(session, int(count["warehouse_id"]), zone_id, location_id)
     unit_id = await _variant_unit_id(session, item.product_variant_id, item.measurement_unit_id)
-    tracking = await validate_tracking_dimensions(session, item.product_variant_id, location_id, item.batch_lot_number, item.expiry_date)
+    tracking = await validate_tracking_dimensions(session, item.product_variant_id, location_id, item.batch_lot_number, item.expiry_date, item.serial_number)
+    validate_serial_quantity(tracking, item.counted_quantity if item.counted_quantity is not None else 1)
     system_quantity = item.system_quantity
     if system_quantity is None:
-        system_quantity = await _system_quantity(session, item.product_variant_id, int(count["warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"])
+        system_quantity = await _system_quantity(session, item.product_variant_id, int(count["warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"], tracking["serial_number"])
     review_status = "PENDING"
     if item.counted_quantity is not None:
         review_status = "OK" if item.counted_quantity == system_quantity else "DIFFERENCE"
@@ -305,7 +311,7 @@ async def _insert_count_item(session, count: dict, item: PhysicalCountItemCreate
             "unit_cost": item.unit_cost,
             "batch_lot_number": tracking["batch_lot_number"],
             "expiry_date": tracking["expiry_date"],
-            "serial_number": item.serial_number,
+            "serial_number": tracking["serial_number"],
             "counted_by_user_id": None,
             "counted_at": None,
             "review_status": review_status,
@@ -319,7 +325,7 @@ async def _insert_count_item(session, count: dict, item: PhysicalCountItemCreate
 async def _items_for_count(session, count_id: int) -> list[dict]:
     result = await session.execute(
         text(
-            "SELECT pici.*, pv.variant_name, p.product_name, mu.unit_name, mu.unit_symbol, "
+            "SELECT pici.*, pv.variant_name, p.product_name, p.has_serial_numbers, mu.unit_name, mu.unit_symbol, "
             "wz.zone_name, wzl.location_name, counted_by.username AS counted_by_username "
             "FROM physical_inventory_count_items pici "
             "JOIN product_variants pv ON pv.id = pici.product_variant_id "
@@ -488,7 +494,7 @@ async def generate_count_items(request: Request, count_id: int = Path(..., gt=0)
                 result = await session.execute(
                     text(
                         "SELECT s.product_variant_id, s.warehouse_zone_id, s.warehouse_zone_location_id, "
-                        "s.batch_lot_number, s.expiry_date, "
+                        "s.batch_lot_number, s.expiry_date, s.serial_number, "
                         "p.base_measurement_unit_id AS measurement_unit_id, s.current_quantity AS system_quantity "
                         "FROM stock s "
                         "JOIN product_variants pv ON pv.id = s.product_variant_id "
@@ -551,6 +557,7 @@ async def update_counted_item(data: PhysicalCountItemUpdate, request: Request, c
                     return ResponseManager.error(message="Item de conteo no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
                 if item.get("status_code") != "COUNTING":
                     raise ValueError("Solo se puede contar items en estado En Conteo")
+                validate_serial_quantity(item, data.counted_quantity)
                 review_status = "OK" if Decimal(str(data.counted_quantity)) == Decimal(str(item["system_quantity"])) else "DIFFERENCE"
                 await session.execute(
                     text(
@@ -645,6 +652,7 @@ async def _stock_row(session, item: dict, warehouse_id: int) -> dict | None:
             "AND warehouse_zone_location_id <=> :warehouse_zone_location_id "
             "AND batch_lot_number <=> :batch_lot_number "
             "AND expiry_date <=> :expiry_date "
+            "AND serial_number <=> :serial_number "
             "LIMIT 1"
         ),
         {
@@ -654,6 +662,7 @@ async def _stock_row(session, item: dict, warehouse_id: int) -> dict | None:
             "warehouse_zone_location_id": item.get("warehouse_zone_location_id"),
             "batch_lot_number": item.get("batch_lot_number"),
             "expiry_date": item.get("expiry_date"),
+            "serial_number": item.get("serial_number"),
         },
     )
     return _row(result.mappings().first())
@@ -700,9 +709,9 @@ async def post_count(data: PhysicalCountNotes, request: Request, count_id: int =
                     else:
                         await session.execute(
                             text(
-                                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, "
+                                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number, "
                                 "current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
-                                "VALUES (:product_variant_id, :warehouse_id, :warehouse_zone_id, :warehouse_zone_location_id, :batch_lot_number, :expiry_date, "
+                                "VALUES (:product_variant_id, :warehouse_id, :warehouse_zone_id, :warehouse_zone_location_id, :batch_lot_number, :expiry_date, :serial_number, "
                                 ":quantity_after, 0, CURRENT_TIMESTAMP, 'ADJUSTMENT')"
                             ),
                             {
@@ -712,6 +721,7 @@ async def post_count(data: PhysicalCountNotes, request: Request, count_id: int =
                                 "warehouse_zone_location_id": item.get("warehouse_zone_location_id"),
                                 "batch_lot_number": item.get("batch_lot_number"),
                                 "expiry_date": item.get("expiry_date"),
+                                "serial_number": item.get("serial_number"),
                                 "quantity_after": quantity_after,
                             },
                         )

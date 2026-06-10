@@ -13,7 +13,7 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
-from utils.inventory_tracking import validate_tracking_dimensions
+from utils.inventory_tracking import validate_serial_quantity, validate_tracking_dimensions
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Stock Transfers"])
@@ -42,6 +42,7 @@ class TransferItemCreate(BaseModel):
     source_warehouse_zone_location_id: int | None = Field(default=None, gt=0)
     batch_lot_number: str | None = Field(default=None, max_length=100)
     expiry_date: date | None = None
+    serial_number: str | None = Field(default=None, max_length=100)
     unit_cost: Decimal | None = None
     notes: str | None = None
 
@@ -252,7 +253,8 @@ async def _get_transfer_by_key(session, transfer_key: str) -> dict | None:
 async def _items(session, transfer_id: int) -> list[dict]:
     result = await session.execute(
         text(
-            "SELECT sti.*, pv.variant_name, p.product_name, mu.unit_name, mu.unit_symbol, "
+            "SELECT sti.*, pv.variant_name, p.product_name, p.has_location_tracking, p.has_batch_control, "
+            "p.has_expiry_date, p.has_serial_numbers, mu.unit_name, mu.unit_symbol, "
             "sz.zone_name AS source_zone_name, sl.location_name AS source_location_name, "
             "pz.zone_name AS pending_zone_name, pl.location_name AS pending_location_name "
             "FROM stock_transfer_items sti "
@@ -278,12 +280,14 @@ async def _stock_row(
     location_id: int | None,
     batch_lot_number: str | None,
     expiry_date: date | None,
+    serial_number: str | None,
 ) -> dict | None:
     result = await session.execute(
         text(
             "SELECT * FROM stock WHERE product_variant_id = :product_variant_id AND warehouse_id = :warehouse_id "
             "AND warehouse_zone_id <=> :zone_id AND warehouse_zone_location_id <=> :location_id "
-            "AND batch_lot_number <=> :batch_lot_number AND expiry_date <=> :expiry_date LIMIT 1"
+            "AND batch_lot_number <=> :batch_lot_number AND expiry_date <=> :expiry_date "
+            "AND serial_number <=> :serial_number LIMIT 1"
         ),
         {
             "product_variant_id": product_variant_id,
@@ -292,6 +296,7 @@ async def _stock_row(
             "location_id": location_id,
             "batch_lot_number": batch_lot_number,
             "expiry_date": expiry_date,
+            "serial_number": serial_number,
         },
     )
     return _row(result.mappings().first())
@@ -305,9 +310,10 @@ async def _validate_available_stock(
     location_id: int | None,
     batch_lot_number: str | None,
     expiry_date: date | None,
+    serial_number: str | None,
     quantity: Decimal,
 ) -> None:
-    stock = await _stock_row(session, product_variant_id, warehouse_id, zone_id, location_id, batch_lot_number, expiry_date)
+    stock = await _stock_row(session, product_variant_id, warehouse_id, zone_id, location_id, batch_lot_number, expiry_date, serial_number)
     available = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
     required = Decimal(str(quantity))
     if available < required:
@@ -322,6 +328,7 @@ async def _apply_stock_delta(
     location_id: int | None,
     batch_lot_number: str | None,
     expiry_date: date | None,
+    serial_number: str | None,
     delta: Decimal,
     movement_type: str,
     reference_type: str,
@@ -329,7 +336,7 @@ async def _apply_stock_delta(
     notes: str,
     unit_cost: Decimal | None = None,
 ):
-    stock = await _stock_row(session, product_variant_id, warehouse_id, zone_id, location_id, batch_lot_number, expiry_date)
+    stock = await _stock_row(session, product_variant_id, warehouse_id, zone_id, location_id, batch_lot_number, expiry_date, serial_number)
     before = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
     after = before + Decimal(str(delta))
     if after < 0:
@@ -343,8 +350,8 @@ async def _apply_stock_delta(
     else:
         await session.execute(
             text(
-                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
-                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :batch_lot_number, :expiry_date, :qty, 0, CURRENT_TIMESTAMP, :movement_type)"
+                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number, current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
+                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :batch_lot_number, :expiry_date, :serial_number, :qty, 0, CURRENT_TIMESTAMP, :movement_type)"
             ),
             {
                 "product_variant_id": product_variant_id,
@@ -353,14 +360,15 @@ async def _apply_stock_delta(
                 "location_id": location_id,
                 "batch_lot_number": batch_lot_number,
                 "expiry_date": expiry_date,
+                "serial_number": serial_number,
                 "qty": after,
                 "movement_type": movement_type,
             },
         )
     await session.execute(
         text(
-            "INSERT INTO stock_movements (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, movement_type, reference_type, quantity, quantity_before, quantity_after, unit_cost, total_cost, batch_lot_number, expiry_date, notes, created_by_user_id) "
-            "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :movement_type, :reference_type, :delta, :before, :after, :unit_cost, :total_cost, :batch_lot_number, :expiry_date, :notes, :user_id)"
+            "INSERT INTO stock_movements (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, movement_type, reference_type, quantity, quantity_before, quantity_after, unit_cost, total_cost, batch_lot_number, expiry_date, serial_number, notes, created_by_user_id) "
+            "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :movement_type, :reference_type, :delta, :before, :after, :unit_cost, :total_cost, :batch_lot_number, :expiry_date, :serial_number, :notes, :user_id)"
         ),
         {
             "product_variant_id": product_variant_id,
@@ -376,6 +384,7 @@ async def _apply_stock_delta(
             "total_cost": Decimal(str(unit_cost or 0)) * abs(Decimal(str(delta))),
             "batch_lot_number": batch_lot_number,
             "expiry_date": expiry_date,
+            "serial_number": serial_number,
             "notes": notes,
             "user_id": user_id,
         },
@@ -419,12 +428,13 @@ async def get_available_stock(
     warehouse_zone_location_id: int | None = Query(None, gt=0),
     batch_lot_number: str | None = Query(None, max_length=100),
     expiry_date: date | None = Query(None),
+    serial_number: str | None = Query(None, max_length=100),
     user: dict = Depends(require_transfer_read),
 ):
     try:
         async with db_manager.get_async_session() as session:
-            tracking = await validate_tracking_dimensions(session, product_variant_id, warehouse_zone_location_id, batch_lot_number, expiry_date)
-            stock = await _stock_row(session, product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, tracking["batch_lot_number"], tracking["expiry_date"])
+            tracking = await validate_tracking_dimensions(session, product_variant_id, warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number)
+            stock = await _stock_row(session, product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, tracking["batch_lot_number"], tracking["expiry_date"], tracking["serial_number"])
             current_quantity = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
             reserved_quantity = Decimal(str(stock["reserved_quantity"])) if stock else Decimal("0")
             available_quantity = current_quantity - reserved_quantity
@@ -436,6 +446,7 @@ async def get_available_stock(
                     "warehouse_zone_location_id": warehouse_zone_location_id,
                     "batch_lot_number": tracking["batch_lot_number"],
                     "expiry_date": _json_value(tracking["expiry_date"]),
+                    "serial_number": tracking["serial_number"],
                     "current_quantity": _json_value(current_quantity),
                     "reserved_quantity": _json_value(reserved_quantity),
                     "available_quantity": _json_value(available_quantity),
@@ -569,12 +580,13 @@ async def add_transfer_item(data: TransferItemCreate, request: Request, transfer
                     raise ValueError("Solo se pueden agregar items en borrador")
                 zone_id, location_id = await _validate_location(session, int(transfer["source_warehouse_id"]), data.source_warehouse_zone_id, data.source_warehouse_zone_location_id)
                 unit_id = await _variant_unit_id(session, data.product_variant_id, data.measurement_unit_id)
-                tracking = await validate_tracking_dimensions(session, data.product_variant_id, location_id, data.batch_lot_number, data.expiry_date)
-                await _validate_available_stock(session, data.product_variant_id, int(transfer["source_warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"], data.quantity)
+                tracking = await validate_tracking_dimensions(session, data.product_variant_id, location_id, data.batch_lot_number, data.expiry_date, data.serial_number)
+                validate_serial_quantity(tracking, data.quantity)
+                await _validate_available_stock(session, data.product_variant_id, int(transfer["source_warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"], tracking["serial_number"], data.quantity)
                 await session.execute(
                     text(
-                        "INSERT INTO stock_transfer_items (stock_transfer_id, product_variant_id, measurement_unit_id, quantity, source_warehouse_zone_id, source_warehouse_zone_location_id, batch_lot_number, expiry_date, unit_cost, notes) "
-                        "VALUES (:transfer_id, :variant_id, :unit_id, :quantity, :zone_id, :location_id, :batch_lot_number, :expiry_date, :unit_cost, :notes)"
+                        "INSERT INTO stock_transfer_items (stock_transfer_id, product_variant_id, measurement_unit_id, quantity, source_warehouse_zone_id, source_warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number, unit_cost, notes) "
+                        "VALUES (:transfer_id, :variant_id, :unit_id, :quantity, :zone_id, :location_id, :batch_lot_number, :expiry_date, :serial_number, :unit_cost, :notes)"
                     ),
                     {
                         "transfer_id": transfer_id,
@@ -585,6 +597,7 @@ async def add_transfer_item(data: TransferItemCreate, request: Request, transfer
                         "location_id": location_id,
                         "batch_lot_number": tracking["batch_lot_number"],
                         "expiry_date": tracking["expiry_date"],
+                        "serial_number": tracking["serial_number"],
                         "unit_cost": data.unit_cost,
                         "notes": data.notes,
                     },
@@ -646,14 +659,15 @@ async def update_transfer_item(data: TransferItemCreate, request: Request, trans
                     return ResponseManager.error(message="Item de transferencia no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
                 zone_id, location_id = await _validate_location(session, int(transfer["source_warehouse_id"]), data.source_warehouse_zone_id, data.source_warehouse_zone_location_id)
                 unit_id = await _variant_unit_id(session, data.product_variant_id, data.measurement_unit_id)
-                tracking = await validate_tracking_dimensions(session, data.product_variant_id, location_id, data.batch_lot_number, data.expiry_date)
-                await _validate_available_stock(session, data.product_variant_id, int(transfer["source_warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"], data.quantity)
+                tracking = await validate_tracking_dimensions(session, data.product_variant_id, location_id, data.batch_lot_number, data.expiry_date, data.serial_number)
+                validate_serial_quantity(tracking, data.quantity)
+                await _validate_available_stock(session, data.product_variant_id, int(transfer["source_warehouse_id"]), zone_id, location_id, tracking["batch_lot_number"], tracking["expiry_date"], tracking["serial_number"], data.quantity)
                 await session.execute(
                     text(
                         "UPDATE stock_transfer_items "
                         "SET product_variant_id = :variant_id, measurement_unit_id = :unit_id, quantity = :quantity, "
                         "source_warehouse_zone_id = :zone_id, source_warehouse_zone_location_id = :location_id, "
-                        "batch_lot_number = :batch_lot_number, expiry_date = :expiry_date, "
+                        "batch_lot_number = :batch_lot_number, expiry_date = :expiry_date, serial_number = :serial_number, "
                         "unit_cost = :unit_cost, notes = :notes "
                         "WHERE id = :item_id"
                     ),
@@ -665,6 +679,7 @@ async def update_transfer_item(data: TransferItemCreate, request: Request, trans
                         "location_id": location_id,
                         "batch_lot_number": tracking["batch_lot_number"],
                         "expiry_date": tracking["expiry_date"],
+                        "serial_number": tracking["serial_number"],
                         "unit_cost": data.unit_cost,
                         "notes": data.notes,
                         "item_id": item_id,
@@ -753,6 +768,7 @@ async def ship_transfer(request: Request, transfer_id: int = Path(..., gt=0), us
                         item.get("source_warehouse_zone_location_id"),
                         item.get("batch_lot_number"),
                         item.get("expiry_date"),
+                        item.get("serial_number"),
                         -Decimal(str(item["quantity"])),
                         "TRANSFER",
                         "TRANSFER",
@@ -825,6 +841,7 @@ async def receive_transfer(data: ReceiveTransferPayload, request: Request, trans
                             target_location_id,
                             item.get("batch_lot_number"),
                             item.get("expiry_date"),
+                            item.get("serial_number"),
                             received_quantity,
                             "TRANSFER",
                             "TRANSFER",
@@ -863,6 +880,8 @@ async def putaway_transfer(data: PutawayPayload, request: Request, transfer_id: 
                 if data.quantity > pending:
                     raise ValueError("La cantidad a ubicar supera lo pendiente")
                 zone_id, location_id = await _validate_location(session, int(transfer["target_warehouse_id"]), data.warehouse_zone_id, data.warehouse_zone_location_id)
+                if item.get("has_location_tracking") and not location_id:
+                    raise ValueError("El producto controla ubicacion; selecciona una ubicacion interna final")
                 if zone_id == item.get("target_pending_warehouse_zone_id") and location_id == item.get("target_pending_warehouse_zone_location_id"):
                     raise ValueError("Selecciona una ubicacion final distinta a Recepcion")
                 user_id = user.get("user_id") or user.get("id")
@@ -874,6 +893,7 @@ async def putaway_transfer(data: PutawayPayload, request: Request, transfer_id: 
                     item.get("target_pending_warehouse_zone_location_id"),
                     item.get("batch_lot_number"),
                     item.get("expiry_date"),
+                    item.get("serial_number"),
                     -Decimal(str(data.quantity)),
                     "TRANSFER",
                     "TRANSFER",
@@ -889,6 +909,7 @@ async def putaway_transfer(data: PutawayPayload, request: Request, transfer_id: 
                     location_id,
                     item.get("batch_lot_number"),
                     item.get("expiry_date"),
+                    item.get("serial_number"),
                     Decimal(str(data.quantity)),
                     "TRANSFER",
                     "TRANSFER",

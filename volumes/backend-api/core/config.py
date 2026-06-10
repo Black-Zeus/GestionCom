@@ -69,6 +69,13 @@ class Settings:
     DOCS_API_URL: Optional[str] = os.getenv("DOCS_API_URL")
     TASKS_API_URL: Optional[str] = os.getenv("TASKS_API_URL")
 
+    # ====== Inventory alerts ======
+    INVENTORY_EXPIRY_ALERTS_ENABLED: bool = os.getenv("INVENTORY_EXPIRY_ALERTS_ENABLED", "true").lower() == "true"
+    INVENTORY_EXPIRY_ALERTS_INTERVAL_SECONDS: int = int(os.getenv("INVENTORY_EXPIRY_ALERTS_INTERVAL_SECONDS") or "86400")
+    INVENTORY_EXPIRY_ALERTS_DAYS: int = int(os.getenv("INVENTORY_EXPIRY_ALERTS_DAYS") or "30")
+    INVENTORY_EXPIRY_ALERTS_INCLUDE_MISSING: bool = os.getenv("INVENTORY_EXPIRY_ALERTS_INCLUDE_MISSING", "true").lower() == "true"
+    INVENTORY_EXPIRY_ALERTS_LIMIT: int = int(os.getenv("INVENTORY_EXPIRY_ALERTS_LIMIT") or "500")
+
     # ====== MinIO / Media Storage ======
     MINIO_HOST: str = os.getenv("MINIO_HOST", "minio")
     MINIO_PORT: int = int(os.getenv("MINIO_PORT") or "9000")

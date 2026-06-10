@@ -1,10 +1,16 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import text
 
 
 def normalize_batch_lot(value: str | None) -> str | None:
     cleaned = str(value or "").strip()
+    return cleaned or None
+
+
+def normalize_serial(value: str | None) -> str | None:
+    cleaned = str(value or "").strip().upper()
     return cleaned or None
 
 
@@ -39,9 +45,11 @@ async def validate_tracking_dimensions(
     warehouse_zone_location_id: int | None,
     batch_lot_number: str | None,
     expiry_date: date | None,
+    serial_number: str | None = None,
 ) -> dict:
     tracking = await get_variant_tracking(session, product_variant_id)
     batch_lot_number = normalize_batch_lot(batch_lot_number)
+    serial_number = normalize_serial(serial_number)
 
     if tracking["has_location_tracking"] and not warehouse_zone_location_id:
         raise ValueError("El producto controla ubicacion; selecciona una ubicacion interna")
@@ -52,9 +60,21 @@ async def validate_tracking_dimensions(
             raise ValueError("El producto controla vencimiento; indica el lote")
         if not expiry_date:
             raise ValueError("El producto controla vencimiento; indica la fecha de vencimiento")
+    if tracking["has_serial_numbers"] and not serial_number:
+        raise ValueError("El producto controla seriales; indica el numero de serie")
 
     return {
         **tracking,
         "batch_lot_number": batch_lot_number,
         "expiry_date": expiry_date,
+        "serial_number": serial_number,
     }
+
+
+def validate_serial_quantity(tracking: dict, quantity) -> None:
+    try:
+        normalized_quantity = Decimal(str(quantity))
+    except (InvalidOperation, TypeError, ValueError):
+        normalized_quantity = Decimal("-1")
+    if tracking.get("has_serial_numbers") and normalized_quantity != Decimal("1"):
+        raise ValueError("Los productos con serial deben moverse en lineas de cantidad 1 por serial")

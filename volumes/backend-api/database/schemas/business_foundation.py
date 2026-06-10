@@ -109,7 +109,7 @@ class ProductCreate(BaseModel):
     has_batch_control: bool = False
     has_expiry_date: bool = False
     has_serial_numbers: bool = False
-    has_location_tracking: bool = True
+    has_location_tracking: bool = False
 
 
 class ProductUpdate(BaseModel):

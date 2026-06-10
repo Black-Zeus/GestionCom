@@ -137,6 +137,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
     source_warehouse_zone_location_id: item?.source_warehouse_zone_location_id ? String(item.source_warehouse_zone_location_id) : '',
     batch_lot_number: item?.batch_lot_number || '',
     expiry_date: item?.expiry_date || '',
+    serial_number: item?.serial_number || '',
     unit_cost: item?.unit_cost ? String(item.unit_cost) : '',
     notes: item?.notes || '',
   });
@@ -153,6 +154,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
   const needsLocation = Boolean(selectedVariant?.has_location_tracking);
   const needsBatch = Boolean(selectedVariant?.has_batch_control || selectedVariant?.has_expiry_date);
   const needsExpiry = Boolean(selectedVariant?.has_expiry_date);
+  const needsSerial = Boolean(selectedVariant?.has_serial_numbers);
   const availableQuantity = Number(availability?.available_quantity ?? 0);
   const hasAvailability = Boolean(form.product_variant_id) && availability !== null;
   const availabilityScope = form.source_warehouse_zone_location_id
@@ -182,6 +184,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
       warehouse_zone_location_id: form.source_warehouse_zone_location_id ? Number(form.source_warehouse_zone_location_id) : undefined,
       batch_lot_number: form.batch_lot_number.trim() || undefined,
       expiry_date: form.expiry_date || undefined,
+      serial_number: form.serial_number.trim() || undefined,
     })
       .then((nextAvailability) => {
         if (active) setAvailability(nextAvailability);
@@ -195,7 +198,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
     return () => {
       active = false;
     };
-  }, [form.batch_lot_number, form.expiry_date, form.product_variant_id, form.source_warehouse_zone_id, form.source_warehouse_zone_location_id, transfer.source_warehouse_id]);
+  }, [form.batch_lot_number, form.expiry_date, form.product_variant_id, form.serial_number, form.source_warehouse_zone_id, form.source_warehouse_zone_location_id, transfer.source_warehouse_id]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -216,6 +219,14 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
       setError('Este producto controla vencimiento; indica la fecha.');
       return;
     }
+    if (needsSerial && !form.serial_number.trim()) {
+      setError('Este producto controla seriales; indica el numero de serie.');
+      return;
+    }
+    if (needsSerial && Number(form.quantity) !== 1) {
+      setError('Los productos con serial se transfieren con cantidad 1 por serial.');
+      return;
+    }
     if (hasAvailability && Number(form.quantity) > availableQuantity) {
       setError(`La cantidad supera el stock disponible en origen (${quantity(availableQuantity)}).`);
       return;
@@ -230,6 +241,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
         source_warehouse_zone_location_id: form.source_warehouse_zone_location_id ? Number(form.source_warehouse_zone_location_id) : null,
         batch_lot_number: form.batch_lot_number.trim() || null,
         expiry_date: form.expiry_date || null,
+        serial_number: form.serial_number.trim() || null,
         unit_cost: form.unit_cost ? Number(form.unit_cost) : null,
         notes: form.notes || null,
       });
@@ -244,7 +256,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
       <div className="grid gap-3 md:grid-cols-3">
         <label className="space-y-1 text-sm md:col-span-2">
           <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variacion</span>
-          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => setForm((current) => ({ ...current, product_variant_id: event.target.value, batch_lot_number: '', expiry_date: '' }))} required>
+          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => setForm((current) => ({ ...current, product_variant_id: event.target.value, batch_lot_number: '', expiry_date: '', serial_number: '' }))} required>
             <option value="">Selecciona SKU</option>
             {variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.product_name, nameLabel(variant, 'variant_name', 'variant_sku')].filter(Boolean).join(' / ')}</option>)}
           </select>
@@ -284,6 +296,12 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
           <label className="space-y-1 text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-200">Vencimiento *</span>
             <input className={fieldClassName} type="date" value={form.expiry_date} onChange={(event) => setForm((current) => ({ ...current, expiry_date: event.target.value }))} required />
+          </label>
+        )}
+        {needsSerial && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Serial *</span>
+            <input className={fieldClassName} value={form.serial_number} onChange={(event) => setForm((current) => ({ ...current, serial_number: event.target.value.toUpperCase() }))} maxLength={100} required />
           </label>
         )}
         <label className="space-y-1 text-sm">
@@ -338,7 +356,7 @@ const ObserveReceptionModal = ({ item, decision, onSave, onClose }) => {
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-1 text-sm md:col-span-2">
           <div className="font-medium text-slate-950 dark:text-white">{item.variant_name}</div>
-          <div className="text-xs text-slate-500">Despachado: {quantity(item.quantity)}{item.batch_lot_number ? ` / Lote ${item.batch_lot_number}` : ''}{item.expiry_date ? ` / Vence ${item.expiry_date}` : ''}</div>
+          <div className="text-xs text-slate-500">Despachado: {quantity(item.quantity)}{item.batch_lot_number ? ` / Lote ${item.batch_lot_number}` : ''}{item.expiry_date ? ` / Vence ${item.expiry_date}` : ''}{item.serial_number ? ` / Serial ${item.serial_number}` : ''}</div>
         </div>
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad recibida</span>
@@ -466,6 +484,7 @@ const PutawayModal = ({ transfer, zones = [], locations = [], onSubmit, onClose 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const selectedItem = pendingItems.find((item) => String(item.id) === String(form.stock_transfer_item_id));
+  const needsLocation = Boolean(selectedItem?.has_location_tracking);
   const zoneOptions = zones.filter((zone) => String(zone.warehouse_id) === String(transfer.target_warehouse_id) && !String(zone.zone_code || '').startsWith('REC_'));
   const locationOptions = locations.filter((location) => !form.warehouse_zone_id || String(location.warehouse_zone_id) === String(form.warehouse_zone_id));
 
@@ -478,6 +497,10 @@ const PutawayModal = ({ transfer, zones = [], locations = [], onSubmit, onClose 
     setError('');
     if (!form.stock_transfer_item_id || !form.warehouse_zone_id || Number(form.quantity) <= 0) {
       setError('Selecciona item, ubicacion final y cantidad.');
+      return;
+    }
+    if (needsLocation && !form.warehouse_zone_location_id) {
+      setError('Este producto controla ubicacion; selecciona una ubicacion interna final.');
       return;
     }
     setSaving(true);
@@ -504,7 +527,7 @@ const PutawayModal = ({ transfer, zones = [], locations = [], onSubmit, onClose 
             const nextItem = pendingItems.find((item) => String(item.id) === event.target.value);
             setForm((current) => ({ ...current, stock_transfer_item_id: event.target.value, quantity: nextItem?.pending_putaway_quantity || '' }));
           }} required>
-            {pendingItems.map((item) => <option key={item.id} value={item.id}>{item.variant_name}{item.batch_lot_number ? ` / ${item.batch_lot_number}` : ''} - pendiente {quantity(item.pending_putaway_quantity)}</option>)}
+            {pendingItems.map((item) => <option key={item.id} value={item.id}>{item.variant_name}{item.batch_lot_number ? ` / ${item.batch_lot_number}` : ''}{item.serial_number ? ` / ${item.serial_number}` : ''} - pendiente {quantity(item.pending_putaway_quantity)}</option>)}
           </select>
         </label>
         <label className="space-y-1 text-sm">
@@ -515,9 +538,9 @@ const PutawayModal = ({ transfer, zones = [], locations = [], onSubmit, onClose 
           </select>
         </label>
         <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion interna</span>
+          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion interna{needsLocation ? ' *' : ''}</span>
           <select className={selectClassName} value={form.warehouse_zone_location_id} onChange={(event) => setForm((current) => ({ ...current, warehouse_zone_location_id: event.target.value }))} disabled={!form.warehouse_zone_id}>
-            <option value="">Sin sububicacion</option>
+            <option value="">{needsLocation ? 'Selecciona ubicacion' : 'Sin sububicacion'}</option>
             {locationOptions.map((location) => <option key={location.id} value={location.id}>{nameLabel(location, 'location_name', 'location_code')}</option>)}
           </select>
         </label>
@@ -558,7 +581,7 @@ const TransferDetailView = ({ transferId, variants, units, zones, locations, rec
 
   const filteredItems = (transfer.items || []).filter((item) => {
     const term = itemSearch.trim().toLowerCase();
-    const matchesText = !term || [item.product_name, item.variant_name, item.batch_lot_number, item.expiry_date, item.source_zone_name, item.source_location_name, item.pending_zone_name, item.pending_location_name].filter(Boolean).join(' ').toLowerCase().includes(term);
+    const matchesText = !term || [item.product_name, item.variant_name, item.batch_lot_number, item.expiry_date, item.serial_number, item.source_zone_name, item.source_location_name, item.pending_zone_name, item.pending_location_name].filter(Boolean).join(' ').toLowerCase().includes(term);
     const pending = Number(item.pending_putaway_quantity || 0);
     const matchesScope = itemScope === 'all' || (itemScope === 'pending' && pending > 0) || (itemScope === 'located' && pending === 0);
     return matchesText && matchesScope;
@@ -676,7 +699,7 @@ const TransferDetailView = ({ transferId, variants, units, zones, locations, rec
         columns={[
           { id: 'sku', label: 'SKU / Variacion', render: (item) => <div><div className="font-medium">{item.variant_name}</div><div className="text-xs text-slate-500">{item.product_name}</div></div> },
           { id: 'origin', label: 'Origen stock', render: (item) => [item.source_zone_name, item.source_location_name].filter(Boolean).join(' / ') || 'Stock general' },
-          { id: 'tracking', label: 'Lote / venc.', render: (item) => [item.batch_lot_number, item.expiry_date].filter(Boolean).join(' / ') || '-' },
+          { id: 'tracking', label: 'Lote / venc. / serial', render: (item) => [item.batch_lot_number, item.expiry_date, item.serial_number].filter(Boolean).join(' / ') || '-' },
           { id: 'quantity', label: 'Despachado', align: 'right', render: (item) => quantity(item.quantity) },
           { id: 'received', label: 'Recibido', align: 'right', render: (item) => quantity(item.received_quantity) },
           { id: 'reception_status', label: 'Recepcion', render: (item) => {
