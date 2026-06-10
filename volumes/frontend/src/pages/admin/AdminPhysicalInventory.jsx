@@ -489,7 +489,7 @@ const AdminPhysicalInventory = () => {
     }
   }, []);
 
-  useEffect(() => { loadMeta(); }, [loadMeta]);
+  useEffect(() => { loadMeta().then(() => ensureFormData()); }, [loadMeta, ensureFormData]);
   useEffect(() => { setPage(0); }, [search, status, warehouseFilter, pageSize]);
 
   const warehouseMap = useMemo(() => byId(warehouses), [warehouses]);

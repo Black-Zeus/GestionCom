@@ -782,7 +782,7 @@ const AdminStockTransfers = () => {
     }
   }, []);
 
-  useEffect(() => { loadMeta(); }, [loadMeta]);
+  useEffect(() => { loadMeta().then(() => ensureFormData()); }, [loadMeta, ensureFormData]);
 
   useEffect(() => {
     if (transferId) ensureFormData();

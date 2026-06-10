@@ -347,7 +347,7 @@ const AdminStockMovements = () => {
     }
   }, []);
 
-  useEffect(() => { loadMeta(); }, [loadMeta]);
+  useEffect(() => { loadMeta().then(() => ensureFormData()); }, [loadMeta, ensureFormData]);
   useEffect(() => { setPage(0); }, [search, typeFilter, warehouseFilter, pageSize]);
 
   const filtered = useMemo(() => {
@@ -411,7 +411,7 @@ const AdminStockMovements = () => {
       <ModuleHeader
         title="Movimientos de stock"
         description="Ingresos, egresos y ajustes manuales controlados por bodega y ubicacion."
-        actions={[{ id: 'new-movement', label: 'Nuevo movimiento', icon: Plus, disabled: !warehouses.length || !variants.length, onClick: openCreate }]}
+        actions={[{ id: 'new-movement', label: 'Nuevo movimiento', icon: Plus, disabled: !warehouses.length, onClick: openCreate }]}
       />
 
       <KpiBar
