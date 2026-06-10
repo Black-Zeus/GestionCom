@@ -536,7 +536,13 @@ const Modal = ({
       />
 
       {/* FLEX CONTAINER: Añadido para centrar el modal */}
-      <div className={['clientWide', 'entityWide', 'minuteWide'].includes(modalSize) ? 'flex min-h-full items-center justify-center px-0' : MODAL_CLASSES.overlay.container}>
+      <div className={
+        modalSize === 'productPicker'
+          ? 'flex min-h-full items-start justify-center px-[5vw] pb-[5vh] pt-[5vh]'
+          : ['clientWide', 'entityWide', 'minuteWide'].includes(modalSize)
+            ? 'flex min-h-full items-center justify-center px-0'
+            : MODAL_CLASSES.overlay.container
+      }>
         <div
           ref={modalRef}
           className={cssClasses.modal}
@@ -632,7 +638,7 @@ const validateModalProps = (props) => {
       modalLog.warn(`Modal: Tipo "${type}" no implementado. Usando fallback.`);
     }
 
-    if (size && !['small', 'medium', 'large', 'xlarge', 'fullscreen', 'fullscreenWide', 'pdfViewer', 'modalLarge', 'clientWide', 'entityWide', 'minuteWide'].includes(size)) {
+    if (size && !['small', 'medium', 'large', 'xlarge', 'fullscreen', 'fullscreenWide', 'pdfViewer', 'modalLarge', 'productPicker', 'clientWide', 'entityWide', 'minuteWide'].includes(size)) {
       modalLog.warn(`Modal: Tamaño "${size}" no válido. Usando "medium".`);
     }
 

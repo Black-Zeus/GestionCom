@@ -113,6 +113,8 @@ const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users
     try {
       await onSubmit(form.scope, toPayload(form));
       onClose?.();
+    } catch (requestError) {
+      setFormError(getBackendMessage(requestError, 'No fue posible guardar la asignacion.'));
     } finally {
       setSaving(false);
     }

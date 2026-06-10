@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Path, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from core.constants import ErrorCode, ErrorType, HTTPStatus
@@ -13,6 +14,7 @@ from core.response import ResponseManager
 from database.database import db_manager
 from database.models.cash_registers import CashRegister
 from database.models.sales_operations import CashRegisterUserAssignment, SalesPoint, SalesPointUserAssignment
+from database.models.user_warehouse_access import AccessType, UserWarehouseAccess
 from database.models.users import User
 from database.models.warehouses import Warehouse
 from database.schemas.sales_operations import (
@@ -111,12 +113,16 @@ def sales_point_to_dict(sales_point: SalesPoint) -> dict:
 
 def cash_assignment_to_dict(assignment: CashRegisterUserAssignment) -> dict:
     cash_register = assignment.cash_register
+    warehouse = cash_register.warehouse if cash_register else None
     return {
         "id": assignment.id,
         "scope": "cash_register",
         "cash_register_id": assignment.cash_register_id,
         "cash_register_code": cash_register.register_code if cash_register else None,
         "cash_register_name": cash_register.register_name if cash_register else None,
+        "warehouse_id": cash_register.warehouse_id if cash_register else None,
+        "warehouse_code": warehouse.warehouse_code if warehouse else None,
+        "warehouse_name": warehouse.warehouse_name if warehouse else None,
         "user_id": assignment.user_id,
         "user": user_to_dict(assignment.user),
         "operator_role": assignment.operator_role,
@@ -127,6 +133,62 @@ def cash_assignment_to_dict(assignment: CashRegisterUserAssignment) -> dict:
         "is_active": assignment.is_active,
         "created_at": assignment.created_at.isoformat() if assignment.created_at else None,
         "updated_at": assignment.updated_at.isoformat() if assignment.updated_at else None,
+    }
+
+
+def warehouse_to_session_dict(warehouse: Warehouse, access_type: str | None = None) -> dict:
+    return {
+        "id": warehouse.id,
+        "warehouse_id": warehouse.id,
+        "warehouse_code": warehouse.warehouse_code,
+        "warehouse_name": warehouse.warehouse_name,
+        "warehouse_type": warehouse.warehouse_type.value if hasattr(warehouse.warehouse_type, "value") else warehouse.warehouse_type,
+        "city": warehouse.city,
+        "address": warehouse.address,
+        "access_type": access_type,
+        "label": f"{warehouse.warehouse_code} - {warehouse.warehouse_name}",
+    }
+
+
+def cash_register_to_session_dict(cash_register: CashRegister, assignment: CashRegisterUserAssignment) -> dict:
+    warehouse = cash_register.warehouse
+    return {
+        "id": cash_register.id,
+        "cash_register_id": cash_register.id,
+        "register_code": cash_register.register_code,
+        "register_name": cash_register.register_name,
+        "warehouse_id": cash_register.warehouse_id,
+        "warehouse_code": warehouse.warehouse_code if warehouse else None,
+        "warehouse_name": warehouse.warehouse_name if warehouse else None,
+        "terminal_identifier": cash_register.terminal_identifier,
+        "location_description": cash_register.location_description,
+        "operator_role": assignment.operator_role,
+        "is_default": assignment.is_default,
+        "assignment_id": assignment.id,
+        "label": f"{cash_register.register_code} - {cash_register.register_name}",
+    }
+
+
+def sales_point_to_session_dict(sales_point: SalesPoint, assignment: SalesPointUserAssignment) -> dict:
+    warehouse = sales_point.warehouse
+    cash_register = sales_point.default_cash_register
+    return {
+        "id": sales_point.id,
+        "sales_point_id": sales_point.id,
+        "sales_point_code": sales_point.sales_point_code,
+        "sales_point_name": sales_point.sales_point_name,
+        "warehouse_id": sales_point.warehouse_id,
+        "warehouse_code": warehouse.warehouse_code if warehouse else None,
+        "warehouse_name": warehouse.warehouse_name if warehouse else None,
+        "default_cash_register_id": sales_point.default_cash_register_id,
+        "default_cash_register_code": cash_register.register_code if cash_register else None,
+        "default_cash_register_name": cash_register.register_name if cash_register else None,
+        "channel_type": sales_point.channel_type,
+        "location_description": sales_point.location_description,
+        "operator_role": assignment.operator_role,
+        "is_default": assignment.is_default,
+        "assignment_id": assignment.id,
+        "label": f"{sales_point.sales_point_code} - {sales_point.sales_point_name}",
     }
 
 
@@ -157,13 +219,124 @@ async def get_active_warehouse(session, warehouse_id: int):
 
 
 async def get_active_cash_register(session, cash_register_id: int):
-    result = await session.execute(select(CashRegister).where(and_(CashRegister.id == cash_register_id, CashRegister.deleted_at.is_(None))))
+    result = await session.execute(
+        select(CashRegister)
+        .options(selectinload(CashRegister.warehouse))
+        .where(and_(CashRegister.id == cash_register_id, CashRegister.deleted_at.is_(None)))
+    )
     return result.scalar_one_or_none()
 
 
 async def get_active_user(session, user_id: int):
     result = await session.execute(select(User).where(and_(User.id == user_id, User.deleted_at.is_(None))))
     return result.scalar_one_or_none()
+
+
+@router.get("/session-context", response_class=JSONResponse)
+async def get_sales_session_context(request: Request, user: dict = Depends(get_current_user)):
+    try:
+        user_id = user.get("user_id") or user.get("id")
+        if not user_id:
+            return ResponseManager.error(message="Usuario no identificado", status_code=HTTPStatus.UNAUTHORIZED, error_code=ErrorCode.UNAUTHORIZED, error_type=ErrorType.AUTHENTICATION_ERROR, request=request)
+
+        today = datetime.now(timezone.utc).date()
+        async with db_manager.get_async_session() as session:
+            access_result = await session.execute(
+                select(Warehouse, UserWarehouseAccess.access_type)
+                .join(UserWarehouseAccess, UserWarehouseAccess.warehouse_id == Warehouse.id)
+                .where(
+                    UserWarehouseAccess.user_id == int(user_id),
+                    UserWarehouseAccess.access_type != AccessType.DENIED,
+                    Warehouse.deleted_at.is_(None),
+                    Warehouse.is_active == True,
+                )
+                .order_by(Warehouse.warehouse_name)
+            )
+            warehouse_access_rows = access_result.all()
+            warehouses_by_id = {
+                warehouse.id: warehouse_to_session_dict(
+                    warehouse,
+                    access_type.value if hasattr(access_type, "value") else str(access_type),
+                )
+                for warehouse, access_type in warehouse_access_rows
+            }
+
+            responsible_result = await session.execute(
+                select(Warehouse)
+                .where(
+                    Warehouse.responsible_user_id == int(user_id),
+                    Warehouse.deleted_at.is_(None),
+                    Warehouse.is_active == True,
+                )
+                .order_by(Warehouse.warehouse_name)
+            )
+            for warehouse in responsible_result.scalars().all():
+                warehouses_by_id.setdefault(warehouse.id, warehouse_to_session_dict(warehouse, "RESPONSIBLE"))
+
+            allowed_warehouse_ids = set(warehouses_by_id.keys())
+            sales_points = []
+            cash_registers = []
+            if allowed_warehouse_ids:
+                sales_point_result = await session.execute(
+                    select(SalesPointUserAssignment)
+                    .options(
+                        selectinload(SalesPointUserAssignment.sales_point).selectinload(SalesPoint.warehouse),
+                        selectinload(SalesPointUserAssignment.sales_point).selectinload(SalesPoint.default_cash_register),
+                        selectinload(SalesPointUserAssignment.user),
+                    )
+                    .join(SalesPoint, SalesPoint.id == SalesPointUserAssignment.sales_point_id)
+                    .where(
+                        SalesPointUserAssignment.user_id == int(user_id),
+                        SalesPointUserAssignment.deleted_at.is_(None),
+                        SalesPointUserAssignment.is_active == True,
+                        SalesPointUserAssignment.valid_from.is_(None) | (SalesPointUserAssignment.valid_from <= today),
+                        SalesPointUserAssignment.valid_until.is_(None) | (SalesPointUserAssignment.valid_until >= today),
+                        SalesPoint.deleted_at.is_(None),
+                        SalesPoint.is_active == True,
+                        SalesPoint.warehouse_id.in_(allowed_warehouse_ids),
+                    )
+                    .order_by(SalesPointUserAssignment.is_default.desc(), SalesPoint.sales_point_code)
+                )
+                sales_points = [
+                    sales_point_to_session_dict(assignment.sales_point, assignment)
+                    for assignment in sales_point_result.scalars().all()
+                    if assignment.sales_point
+                ]
+
+                cash_result = await session.execute(
+                    select(CashRegisterUserAssignment)
+                    .options(
+                        selectinload(CashRegisterUserAssignment.cash_register).selectinload(CashRegister.warehouse),
+                        selectinload(CashRegisterUserAssignment.user),
+                    )
+                    .join(CashRegister, CashRegister.id == CashRegisterUserAssignment.cash_register_id)
+                    .where(
+                        CashRegisterUserAssignment.user_id == int(user_id),
+                        CashRegisterUserAssignment.deleted_at.is_(None),
+                        CashRegisterUserAssignment.is_active == True,
+                        CashRegisterUserAssignment.valid_from.is_(None) | (CashRegisterUserAssignment.valid_from <= today),
+                        CashRegisterUserAssignment.valid_until.is_(None) | (CashRegisterUserAssignment.valid_until >= today),
+                        CashRegister.deleted_at.is_(None),
+                        CashRegister.is_active == True,
+                        CashRegister.warehouse_id.in_(allowed_warehouse_ids),
+                    )
+                    .order_by(CashRegisterUserAssignment.is_default.desc(), CashRegister.register_code)
+                )
+                cash_registers = [
+                    cash_register_to_session_dict(assignment.cash_register, assignment)
+                    for assignment in cash_result.scalars().all()
+                    if assignment.cash_register
+                ]
+
+            data = {
+                "locations": list(warehouses_by_id.values()),
+                "sales_points": sales_points,
+                "cash_registers": cash_registers,
+            }
+            return ResponseManager.success(data=data, message="Contexto operativo cargado", request=request)
+    except Exception as exc:
+        logger.error("Error al obtener contexto operativo de usuario: %s", exc)
+        return ResponseManager.internal_server_error(message="Error al obtener contexto operativo", details=str(exc), request=request)
 
 
 @router.get("/sales-points", response_class=JSONResponse)
@@ -290,7 +463,14 @@ async def delete_sales_point(request: Request, sales_point_id: int = Path(..., g
 async def list_cash_register_assignments(request: Request, user: dict = Depends(require_sales_ops_read), active_only: bool = Query(False)):
     try:
         async with db_manager.get_async_session() as session:
-            stmt = select(CashRegisterUserAssignment).options(selectinload(CashRegisterUserAssignment.cash_register), selectinload(CashRegisterUserAssignment.user)).where(CashRegisterUserAssignment.deleted_at.is_(None))
+            stmt = (
+                select(CashRegisterUserAssignment)
+                .options(
+                    selectinload(CashRegisterUserAssignment.cash_register).selectinload(CashRegister.warehouse),
+                    selectinload(CashRegisterUserAssignment.user),
+                )
+                .where(CashRegisterUserAssignment.deleted_at.is_(None))
+            )
             if active_only:
                 stmt = stmt.where(CashRegisterUserAssignment.is_active == True)
             result = await session.execute(stmt.order_by(CashRegisterUserAssignment.cash_register_id, CashRegisterUserAssignment.user_id))
@@ -309,6 +489,23 @@ async def create_cash_register_assignment(assignment_data: CashRegisterAssignmen
             operator = await get_active_user(session, assignment_data.user_id)
             if not cash_register or not operator:
                 return ResponseManager.error(message="Caja o usuario no encontrado", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            existing_result = await session.execute(
+                select(CashRegisterUserAssignment).where(
+                    and_(
+                        CashRegisterUserAssignment.cash_register_id == assignment_data.cash_register_id,
+                        CashRegisterUserAssignment.user_id == assignment_data.user_id,
+                        CashRegisterUserAssignment.deleted_at.is_(None),
+                    )
+                )
+            )
+            if existing_result.scalar_one_or_none():
+                return ResponseManager.error(
+                    message="El usuario ya tiene una asignacion vigente para esta caja",
+                    status_code=HTTPStatus.CONFLICT,
+                    error_code=ErrorCode.RESOURCE_DUPLICATE,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request,
+                )
             assignment = CashRegisterUserAssignment(**assignment_data.model_dump())
             session.add(assignment)
             await session.commit()
@@ -316,6 +513,9 @@ async def create_cash_register_assignment(assignment_data: CashRegisterAssignmen
             assignment.cash_register = cash_register
             assignment.user = operator
             return ResponseManager.success(data=cash_assignment_to_dict(assignment), message="Asignacion de caja creada correctamente", request=request)
+    except IntegrityError as exc:
+        logger.warning("Asignacion de caja duplicada o invalida: %s", exc)
+        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para esta caja y usuario", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except Exception as exc:
         logger.error("Error al crear asignacion de caja: %s", exc)
         return ResponseManager.internal_server_error(message="Error al crear asignacion de caja", details=str(exc), request=request)
@@ -355,6 +555,23 @@ async def create_sales_point_assignment(assignment_data: SalesPointAssignmentCre
             operator = await get_active_user(session, assignment_data.user_id)
             if not sales_point or not operator:
                 return ResponseManager.error(message="Punto de venta o usuario no encontrado", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            existing_result = await session.execute(
+                select(SalesPointUserAssignment).where(
+                    and_(
+                        SalesPointUserAssignment.sales_point_id == assignment_data.sales_point_id,
+                        SalesPointUserAssignment.user_id == assignment_data.user_id,
+                        SalesPointUserAssignment.deleted_at.is_(None),
+                    )
+                )
+            )
+            if existing_result.scalar_one_or_none():
+                return ResponseManager.error(
+                    message="El usuario ya tiene una asignacion vigente para este punto de venta",
+                    status_code=HTTPStatus.CONFLICT,
+                    error_code=ErrorCode.RESOURCE_DUPLICATE,
+                    error_type=ErrorType.RESOURCE_ERROR,
+                    request=request,
+                )
             assignment = SalesPointUserAssignment(**assignment_data.model_dump())
             session.add(assignment)
             await session.commit()
@@ -362,6 +579,9 @@ async def create_sales_point_assignment(assignment_data: SalesPointAssignmentCre
             assignment.sales_point = sales_point
             assignment.user = operator
             return ResponseManager.success(data=sales_point_assignment_to_dict(assignment), message="Asignacion POS creada correctamente", request=request)
+    except IntegrityError as exc:
+        logger.warning("Asignacion POS duplicada o invalida: %s", exc)
+        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para este punto de venta y usuario", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except Exception as exc:
         logger.error("Error al crear asignacion POS: %s", exc)
         return ResponseManager.internal_server_error(message="Error al crear asignacion POS", details=str(exc), request=request)
@@ -382,7 +602,7 @@ async def _update_assignment(model, serializer, assignment_data: OperatorAssignm
         async with db_manager.get_async_session() as session:
             load_options = [selectinload(model.user)]
             if model is CashRegisterUserAssignment:
-                load_options.append(selectinload(model.cash_register))
+                load_options.append(selectinload(model.cash_register).selectinload(CashRegister.warehouse))
             else:
                 load_options.append(selectinload(model.sales_point))
             result = await session.execute(select(model).options(*load_options).where(and_(model.id == assignment_id, model.deleted_at.is_(None))))
@@ -405,7 +625,7 @@ async def _delete_assignment(model, serializer, request: Request, assignment_id:
         async with db_manager.get_async_session() as session:
             load_options = [selectinload(model.user)]
             if model is CashRegisterUserAssignment:
-                load_options.append(selectinload(model.cash_register))
+                load_options.append(selectinload(model.cash_register).selectinload(CashRegister.warehouse))
             else:
                 load_options.append(selectinload(model.sales_point))
             result = await session.execute(select(model).options(*load_options).where(and_(model.id == assignment_id, model.deleted_at.is_(None))))

@@ -8,6 +8,11 @@ const normalizeList = (data) => {
 };
 
 export const salesOperationsService = {
+  async getSessionContext() {
+    const response = await apiClient.get('/sales-operations/session-context');
+    return unwrap(response);
+  },
+
   async listSalesPoints(params = {}) {
     const response = await apiClient.get('/sales-operations/sales-points', { params });
     return normalizeList(unwrap(response));

@@ -112,6 +112,11 @@ export const MODAL_SIZES = {
   padding: 'p-8',
   maxHeight: 'max-h-[90vh]'
 },
+  productPicker: {
+    width: '!w-[90vw] !max-w-[90vw]',
+    padding: 'p-6',
+    maxHeight: 'max-h-[90vh]'
+  },
   clientWide: {
     width: '!w-[50vw] !max-w-[50vw]',
     padding: 'p-6'
@@ -420,7 +425,7 @@ export const getModalConfig = (type) => {
  */
 export const getModalSizeClasses = (size = 'medium') => {
   const sizeConfig = MODAL_SIZES[size] || MODAL_SIZES.medium;
-  return `${sizeConfig.width} w-full`;
+  return `${sizeConfig.width} ${sizeConfig.maxHeight || ''} w-full`;
 };
 
 /**

@@ -28,10 +28,12 @@ import { useNavigationHistoryStore } from '@/store/useNavigationHistoryStore';
 import { usePreferencesStore } from '@/store/usePreferencesStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { appConfig } from '@/config/appConfig';
+import ModalManager from '@/components/ui/modal';
 import ProductInfoModalContent from '@/components/product/ProductInfoModalContent';
 import UserAvatar from '@/components/common/media/UserAvatar';
 import { authService } from '@/services/auth/authService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
+import { salesOperationsService } from '@/services/admin/salesOperationsService';
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { notificationService } from '@/services/notifications/notificationService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
@@ -66,6 +68,50 @@ const hiddenSidebarMenuPaths = new Set(['/notifications']);
 const hiddenSidebarMenuIds = new Set(['notifications']);
 const isHiddenSidebarMenuItem = (item) => (
   hiddenSidebarMenuPaths.has(item?.path) || hiddenSidebarMenuIds.has(item?.id) || hiddenSidebarMenuIds.has(item?.code)
+);
+
+const sessionSelectorButtonClassName = 'inline-flex h-8 min-w-32 max-w-56 items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-xs text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-blue-800 dark:hover:bg-blue-950/30 dark:focus:ring-blue-950';
+
+const SessionOptionModal = ({ items = [], activeId, emptyMessage, onSelect, onClose }) => (
+  <div className="space-y-3">
+    <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+      {items.map((item) => {
+        const itemId = String(item.id ?? item);
+        const active = itemId === String(activeId);
+        return (
+          <button
+            key={itemId}
+            type="button"
+            onClick={() => {
+              onSelect(itemId);
+              onClose?.();
+            }}
+            className={`w-full rounded-md border px-3 py-2 text-left transition ${active ? 'border-blue-300 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800'}`}
+          >
+            <div className="flex items-center justify-between gap-3">
+            <span className="truncate text-sm font-medium text-slate-950 dark:text-white">{item.label || item.name || item}</span>
+              {active && <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />}
+            </div>
+            {(item.warehouse_code || item.register_code || item.location_description) && (
+              <div className="mt-0.5 truncate font-mono text-xs text-slate-500">
+                {[item.warehouse_code || item.register_code, item.location_description].filter(Boolean).join(' / ')}
+              </div>
+            )}
+          </button>
+        );
+      })}
+      {items.length === 0 && (
+        <div className="rounded-md border border-dashed border-slate-300 px-3 py-8 text-center text-sm text-slate-500 dark:border-slate-700">
+          {emptyMessage}
+        </div>
+      )}
+    </div>
+    <div className="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-800">
+      <button type="button" onClick={onClose} className="h-9 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800">
+        Cerrar
+      </button>
+    </div>
+  </div>
 );
 
 const detailNavigationRoutes = [
@@ -498,14 +544,18 @@ const AppLayout = () => {
   const syncSession = useAuthStore((state) => state.syncSession);
   const isDemoSession = useAuthStore((state) => state.isDemoSession);
   const locations = useSessionStore((state) => state.locations);
+  const salesPoints = useSessionStore((state) => state.salesPoints);
   const cashRegisters = useSessionStore((state) => state.cashRegisters);
   const activeLocation = useSessionStore((state) => state.activeLocation);
+  const activeSalesPoint = useSessionStore((state) => state.activeSalesPoint);
   const activeCashRegister = useSessionStore((state) => state.activeCashRegister);
   const timezone = usePreferencesStore((state) => state.timezone);
   const hourFormat = usePreferencesStore((state) => state.hourFormat);
   const setActiveLocation = useSessionStore((state) => state.setActiveLocation);
+  const setActiveSalesPoint = useSessionStore((state) => state.setActiveSalesPoint);
   const setActiveCashRegister = useSessionStore((state) => state.setActiveCashRegister);
   const initializeFromUser = useSessionStore((state) => state.initializeFromUser);
+  const setOperationalContext = useSessionStore((state) => state.setOperationalContext);
   const navigationHistory = useNavigationHistoryStore((state) => state.items);
   const addNavigationVisit = useNavigationHistoryStore((state) => state.addVisit);
   const dbMenuGroups = useMenuStore((state) => state.groups);
@@ -514,6 +564,81 @@ const AppLayout = () => {
   const clearMenu = useMenuStore((state) => state.clearMenu);
 
   const sidebarWidth = collapsed ? 'w-20' : 'w-80';
+  const activeLocationRecord = useMemo(
+    () => locations.find((item) => String(item.id ?? item) === String(activeLocation)) || null,
+    [activeLocation, locations]
+  );
+  const salesPointsForLocation = useMemo(() => (
+    salesPoints.filter((salesPoint) => (
+      !salesPoint.warehouse_id
+      || !activeLocationRecord
+      || String(salesPoint.warehouse_id) === String(activeLocationRecord.warehouse_id || activeLocationRecord.id)
+    ))
+  ), [activeLocationRecord, salesPoints]);
+  const cashRegistersForLocation = useMemo(() => (
+    cashRegisters.filter((cashRegister) => (
+      !cashRegister.warehouse_id
+      || !activeLocationRecord
+      || String(cashRegister.warehouse_id) === String(activeLocationRecord.warehouse_id || activeLocationRecord.id)
+    ))
+  ), [activeLocationRecord, cashRegisters]);
+  const activeCashRegisterRecord = useMemo(
+    () => cashRegisters.find((item) => String(item.id ?? item) === String(activeCashRegister)) || null,
+    [activeCashRegister, cashRegisters]
+  );
+  const activeSalesPointRecord = useMemo(
+    () => salesPoints.find((item) => String(item.id ?? item) === String(activeSalesPoint)) || null,
+    [activeSalesPoint, salesPoints]
+  );
+  const openLocationSelector = useCallback(() => {
+    ModalManager.show({
+      type: 'custom',
+      title: 'Seleccionar locacion',
+      size: 'large',
+      showFooter: false,
+      contentComponent: SessionOptionModal,
+      contentProps: {
+        items: locations,
+        activeId: activeLocation,
+        emptyMessage: 'No hay locaciones habilitadas para este usuario.',
+        onSelect: setActiveLocation,
+      },
+    });
+  }, [activeLocation, locations, setActiveLocation]);
+  const openSalesPointSelector = useCallback(() => {
+    ModalManager.show({
+      type: 'custom',
+      title: 'Seleccionar punto de venta',
+      size: 'large',
+      showFooter: false,
+      contentComponent: SessionOptionModal,
+      contentProps: {
+        items: salesPointsForLocation,
+        activeId: activeSalesPoint,
+        emptyMessage: activeLocationRecord
+          ? 'No hay puntos de venta habilitados para este usuario en la locacion seleccionada.'
+          : 'Selecciona una locacion antes de seleccionar punto de venta.',
+        onSelect: setActiveSalesPoint,
+      },
+    });
+  }, [activeLocationRecord, activeSalesPoint, salesPointsForLocation, setActiveSalesPoint]);
+  const openCashRegisterSelector = useCallback(() => {
+    ModalManager.show({
+      type: 'custom',
+      title: 'Seleccionar caja',
+      size: 'large',
+      showFooter: false,
+      contentComponent: SessionOptionModal,
+      contentProps: {
+        items: cashRegistersForLocation,
+        activeId: activeCashRegister,
+        emptyMessage: activeLocationRecord
+          ? 'No hay cajas habilitadas para este usuario en la locacion seleccionada.'
+          : 'Selecciona una locacion antes de seleccionar caja.',
+        onSelect: setActiveCashRegister,
+      },
+    });
+  }, [activeCashRegister, activeLocationRecord, cashRegistersForLocation, setActiveCashRegister]);
   const moduleGroups = dbMenuGroups;
   const navigablePages = useMemo(() => (
     [...dbMenuPages, ...systemPages].filter((page) => !isHiddenSidebarMenuItem(page))
@@ -580,18 +705,17 @@ const AppLayout = () => {
   }, [initializeFromUser, user]);
 
   useEffect(() => {
-    const preloadModalSystem = () => {
-      import('@/components/ui/modal').catch(() => {});
-    };
-
-    if (typeof window.requestIdleCallback === 'function') {
-      const idleId = window.requestIdleCallback(preloadModalSystem, { timeout: 2000 });
-      return () => window.cancelIdleCallback?.(idleId);
-    }
-
-    const timer = window.setTimeout(preloadModalSystem, 800);
-    return () => window.clearTimeout(timer);
-  }, []);
+    if (!user || isDemoSession) return;
+    let ignore = false;
+    salesOperationsService.getSessionContext()
+      .then((context) => {
+        if (!ignore) setOperationalContext(context);
+      })
+      .catch((error) => {
+        if (!ignore) toast.error(getBackendMessage(error, 'No fue posible cargar locaciones y cajas habilitadas.'));
+      });
+    return () => { ignore = true; };
+  }, [isDemoSession, setOperationalContext, user]);
 
   useEffect(() => {
     if (!user || isDemoSession) {
@@ -1294,26 +1418,39 @@ const AppLayout = () => {
 
       <footer className="col-start-2 row-start-3 flex h-11 items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 text-xs text-slate-600 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
         <div className="min-w-0 truncate"><span className="font-medium">Usuario:</span> {displayUserName} - {displayUserProfile}</div>
-        <label className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 md:flex">
           <span className="font-medium">Locacion:</span>
-          <select
-            value={activeLocation}
-            onChange={(event) => setActiveLocation(event.target.value)}
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          <button
+            type="button"
+            onClick={openLocationSelector}
+            className={sessionSelectorButtonClassName}
           >
-            {locations.map((location) => <option key={location}>{location}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-2">
+            <span className="truncate">{activeLocationRecord?.label || activeLocationRecord?.name || activeLocationRecord || 'Sin locacion'}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          </button>
+        </div>
+        <div className="hidden items-center gap-2 lg:flex">
+          <span className="font-medium">Punto venta:</span>
+          <button
+            type="button"
+            onClick={openSalesPointSelector}
+            className={sessionSelectorButtonClassName}
+          >
+            <span className="truncate">{activeSalesPointRecord?.label || activeSalesPointRecord?.name || activeSalesPointRecord || 'Sin punto de venta'}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
           <span className="font-medium">Caja:</span>
-          <select
-            value={activeCashRegister}
-            onChange={(event) => setActiveCashRegister(event.target.value)}
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          <button
+            type="button"
+            onClick={openCashRegisterSelector}
+            className={sessionSelectorButtonClassName}
           >
-            {cashRegisters.map((cash) => <option key={cash}>{cash}</option>)}
-          </select>
-        </label>
+            <span className="truncate">{activeCashRegisterRecord?.label || activeCashRegisterRecord?.name || activeCashRegisterRecord || 'Sin caja asignada'}</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          </button>
+        </div>
       </footer>
     </div>
   );

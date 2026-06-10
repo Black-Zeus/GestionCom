@@ -20,6 +20,7 @@ const AdminOperatorAssignments = lazy(() => import('@/pages/admin/AdminOperatorA
 const AdminPettyCashCategories = lazy(() => import('@/pages/admin/AdminPettyCashCategories'));
 const AdminPettyCashFunds = lazy(() => import('@/pages/admin/AdminPettyCashFunds'));
 const PettyCashExpenses = lazy(() => import('@/pages/cash/PettyCashExpenses'));
+const NewSale = lazy(() => import('@/pages/sales/NewSale'));
 const SalesPriceQuery = lazy(() => import('@/pages/sales/SalesPriceQuery'));
 const AdminPaymentMethods = lazy(() => import('@/pages/admin/AdminPaymentMethods'));
 const AdminMeasurementUnits = lazy(() => import('@/pages/admin/AdminMeasurementUnits'));
@@ -76,6 +77,7 @@ const moduleComponents = {
   'operator-assignments-admin': AdminOperatorAssignments,
   'petty-cash': AdminPettyCashFunds,
   'petty-cash-expenses': PettyCashExpenses,
+  'new-sale': NewSale,
   'price-query': SalesPriceQuery,
   'petty-cash-admin': AdminPettyCashCategories,
   'petty-cash-categories': AdminPettyCashCategories,
