@@ -69,6 +69,7 @@ const SimpleFormContent = ({
   submitLabel = 'Guardar',
   savingLabel = 'Guardando...',
   actionBarClassName = '-mx-6 -mb-6',
+  footerNote = null,
 }) => {
   const [form, setForm] = useState(() => normalizeFormValues(fields, initialValues));
   const [errors, setErrors] = useState({});
@@ -285,7 +286,7 @@ const SimpleFormContent = ({
               <p className="mt-0.5 text-xs leading-5">{submitError}</p>
             </div>
           </div>
-        ) : null}
+        ) : (footerNote ? footerNote(form) : null)}
         actions={[
           { id: 'cancel', label: 'Cancelar', variant: 'neutral', onClick: onClose },
           { id: 'save', label: saving ? savingLabel : submitLabel, icon: Check, variant: 'primary', disabled: saving, type: 'submit' },

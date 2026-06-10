@@ -13,6 +13,8 @@ const AutocompleteSelect = ({
   showIcons = false,
   multiple = false,
   maxVisibleTags = 2,
+  allowCustom = false,
+  customOptionLabel = 'Usar',
   className = '',
   buttonClassName = '',
 }) => {
@@ -79,6 +81,14 @@ const AutocompleteSelect = ({
     setOpen(false);
   };
 
+  const selectCustomOption = () => {
+    const customValue = term.trim();
+    if (!customValue) return;
+    onChange?.(customValue);
+    setTerm('');
+    setOpen(false);
+  };
+
   const clearValue = (event) => {
     event.stopPropagation();
     onChange?.(multiple ? [] : '');
@@ -86,7 +96,9 @@ const AutocompleteSelect = ({
   };
 
   const SelectedIcon = showIcons ? selectedOption?.icon : null;
-  const hasSelection = multiple ? selectedOptions.length > 0 : Boolean(selectedOption);
+  const hasSelection = multiple ? selectedOptions.length > 0 : Boolean(selectedOption) || (allowCustom && Boolean(value));
+  const customValueLabel = allowCustom && value ? String(value) : '';
+  const canUseCustomTerm = allowCustom && term.trim() && !options.some((option) => String(option.value).toLowerCase() === term.trim().toLowerCase());
 
   return (
     <div ref={containerRef} className={`relative min-w-0 ${className}`}>
@@ -117,8 +129,8 @@ const AutocompleteSelect = ({
             )}
           </span>
         ) : (
-          <span className={`min-w-0 flex-1 truncate ${selectedOption ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>
-            {selectedOption?.label || placeholder}
+          <span className={`min-w-0 flex-1 truncate ${selectedOption || customValueLabel ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400'}`}>
+            {selectedOption?.label || customValueLabel || placeholder}
           </span>
         )}
         {clearable && hasSelection && !disabled && (
@@ -146,6 +158,7 @@ const AutocompleteSelect = ({
               onKeyDown={(event) => {
                 if (event.key === 'Escape') setOpen(false);
                 if (event.key === 'Enter' && filteredOptions[0]) selectOption(filteredOptions[0].value);
+                if (event.key === 'Enter' && !filteredOptions[0] && canUseCustomTerm) selectCustomOption();
               }}
               className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
               placeholder={searchPlaceholder}
@@ -154,6 +167,15 @@ const AutocompleteSelect = ({
           <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-multiselectable={multiple || undefined}>
             {filteredOptions.length === 0 && (
               <div className="px-3 py-3 text-sm text-slate-500">Sin coincidencias</div>
+            )}
+            {canUseCustomTerm && (
+              <button
+                type="button"
+                onClick={selectCustomOption}
+                className="flex w-full items-center gap-2 border-b border-slate-100 px-3 py-2 text-left text-sm font-medium text-blue-700 transition hover:bg-blue-50 dark:border-slate-800 dark:text-blue-200 dark:hover:bg-blue-950/50"
+              >
+                <span className="min-w-0 flex-1 truncate">{`${customOptionLabel} "${term.trim()}"`}</span>
+              </button>
             )}
             {filteredOptions.map((option) => {
               const selected = multiple
