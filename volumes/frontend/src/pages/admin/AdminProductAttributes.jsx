@@ -62,7 +62,7 @@ const AdminProductAttributes = () => {
     return counts;
   }, {}), [values]);
 
-  const load = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -81,7 +81,7 @@ const AdminProductAttributes = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { setSearch(''); }, [activeLevel]);
   useEffect(() => { setPage(0); }, [activeLevel, filters, search, tablePageSize]);
 
@@ -100,7 +100,7 @@ const AdminProductAttributes = () => {
       onSubmit: async (form) => {
         const payload = { group_name: form.group_name.trim(), group_description: form.group_description || null, sort_order: Number(form.sort_order || 0), is_active: Boolean(form.is_active) };
         await notifyPromise(group ? productConfigService.updateGroup(group.id, payload) : productConfigService.createGroup(payload), { loading: 'Guardando grupo...', success: 'Grupo guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
-        await load();
+        await loadMeta();
       },
     },
   });
@@ -136,7 +136,7 @@ const AdminProductAttributes = () => {
         onSubmit: async (form) => {
           const payload = { attribute_group_id: Number(attribute?.attribute_group_id || lockedGroupId), attribute_name: form.attribute_name.trim(), attribute_type: form.attribute_type, is_required: Boolean(form.is_required), affects_sku: Boolean(form.affects_sku), sort_order: Number(form.sort_order || 0), is_active: Boolean(form.is_active) };
           await notifyPromise(attribute ? productConfigService.updateAttribute(attribute.id, payload) : productConfigService.createAttribute(payload), { loading: 'Guardando atributo...', success: 'Atributo guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
-          await load();
+          await loadMeta();
         },
       },
     });
@@ -155,7 +155,7 @@ const AdminProductAttributes = () => {
       onSubmit: async (form) => {
         const payload = { attribute_id: Number(selectedAttribute?.id), value_name: form.value_name.trim(), sort_order: Number(form.sort_order || 0), is_active: Boolean(form.is_active) };
         await notifyPromise(value ? productConfigService.updateValue(value.id, payload) : productConfigService.createValue(payload), { loading: 'Guardando valor...', success: 'Valor guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
-        await load();
+        await loadMeta();
       },
     },
   });
@@ -163,7 +163,7 @@ const AdminProductAttributes = () => {
   const remove = async (label, action) => {
     if (!await ModalManager.confirm({ title: `Eliminar ${label}`, message: `Confirma eliminar ${label}.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } })) return;
     await notifyPromise(action(), { loading: 'Eliminando...', success: 'Eliminado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.') });
-    await load();
+    await loadMeta();
   };
 
   const toggleStatus = async ({ label, item, payload, action }) => {
@@ -179,7 +179,7 @@ const AdminProductAttributes = () => {
       success: nextStatus ? `${label} activo.` : `${label} inactivo.`,
       error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
     });
-    await load();
+    await loadMeta();
   };
 
   const openGroupAttributes = (group) => {
@@ -300,7 +300,7 @@ const AdminProductAttributes = () => {
         fields={filterFields}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={clearFilters} />
           </>
         )}

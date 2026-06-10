@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, CheckCircle2, MapPin, PackageCheck, PackagePlus, PackageSearch, Pencil, Plus, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
@@ -744,25 +744,18 @@ const AdminStockTransfers = () => {
   const [receptionDraft, setReceptionDraft] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const formDataLoadedRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextTransfers, nextWarehouses, nextZones, nextLocations, nextVariants, nextUnits] = await Promise.all([
+      const [nextTransfers, nextWarehouses] = await Promise.all([
         stockTransfersService.listTransfers(),
         adminMaintainersService.list('warehouses-options'),
-        adminMaintainersService.list('warehouse-zones-options'),
-        adminMaintainersService.list('warehouse-zone-locations-options'),
-        stockTransfersService.listVariantOptions(),
-        adminMaintainersService.list('measurement-units-options'),
       ]);
       setTransfers(nextTransfers);
       setWarehouses(nextWarehouses);
-      setZones(nextZones);
-      setLocations(nextLocations);
-      setVariants(nextVariants);
-      setUnits(nextUnits);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar transferencias.'));
     } finally {
@@ -770,7 +763,30 @@ const AdminStockTransfers = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextZones, nextLocations, nextVariants, nextUnits] = await Promise.all([
+        adminMaintainersService.list('warehouse-zones-options'),
+        adminMaintainersService.list('warehouse-zone-locations-options'),
+        stockTransfersService.listVariantOptions(),
+        adminMaintainersService.list('measurement-units-options'),
+      ]);
+      setZones(nextZones);
+      setLocations(nextLocations);
+      setVariants(nextVariants);
+      setUnits(nextUnits);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
+
+  useEffect(() => {
+    if (transferId) ensureFormData();
+  }, [transferId, ensureFormData]);
   useEffect(() => { setReceptionDraft({}); }, [transferId]);
   useEffect(() => { setPage(0); }, [search, status, warehouseFilter, pageSize]);
 
@@ -786,37 +802,43 @@ const AdminStockTransfers = () => {
 
   const visibleData = filtered.slice(page * pageSize, page * pageSize + pageSize);
   const warehouseMap = byId(warehouses);
-  const openCreate = () => ModalManager.show({
-    type: 'custom', title: 'Nueva transferencia de stock', size: 'large', showFooter: false, contentComponent: TransferFormModal,
-    contentProps: {
-      warehouses,
-      onSubmit: async (payload) => {
-        return ignoreRejected(async () => {
-          await notifyPromise(stockTransfersService.createTransfer(payload), { loading: 'Creando transferencia...', success: 'Transferencia creada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible crear.') });
-          await load();
-        });
+  const openCreate = async () => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom', title: 'Nueva transferencia de stock', size: 'large', showFooter: false, contentComponent: TransferFormModal,
+      contentProps: {
+        warehouses,
+        onSubmit: async (payload) => {
+          return ignoreRejected(async () => {
+            await notifyPromise(stockTransfersService.createTransfer(payload), { loading: 'Creando transferencia...', success: 'Transferencia creada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible crear.') });
+            await loadMeta();
+          });
+        },
       },
-    },
-  });
-  const openEdit = (transfer) => ModalManager.show({
-    type: 'custom', title: 'Editar transferencia de stock', size: 'large', showFooter: false, contentComponent: TransferFormModal,
-    contentProps: {
-      transfer,
-      warehouses,
-      onSubmit: async (payload) => {
-        return ignoreRejected(async () => {
-          await notifyPromise(stockTransfersService.updateTransfer(transfer.id, payload), { loading: 'Guardando transferencia...', success: 'Transferencia actualizada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible actualizar.') });
-          await load();
-        });
+    });
+  };
+  const openEdit = async (transfer) => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom', title: 'Editar transferencia de stock', size: 'large', showFooter: false, contentComponent: TransferFormModal,
+      contentProps: {
+        transfer,
+        warehouses,
+        onSubmit: async (payload) => {
+          return ignoreRejected(async () => {
+            await notifyPromise(stockTransfersService.updateTransfer(transfer.id, payload), { loading: 'Guardando transferencia...', success: 'Transferencia actualizada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible actualizar.') });
+            await loadMeta();
+          });
+        },
       },
-    },
-  });
+    });
+  };
   const openDetail = (transfer) => navigate(`/stock/transfers/${encodeURIComponent(transfer.transfer_code || transfer.id)}`);
   const deleteTransfer = async (transfer) => {
     if (!await ModalManager.confirm({ title: 'Eliminar transferencia', message: `Confirma eliminar la transferencia hacia ${transfer.target_warehouse_name || 'la bodega destino'}.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } })) return;
     await ignoreRejected(async () => {
       await notifyPromise(stockTransfersService.deleteTransfer(transfer.id), { loading: 'Eliminando transferencia...', success: 'Transferencia eliminada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.') });
-      await load();
+      await loadMeta();
     });
   };
   const shipTransfer = async (transfer) => {
@@ -836,7 +858,7 @@ const AdminStockTransfers = () => {
       await stockTransfersService.ship(transfer.id);
       ModalManager.close(loadingModalId);
       toast.success('Transferencia despachada.');
-      await load();
+      await loadMeta();
     } catch (requestError) {
       ModalManager.close(loadingModalId);
       const message = getBackendMessage(requestError, 'No fue posible despachar la transferencia.');
@@ -852,7 +874,7 @@ const AdminStockTransfers = () => {
     if (!await ModalManager.confirm({ title: 'Cancelar transferencia', message: `Confirma cancelar la transferencia hacia ${transfer.target_warehouse_name || 'la bodega destino'}.`, buttons: { cancel: 'Volver', confirm: 'Cancelar transferencia' } })) return;
     await ignoreRejected(async () => {
       await notifyPromise(stockTransfersService.cancel(transfer.id), { loading: 'Cancelando transferencia...', success: 'Transferencia cancelada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible cancelar.') });
-      await load();
+      await loadMeta();
     });
   };
   const renderTransferActions = (transfer) => (
@@ -893,11 +915,12 @@ const AdminStockTransfers = () => {
     const decodedTransferKey = decodeURIComponent(transferId || '');
     const currentTransfer = transfers.find((item) => String(item.id) === decodedTransferKey || String(item.transfer_code) === decodedTransferKey);
     const refreshDetail = async () => {
-      await load();
+      await loadMeta();
       setDetailRefreshToken((current) => current + 1);
     };
     const loadCurrentTransferDetail = async () => stockTransfersService.getTransfer(decodedTransferKey);
     const openAddItemFromHeader = async () => {
+      await ensureFormData();
       const transfer = await loadCurrentTransferDetail();
       ModalManager.show({
         type: 'custom',
@@ -991,7 +1014,7 @@ const AdminStockTransfers = () => {
         />
         <KpiBar items={detailKpis} className="mb-4" />
         {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-        <TransferDetailView transferId={decodedTransferKey} variants={variants} units={units} zones={zones} locations={locations} receptionDraft={receptionDraft} onReceptionDraftChange={setReceptionDraft} onChanged={load} refreshToken={detailRefreshToken} />
+        <TransferDetailView transferId={decodedTransferKey} variants={variants} units={units} zones={zones} locations={locations} receptionDraft={receptionDraft} onReceptionDraftChange={setReceptionDraft} onChanged={loadMeta} refreshToken={detailRefreshToken} />
       </section>
     );
   }
@@ -1018,7 +1041,7 @@ const AdminStockTransfers = () => {
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={resetListFilters} />
           </>
         )}

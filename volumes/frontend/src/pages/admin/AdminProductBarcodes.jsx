@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
 import { Barcode, CheckCircle2, Eye, EyeOff, Pencil, Power, QrCode, RefreshCw, Trash2 } from 'lucide-react';
@@ -346,27 +346,36 @@ const AdminProductBarcodes = () => {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState('');
+  const formDataLoadedRef = useRef(false);
 
-  const load = async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextBarcodes, nextVariants, nextUnits] = await Promise.all([
-        adminMaintainersService.list('product-barcodes'),
-        adminMaintainersService.list('product-variants-options'),
-        adminMaintainersService.list('measurement-units-options'),
-      ]);
-      setBarcodes(nextBarcodes);
-      setVariants(nextVariants);
-      setUnits(nextUnits);
+      setBarcodes(await adminMaintainersService.list('product-barcodes'));
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar codigos de barra.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextVariants, nextUnits] = await Promise.all([
+        adminMaintainersService.list('product-variants-options'),
+        adminMaintainersService.list('measurement-units-options'),
+      ]);
+      setVariants(nextVariants);
+      setUnits(nextUnits);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { setPage(0); }, [search, status, typeFilter, pageSize]);
 
   const variantOptions = useMemo(() => variants.map((row) => ({ value: row.id, label: optionLabel(row) })), [variants]);
@@ -401,7 +410,9 @@ const AdminProductBarcodes = () => {
     setTypeFilter('all');
   };
 
-  const openForm = (item = null) => ModalManager.show({
+  const openForm = async (item = null) => {
+    await ensureFormData();
+    ModalManager.show({
     type: 'custom',
     title: item ? 'Editar codigo de barra' : 'Nuevo codigo de barra',
     icon: Barcode,
@@ -426,10 +437,11 @@ const AdminProductBarcodes = () => {
           success: 'Codigo guardado.',
           error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar el codigo.'),
         });
-        await load();
+        await loadMeta();
       },
     },
   });
+  };
 
   const remove = async (item) => {
     const confirmed = await ModalManager.confirm({
@@ -445,7 +457,7 @@ const AdminProductBarcodes = () => {
         success: 'Codigo eliminado.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar el codigo.'),
       });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -466,7 +478,7 @@ const AdminProductBarcodes = () => {
         success: nextStatus ? 'Codigo activo.' : 'Codigo inactivo.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
       });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -519,7 +531,7 @@ const AdminProductBarcodes = () => {
           { id: 'type', value: typeFilter, onChange: (value) => setTypeFilter(value || 'all'), placeholder: 'Todos los tipos', clearable: false, showIcons: true, options: [{ value: 'all', label: 'Todos los tipos', icon: Barcode }, ...BARCODE_TYPES] },
           { id: 'status', value: status, onChange: (value) => setStatus(value || 'all'), placeholder: 'Todos los estados', clearable: false, options: [{ value: 'all', label: 'Todos los estados' }, { value: 'active', label: 'Activos' }, { value: 'inactive', label: 'Inactivos' }] },
         ]}
-        actions={<div className="flex flex-wrap gap-2"><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} /><ActionButton label="Limpiar" icon={EyeOff} variant="neutral" onClick={clearFilters} /></div>}
+        actions={<div className="flex flex-wrap gap-2"><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} /><ActionButton label="Limpiar" icon={EyeOff} variant="neutral" onClick={clearFilters} /></div>}
       />
 
       {error && <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{error}</div>}

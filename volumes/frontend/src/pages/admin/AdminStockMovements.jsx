@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, FileText, Plus, RefreshCw, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -311,23 +311,18 @@ const AdminStockMovements = () => {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const formDataLoadedRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextMovements, nextWarehouses, nextZones, nextLocations, nextVariants] = await Promise.all([
+      const [nextMovements, nextWarehouses] = await Promise.all([
         stockMovementsService.listMovements(),
         adminMaintainersService.list('warehouses-options'),
-        adminMaintainersService.list('warehouse-zones-options'),
-        adminMaintainersService.list('warehouse-zone-locations-options'),
-        stockMovementsService.listVariantOptions(),
       ]);
       setMovements(nextMovements);
       setWarehouses(nextWarehouses);
-      setZones(nextZones);
-      setLocations(nextLocations);
-      setVariants(nextVariants);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar movimientos.'));
     } finally {
@@ -335,7 +330,24 @@ const AdminStockMovements = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextZones, nextLocations, nextVariants] = await Promise.all([
+        adminMaintainersService.list('warehouse-zones-options'),
+        adminMaintainersService.list('warehouse-zone-locations-options'),
+        stockMovementsService.listVariantOptions(),
+      ]);
+      setZones(nextZones);
+      setLocations(nextLocations);
+      setVariants(nextVariants);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { setPage(0); }, [search, typeFilter, warehouseFilter, pageSize]);
 
   const filtered = useMemo(() => {
@@ -352,28 +364,31 @@ const AdminStockMovements = () => {
   const totalIn = movements.filter((movement) => movementDirection(movement) === 'in').reduce((sum, item) => sum + Math.abs(Number(item.quantity || 0)), 0);
   const totalOut = movements.filter((movement) => movementDirection(movement) === 'out').reduce((sum, item) => sum + Math.abs(Number(item.quantity || 0)), 0);
 
-  const openCreate = () => ModalManager.show({
-    type: 'custom',
-    title: 'Nuevo movimiento de stock',
-    size: 'xlarge',
-    showFooter: false,
-    contentComponent: StockMovementModal,
-    contentProps: {
-      variants,
-      warehouses,
-      zones,
-      locations,
-      onSubmit: async (payload) => {
-        try {
-          await notifyPromise(stockMovementsService.createMovement(payload), { loading: 'Registrando movimiento...', success: 'Movimiento registrado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible registrar el movimiento.') });
-          await load();
-          return true;
-        } catch {
-          return false;
-        }
+  const openCreate = async () => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom',
+      title: 'Nuevo movimiento de stock',
+      size: 'xlarge',
+      showFooter: false,
+      contentComponent: StockMovementModal,
+      contentProps: {
+        variants,
+        warehouses,
+        zones,
+        locations,
+        onSubmit: async (payload) => {
+          try {
+            await notifyPromise(stockMovementsService.createMovement(payload), { loading: 'Registrando movimiento...', success: 'Movimiento registrado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible registrar el movimiento.') });
+            await loadMeta();
+            return true;
+          } catch {
+            return false;
+          }
+        },
       },
-    },
-  });
+    });
+  };
 
   const openDetail = (movement) => ModalManager.show({
     type: 'custom',
@@ -421,7 +436,7 @@ const AdminStockMovements = () => {
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={resetFilters} />
           </>
         )}

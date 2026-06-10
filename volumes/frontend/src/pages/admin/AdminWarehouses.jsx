@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, CheckCircle2, EyeOff, MapPin, Pencil, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -199,6 +199,7 @@ const AdminWarehouses = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledDeepLinkRef = useRef('');
+  const formDataLoadedRef = useRef(false);
   const [warehouses, setWarehouses] = useState([]);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState(() => searchParams.get('search') || '');
@@ -254,16 +255,19 @@ const AdminWarehouses = () => {
     setFilters((current) => ({ ...current, [field]: value }));
   };
 
-  const loadUsers = async () => {
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
     try {
       const data = await usersService.list({ status: 'all', active_only: false, limit: 1000 });
       setUsers(data.users || []);
     } catch {
+      formDataLoadedRef.current = false;
       setUsers([]);
     }
-  };
+  }, []);
 
-  const loadWarehouses = async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -275,12 +279,9 @@ const AdminWarehouses = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadWarehouses();
-    loadUsers();
   }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
 
   useEffect(() => {
     const nextSearch = searchParams.get('search') || '';
@@ -295,7 +296,8 @@ const AdminWarehouses = () => {
     setPage(0);
   }, [search]);
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
+    await ensureFormData();
     ModalManager.show({
       type: 'custom',
       title: 'Nueva bodega',
@@ -315,13 +317,14 @@ const AdminWarehouses = () => {
               error: (requestError) => getBackendMessage(requestError, 'No fue posible crear la bodega.'),
             }
           );
-          await loadWarehouses();
+          await loadMeta();
         },
       },
     });
   };
 
-  const openEditModal = (warehouse) => {
+  const openEditModal = async (warehouse) => {
+    await ensureFormData();
     ModalManager.show({
       type: 'custom',
       title: 'Editar bodega',
@@ -341,7 +344,7 @@ const AdminWarehouses = () => {
               error: (requestError) => getBackendMessage(requestError, 'No fue posible actualizar la bodega.'),
             }
           );
-          await loadWarehouses();
+          await loadMeta();
         },
       },
     });
@@ -389,7 +392,7 @@ const AdminWarehouses = () => {
           error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
         }
       );
-      await loadWarehouses();
+      await loadMeta();
     } finally {
       setBusyWarehouseId(null);
     }
@@ -418,7 +421,7 @@ const AdminWarehouses = () => {
           error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar la bodega.'),
         }
       );
-      await loadWarehouses();
+      await loadMeta();
     } finally {
       setBusyWarehouseId(null);
     }
@@ -591,7 +594,7 @@ const AdminWarehouses = () => {
         fields={filterFields}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadWarehouses} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton
               label="Limpiar"
               icon={XCircle}

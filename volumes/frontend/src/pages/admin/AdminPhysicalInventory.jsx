@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ClipboardCheck, Eye, Play, Plus, RefreshCw, Send, ShieldCheck, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -453,23 +453,18 @@ const AdminPhysicalInventory = () => {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const formDataLoadedRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextCounts, nextWarehouses, nextZones, nextLocations, nextVariants] = await Promise.all([
+      const [nextCounts, nextWarehouses] = await Promise.all([
         physicalInventoryService.listCounts({ limit: 500 }),
         adminMaintainersService.list('warehouses-options'),
-        adminMaintainersService.list('warehouse-zones-options'),
-        adminMaintainersService.list('warehouse-zone-locations-options'),
-        physicalInventoryService.listVariantOptions(),
       ]);
       setCounts(nextCounts);
       setWarehouses(nextWarehouses);
-      setZones(nextZones);
-      setLocations(nextLocations);
-      setVariants(nextVariants);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar inventarios fisicos.'));
     } finally {
@@ -477,7 +472,24 @@ const AdminPhysicalInventory = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextZones, nextLocations, nextVariants] = await Promise.all([
+        adminMaintainersService.list('warehouse-zones-options'),
+        adminMaintainersService.list('warehouse-zone-locations-options'),
+        physicalInventoryService.listVariantOptions(),
+      ]);
+      setZones(nextZones);
+      setLocations(nextLocations);
+      setVariants(nextVariants);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { setPage(0); }, [search, status, warehouseFilter, pageSize]);
 
   const warehouseMap = useMemo(() => byId(warehouses), [warehouses]);
@@ -494,43 +506,49 @@ const AdminPhysicalInventory = () => {
   }, [counts, search, status, warehouseFilter]);
   const visibleData = filtered.slice(page * pageSize, page * pageSize + pageSize);
 
-  const openCreate = () => ModalManager.show({
-    type: 'custom',
-    title: 'Nuevo inventario fisico',
-    icon: ClipboardCheck,
-    size: 'xlarge',
-    showFooter: false,
-    contentComponent: CreateCountModal,
-    contentProps: {
-      warehouses,
-      zones,
-      locations,
-      onSubmit: async (payload) => {
-        await notifyPromise(physicalInventoryService.createCount(payload), {
-          loading: 'Creando inventario...',
-          success: 'Inventario creado.',
-          error: (requestError) => getBackendMessage(requestError, 'No fue posible crear inventario.'),
-        });
-        await load();
+  const openCreate = async () => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom',
+      title: 'Nuevo inventario fisico',
+      icon: ClipboardCheck,
+      size: 'xlarge',
+      showFooter: false,
+      contentComponent: CreateCountModal,
+      contentProps: {
+        warehouses,
+        zones,
+        locations,
+        onSubmit: async (payload) => {
+          await notifyPromise(physicalInventoryService.createCount(payload), {
+            loading: 'Creando inventario...',
+            success: 'Inventario creado.',
+            error: (requestError) => getBackendMessage(requestError, 'No fue posible crear inventario.'),
+          });
+          await loadMeta();
+        },
       },
-    },
-  });
+    });
+  };
 
-  const openDetail = (item) => ModalManager.show({
-    type: 'custom',
-    title: `Inventario fisico ${item.count_code}`,
-    icon: ClipboardCheck,
-    size: 'xlarge',
-    showFooter: false,
-    contentComponent: CountDetailModal,
-    contentProps: {
-      countId: item.id,
-      variants,
-      zones,
-      locations,
-      onChanged: load,
-    },
-  });
+  const openDetail = async (item) => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom',
+      title: `Inventario fisico ${item.count_code}`,
+      icon: ClipboardCheck,
+      size: 'xlarge',
+      showFooter: false,
+      contentComponent: CountDetailModal,
+      contentProps: {
+        countId: item.id,
+        variants,
+        zones,
+        locations,
+        onChanged: loadMeta,
+      },
+    });
+  };
 
   const kpis = [
     { label: 'Conteos', value: counts.length },
@@ -561,7 +579,7 @@ const AdminPhysicalInventory = () => {
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setStatus('all'); setWarehouseFilter('all'); }} />
           </>
         )}

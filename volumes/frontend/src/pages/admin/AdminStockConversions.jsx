@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRightLeft, RefreshCw, XCircle } from 'lucide-react';
 import { ActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -55,6 +55,7 @@ const AdminStockConversions = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [formError, setFormError] = useState('');
+  const formDataLoadedRef = useRef(false);
 
   const selectedVariant = variants.find((variant) => String(variant.id) === String(form.product_variant_id));
   const fromUnit = unitOptions.find((unit) => String(unit.id) === String(form.from_measurement_unit_id));
@@ -73,22 +74,16 @@ const AdminStockConversions = () => {
     return (amount * fromFactor) / toFactor;
   }, [form.from_quantity, fromUnit, toUnit]);
 
-  const load = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextConversions, nextWarehouses, nextZones, nextLocations, nextVariants] = await Promise.all([
+      const [nextConversions, nextWarehouses] = await Promise.all([
         stockMovementsService.listUnitConversions(),
         adminMaintainersService.list('warehouses-options'),
-        adminMaintainersService.list('warehouse-zones-options'),
-        adminMaintainersService.list('warehouse-zone-locations-options'),
-        stockMovementsService.listVariantOptions(),
       ]);
       setConversions(nextConversions);
       setWarehouses(nextWarehouses);
-      setZones(nextZones);
-      setLocations(nextLocations);
-      setVariants(nextVariants);
     } catch (requestError) {
       setError(getBackendMessage(requestError, 'No fue posible cargar conversiones.'));
     } finally {
@@ -96,7 +91,24 @@ const AdminStockConversions = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextZones, nextLocations, nextVariants] = await Promise.all([
+        adminMaintainersService.list('warehouse-zones-options'),
+        adminMaintainersService.list('warehouse-zone-locations-options'),
+        stockMovementsService.listVariantOptions(),
+      ]);
+      setZones(nextZones);
+      setLocations(nextLocations);
+      setVariants(nextVariants);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadMeta(); ensureFormData(); }, [loadMeta, ensureFormData]);
   useEffect(() => { setPage(0); }, [search, warehouseFilter, pageSize]);
 
   useEffect(() => {
@@ -211,7 +223,7 @@ const AdminStockConversions = () => {
         error: (requestError) => getBackendMessage(requestError, 'No fue posible registrar la conversion.'),
       });
       resetForm();
-      await load();
+      await loadMeta();
     } finally {
       setSaving(false);
     }
@@ -231,7 +243,7 @@ const AdminStockConversions = () => {
       <ModuleHeader
         title="Conversion de stock"
         description="Transforma stock entre unidades de inventario del mismo SKU manteniendo trazabilidad en movimientos."
-        actions={[{ id: 'refresh', label: 'Refrescar', icon: RefreshCw, onClick: load, disabled: loading }]}
+        actions={[{ id: 'refresh', label: 'Refrescar', icon: RefreshCw, onClick: loadMeta, disabled: loading }]}
       />
 
       <KpiBar
@@ -341,7 +353,7 @@ const AdminStockConversions = () => {
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={resetFilters} />
           </>
         )}

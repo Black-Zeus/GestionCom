@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CircleCheck, EyeOff, FolderTree, Layers3, Pencil, Power, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
@@ -42,7 +42,7 @@ const AdminProductCategories = () => {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState('');
 
-  const load = async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -52,9 +52,9 @@ const AdminProductCategories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => { setPage(0); }, [parentFilter, search, status, tablePageSize]);
 
   const parentOptions = useMemo(() => [
@@ -114,7 +114,7 @@ const AdminProductCategories = () => {
             success: 'Categoria guardada correctamente.',
             error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar la categoria.'),
           });
-          await load();
+          await loadMeta();
         },
       },
     });
@@ -125,7 +125,7 @@ const AdminProductCategories = () => {
     setBusyId(category.id);
     try {
       await notifyPromise(productConfigService.removeCategory(category.id), { loading: 'Eliminando...', success: 'Categoria eliminada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.') });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -146,7 +146,7 @@ const AdminProductCategories = () => {
         success: nextStatus ? 'Categoria activa.' : 'Categoria inactiva.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
       });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -197,7 +197,7 @@ const AdminProductCategories = () => {
         ]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={clearFilters} />
           </>
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, EyeOff, ListTree, Pencil, Power, RefreshCw, Tags, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
@@ -37,7 +37,7 @@ const AdminProductSupportMaintainers = () => {
   const selectedBrand = brands.find((brand) => brand.brand_code === selectedBrandCode);
   const activeLevel = selectedBrandCode ? 'models' : 'brands';
 
-  const load = async () => {
+  const loadMeta = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -52,9 +52,9 @@ const AdminProductSupportMaintainers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
   useEffect(() => {
     setSearch('');
     setStatus('all');
@@ -137,7 +137,7 @@ const AdminProductSupportMaintainers = () => {
           success: 'Marca guardada.',
           error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar la marca.'),
         });
-        await load();
+        await loadMeta();
       },
     },
   });
@@ -166,7 +166,7 @@ const AdminProductSupportMaintainers = () => {
             success: 'Modelo guardado.',
             error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar el modelo.'),
           });
-          await load();
+          await loadMeta();
         },
       },
     });
@@ -186,7 +186,7 @@ const AdminProductSupportMaintainers = () => {
         success: 'Registro eliminado.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.'),
       });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -207,7 +207,7 @@ const AdminProductSupportMaintainers = () => {
         success: nextStatus ? 'Registro activo.' : 'Registro inactivo.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible cambiar el estado.'),
       });
-      await load();
+      await loadMeta();
     } finally {
       setBusyId(null);
     }
@@ -273,7 +273,7 @@ const AdminProductSupportMaintainers = () => {
         fields={[{ id: 'status', value: status, onChange: setStatus, options: getStatusOptions(activeLevel) }]}
         actions={(
           <>
-            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={load} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadMeta} className={loading ? '[&>svg]:animate-spin' : ''} />
             <ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={clearFilters} />
           </>
         )}
