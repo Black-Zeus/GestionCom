@@ -43,14 +43,15 @@ class UserWarehouseAccessBase(BaseModel):
 
 class UserWarehouseAccessCreate(UserWarehouseAccessBase):
     """Schema for creating a new user warehouse access"""
-    
+    # warehouse_id comes from the URL path, granted_by_user_id from the auth token
+    warehouse_id: Optional[int] = Field(None, gt=0, description="ID del almacén (se toma del path)")
+    granted_by_user_id: Optional[int] = Field(None, gt=0, description="ID del otorgante (se toma del token)")
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "user_id": 1,
-                "warehouse_id": 2,
                 "access_type": "FULL",
-                "granted_by_user_id": 3
             }
         }
     )

@@ -2,12 +2,12 @@
 volumes/backend-api/database/models/user_warehouse_access.py
 Modelo SQLAlchemy para la tabla user_warehouse_access
 """
-from datetime import datetime, timezone
 from sqlalchemy import Column, BigInteger, ForeignKey, TIMESTAMP, Enum, Index, UniqueConstraint
 from sqlalchemy.orm import validates, relationship
+from datetime import datetime, timezone
 import enum
 
-from .base import BaseModel
+from .base import Base, PrimaryKeyMixin
 
 
 class AccessType(enum.Enum):
@@ -17,7 +17,7 @@ class AccessType(enum.Enum):
     DENIED = "DENIED"
 
 
-class UserWarehouseAccess(BaseModel):
+class UserWarehouseAccess(Base, PrimaryKeyMixin):
     """Modelo para control de acceso de usuarios a bodegas"""
     
     __tablename__ = "user_warehouse_access"

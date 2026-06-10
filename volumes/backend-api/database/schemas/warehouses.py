@@ -146,7 +146,7 @@ class UserWarehouseAccessBase(BaseModel):
 
 class UserWarehouseAccessCreate(UserWarehouseAccessBase):
     """Schema para crear UserWarehouseAccess"""
-    pass
+    warehouse_id: Optional[int] = Field(None, gt=0, description="ID de la bodega (se toma del path si no se envía)")
 
 
 class UserWarehouseAccessUpdate(BaseModel):

@@ -103,7 +103,7 @@ async def require_access_grant_permission(request: Request) -> dict:
 # HELPER FUNCTIONS
 # ==========================================
 
-def warehouse_to_dict(warehouse: Warehouse, zone_count: int = 0) -> dict:
+def warehouse_to_dict(warehouse: Warehouse, zone_count: int = 0, access_count: int = 0) -> dict:
     """Convertir modelo Warehouse a diccionario"""
     return {
         "id": warehouse.id,
@@ -124,6 +124,7 @@ def warehouse_to_dict(warehouse: Warehouse, zone_count: int = 0) -> dict:
         "is_warehouse": warehouse.is_warehouse,
         "is_outlet": warehouse.is_outlet,
         "zone_count": zone_count,
+        "access_count": access_count,
         "created_at": warehouse.created_at.isoformat() if warehouse.created_at else None,
         "updated_at": warehouse.updated_at.isoformat() if warehouse.updated_at else None
     }
@@ -164,8 +165,6 @@ def warehouse_access_to_dict(access: UserWarehouseAccess, include_details: bool 
         "access_level_label": access.access_level_label,
         "access_info": access.access_info,
         "is_self_granted": access.is_self_granted,
-        "created_at": access.created_at.isoformat() if access.created_at else None,
-        "updated_at": access.updated_at.isoformat() if access.updated_at else None
     }
     
     return base_dict
@@ -206,6 +205,7 @@ async def list_warehouses(
 
             warehouse_ids = [warehouse.id for warehouse in warehouses]
             zone_counts = {}
+            access_counts = {}
             if warehouse_ids:
                 counts_result = await session.execute(
                     select(WarehouseZone.warehouse_id, func.count(WarehouseZone.id))
@@ -217,7 +217,17 @@ async def list_warehouses(
                 )
                 zone_counts = {warehouse_id: int(count) for warehouse_id, count in counts_result.all()}
 
-            warehouse_data = [warehouse_to_dict(warehouse, zone_counts.get(warehouse.id, 0)) for warehouse in warehouses]
+                access_result = await session.execute(
+                    select(UserWarehouseAccess.warehouse_id, func.count(UserWarehouseAccess.id))
+                    .where(
+                        UserWarehouseAccess.warehouse_id.in_(warehouse_ids),
+                        UserWarehouseAccess.access_type != AccessType.DENIED,
+                    )
+                    .group_by(UserWarehouseAccess.warehouse_id)
+                )
+                access_counts = {warehouse_id: int(count) for warehouse_id, count in access_result.all()}
+
+            warehouse_data = [warehouse_to_dict(warehouse, zone_counts.get(warehouse.id, 0), access_counts.get(warehouse.id, 0)) for warehouse in warehouses]
             
             logger.info(f"Usuario {user['username']} listó {len(warehouse_data)} bodegas")
             
@@ -987,13 +997,13 @@ async def list_warehouse_access(
             
             # Convertir a diccionarios con información de usuario
             access_data = []
-            for access, user in access_user_pairs:
+            for access, db_user in access_user_pairs:
                 access_dict = warehouse_access_to_dict(access, include_details=True)
                 access_dict.update({
-                    "user_username": user.username,
-                    "user_full_name": f"{user.first_name} {user.last_name}".strip() or user.username,
-                    "user_email": user.email,
-                    "user_is_active": user.is_active
+                    "user_username": db_user.username,
+                    "user_full_name": f"{db_user.first_name} {db_user.last_name}".strip() or db_user.username,
+                    "user_email": db_user.email,
+                    "user_is_active": db_user.is_active
                 })
                 access_data.append(access_dict)
             
@@ -1116,11 +1126,11 @@ async def grant_warehouse_access(
                 "granted_by_username": user['username']
             })
             
-            logger.info(f"Usuario {user['username']} otorgó acceso {access_data.access_type} a {target_user.username} para bodega {warehouse.warehouse_code}")
-            
+            logger.info(f"Usuario {user['username']} otorgó acceso {access_data.access_type.value} a {target_user.username} para bodega {warehouse.warehouse_code}")
+
             return ResponseManager.success(
                 data=access_dict,
-                message=f"Acceso {access_data.access_type} otorgado a {target_user.username} para bodega {warehouse.warehouse_name}",
+                message=f"Acceso {access_data.access_type.value} otorgado a {target_user.username} para bodega {warehouse.warehouse_name}",
                 request=request
             )
         
@@ -1243,8 +1253,7 @@ async def update_warehouse_access(
             # Actualizar tipo de acceso
             old_access_type = access.access_type.value
             access.access_type = AccessType(access_data.access_type)
-            access.granted_by_user_id = user['user_id']  # Actualizar quien modificó
-            access.updated_at = datetime.now(timezone.utc)
+            access.granted_by_user_id = user['user_id']
             
             await session.commit()
             await session.refresh(access)
