@@ -21,12 +21,15 @@ import {
   Ruler,
   Settings,
   Shield,
+  SlidersHorizontal,
   ShoppingCart,
   Store,
   Tags,
   Truck,
   Users,
   WalletCards,
+  AlertTriangle,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 export const moduleGroups = [
@@ -48,6 +51,7 @@ export const moduleGroups = [
       { id: 'new-sale', label: 'Nueva venta', path: '/sales/new', icon: ShoppingCart, weight: 10 },
       { id: 'cash-pos', label: 'Cobro en caja POS', path: '/cash/pos', icon: CreditCard, weight: 20 },
       { id: 'sales-history', label: 'Historial de ventas', path: '/sales/history', icon: ClipboardList, weight: 30 },
+      { id: 'price-query', label: 'Consulta de precio', path: '/sales/price-query', icon: Tags, weight: 35, permissions: ['PRICE_LISTS_ACCESS', 'PRICE_LISTS_MANAGE'] },
       { id: 'promotions', label: 'Promociones comerciales', path: '/sales/promotions', icon: BadgeDollarSign, weight: 40, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
     ],
   },
@@ -70,7 +74,8 @@ export const moduleGroups = [
       { id: 'cash-opening', label: 'Apertura / cierre de caja', path: '/cash/opening', icon: Store, weight: 10 },
       { id: 'cash-count', label: 'Arqueo de caja', path: '/cash/count', icon: WalletCards, weight: 20 },
       { id: 'cash-movements', label: 'Movimientos de caja', path: '/cash/movements', icon: CircleDollarSign, weight: 30 },
-      { id: 'petty-cash', label: 'Caja chica operativa', path: '/cash/petty', icon: WalletCards, weight: 40 },
+      { id: 'petty-cash', label: 'Fondos de caja chica', path: '/cash/petty', icon: WalletCards, weight: 40, permissions: ['PETTY_CASH_FUNDS_ACCESS', 'PETTY_CASH_ACCESS', 'PETTY_CASH_FUNDS_MANAGE', 'PETTY_CASH_REPLENISH', 'PETTY_CASH_APPROVE'] },
+      { id: 'petty-cash-expenses', label: 'Gastos de caja chica', path: '/cash/petty/expenses', icon: Receipt, weight: 45, permissions: ['PETTY_CASH_EXPENSES_ACCESS', 'PETTY_CASH_EXPENSES_CREATE', 'PETTY_CASH_EXPENSES_APPROVE', 'PETTY_CASH_SPEND'] },
     ],
   },
   {
@@ -81,7 +86,9 @@ export const moduleGroups = [
     items: [
       { id: 'products', label: 'Catalogo de productos', path: '/products', icon: Package, weight: 10, permissions: ['PRODUCTS_ACCESS', 'PRODUCTS_MANAGE'] },
       { id: 'stock-movements', label: 'Movimientos de stock', path: '/stock/movements', icon: Boxes, weight: 20 },
+      { id: 'stock-conversions', label: 'Conversion de stock', path: '/stock/conversions', icon: ArrowRightLeft, weight: 25, permissions: ['STOCK_CONVERSIONS_ACCESS', 'STOCK_CONVERT', 'STOCK_ADJUST'] },
       { id: 'physical-inventory', label: 'Inventario fisico', path: '/stock/physical', icon: ClipboardCheck, weight: 30 },
+      { id: 'inventory-tracking-reports', label: 'Control de tracking', path: '/stock/tracking-reports', icon: AlertTriangle, weight: 32, permissions: ['STOCK_VIEW', 'WAREHOUSE_INVENTORY_VIEW', 'INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE'] },
       { id: 'warehouses', label: 'Administracion de bodegas', path: '/inventory/warehouses', icon: Store, weight: 35, permissions: ['WAREHOUSE_READ', 'WAREHOUSE_MANAGER', 'WAREHOUSE_SUPERVISOR', 'WAREHOUSE_ADMIN', 'WAREHOUSES_ACCESS'] },
       { id: 'stock-critical-config', label: 'Stock critico y reposicion', path: '/inventory/stock-critical', icon: Percent, weight: 36, permissions: ['INVENTORY_MAINTAINERS_ACCESS', 'INVENTORY_MAINTAINERS_MANAGE'] },
       { id: 'inventory-adjustments', label: 'Ajustes de inventario', path: '/stock/adjustments', icon: Settings, weight: 40 },
@@ -187,7 +194,8 @@ export const moduleGroups = [
       { id: 'users', label: 'Administracion de usuarios', path: '/admin/users', icon: Users, weight: 10, permissions: ['USER_READ', 'USER_MANAGER'] },
       { id: 'roles', label: 'Administracion de roles y permisos', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
       { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash-pos', icon: CreditCard, weight: 40, permissions: ['CASH_POS_ADMIN_ACCESS', 'CASH_SETTINGS_MANAGE'] },
-      { id: 'petty-cash-admin', label: 'Administracion de caja chica', path: '/admin/cash-petty', icon: WalletCards, weight: 50, permissions: ['PETTY_CASH_ADMIN_ACCESS', 'PETTY_CASH_MANAGE', 'PETTY_CASH_APPROVE'] },
+      { id: 'petty-cash-categories', label: 'Categorias de caja chica', path: '/admin/petty-cash-categories', icon: Tags, weight: 50, permissions: ['PETTY_CASH_CATEGORIES_ACCESS', 'PETTY_CASH_ADMIN_ACCESS', 'PETTY_CASH_CATEGORIES_MANAGE', 'PETTY_CASH_MANAGE'] },
+      { id: 'product-flag-settings', label: 'Checks de producto', path: '/admin/product-flags', icon: SlidersHorizontal, weight: 55, permissions: ['PRODUCT_FLAG_SETTINGS_ACCESS', 'PRODUCT_FLAG_SETTINGS_MANAGE', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'backup', label: 'Backup y restauracion', path: '/admin/backup', icon: Database, weight: 60 },
     ],
   },
