@@ -347,7 +347,7 @@ const AdminStockMovements = () => {
     }
   }, []);
 
-  useEffect(() => { loadMeta().then(() => ensureFormData()); }, [loadMeta, ensureFormData]);
+  useEffect(() => { loadMeta(); ensureFormData(); }, [loadMeta, ensureFormData]);
   useEffect(() => { setPage(0); }, [search, typeFilter, warehouseFilter, pageSize]);
 
   const filtered = useMemo(() => {
