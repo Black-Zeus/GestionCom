@@ -1371,15 +1371,69 @@ async def resolve_price(
 @router.get("/products", response_class=JSONResponse)
 async def list_products(request: Request, user: dict = Depends(require_products_read), active_only: bool = Query(False)):
     async with db_manager.get_async_session() as session:
-        stmt = select(Product).options(selectinload(Product.category), selectinload(Product.base_unit), selectinload(Product.brand_ref), selectinload(Product.model_ref)).where(Product.deleted_at.is_(None))
-        if active_only:
-            stmt = stmt.where(Product.is_active == True)
-        result = await session.execute(stmt.order_by(Product.product_code))
-        products = result.scalars().all()
-        rows = [product_to_dict(item) for item in products]
-        assets = await _media_map(session, [item.get("primary_image_media_asset_id") for item in rows])
-        for row in rows:
-            row["primary_image"] = assets.get(row.get("primary_image_media_asset_id"))
+        where_extra = " AND p.is_active = TRUE" if active_only else ""
+        result = await session.execute(
+            text(
+                f"""
+                SELECT
+                  p.id, p.category_id, p.product_code, p.product_name, p.product_description,
+                  p.primary_image_media_asset_id,
+                  p.brand_id, p.brand, p.product_model_id, p.model,
+                  p.base_measurement_unit_id,
+                  p.base_price, p.cost_price,
+                  p.has_variants, p.is_active,
+                  p.has_batch_control, p.has_expiry_date, p.has_serial_numbers, p.has_location_tracking,
+                  p.created_at, p.updated_at,
+                  cat.category_code, cat.category_name,
+                  mu.unit_code AS base_unit_code, mu.unit_name AS base_unit_name,
+                  b.brand_code, b.brand_name,
+                  pm.model_code, pm.model_name,
+                  ma.media_code AS image_media_code
+                FROM products p
+                LEFT JOIN categories cat ON cat.id = p.category_id
+                LEFT JOIN measurement_units mu ON mu.id = p.base_measurement_unit_id
+                LEFT JOIN product_brands b ON b.id = p.brand_id
+                LEFT JOIN product_models pm ON pm.id = p.product_model_id
+                LEFT JOIN media_assets ma ON ma.id = p.primary_image_media_asset_id AND ma.deleted_at IS NULL
+                WHERE p.deleted_at IS NULL{where_extra}
+                ORDER BY p.product_code
+                """
+            )
+        )
+        rows = []
+        for r in result.mappings().all():
+            rows.append({
+                "id": r["id"],
+                "category_id": r["category_id"],
+                "category_code": r["category_code"],
+                "category_name": r["category_name"],
+                "product_code": r["product_code"],
+                "product_name": r["product_name"],
+                "product_description": r["product_description"],
+                "primary_image_media_asset_id": r["primary_image_media_asset_id"],
+                "brand_id": r["brand_id"],
+                "brand_code": r["brand_code"],
+                "brand_name": r["brand_name"],
+                "brand": r["brand"],
+                "product_model_id": r["product_model_id"],
+                "model_code": r["model_code"],
+                "model_name": r["model_name"],
+                "model": r["model"],
+                "base_measurement_unit_id": r["base_measurement_unit_id"],
+                "base_unit_code": r["base_unit_code"],
+                "base_unit_name": r["base_unit_name"],
+                "base_price": float(r["base_price"]) if r["base_price"] is not None else None,
+                "cost_price": float(r["cost_price"]) if r["cost_price"] is not None else None,
+                "has_variants": bool(r["has_variants"]),
+                "is_active": bool(r["is_active"]),
+                "has_batch_control": bool(r["has_batch_control"]),
+                "has_expiry_date": bool(r["has_expiry_date"]),
+                "has_serial_numbers": bool(r["has_serial_numbers"]),
+                "has_location_tracking": bool(r["has_location_tracking"]),
+                "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+                "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                "primary_image": media_storage.safe_asset({"id": r["primary_image_media_asset_id"], "media_code": r["image_media_code"]}) if r["primary_image_media_asset_id"] else None,
+            })
         return ResponseManager.success(data=rows, request=request)
 
 
@@ -1436,11 +1490,13 @@ async def delete_product(request: Request, product_id: int = Path(..., gt=0), us
 
 
 @router.get("/product-variants", response_class=JSONResponse)
-async def list_product_variants(request: Request, user: dict = Depends(require_products_read), active_only: bool = Query(False)):
+async def list_product_variants(request: Request, user: dict = Depends(require_products_read), active_only: bool = Query(False), product_id: int | None = Query(None, gt=0)):
     async with db_manager.get_async_session() as session:
         stmt = select(ProductVariant).options(selectinload(ProductVariant.product)).where(ProductVariant.deleted_at.is_(None))
         if active_only:
             stmt = stmt.where(ProductVariant.is_active == True)
+        if product_id:
+            stmt = stmt.where(ProductVariant.product_id == product_id)
         result = await session.execute(stmt.order_by(ProductVariant.variant_sku))
         variants = result.scalars().all()
         attributes = await _variant_attribute_map(session, [item.id for item in variants])

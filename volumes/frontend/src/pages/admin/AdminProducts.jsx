@@ -476,6 +476,7 @@ const VariantFormModal = ({ variant = null, initialValues, productOptions = [], 
 const AdminProducts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const handledDeepLinkRef = useRef('');
+  const formDataLoadedRef = useRef(false);
   const [products, setProducts] = useState([]);
   const [variants, setVariants] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -490,29 +491,23 @@ const AdminProducts = () => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
+  const [loadingVariants, setLoadingVariants] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
+  // Fast initial load: products + brands/models for KPIs + flag settings for table labels
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [nextProducts, nextVariants, nextCategories, nextUnits, nextBrands, nextModels, nextSkuAttributes, nextFlagSettings] = await Promise.all([
+      const [nextProducts, nextBrands, nextModels, nextFlagSettings] = await Promise.all([
         businessFoundationService.products.list({ active_only: false }),
-        businessFoundationService.variants.list({ active_only: false }),
-        productConfigService.listCategories({ active_only: false, limit: 1000 }),
-        measurementUnitsService.list({ active_only: false, limit: 1000 }),
         adminMaintainersService.list('product-brands'),
         adminMaintainersService.list('product-models'),
-        businessFoundationService.variants.listSkuAttributes(),
         productConfigService.listProductFlagSettings(),
       ]);
       setProducts(nextProducts);
-      setVariants(nextVariants);
-      setCategories(nextCategories);
-      setUnits(nextUnits);
       setBrands(nextBrands);
       setModels(nextModels);
-      setSkuAttributes(nextSkuAttributes);
       setProductFlagVisibility({
         ...defaultProductFlagVisibility,
         ...Object.fromEntries(nextFlagSettings.map((item) => [item.field, Boolean(item.is_visible)])),
@@ -524,7 +519,37 @@ const AdminProducts = () => {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Lazy variant load, optionally scoped to a product
+  const loadVariants = useCallback(async (productId) => {
+    setLoadingVariants(true);
+    try {
+      const params = { active_only: false };
+      if (productId) params.product_id = Number(productId);
+      setVariants(await businessFoundationService.variants.list(params));
+    } finally {
+      setLoadingVariants(false);
+    }
+  }, []);
+
+  // Form data: categories, units, skuAttributes — loaded once per session on first form open
+  const ensureFormData = useCallback(async () => {
+    if (formDataLoadedRef.current) return;
+    formDataLoadedRef.current = true;
+    try {
+      const [nextCategories, nextUnits, nextSkuAttributes] = await Promise.all([
+        productConfigService.listCategories({ active_only: false, limit: 1000 }),
+        measurementUnitsService.list({ active_only: false, limit: 1000 }),
+        businessFoundationService.variants.listSkuAttributes(),
+      ]);
+      setCategories(nextCategories);
+      setUnits(nextUnits);
+      setSkuAttributes(nextSkuAttributes);
+    } catch {
+      formDataLoadedRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
   useEffect(() => { setPage(0); }, [activeTab, search, status, pageSize]);
   useEffect(() => {
     const nextTab = searchParams.get('tab');
@@ -536,6 +561,17 @@ const AdminProducts = () => {
     if (nextSearch !== search) setSearch(nextSearch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Load variants lazily when the variants tab becomes visible
+  useEffect(() => {
+    if (activeTab !== 'variants') return;
+    const productCode = searchParams.get('product_code') || '';
+    const productLegacyId = searchParams.get('product_id') || '';
+    const scopedProduct = products.find((p) => (productCode && String(p.product_code) === productCode) || (productLegacyId && String(p.id) === productLegacyId));
+    const scopedId = scopedProduct?.id ? String(scopedProduct.id) : productLegacyId;
+    loadVariants(scopedId || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, searchParams]);
 
   const unitOptions = units.map((unit) => ({ value: String(unit.id), label: `${unit.unit_code} - ${unit.unit_name}` }));
   const productOptions = products
@@ -553,33 +589,37 @@ const AdminProducts = () => {
     productFlagVisibility.has_location_tracking && item.has_location_tracking && 'Ubicacion',
   ].filter(Boolean).join(' / ') || 'Simple';
 
-  const openProduct = (product = null) => ModalManager.show({
-    type: 'custom', title: product ? 'Editar producto' : 'Nuevo producto', size: 'xlarge', showFooter: false, contentComponent: ProductFormModal,
-    contentProps: {
-      product,
-      initialValues: productToForm(product, unitOptions[0]?.value || ''),
-      flagVisibility: productFlagVisibility,
-      categories,
-      units,
-      brands,
-      models,
-      onSubmit: async (payload, mediaChanges = {}) => {
-        await notifyPromise((async () => {
-          const savedProduct = product
-            ? await businessFoundationService.products.update(product.id, payload)
-            : await businessFoundationService.products.create(payload);
-          const productId = savedProduct?.id || product?.id;
-          if (productId && mediaChanges.removeImage) await mediaService.removeProductImage(productId);
-          if (productId && mediaChanges.imageFile) await mediaService.uploadProductImage(productId, mediaChanges.imageFile);
-          return savedProduct;
-        })(), { loading: 'Guardando producto...', success: 'Producto guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
-        await load();
+  const openProduct = async (product = null) => {
+    await ensureFormData();
+    ModalManager.show({
+      type: 'custom', title: product ? 'Editar producto' : 'Nuevo producto', size: 'xlarge', showFooter: false, contentComponent: ProductFormModal,
+      contentProps: {
+        product,
+        initialValues: productToForm(product, unitOptions[0]?.value || ''),
+        flagVisibility: productFlagVisibility,
+        categories,
+        units,
+        brands,
+        models,
+        onSubmit: async (payload, mediaChanges = {}) => {
+          await notifyPromise((async () => {
+            const savedProduct = product
+              ? await businessFoundationService.products.update(product.id, payload)
+              : await businessFoundationService.products.create(payload);
+            const productId = savedProduct?.id || product?.id;
+            if (productId && mediaChanges.removeImage) await mediaService.removeProductImage(productId);
+            if (productId && mediaChanges.imageFile) await mediaService.uploadProductImage(productId, mediaChanges.imageFile);
+            return savedProduct;
+          })(), { loading: 'Guardando producto...', success: 'Producto guardado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
+          await loadProducts();
+        },
       },
-    },
-  });
+    });
+  };
 
   const openVariant = (variant = null, fixedProductId = selectedProductId) => {
     const resolvedProductId = variant?.product_id ? String(variant.product_id) : fixedProductId || productOptions[0]?.value || '';
+    const scopedId = resolvedProductId || null;
     ModalManager.show({
       type: 'custom',
       title: variant ? 'Editar SKU / Variacion' : 'Nueva SKU / Variacion',
@@ -595,14 +635,15 @@ const AdminProducts = () => {
           : { product_id: resolvedProductId, variant_name: '', variant_description: '', is_default_variant: false, is_active: true },
         onSubmit: async (payload) => {
           await notifyPromise(variant ? businessFoundationService.variants.update(variant.id, payload) : businessFoundationService.variants.create(payload), { loading: 'Guardando SKU / Variacion...', success: 'SKU / Variacion guardada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
-          await load();
+          await loadVariants(String(payload.product_id) || scopedId);
         },
       },
     });
   };
 
-  const openVariantGenerator = () => {
+  const openVariantGenerator = async () => {
     if (!selectedProduct) return;
+    await ensureFormData();
     ModalManager.show({
       type: 'custom',
       title: 'Generar SKU / Variaciones',
@@ -621,7 +662,7 @@ const AdminProducts = () => {
               error: (requestError) => getBackendMessage(requestError, 'No fue posible generar SKU.'),
             },
           );
-          await load();
+          await loadVariants(String(payload.product_id) || selectedProductId || null);
           return result;
         },
       },
@@ -633,7 +674,7 @@ const AdminProducts = () => {
     const recordId = Number(searchParams.get('id'));
     const tabId = searchParams.get('tab') || activeTab;
     const deepLinkKey = `${tabId}:${openMode}:${recordId}`;
-    if (loading || openMode !== 'edit' || !recordId || handledDeepLinkRef.current === deepLinkKey) return;
+    if (loading || loadingVariants || openMode !== 'edit' || !recordId || handledDeepLinkRef.current === deepLinkKey) return;
 
     if (tabId === 'variants') {
       const targetVariant = variants.find((variant) => Number(variant.id) === recordId);
@@ -654,12 +695,12 @@ const AdminProducts = () => {
     nextParams.delete('id');
     setSearchParams(nextParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, products, searchParams, setSearchParams, variants]);
+  }, [loading, loadingVariants, products, variants, searchParams, setSearchParams]);
 
-  const remove = async (label, action) => {
+  const remove = async (label, action, onSuccess = loadProducts) => {
     if (!await ModalManager.confirm({ title: `Eliminar ${label}`, message: `Confirma eliminar ${label}.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } })) return;
     await notifyPromise(action(), { loading: 'Eliminando...', success: 'Eliminado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.') });
-    await load();
+    await onSuccess();
   };
 
   const openSkuView = (product) => {
@@ -709,9 +750,9 @@ const AdminProducts = () => {
       />
       <KpiBar items={[{ label: 'Productos', value: products.length }, { label: 'SKU', value: variants.length }, { label: 'Marcas', value: brands.length }, { label: 'Modelos', value: models.length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeTab === 'products' ? 'Buscar producto, codigo o marca' : 'Buscar SKU / Variacion'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: load, onClear: () => { setSearch(''); setStatus('all'); } })} />
+      <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeTab === 'products' ? 'Buscar producto, codigo o marca' : 'Buscar SKU / Variacion'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: loadProducts, onClear: () => { setSearch(''); setStatus('all'); } })} />
       {activeTab === 'products' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <div className="flex items-center gap-3">{item.primary_image?.thumb_url ? <img src={item.primary_image.thumb_url} alt={item.product_name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800"><Package className="h-5 w-5" /></div>}<div><div className="font-medium">{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></div></div> }, { id: 'category', label: 'Categoria', render: (item) => item.category_name || '-' }, { id: 'brand', label: 'Marca / modelo', render: (item) => [item.brand_name || item.brand, item.model_name || item.model].filter(Boolean).join(' / ') || '-' }, { id: 'unit', label: 'Unidad', render: (item) => item.base_unit_code }, { id: 'base_price', label: 'Precio base', align: 'right', render: (item) => formatMoney(item.base_price) }, { id: 'cost_price', label: 'Precio costo', align: 'right', render: (item) => formatMoney(item.cost_price) }, { id: 'controls', label: 'Control', render: (item) => <span className="text-xs text-slate-500">{productControlLabels(item)}</span> }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openProduct(item)} /><RowActionButton label="SKU / Variaciones" icon={Boxes} disabled={!productFlagVisibility.has_variants || !item.has_variants} onClick={() => openSkuView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('producto', () => businessFoundationService.products.remove(item.id))} /></div> }]} />}
-      {activeTab === 'variants' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variacion', render: (item) => <div className="font-medium">{item.variant_name}</div> }, { id: 'attributes', label: 'Atributos SKU', render: (item) => item.attribute_summary || '-' }, { id: 'product', label: 'Producto', render: (item) => item.product_name || '-' }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item, String(item.product_id))} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU / Variacion', () => businessFoundationService.variants.remove(item.id))} /></div> }]} />}
+      {activeTab === 'variants' && <DataTable loading={loadingVariants} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading: loadingVariants, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variacion', render: (item) => <div className="font-medium">{item.variant_name}</div> }, { id: 'attributes', label: 'Atributos SKU', render: (item) => item.attribute_summary || '-' }, { id: 'product', label: 'Producto', render: (item) => item.product_name || '-' }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item, String(item.product_id))} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU / Variacion', () => businessFoundationService.variants.remove(item.id), () => loadVariants(selectedProductId || null))} /></div> }]} />}
     </section>
   );
 };
