@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Path, Query, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import and_, select
+from sqlalchemy import text
 from sqlalchemy.orm import selectinload
 
 from core.constants import ErrorCode, ErrorType, HTTPStatus
@@ -23,6 +25,7 @@ from database.schemas.product_config import (
     CategoryUpdate,
 )
 from utils.code_generator import generate_sequential_code
+from utils.product_feature_flags import PRODUCT_FLAG_FEATURES, product_flag_settings
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Product Config"])
@@ -51,6 +54,31 @@ async def require_product_config_write(request: Request) -> dict:
     import json
     response = ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
     raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
+
+
+async def require_product_flag_settings_read(request: Request) -> dict:
+    user = await get_current_user(request)
+    if _has_any_permission(user, ["PRODUCTS_ACCESS", "PRODUCTS_MANAGE", "PRODUCT_FLAG_SETTINGS_ACCESS", "PRODUCT_FLAG_SETTINGS_MANAGE", "FOUNDATION_MAINTAINERS_ACCESS", "FOUNDATION_MAINTAINERS_MANAGE"]):
+        return user
+    from fastapi import HTTPException
+    import json
+    response = ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
+
+
+async def require_product_flag_settings_write(request: Request) -> dict:
+    user = await get_current_user(request)
+    if _has_any_permission(user, ["PRODUCT_FLAG_SETTINGS_MANAGE", "FOUNDATION_MAINTAINERS_MANAGE", "PRODUCTS_MANAGE"]):
+        return user
+    from fastapi import HTTPException
+    import json
+    response = ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail=json.loads(response.body.decode("utf-8")))
+
+
+class ProductFlagSettingUpdate(BaseModel):
+    field: str
+    is_visible: bool
 
 
 def category_to_dict(category: Category) -> dict:
@@ -130,6 +158,55 @@ async def _get_category(session, category_id: int | None):
 def _set_category_tree(category: Category, parent: Category | None):
     category.category_level = (parent.category_level + 1) if parent else 1
     category.category_path = f"{parent.category_path}/{category.category_name}" if parent and parent.category_path else category.category_name
+
+
+@router.get("/product-flag-settings", response_class=JSONResponse)
+async def list_product_flag_settings(request: Request, user: dict = Depends(require_product_flag_settings_read)):
+    async with db_manager.get_async_session() as session:
+        return ResponseManager.success(data=await product_flag_settings(session), request=request)
+
+
+@router.put("/product-flag-settings", response_class=JSONResponse)
+async def update_product_flag_settings(settings: list[ProductFlagSettingUpdate], request: Request, user: dict = Depends(require_product_flag_settings_write)):
+    valid_fields = set(PRODUCT_FLAG_FEATURES.keys())
+    incoming_fields = {item.field for item in settings}
+    invalid_fields = incoming_fields - valid_fields
+    if invalid_fields:
+        return ResponseManager.error(message=f"Checks no soportados: {', '.join(sorted(invalid_fields))}", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+    async with db_manager.get_async_session() as session:
+        user_id = int(user.get("user_id") or user.get("id"))
+        for item in settings:
+            feature = PRODUCT_FLAG_FEATURES[item.field]
+            await session.execute(
+                text(
+                    """
+                    INSERT INTO system_features (
+                      feature_code, feature_name, feature_description, feature_type,
+                      default_value, current_value, is_active, updated_by_user_id
+                    ) VALUES (
+                      :feature_code, :feature_name, :feature_description, 'BOOLEAN',
+                      :default_value, :current_value, TRUE, :user_id
+                    )
+                    ON DUPLICATE KEY UPDATE
+                      feature_name = VALUES(feature_name),
+                      feature_description = VALUES(feature_description),
+                      feature_type = VALUES(feature_type),
+                      current_value = VALUES(current_value),
+                      is_active = TRUE,
+                      updated_by_user_id = VALUES(updated_by_user_id)
+                    """
+                ),
+                {
+                    "feature_code": feature["feature_code"],
+                    "feature_name": f"Mostrar check {feature['label']}",
+                    "feature_description": feature["description"],
+                    "default_value": "true" if feature["default_visible"] else "false",
+                    "current_value": "true" if item.is_visible else "false",
+                    "user_id": user_id,
+                },
+            )
+        await session.commit()
+        return ResponseManager.success(data=await product_flag_settings(session), message="Configuracion de checks actualizada", request=request)
 
 
 @router.get("/categories", response_class=JSONResponse)

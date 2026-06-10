@@ -52,4 +52,10 @@ export const productConfigService = {
   async removeValue(id) {
     return unwrap(await apiClient.delete(`/product-config/attribute-values/${id}`));
   },
+  async listProductFlagSettings() {
+    return list(unwrap(await apiClient.get('/product-config/product-flag-settings')));
+  },
+  async updateProductFlagSettings(payload) {
+    return list(unwrap(await apiClient.put('/product-config/product-flag-settings', payload)));
+  },
 };
