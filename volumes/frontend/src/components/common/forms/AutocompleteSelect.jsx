@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search, XCircle } from 'lucide-react';
 
 const AutocompleteSelect = ({
@@ -19,9 +20,12 @@ const AutocompleteSelect = ({
   buttonClassName = '',
 }) => {
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedValues = useMemo(() => {
     if (!multiple) return [];
@@ -52,11 +56,27 @@ const AutocompleteSelect = ({
 
   useEffect(() => {
     if (!open) return undefined;
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+    }
     const onPointerDown = (event) => {
-      if (!containerRef.current?.contains(event.target)) setOpen(false);
+      const inContainer = containerRef.current?.contains(event.target);
+      const inDropdown = dropdownRef.current?.contains(event.target);
+      if (!inContainer && !inDropdown) setOpen(false);
+    };
+    const onScroll = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+      }
     };
     document.addEventListener('mousedown', onPointerDown);
-    return () => document.removeEventListener('mousedown', onPointerDown);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('scroll', onScroll, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -103,6 +123,7 @@ const AutocompleteSelect = ({
   return (
     <div ref={containerRef} className={`relative min-w-0 ${className}`}>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         onClick={() => {
@@ -147,8 +168,12 @@ const AutocompleteSelect = ({
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-950">
+      {open && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+          className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-950"
+        >
           <div className="flex h-10 items-center gap-2 border-b border-slate-100 px-3 dark:border-slate-800">
             <Search className="h-4 w-4 text-slate-400" />
             <input
@@ -202,7 +227,8 @@ const AutocompleteSelect = ({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
