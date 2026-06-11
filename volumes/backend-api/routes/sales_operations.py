@@ -194,12 +194,16 @@ def sales_point_to_session_dict(sales_point: SalesPoint, assignment: SalesPointU
 
 def sales_point_assignment_to_dict(assignment: SalesPointUserAssignment) -> dict:
     sales_point = assignment.sales_point
+    cash_register = sales_point.default_cash_register if sales_point else None
     return {
         "id": assignment.id,
         "scope": "sales_point",
         "sales_point_id": assignment.sales_point_id,
         "sales_point_code": sales_point.sales_point_code if sales_point else None,
         "sales_point_name": sales_point.sales_point_name if sales_point else None,
+        "default_cash_register_id": sales_point.default_cash_register_id if sales_point else None,
+        "default_cash_register_code": cash_register.register_code if cash_register else None,
+        "default_cash_register_name": cash_register.register_name if cash_register else None,
         "user_id": assignment.user_id,
         "user": user_to_dict(assignment.user),
         "operator_role": assignment.operator_role,
@@ -535,7 +539,10 @@ async def delete_cash_register_assignment(request: Request, assignment_id: int =
 async def list_sales_point_assignments(request: Request, user: dict = Depends(require_sales_ops_read), active_only: bool = Query(False)):
     try:
         async with db_manager.get_async_session() as session:
-            stmt = select(SalesPointUserAssignment).options(selectinload(SalesPointUserAssignment.sales_point), selectinload(SalesPointUserAssignment.user)).where(SalesPointUserAssignment.deleted_at.is_(None))
+            stmt = select(SalesPointUserAssignment).options(
+                selectinload(SalesPointUserAssignment.sales_point).selectinload(SalesPoint.default_cash_register),
+                selectinload(SalesPointUserAssignment.user),
+            ).where(SalesPointUserAssignment.deleted_at.is_(None))
             if active_only:
                 stmt = stmt.where(SalesPointUserAssignment.is_active == True)
             result = await session.execute(stmt.order_by(SalesPointUserAssignment.sales_point_id, SalesPointUserAssignment.user_id))
@@ -550,7 +557,11 @@ async def list_sales_point_assignments(request: Request, user: dict = Depends(re
 async def create_sales_point_assignment(assignment_data: SalesPointAssignmentCreate, request: Request, user: dict = Depends(require_sales_ops_write)):
     try:
         async with db_manager.get_async_session() as session:
-            result = await session.execute(select(SalesPoint).where(and_(SalesPoint.id == assignment_data.sales_point_id, SalesPoint.deleted_at.is_(None))))
+            result = await session.execute(
+                select(SalesPoint)
+                .options(selectinload(SalesPoint.default_cash_register))
+                .where(and_(SalesPoint.id == assignment_data.sales_point_id, SalesPoint.deleted_at.is_(None)))
+            )
             sales_point = result.scalar_one_or_none()
             operator = await get_active_user(session, assignment_data.user_id)
             if not sales_point or not operator:
@@ -604,7 +615,7 @@ async def _update_assignment(model, serializer, assignment_data: OperatorAssignm
             if model is CashRegisterUserAssignment:
                 load_options.append(selectinload(model.cash_register).selectinload(CashRegister.warehouse))
             else:
-                load_options.append(selectinload(model.sales_point))
+                load_options.append(selectinload(model.sales_point).selectinload(SalesPoint.default_cash_register))
             result = await session.execute(select(model).options(*load_options).where(and_(model.id == assignment_id, model.deleted_at.is_(None))))
             assignment = result.scalar_one_or_none()
             if not assignment:
@@ -627,7 +638,7 @@ async def _delete_assignment(model, serializer, request: Request, assignment_id:
             if model is CashRegisterUserAssignment:
                 load_options.append(selectinload(model.cash_register).selectinload(CashRegister.warehouse))
             else:
-                load_options.append(selectinload(model.sales_point))
+                load_options.append(selectinload(model.sales_point).selectinload(SalesPoint.default_cash_register))
             result = await session.execute(select(model).options(*load_options).where(and_(model.id == assignment_id, model.deleted_at.is_(None))))
             assignment = result.scalar_one_or_none()
             if not assignment:

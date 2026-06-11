@@ -20,6 +20,7 @@ const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
 
 const scopeLabels = {
+  all: 'Origen',
   cash_register: 'Caja',
   sales_point: 'Punto de venta',
 };
@@ -33,6 +34,12 @@ const roleOptionsByScope = {
     { value: 'SELLER', label: 'Vendedor' },
     { value: 'SUPERVISOR', label: 'Supervisor' },
   ],
+};
+
+const roleLabels = {
+  CASHIER: 'Cajero',
+  SELLER: 'Vendedor',
+  SUPERVISOR: 'Supervisor',
 };
 
 const emptyForm = {
@@ -78,6 +85,12 @@ const toPayload = (form) => ({
   notes: form.notes.trim() || null,
   is_active: Boolean(form.is_active),
 });
+
+const EmptyCell = () => <span className="text-sm text-slate-400">-</span>;
+
+const SourceCell = ({ name }) => (name ? <span className="font-medium text-slate-700 dark:text-slate-200">{name}</span> : <EmptyCell />);
+
+const assignmentKey = (assignment) => `${assignment.scope}:${assignment.id}`;
 
 const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users = [], cashRegisters = [], salesPoints = [], onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
@@ -147,7 +160,7 @@ const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users
           <span className="font-medium text-slate-700 dark:text-slate-200">Operador</span>
           <select className={selectClassName} value={form.user_id} onChange={(event) => updateField('user_id', event.target.value)} disabled={isEdit} required>
             <option value="">Seleccione...</option>
-            {users.map((user) => <option key={user.id} value={user.id}>{user.full_name || `${user.first_name} ${user.last_name}`} ({user.username})</option>)}
+            {users.map((user) => <option key={user.id} value={user.id}>{user.full_name || `${user.first_name} ${user.last_name}`}</option>)}
           </select>
         </label>
         {form.scope === 'cash_register' ? (
@@ -155,7 +168,7 @@ const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users
             <span className="font-medium text-slate-700 dark:text-slate-200">Caja</span>
             <select className={selectClassName} value={form.cash_register_id} onChange={(event) => updateField('cash_register_id', event.target.value)} disabled={isEdit} required>
               <option value="">Seleccione...</option>
-              {cashRegisters.map((item) => <option key={item.id} value={item.id}>{item.register_code} - {item.register_name}</option>)}
+              {cashRegisters.map((item) => <option key={item.id} value={item.id}>{item.register_name}</option>)}
             </select>
           </label>
         ) : (
@@ -163,7 +176,7 @@ const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users
             <span className="font-medium text-slate-700 dark:text-slate-200">Punto de venta</span>
             <select className={selectClassName} value={form.sales_point_id} onChange={(event) => updateField('sales_point_id', event.target.value)} disabled={isEdit} required>
               <option value="">Seleccione...</option>
-              {salesPoints.map((item) => <option key={item.id} value={item.id}>{item.sales_point_code} - {item.sales_point_name}</option>)}
+              {salesPoints.map((item) => <option key={item.id} value={item.id}>{item.sales_point_name}</option>)}
             </select>
           </label>
         )}
@@ -214,7 +227,7 @@ const AssignmentFormModal = ({ mode = 'create', initialValues = emptyForm, users
 };
 
 const AdminOperatorAssignments = () => {
-  const [scope, setScope] = useState('cash_register');
+  const [scope, setScope] = useState('all');
   const [cashAssignments, setCashAssignments] = useState([]);
   const [salesPointAssignments, setSalesPointAssignments] = useState([]);
   const [cashRegisters, setCashRegisters] = useState([]);
@@ -224,14 +237,18 @@ const AdminOperatorAssignments = () => {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [busyId, setBusyId] = useState(null);
+  const [busyKey, setBusyKey] = useState(null);
   const [error, setError] = useState('');
   const tablePageSize = usePreferencesStore((state) => state.tablePageSize);
   const setTablePageSize = usePreferencesStore((state) => state.setTablePageSize);
 
-  const assignments = scope === 'cash_register' ? cashAssignments : salesPointAssignments;
+  const assignments = useMemo(() => {
+    if (scope === 'all') return [...cashAssignments, ...salesPointAssignments];
+    return scope === 'cash_register' ? cashAssignments : salesPointAssignments;
+  }, [cashAssignments, salesPointAssignments, scope]);
 
   const stats = useMemo(() => ({
+    total: cashAssignments.length + salesPointAssignments.length,
     cash: cashAssignments.length,
     pos: salesPointAssignments.length,
     active: [...cashAssignments, ...salesPointAssignments].filter((item) => item.is_active).length,
@@ -244,8 +261,10 @@ const AdminOperatorAssignments = () => {
       const userName = item.user?.full_name || '';
       const sourceName = item.scope === 'cash_register' ? item.cash_register_name : item.sales_point_name;
       const sourceCode = item.scope === 'cash_register' ? item.cash_register_code : item.sales_point_code;
+      const dependentCashName = item.scope === 'sales_point' ? item.default_cash_register_name : '';
+      const dependentCashCode = item.scope === 'sales_point' ? item.default_cash_register_code : '';
       const matchesStatus = status === 'all' || (status === 'active' && item.is_active) || (status === 'inactive' && !item.is_active);
-      const matchesSearch = !term || [userName, item.user?.username, sourceName, sourceCode, item.operator_role].filter(Boolean).some((value) => value.toLowerCase().includes(term));
+      const matchesSearch = !term || [userName, item.user?.username, scopeLabels[item.scope], sourceName, sourceCode, dependentCashName, dependentCashCode, roleLabels[item.operator_role], item.operator_role].filter(Boolean).some((value) => value.toLowerCase().includes(term));
       return matchesStatus && matchesSearch;
     });
   }, [assignments, search, status]);
@@ -287,7 +306,7 @@ const AdminOperatorAssignments = () => {
       contentComponent: AssignmentFormModal,
       contentProps: {
         mode: assignment ? 'edit' : 'create',
-        initialValues: assignment ? assignmentToForm(assignment) : { ...emptyForm, scope },
+        initialValues: assignment ? assignmentToForm(assignment) : { ...emptyForm, scope: scope === 'all' ? emptyForm.scope : scope },
         users,
         cashRegisters,
         salesPoints,
@@ -309,14 +328,23 @@ const AdminOperatorAssignments = () => {
   };
 
   const toggle = async (assignment) => {
-    setBusyId(assignment.id);
+    const nextState = !assignment.is_active;
+    const sourceName = assignment.scope === 'cash_register' ? assignment.cash_register_name : assignment.sales_point_name;
+    const confirmed = await ModalManager.confirm({
+      title: `${nextState ? 'Activar' : 'Desactivar'} asignacion`,
+      message: `Confirma que deseas ${nextState ? 'activar' : 'desactivar'} la asignacion de ${assignment.user?.full_name || 'operador'} con ${sourceName || 'este origen operativo'}.`,
+      buttons: { cancel: 'Cancelar', confirm: nextState ? 'Activar' : 'Desactivar' },
+    });
+    if (!confirmed) return;
+
+    setBusyKey(assignmentKey(assignment));
     const payload = {
       operator_role: assignment.operator_role,
       is_default: assignment.is_default,
       valid_from: assignment.valid_from || null,
       valid_until: assignment.valid_until || null,
       notes: assignment.notes || null,
-      is_active: !assignment.is_active,
+      is_active: nextState,
     };
     try {
       const action = assignment.scope === 'cash_register'
@@ -329,7 +357,7 @@ const AdminOperatorAssignments = () => {
       });
       await loadData();
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   };
 
@@ -341,7 +369,7 @@ const AdminOperatorAssignments = () => {
       buttons: { cancel: 'Cancelar', confirm: 'Eliminar' },
     });
     if (!confirmed) return;
-    setBusyId(assignment.id);
+    setBusyKey(assignmentKey(assignment));
     try {
       const action = assignment.scope === 'cash_register'
         ? salesOperationsService.removeCashRegisterAssignment(assignment.id)
@@ -353,26 +381,53 @@ const AdminOperatorAssignments = () => {
       });
       await loadData();
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   };
 
   const columns = [
-    { id: 'user', label: 'Operador', sortable: true, sortValue: (item) => item.user?.full_name || '', render: (item) => <><div className="font-medium text-slate-950 dark:text-white">{item.user?.full_name || 'Usuario'}</div><div className="font-mono text-xs text-slate-500">{item.user?.username}</div></> },
-    { id: 'source', label: scopeLabels[scope], sortable: true, sortValue: (item) => (scope === 'cash_register' ? item.cash_register_name : item.sales_point_name) || '', render: (item) => <div><div className="font-medium text-slate-700 dark:text-slate-200">{scope === 'cash_register' ? item.cash_register_name : item.sales_point_name}</div><div className="font-mono text-xs text-slate-500">{scope === 'cash_register' ? item.cash_register_code : item.sales_point_code}</div></div> },
-    { id: 'role', label: 'Rol', sortable: true, sortValue: (item) => item.operator_role, render: (item) => <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"><UserCheck className="h-3.5 w-3.5" />{item.operator_role}</span> },
+    {
+      id: 'scope',
+      label: 'Tipo',
+      sortable: true,
+      sortValue: (item) => scopeLabels[item.scope] || '',
+      render: (item) => (
+        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+          {scopeLabels[item.scope] || '-'}
+        </span>
+      ),
+    },
+    {
+      id: 'cash_register',
+      label: 'Caja',
+      sortable: true,
+      sortValue: (item) => (item.scope === 'cash_register' ? item.cash_register_name : item.default_cash_register_name) || '',
+      render: (item) => {
+        const name = item.scope === 'cash_register' ? item.cash_register_name : item.default_cash_register_name;
+        return <SourceCell name={name} />;
+      },
+    },
+    {
+      id: 'sales_point',
+      label: 'Punto de venta',
+      sortable: true,
+      sortValue: (item) => item.sales_point_name || '',
+      render: (item) => <SourceCell name={item.scope === 'sales_point' ? item.sales_point_name : ''} />,
+    },
+    { id: 'user', label: 'Operador', sortable: true, sortValue: (item) => item.user?.full_name || '', render: (item) => <span className="font-medium text-slate-950 dark:text-white">{item.user?.full_name || 'Usuario'}</span> },
+    { id: 'role', label: 'Rol', sortable: true, sortValue: (item) => roleLabels[item.operator_role] || item.operator_role || '', render: (item) => <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"><UserCheck className="h-3.5 w-3.5" />{roleLabels[item.operator_role] || item.operator_role || '-'}</span> },
     { id: 'validity', label: 'Vigencia', render: (item) => <div className="text-sm text-slate-600 dark:text-slate-300">{item.valid_from || 'Sin inicio'} - {item.valid_until || 'Sin termino'}{item.is_default && <div className="text-xs font-medium text-blue-600 dark:text-blue-300">Predeterminado</div>}</div> },
     { id: 'status', label: 'Estado', sortable: true, sortValue: (item) => item.is_active, render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openModal(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={CheckCircle2} disabled={busyId === item.id} onClick={() => toggle(item)} /><RowActionButton label="Eliminar" icon={Trash2} disabled={busyId === item.id} variant="danger" onClick={() => remove(item)} /></div> },
+    { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyKey === assignmentKey(item)} onClick={() => openModal(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={CheckCircle2} disabled={busyKey === assignmentKey(item)} onClick={() => toggle(item)} /><RowActionButton label="Eliminar" icon={Trash2} disabled={busyKey === assignmentKey(item)} variant="danger" onClick={() => remove(item)} /></div> },
   ];
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader title="Asignacion de operadores" description="Relaciona usuarios con cajas y puntos de venta autorizados." actions={[{ id: 'new-assignment', label: 'Nuevo', onClick: () => openModal() }]} />
-      <KpiBar items={[{ id: 'cash', label: 'Cajas', value: stats.cash, active: scope === 'cash_register', onClick: () => setScope('cash_register') }, { id: 'pos', label: 'Puntos de venta', value: stats.pos, active: scope === 'sales_point', onClick: () => setScope('sales_point') }, { id: 'active', label: 'Activas', value: stats.active }, { id: 'inactive', label: 'Inactivas', value: stats.inactive }]} className="mb-4" />
-      <FilterBar className="mb-4" gridClassName="lg:grid-cols-[minmax(280px,1fr)_190px_170px_auto_auto]" searchValue={search} searchPlaceholder="Buscar operador, usuario, caja o POS" onSearchChange={setSearch} onSearchSubmit={() => setPage(0)} fields={[{ id: 'scope', value: scope, onChange: setScope, options: [{ value: 'cash_register', label: 'Asignaciones a caja' }, { value: 'sales_point', label: 'Asignaciones a POS' }] }, { id: 'status', value: status, onChange: setStatus, options: [{ value: 'all', label: 'Todos los estados' }, { value: 'active', label: 'Activas' }, { value: 'inactive', label: 'Inactivas' }] }]} actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadData} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setStatus('all'); }} /></>} />
+      <KpiBar items={[{ id: 'total', label: 'Total', value: stats.total, active: scope === 'all', onClick: () => setScope('all') }, { id: 'cash', label: 'Cajas', value: stats.cash, active: scope === 'cash_register', onClick: () => setScope('cash_register') }, { id: 'pos', label: 'Puntos de venta', value: stats.pos, active: scope === 'sales_point', onClick: () => setScope('sales_point') }, { id: 'active', label: 'Activas', value: stats.active }, { id: 'inactive', label: 'Inactivas', value: stats.inactive }]} className="mb-4" />
+      <FilterBar className="mb-4" gridClassName="lg:grid-cols-[minmax(280px,1fr)_190px_170px_auto_auto]" searchValue={search} searchPlaceholder="Buscar operador, usuario, caja o POS" onSearchChange={setSearch} onSearchSubmit={() => setPage(0)} fields={[{ id: 'scope', value: scope, onChange: setScope, options: [{ value: 'all', label: 'Todas las asignaciones' }, { value: 'cash_register', label: 'Asignaciones a caja' }, { value: 'sales_point', label: 'Asignaciones a POS' }] }, { id: 'status', value: status, onChange: setStatus, options: [{ value: 'all', label: 'Todos los estados' }, { value: 'active', label: 'Activas' }, { value: 'inactive', label: 'Inactivas' }] }]} actions={<><ActionButton label="Refrescar" icon={RefreshCw} variant="neutral" onClick={loadData} className={loading ? '[&>svg]:animate-spin' : ''} /><ActionButton label="Limpiar" icon={XCircle} variant="neutral" onClick={() => { setSearch(''); setStatus('all'); setScope('all'); }} /></>} />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
-      <DataTable columns={columns} data={visible} loading={loading} emptyMessage="No hay asignaciones para mostrar." footer={<DataTablePagination page={page} pageSize={tablePageSize} pageSizeOptions={PAGE_SIZE_OPTIONS} total={filtered.length} hasMore={(page + 1) * tablePageSize < filtered.length} loading={loading} onPageChange={setPage} onPageSizeChange={(size) => { setTablePageSize(size); setPage(0); }} />} />
+      <DataTable columns={columns} data={visible} getRowKey={(item) => `${item.scope}:${item.id}`} loading={loading} emptyMessage="No hay asignaciones para mostrar." footer={<DataTablePagination page={page} pageSize={tablePageSize} pageSizeOptions={PAGE_SIZE_OPTIONS} total={filtered.length} hasMore={(page + 1) * tablePageSize < filtered.length} loading={loading} onPageChange={setPage} onPageSizeChange={(size) => { setTablePageSize(size); setPage(0); }} />} />
     </section>
   );
 };
