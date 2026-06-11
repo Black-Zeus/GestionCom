@@ -1,12 +1,12 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  CheckCircle2,
   ClipboardList,
   PackagePlus,
   Save,
   Search,
   Send,
+  Store,
   Trash2,
   UserRound,
   XCircle,
@@ -26,6 +26,7 @@ import { tableFooter } from '@/pages/admin/businessFoundationShared';
 
 const DRAFT_KEY = 'gestioncom.sales.new.draft';
 const PENDING_KEY = 'gestioncom.sales.pending';
+const DEFAULT_CUSTOMER_CODE = 'DEFAULT_CUSTOMER';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
 const compactFieldClassName = 'h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
@@ -51,6 +52,8 @@ const customerName = (customer) => (
 );
 
 const customerTaxId = (customer) => customer?.tax_id || customer?.document_number || customer?.rut || '';
+const isDefaultCustomer = (customer) => customer?.customer_code === DEFAULT_CUSTOMER_CODE;
+const customerPriceGroupId = (customer) => customer?.price_list_group_id || customer?.price_group_id || customer?.price_list_category_id || '';
 
 const productKey = (product) => [
   product.price_item_id || product.id || product.product_id,
@@ -74,6 +77,8 @@ const buildDraft = ({ customer, authorizedBuyer, items, documentDiscount }) => (
 const CustomerSearchPanel = ({ customers, search, setSearch, selectedCustomer, onSelect, loading }) => {
   const filteredCustomers = useMemo(() => {
     const term = normalize(search);
+    if (!term) return customers.filter(isDefaultCustomer).slice(0, 1);
+
     return customers
       .filter((customer) => !term || [
         customerName(customer),
@@ -154,6 +159,32 @@ const AuthorizedBuyerSelect = ({ customer, buyers, value, onChange }) => {
   );
 };
 
+const NoSalesPointAccess = ({ displayUser }) => (
+  <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
+    <ModuleHeader
+      title="Nueva venta"
+      description="Validacion de acceso al modulo de ventas."
+    />
+
+    <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+      <div className="w-full max-w-2xl rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
+          <Store className="h-8 w-8" />
+        </div>
+        <h1 className="mt-5 text-xl font-bold text-slate-950 dark:text-white">Sin puntos de venta autorizados</h1>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+          {displayUser} no posee puntos de venta autorizados para operar en este modulo.
+          Contacta al administrador para que asigne un punto de venta activo a tu usuario.
+        </p>
+        <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+          <div className="font-semibold text-slate-800 dark:text-slate-100">Acceso requerido</div>
+          <div className="mt-1">Asignacion activa a un punto de venta y una locacion operativa habilitada.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
 const ProductSelectionModal = ({ products = [], onSelect, onClose }) => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
@@ -215,6 +246,7 @@ const ProductSelectionModal = ({ products = [], onSelect, onClose }) => {
 
 const NewSale = () => {
   const user = useAuthStore((state) => state.user);
+  const salesPoints = useSessionStore((state) => state.salesPoints);
   const activeLocationRecord = useSessionStore((state) => state.getActiveLocation());
   const activeSalesPointRecord = useSessionStore((state) => state.getActiveSalesPoint());
   const activeCashRegisterRecord = useSessionStore((state) => state.getActiveCashRegister());
@@ -233,6 +265,8 @@ const NewSale = () => {
   const [error, setError] = useState('');
 
   const displayUser = user?.display_name || user?.full_name || user?.username || 'Usuario';
+  const defaultCustomer = useMemo(() => customers.find(isDefaultCustomer) || null, [customers]);
+  const hasAuthorizedSalesPoint = salesPoints.length > 0;
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -240,6 +274,7 @@ const NewSale = () => {
     try {
       const draft = JSON.parse(saved);
       setSelectedCustomer(draft.customer || null);
+      if (draft.customer) setCustomerSearch(customerName(draft.customer));
       setAuthorizedBuyer(draft.authorizedBuyer || null);
       setItems(Array.isArray(draft.items) ? draft.items : []);
       setDocumentDiscount(Number(draft.documentDiscount || 0));
@@ -249,6 +284,7 @@ const NewSale = () => {
   }, []);
 
   useEffect(() => {
+    if (!hasAuthorizedSalesPoint) return undefined;
     let ignore = false;
     setLoadingMeta(true);
     Promise.all([
@@ -261,6 +297,14 @@ const NewSale = () => {
         setCustomers(customerData);
         setAuthorizedUsers(buyerData);
         setPriceGroups(groupData);
+        const defaultCustomer = customerData.find(isDefaultCustomer);
+        if (defaultCustomer) {
+          setSelectedCustomer((current) => {
+            if (current) return current;
+            setCustomerSearch(customerName(defaultCustomer));
+            return defaultCustomer;
+          });
+        }
         if (!priceGroupId && groupData[0]?.id) setPriceGroupId(String(groupData[0].id));
       })
       .catch((err) => setError(getBackendMessage(err, 'No fue posible cargar los datos iniciales.')))
@@ -268,7 +312,14 @@ const NewSale = () => {
         if (!ignore) setLoadingMeta(false);
       });
     return () => { ignore = true; };
-  }, [priceGroupId]);
+  }, [hasAuthorizedSalesPoint, priceGroupId]);
+
+  useEffect(() => {
+    const nextGroupId = customerPriceGroupId(selectedCustomer);
+    if (!nextGroupId) return;
+    if (!priceGroups.some((group) => String(group.id) === String(nextGroupId))) return;
+    setPriceGroupId(String(nextGroupId));
+  }, [priceGroups, selectedCustomer]);
 
   const buyersForCustomer = useMemo(() => {
     if (!selectedCustomer?.id) return [];
@@ -295,6 +346,8 @@ const NewSale = () => {
     setSelectedCustomer(customer);
     setAuthorizedBuyer(null);
     setCustomerSearch(customerName(customer));
+    const nextGroupId = customerPriceGroupId(customer);
+    if (nextGroupId) setPriceGroupId(String(nextGroupId));
   };
 
   const addItem = useCallback((product) => {
@@ -381,9 +434,9 @@ const NewSale = () => {
   const removeItem = (key) => setItems((current) => current.filter((item) => item.key !== key));
 
   const clearAll = () => {
-    setSelectedCustomer(null);
+    setSelectedCustomer(defaultCustomer);
     setAuthorizedBuyer(null);
-    setCustomerSearch('');
+    setCustomerSearch(defaultCustomer ? customerName(defaultCustomer) : '');
     setProductSearch('');
     setItems([]);
     setDocumentDiscount(0);
@@ -426,6 +479,9 @@ const NewSale = () => {
     const current = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
     localStorage.setItem(PENDING_KEY, JSON.stringify([pendingSale, ...current].slice(0, 50)));
     localStorage.removeItem(DRAFT_KEY);
+    setSelectedCustomer(defaultCustomer);
+    setAuthorizedBuyer(null);
+    setCustomerSearch(defaultCustomer ? customerName(defaultCustomer) : '');
     setItems([]);
     setDocumentDiscount(0);
     toast.success('Venta marcada como pendiente para caja.');
@@ -435,6 +491,10 @@ const NewSale = () => {
     value: String(group.id),
     label: group.group_name || group.category_name,
   })), [priceGroups]);
+
+  if (!hasAuthorizedSalesPoint) {
+    return <NoSalesPointAccess displayUser={displayUser} />;
+  }
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
@@ -577,56 +637,54 @@ const NewSale = () => {
           </div>
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-5 xl:self-start">
-          <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-4 flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-blue-600" />
-              <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Resumen</h2>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-slate-500">Items</span><span className="font-medium">{items.length}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium">{money(totals.subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>
-              <label className="block space-y-1">
-                <span className="text-slate-500">Descuento documento</span>
-                <div className="flex items-center gap-2">
-                  <input className={`${compactFieldClassName} text-right`} type="number" min="0" max="100" step="0.01" value={documentDiscount} onChange={(event) => setDocumentDiscount(Number(event.target.value || 0))} />
-                  <span className="text-sm text-slate-500">%</span>
-                  <span className="ml-auto font-medium">{money(totals.documentDiscountAmount)}</span>
+        <aside>
+          <div className="xl:sticky xl:top-0 xl:z-20">
+            <div className="space-y-4 xl:mt-4">
+              <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="mb-4 flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-blue-600" />
+                <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Resumen</h2>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between"><span className="text-slate-500">Items</span><span className="font-medium">{items.length}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium">{money(totals.subtotal)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>
+                <label className="block space-y-1">
+                  <span className="text-slate-500">Descuento documento</span>
+                  <div className="flex items-center gap-2">
+                    <input className={`${compactFieldClassName} text-right`} type="number" min="0" max="100" step="0.01" value={documentDiscount} onChange={(event) => setDocumentDiscount(Number(event.target.value || 0))} />
+                    <span className="text-sm text-slate-500">%</span>
+                    <span className="ml-auto font-medium">{money(totals.documentDiscountAmount)}</span>
+                  </div>
+                </label>
+                <div className="flex justify-between"><span className="text-slate-500">Neto</span><span className="font-medium">{money(totals.net)}</span></div>
+                <div className="flex justify-between"><span className="text-slate-500">IVA 19%</span><span className="font-medium">{money(totals.tax)}</span></div>
+                <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total</span><span>{money(totals.total)}</span></div>
+              </div>
+              <div className="mt-5 grid gap-2">
+                <ActionButton label="Enviar a caja" icon={Send} onClick={sendToCashier} disabled={!canSend} className="w-full" />
+                <ActionButton label="Guardar borrador" icon={Save} variant="neutral" onClick={saveDraft} className="w-full" />
+                <ActionButton label="Limpiar venta" icon={XCircle} variant="neutral" onClick={clearAll} className="w-full" />
+              </div>
+              </div>
+
+              <div className="rounded-md border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-3 flex items-center gap-2 font-semibold text-slate-950 dark:text-white">
+                  <UserRound className="h-4 w-4 text-slate-500" />
+                  Documento pendiente
                 </div>
-              </label>
-              <div className="flex justify-between"><span className="text-slate-500">Neto</span><span className="font-medium">{money(totals.net)}</span></div>
-              <div className="flex justify-between"><span className="text-slate-500">IVA 19%</span><span className="font-medium">{money(totals.tax)}</span></div>
-              <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total</span><span>{money(totals.total)}</span></div>
-            </div>
-            <div className="mt-5 grid gap-2">
-              <ActionButton label="Enviar a caja" icon={Send} onClick={sendToCashier} disabled={!canSend} className="w-full" />
-              <ActionButton label="Guardar borrador" icon={Save} variant="neutral" onClick={saveDraft} className="w-full" />
-              <ActionButton label="Limpiar venta" icon={XCircle} variant="neutral" onClick={clearAll} className="w-full" />
-            </div>
-          </div>
-
-          <div className="rounded-md border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className="mb-3 flex items-center gap-2 font-semibold text-slate-950 dark:text-white">
-              <UserRound className="h-4 w-4 text-slate-500" />
-              Documento pendiente
-            </div>
-            <div className="space-y-2 text-slate-600 dark:text-slate-300">
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Cliente</span><span className="text-right font-medium">{selectedCustomer ? customerName(selectedCustomer) : 'No seleccionado'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Comprador</span><span className="text-right font-medium">{authorizedBuyer?.authorized_name || authorizedBuyer?.full_name || 'No aplica'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Locacion</span><span className="text-right font-medium">{activeLocationRecord?.label || activeLocationRecord?.warehouse_name || 'No seleccionada'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Punto venta</span><span className="text-right font-medium">{activeSalesPointRecord?.label || activeSalesPointRecord?.sales_point_name || 'No asignado'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Caja destino</span><span className="text-right font-medium">{activeCashRegisterRecord?.label || activeSalesPointRecord?.default_cash_register_name || 'Se define en caja'}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Preparado por</span><span className="text-right font-medium">{displayUser}</span></div>
-              <div className="flex justify-between gap-3"><span className="text-slate-500">Estado</span><span className="text-right font-medium">Pendiente de caja</span></div>
+                <div className="space-y-2 text-slate-600 dark:text-slate-300">
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Cliente</span><span className="text-right font-medium">{selectedCustomer ? customerName(selectedCustomer) : 'No seleccionado'}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Comprador</span><span className="text-right font-medium">{authorizedBuyer?.authorized_name || authorizedBuyer?.full_name || 'No aplica'}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Locacion</span><span className="text-right font-medium">{activeLocationRecord?.label || activeLocationRecord?.warehouse_name || 'No seleccionada'}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Punto venta</span><span className="text-right font-medium">{activeSalesPointRecord?.label || activeSalesPointRecord?.sales_point_name || 'No asignado'}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Caja destino</span><span className="text-right font-medium">{activeCashRegisterRecord?.label || activeSalesPointRecord?.default_cash_register_name || 'Se define en caja'}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Preparado por</span><span className="text-right font-medium">{displayUser}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Estado</span><span className="text-right font-medium">Pendiente de caja</span></div>
+                </div>
+              </div>
             </div>
           </div>
-
-          {canSend && (
-            <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-300">
-              <div className="flex items-center gap-2 font-medium"><CheckCircle2 className="h-4 w-4" /> Venta lista para caja</div>
-            </div>
-          )}
         </aside>
       </div>
     </section>
