@@ -205,6 +205,7 @@ const optionLabel = (row) => {
   if (row.brand_name) return `${row.brand_code ? `${row.brand_code} - ` : ''}${row.brand_name}`;
   if (row.variant_sku || row.variant_name) return `${row.variant_sku || row.id} - ${row.variant_name || 'SKU'}`;
   if (row.category_name) return `${row.category_code ? `${row.category_code} - ` : ''}${row.category_name}`;
+  if (row.group_name) return `${row.group_code ? `${row.group_code} - ` : ''}${row.group_name}`;
   if (row.unit_name) return `${row.unit_code ? `${row.unit_code} - ` : ''}${row.unit_name}`;
   if (row.promotion_name) return `${row.promotion_code ? `${row.promotion_code} - ` : ''}${row.promotion_name}`;
   if (row.type_name) return `${row.type_code ? `${row.type_code} - ` : ''}${row.type_name}`;

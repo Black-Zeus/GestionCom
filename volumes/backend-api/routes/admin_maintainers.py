@@ -23,8 +23,8 @@ RESOURCES = {
     "customers": {
         "table": "customers", "code_field": "customer_code", "prefix": "CUS", "active_field": "status_id",
         "soft_delete": True,
-        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "business_activity", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_id", "default_currency_code", "sales_rep_user_id", "status_id", "is_credit_customer", "registration_date", "notes", "internal_notes"],
-        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_id", "sales_rep_user_id", "status_id"], "date": ["registration_date"], "rut": ["tax_id"], "phone": ["phone", "mobile"],
+        "fields": ["customer_type", "tax_id", "legal_name", "commercial_name", "business_activity", "contact_person", "email", "phone", "mobile", "website", "address", "city", "region", "country", "postal_code", "price_list_group_id", "price_list_id", "default_currency_code", "sales_rep_user_id", "status_id", "is_credit_customer", "registration_date", "notes", "internal_notes"],
+        "required": ["customer_type", "tax_id", "legal_name"], "bool": ["is_credit_customer"], "int": ["price_list_group_id", "price_list_id", "sales_rep_user_id", "status_id"], "date": ["registration_date"], "rut": ["tax_id"], "phone": ["phone", "mobile"],
     },
     "customer-authorized-users": {
         "table": "customer_authorized_users", "active_field": "is_active", "soft_delete": False,
@@ -195,6 +195,12 @@ RESOURCES = {
         "table": "categories", "active_field": "is_active", "soft_delete": True,
         "fields": ["category_code", "category_name", "category_level", "is_active"],
         "bool": ["is_active"], "int": ["category_level"], "read_only": True,
+    },
+    "price-list-groups-options": {
+        "table": "price_list_groups", "active_field": "is_active", "soft_delete": True,
+        "fields": ["group_code", "group_name", "group_description", "is_active"],
+        "bool": ["is_active"], "read_only": True,
+        "order_by": "group_name ASC, id ASC",
     },
     "measurement-units-options": {
         "table": "measurement_units", "active_field": "is_active", "soft_delete": True,
@@ -509,6 +515,35 @@ async def _ensure_unique_product_barcode(session, barcode_value: str | None, ite
         raise ValueError("Ya existe un codigo de barra con ese valor")
 
 
+async def _align_customer_price_fields(session, data: dict) -> None:
+    group_id = data.get("price_list_group_id")
+    price_list_id = data.get("price_list_id")
+
+    if price_list_id:
+        result = await session.execute(
+            text("SELECT price_list_group_id FROM price_lists WHERE id = :id AND deleted_at IS NULL"),
+            {"id": price_list_id},
+        )
+        list_group_id = result.scalar_one_or_none()
+        if list_group_id is None:
+            raise ValueError("Lista de precios no encontrada")
+        if group_id and int(group_id) != int(list_group_id):
+            raise ValueError("La lista de precios no pertenece al tipo de cliente seleccionado")
+        data["price_list_group_id"] = list_group_id
+        return
+
+    if group_id:
+        result = await session.execute(
+            text(
+                "SELECT id FROM price_lists "
+                "WHERE price_list_group_id = :group_id AND is_active = TRUE AND deleted_at IS NULL "
+                "ORDER BY priority ASC, id ASC LIMIT 1"
+            ),
+            {"group_id": group_id},
+        )
+        data["price_list_id"] = result.scalar_one_or_none()
+
+
 async def _next_code(session, table: str, field: str, prefix: str) -> str:
     pattern = f"{prefix}_%"
     result = await session.execute(
@@ -590,6 +625,8 @@ async def create_item(payload: dict, request: Request, resource: str = Path(...)
             if config["table"] == "customers" and data.get("status_id") in (None, ""):
                 status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'CUSTOMER' AND status_code = 'ACTIVE' LIMIT 1"))
                 data["status_id"] = status_result.scalar_one_or_none()
+            if config["table"] == "customers":
+                await _align_customer_price_fields(session, data)
             if config["table"] == "suppliers" and data.get("status_id") in (None, ""):
                 status_result = await session.execute(text("SELECT id FROM system_statuses WHERE status_group = 'SUPPLIER' AND status_code = 'ACTIVE' LIMIT 1"))
                 data["status_id"] = status_result.scalar_one_or_none()
@@ -659,6 +696,8 @@ async def update_item(payload: dict, request: Request, resource: str = Path(...)
             return ResponseManager.error(message="Sin campos para actualizar", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
         data["id"] = item_id
         async with db_manager.get_async_session() as session:
+            if config["table"] == "customers" and ("price_list_group_id" in data or "price_list_id" in data):
+                await _align_customer_price_fields(session, data)
             if config["table"] == "warehouse_zone_locations" and data.get("warehouse_zone_id"):
                 zone_result = await session.execute(
                     text("SELECT is_location_tracking_enabled FROM warehouse_zones WHERE id = :zone_id AND deleted_at IS NULL"),

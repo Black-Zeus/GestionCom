@@ -21,6 +21,12 @@ const mapCurrencyOption = (row) => ({
   label: `${row.currency_code} - ${row.currency_symbol || ''} - ${row.currency_name || ''}`.replace(/\s+-\s+$/, ''),
 });
 
+const mapPriceListGroupOption = (row) => ({
+  value: String(row.id),
+  label: row.group_name || row.group_code || String(row.id),
+  code: row.group_code,
+});
+
 const mapAuthorizedContactOption = (row) => ({
   value: row.authorized_name,
   label: [row.authorized_name, row.position].filter(Boolean).join(' - '),
@@ -110,17 +116,19 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
       setLoading(true);
       setError('');
       try {
-        const [customers, authorizedUsers, statuses, currencies, companies] = await Promise.all([
+        const [customers, authorizedUsers, statuses, currencies, priceListGroups, companies] = await Promise.all([
           isEdit ? adminMaintainersService.list(customerMaintainerConfig.resource) : Promise.resolve([]),
           isEdit ? adminMaintainersService.list('customer-authorized-users') : Promise.resolve([]),
           adminMaintainersService.list(customerMaintainerConfig.statusOptionsResource),
           adminMaintainersService.list('currencies'),
+          adminMaintainersService.list('price-list-groups-options'),
           businessFoundationService.companies.list().catch(() => []),
         ]);
         if (!mounted) return;
 
         const mappedStatuses = statuses.filter((row) => row.is_active !== false).map(mapStatusOption);
         const mappedCurrencies = currencies.filter((row) => row.is_active !== false).map(mapCurrencyOption);
+        const mappedPriceListGroups = priceListGroups.filter((row) => row.is_active !== false).map(mapPriceListGroupOption);
         setActiveCompany(companies.find((company) => company.is_active) || null);
 
         if (isEdit) {
@@ -138,6 +146,7 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
           setOptionData({
             [customerMaintainerConfig.statusOptionsResource]: mappedStatuses,
             currencies: mappedCurrencies,
+            'price-list-groups-options': mappedPriceListGroups,
             'customer-authorized-contact-options': authorizedContactOptions,
           });
           setCustomer({
@@ -148,6 +157,7 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
           setOptionData({
             [customerMaintainerConfig.statusOptionsResource]: mappedStatuses,
             currencies: mappedCurrencies,
+            'price-list-groups-options': mappedPriceListGroups,
             'customer-authorized-contact-options': [],
           });
           setCustomer(null);
@@ -196,9 +206,11 @@ const AdminCustomerFormPage = ({ mode = 'create' }) => {
       };
     }
     const activeStatus = optionData[customerMaintainerConfig.statusOptionsResource]?.find((option) => option.code === customerMaintainerConfig.activeValue);
+    const retailGroup = optionData['price-list-groups-options']?.find((option) => option.code === 'PLCAT_RETAIL');
     return {
       ...customerMaintainerConfig.empty,
       status_id: activeStatus?.value || customerMaintainerConfig.empty.status_id,
+      price_list_group_id: retailGroup?.value || customerMaintainerConfig.empty.price_list_group_id,
       default_currency_code: activeCompany?.default_customer_currency_code || customerMaintainerConfig.empty.default_currency_code || 'CLP',
     };
   }, [activeCompany?.default_customer_currency_code, customer, isEdit, optionData]);
