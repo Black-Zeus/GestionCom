@@ -1,6 +1,8 @@
 /* eslint-disable react/prop-types */
 import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Image, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, Smartphone, Truck, UserRound, Users } from 'lucide-react';
 import AdminGenericMaintainers from './AdminGenericMaintainers';
+import PromotionFormModal from './PromotionFormModal';
+import PromotionItemFormModal from './PromotionItemFormModal';
 import StockCriticalFormModal from './StockCriticalFormModal';
 import WarehouseZoneFormModal from './WarehouseZoneFormModal';
 import WarehouseZoneLocationFormModal from './WarehouseZoneLocationFormModal';
@@ -442,15 +444,23 @@ const inventoryTabs = [
 const salesConfigTabs = [
   {
     id: 'promotions', resource: 'promotions', label: 'Promociones', singular: 'promocion', icon: Percent, codeField: 'promotion_code', activeField: 'is_active',
+    formComponent: PromotionFormModal,
     empty: { promotion_name: '', promotion_type: 'PERCENTAGE_OFF', target_type: 'PRODUCT', valid_from: new Date().toISOString().slice(0, 16), valid_to: new Date().toISOString().slice(0, 16), is_combinable: false, is_active: true },
-    fields: [{ id: 'promotion_name', label: 'Promocion', required: true }, { id: 'promotion_type', label: 'Tipo', type: 'select', options: ['QUANTITY_DISCOUNT', 'BUY_X_GET_Y', 'PERCENTAGE_OFF', 'FIXED_AMOUNT'].map((value) => ({ value, label: value })) }, { id: 'target_type', label: 'Objetivo', type: 'select', options: ['PRODUCT', 'CATEGORY', 'ALL'].map((value) => ({ value, label: value })) }, { id: 'min_quantity', label: 'Cantidad minima', type: 'number', min: 0 }, { id: 'discount_percentage', label: 'Descuento %', type: 'number', min: 0 }, { id: 'discount_amount', label: 'Descuento monto', type: 'number', min: 0 }, { id: 'buy_quantity', label: 'Compra cantidad', type: 'number', min: 0 }, { id: 'get_quantity', label: 'Recibe cantidad', type: 'number', min: 0 }, { id: 'valid_from', label: 'Vigente desde', type: 'datetime-local', required: true }, { id: 'valid_to', label: 'Vigente hasta', type: 'datetime-local', required: true }, { id: 'is_combinable', label: 'Combinable', type: 'checkbox', checkLabel: 'Permite combinar' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
+    fields: [],
     tableFields: [{ id: 'promotion_name', label: 'Promocion', primary: true }, { id: 'promotion_type', label: 'Tipo' }, { id: 'target_type', label: 'Objetivo' }, { id: 'valid_to', label: 'Hasta' }],
+    rowActions: [
+      { label: 'Items', icon: PackageSearch, path: '/sales/promotions/items', params: (row) => ({ promotion_id: row.id }) },
+    ],
   },
   {
     id: 'items', resource: 'promotion-items', label: 'Items', singular: 'item de promocion', icon: PackageSearch, showStatus: false,
-    empty: { promotion_id: '', product_variant_id: '', category_id: '' },
-    fields: [{ id: 'promotion_id', label: 'Promocion', type: 'select', optionsResource: 'promotions', required: true }, { id: 'product_variant_id', label: 'SKU', type: 'select', optionsResource: 'product-variants-options' }, { id: 'category_id', label: 'Categoria', type: 'select', optionsResource: 'categories-options' }],
-    tableFields: [{ id: 'promotion_id', label: 'Promocion', primary: true }, { id: 'product_variant_id', label: 'SKU' }, { id: 'category_id', label: 'Categoria' }],
+    formComponent: PromotionItemFormModal,
+    detailDescription: 'Productos asociados a la promocion seleccionada.',
+    routeFilters: [{ param: 'promotion_id', field: 'promotion_id' }],
+    scope: { field: 'promotion_id', optionsResource: 'promotions', fallback: 'Promocion', backPath: '/sales/promotions' },
+    empty: { promotion_id: '', product_id: '', product_variant_id: '' },
+    fields: [{ id: 'promotion_id', label: 'Promocion', type: 'select', optionsResource: 'promotions', required: true }, { id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options', required: true }, { id: 'product_variant_id', label: 'Variante', type: 'select', optionsResource: 'product-variants-options' }],
+    tableFields: [{ id: 'promotion_id', label: 'Promocion', primary: true, optionsResource: 'promotions' }, { id: 'product_id', label: 'Producto', optionsResource: 'products-options' }, { id: 'product_variant_id', label: 'Variante', optionsResource: 'product-variants-options' }],
   },
   {
     id: 'returns', resource: 'return-reasons', label: 'Devoluciones', singular: 'motivo de devolucion', icon: RotateCcw, codeField: 'reason_code', activeField: 'is_active',
@@ -592,7 +602,20 @@ export const InventoryMaintainers = ({ initialTab, visibleTabs }) => {
   const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Zonas de bodega y reglas de reposicion.' : 'Zonas de bodega y reglas de reposicion.';
   return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
 };
-export const SalesConfigMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores comerciales" description="Promociones y reglas de devolucion sin transaccionar ventas." tabs={salesConfigTabs} initialTab={initialTab} />;
+export const SalesConfigMaintainers = ({ initialTab, visibleTabs }) => {
+  const scopedTabs = visibleTabs?.length ? salesConfigTabs.filter((tab) => visibleTabs.includes(tab.id)) : salesConfigTabs;
+  const singleTabTitles = {
+    items: 'Items de promocion',
+    returns: 'Motivos de devolucion',
+  };
+  const singleTabDescriptions = {
+    items: 'Productos o categorias asociados a una promocion comercial.',
+    returns: 'Reglas base para cambios, reembolsos y devoluciones de venta.',
+  };
+  const title = scopedTabs.length === 1 ? singleTabTitles[scopedTabs[0].id] || 'Mantenedores comerciales' : 'Promociones comerciales';
+  const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Configuracion comercial no transaccional.' : 'Promociones, vigencias y productos o categorias asociadas.';
+  return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
+};
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;
 export const NotificationSettingsMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Configuracion de notificaciones" description="Tipos, reglas de emision y preferencias de recepcion." tabs={notificationSettingsTabs} initialTab={initialTab} />;
