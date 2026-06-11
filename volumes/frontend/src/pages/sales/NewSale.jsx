@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ClipboardList,
   PackagePlus,
@@ -19,13 +20,13 @@ import StatusBadge from '@/components/common/data/StatusBadge';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
+import { salesDocumentsService } from '@/services/sales/salesDocumentsService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSessionStore } from '@/store/useSessionStore';
 import { tableFooter } from '@/pages/admin/businessFoundationShared';
 
 const DRAFT_KEY = 'gestioncom.sales.new.draft';
-const PENDING_KEY = 'gestioncom.sales.pending';
 const DEFAULT_CUSTOMER_CODE = 'DEFAULT_CUSTOMER';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
@@ -66,13 +67,32 @@ const productName = (product) => product.variant_name || product.product_name ||
 const productPrice = (product) => Number(product.sale_price ?? product.base_price ?? product.price ?? 0);
 const productStock = (product) => Number(product.total_stock ?? product.stock_quantity ?? product.available_stock ?? 0);
 
-const buildDraft = ({ customer, authorizedBuyer, items, documentDiscount }) => ({
+const buildDraft = ({ customer, authorizedBuyer, items }) => ({
   customer,
   authorizedBuyer,
   items,
-  documentDiscount,
   saved_at: new Date().toISOString(),
 });
+
+const mapLineToItem = (line) => {
+  const key = [
+    line.product_id,
+    line.product_variant_id || '',
+    line.measurement_unit_id || '',
+  ].join(':');
+  return {
+    key,
+    product_id: line.product_id,
+    product_variant_id: line.product_variant_id || null,
+    code: line.product_code || line.code || '-',
+    name: line.product_name || line.name || 'Producto',
+    unit_name: line.unit_name || '',
+    available_stock: 0,
+    quantity: Number(line.quantity || 1),
+    unit_price: Number(line.unit_price || 0),
+    discount_percent: Number(line.discount_percent || 0),
+  };
+};
 
 const CustomerSearchPanel = ({ customers, search, setSearch, selectedCustomer, onSelect, loading }) => {
   const filteredCustomers = useMemo(() => {
@@ -245,7 +265,11 @@ const ProductSelectionModal = ({ products = [], onSelect, onClose }) => {
 };
 
 const NewSale = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editSaleCode = searchParams.get('edit');
   const user = useAuthStore((state) => state.user);
+  const hasPermission = useAuthStore((state) => state.hasPermission);
   const salesPoints = useSessionStore((state) => state.salesPoints);
   const activeLocationRecord = useSessionStore((state) => state.getActiveLocation());
   const activeSalesPointRecord = useSessionStore((state) => state.getActiveSalesPoint());
@@ -259,9 +283,10 @@ const NewSale = () => {
   const [authorizedBuyer, setAuthorizedBuyer] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [items, setItems] = useState([]);
-  const [documentDiscount, setDocumentDiscount] = useState(0);
+  const [editSaleId, setEditSaleId] = useState(null);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [sendingToCashier, setSendingToCashier] = useState(false);
   const [error, setError] = useState('');
 
   const displayUser = user?.display_name || user?.full_name || user?.username || 'Usuario';
@@ -269,6 +294,7 @@ const NewSale = () => {
   const hasAuthorizedSalesPoint = salesPoints.length > 0;
 
   useEffect(() => {
+    if (editSaleCode) return;
     const saved = localStorage.getItem(DRAFT_KEY);
     if (!saved) return;
     try {
@@ -277,11 +303,28 @@ const NewSale = () => {
       if (draft.customer) setCustomerSearch(customerName(draft.customer));
       setAuthorizedBuyer(draft.authorizedBuyer || null);
       setItems(Array.isArray(draft.items) ? draft.items : []);
-      setDocumentDiscount(Number(draft.documentDiscount || 0));
     } catch {
       localStorage.removeItem(DRAFT_KEY);
     }
-  }, []);
+  }, [editSaleCode]);
+
+  useEffect(() => {
+    if (!editSaleCode) return;
+    salesDocumentsService.getByCode(editSaleCode)
+      .then((sale) => {
+        setEditSaleId(sale.id);
+        if (sale.customer) {
+          setSelectedCustomer(sale.customer);
+          setCustomerSearch(customerName(sale.customer));
+        }
+        if (Array.isArray(sale.items) && sale.items.length > 0) {
+          setItems(sale.items.map(mapLineToItem));
+        }
+      })
+      .catch((err) => {
+        toast.error(getBackendMessage(err, 'No fue posible cargar la venta para editar.'));
+      });
+  }, [editSaleCode]);
 
   useEffect(() => {
     if (!hasAuthorizedSalesPoint) return undefined;
@@ -332,15 +375,14 @@ const NewSale = () => {
       const base = Number(item.quantity || 0) * Number(item.unit_price || 0);
       return sum + (base * Number(item.discount_percent || 0) / 100);
     }, 0);
-    const afterLineDiscount = Math.max(subtotal - lineDiscount, 0);
-    const documentDiscountAmount = afterLineDiscount * Number(documentDiscount || 0) / 100;
-    const net = Math.max(afterLineDiscount - documentDiscountAmount, 0);
-    const tax = net * 0.19;
-    const total = net + tax;
-    return { subtotal, lineDiscount, documentDiscountAmount, net, tax, total };
-  }, [documentDiscount, items]);
+    const total = Math.max(subtotal - lineDiscount, 0);
+    const net = total / 1.19;
+    const tax = total - net;
+    return { subtotal, lineDiscount, net, tax, total };
+  }, [items]);
 
   const canSend = Boolean(items.length > 0 && selectedCustomer && totals.total > 0 && activeSalesPointRecord);
+  const hasCashAccess = hasPermission('CASH_POS_ACCESS') && Boolean(activeCashRegisterRecord);
 
   const selectCustomer = (customer) => {
     setSelectedCustomer(customer);
@@ -439,7 +481,6 @@ const NewSale = () => {
     setCustomerSearch(defaultCustomer ? customerName(defaultCustomer) : '');
     setProductSearch('');
     setItems([]);
-    setDocumentDiscount(0);
     localStorage.removeItem(DRAFT_KEY);
   };
 
@@ -448,43 +489,69 @@ const NewSale = () => {
       customer: selectedCustomer,
       authorizedBuyer,
       items,
-      documentDiscount,
     })));
     toast.success('Borrador guardado.');
   };
 
-  const sendToCashier = () => {
+  const sendToCashier = async () => {
     if (!activeSalesPointRecord) {
       toast.error('Selecciona un punto de venta antes de enviar la venta.');
       return;
     }
     if (!canSend) return;
-    const pendingSale = {
-      id: `PEND-${Date.now()}`,
-      status: 'PENDING_CASHIER',
-      warehouse_id: activeLocationRecord?.warehouse_id || activeLocationRecord?.id || null,
-      location: activeLocationRecord,
-      sales_point_id: activeSalesPointRecord.id,
-      sales_point: activeSalesPointRecord,
-      target_cash_register_id: activeCashRegisterRecord?.id || activeSalesPointRecord.default_cash_register_id || null,
-      target_cash_register: activeCashRegisterRecord || null,
-      customer: selectedCustomer,
-      authorized_buyer: authorizedBuyer,
-      items,
-      totals,
-      document_discount_percent: Number(documentDiscount || 0),
-      prepared_by: displayUser,
-      created_at: new Date().toISOString(),
-    };
-    const current = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
-    localStorage.setItem(PENDING_KEY, JSON.stringify([pendingSale, ...current].slice(0, 50)));
-    localStorage.removeItem(DRAFT_KEY);
-    setSelectedCustomer(defaultCustomer);
-    setAuthorizedBuyer(null);
-    setCustomerSearch(defaultCustomer ? customerName(defaultCustomer) : '');
-    setItems([]);
-    setDocumentDiscount(0);
-    toast.success('Venta marcada como pendiente para caja.');
+    setSendingToCashier(true);
+    try {
+      const payload = {
+        warehouse_id: activeLocationRecord?.warehouse_id || activeLocationRecord?.id || null,
+        sales_point_id: activeSalesPointRecord.id,
+        target_cash_register_id: activeCashRegisterRecord?.id || activeSalesPointRecord.default_cash_register_id || null,
+        customer: selectedCustomer,
+        authorized_buyer: authorizedBuyer,
+        items,
+        prepared_by: displayUser,
+      };
+      const sale = editSaleId
+        ? await salesDocumentsService.updatePending(editSaleId, payload)
+        : await salesDocumentsService.createPending(payload);
+      localStorage.removeItem(DRAFT_KEY);
+      navigate(`/cash/pos?saleId=${sale.sale_code}`);
+    } catch (err) {
+      toast.error(getBackendMessage(err, 'No fue posible enviar la venta a caja.'));
+    } finally {
+      setSendingToCashier(false);
+    }
+  };
+
+  const saveVenta = async () => {
+    if (!activeSalesPointRecord) {
+      toast.error('Selecciona un punto de venta antes de guardar la venta.');
+      return;
+    }
+    if (!canSend) return;
+    setSendingToCashier(true);
+    try {
+      const payload = {
+        warehouse_id: activeLocationRecord?.warehouse_id || activeLocationRecord?.id || null,
+        sales_point_id: activeSalesPointRecord.id,
+        target_cash_register_id: activeCashRegisterRecord?.id || activeSalesPointRecord.default_cash_register_id || null,
+        customer: selectedCustomer,
+        authorized_buyer: authorizedBuyer,
+        items,
+        prepared_by: displayUser,
+      };
+      if (editSaleId) {
+        await salesDocumentsService.updatePending(editSaleId, payload);
+      } else {
+        await salesDocumentsService.createPending(payload);
+      }
+      localStorage.removeItem(DRAFT_KEY);
+      toast.success('Venta guardada como pendiente.');
+      navigate('/sales/history');
+    } catch (err) {
+      toast.error(getBackendMessage(err, 'No fue posible guardar la venta.'));
+    } finally {
+      setSendingToCashier(false);
+    }
   };
 
   const priceGroupOptions = useMemo(() => priceGroups.map((group) => ({
@@ -499,12 +566,9 @@ const NewSale = () => {
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
-        title="Preparacion de venta"
-        description="Arma una venta y dejala pendiente para procesamiento en caja."
-        actions={[
-          { id: 'save-draft', label: 'Guardar borrador', icon: Save, variant: 'neutral', onClick: saveDraft },
-          { id: 'send-cashier', label: 'Enviar a caja', icon: Send, onClick: sendToCashier, disabled: !canSend },
-        ]}
+        title={editSaleCode ? 'Editar venta' : 'Preparacion de venta'}
+        description={editSaleCode ? 'Modifica la venta pendiente y reenvíala a caja.' : 'Arma una venta y dejala pendiente para procesamiento en caja.'}
+        actions={[]}
       />
 
       {error && (
@@ -649,21 +713,15 @@ const NewSale = () => {
                 <div className="flex justify-between"><span className="text-slate-500">Items</span><span className="font-medium">{items.length}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium">{money(totals.subtotal)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>
-                <label className="block space-y-1">
-                  <span className="text-slate-500">Descuento documento</span>
-                  <div className="flex items-center gap-2">
-                    <input className={`${compactFieldClassName} text-right`} type="number" min="0" max="100" step="0.01" value={documentDiscount} onChange={(event) => setDocumentDiscount(Number(event.target.value || 0))} />
-                    <span className="text-sm text-slate-500">%</span>
-                    <span className="ml-auto font-medium">{money(totals.documentDiscountAmount)}</span>
-                  </div>
-                </label>
                 <div className="flex justify-between"><span className="text-slate-500">Neto</span><span className="font-medium">{money(totals.net)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">IVA 19%</span><span className="font-medium">{money(totals.tax)}</span></div>
                 <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total</span><span>{money(totals.total)}</span></div>
               </div>
               <div className="mt-5 grid gap-2">
-                <ActionButton label="Enviar a caja" icon={Send} onClick={sendToCashier} disabled={!canSend} className="w-full" />
-                <ActionButton label="Guardar borrador" icon={Save} variant="neutral" onClick={saveDraft} className="w-full" />
+                {hasCashAccess && (
+                  <ActionButton label={sendingToCashier ? 'Enviando...' : 'Enviar a caja'} icon={Send} onClick={sendToCashier} disabled={!canSend || sendingToCashier} className="w-full" />
+                )}
+                <ActionButton label={sendingToCashier ? 'Guardando...' : 'Guardar venta'} icon={Save} onClick={saveVenta} disabled={!canSend || sendingToCashier} className="w-full" />
                 <ActionButton label="Limpiar venta" icon={XCircle} variant="neutral" onClick={clearAll} className="w-full" />
               </div>
               </div>
