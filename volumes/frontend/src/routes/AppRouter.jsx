@@ -20,13 +20,17 @@ const AdminOperatorAssignments = lazy(() => import('@/pages/admin/AdminOperatorA
 const AdminPettyCashCategories = lazy(() => import('@/pages/admin/AdminPettyCashCategories'));
 const AdminPettyCashFunds = lazy(() => import('@/pages/admin/AdminPettyCashFunds'));
 const PettyCashExpenses = lazy(() => import('@/pages/cash/PettyCashExpenses'));
+const CashPos = lazy(() => import('@/pages/cash/CashPos'));
 const NewSale = lazy(() => import('@/pages/sales/NewSale'));
+const SalesHistory = lazy(() => import('@/pages/sales/SalesHistory'));
+const SalesReturns = lazy(() => import('@/pages/sales/SalesReturns'));
 const SalesPriceQuery = lazy(() => import('@/pages/sales/SalesPriceQuery'));
 const AdminPaymentMethods = lazy(() => import('@/pages/admin/AdminPaymentMethods'));
 const AdminMeasurementUnits = lazy(() => import('@/pages/admin/AdminMeasurementUnits'));
 const AdminProductCategories = lazy(() => import('@/pages/admin/AdminProductCategories'));
 const AdminProductAttributes = lazy(() => import('@/pages/admin/AdminProductAttributes'));
 const AdminDocumentSeries = lazy(() => import('@/pages/admin/AdminDocumentSeries'));
+const AdminDocumentTypes = lazy(() => import('@/pages/admin/AdminDocumentTypes'));
 const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
 const AdminPriceLists = lazy(() => import('@/pages/admin/AdminPriceLists'));
 const AdminTaxConfig = lazy(() => import('@/pages/admin/AdminTaxConfig'));
@@ -55,6 +59,7 @@ const AdminStockConversions = lazy(() => import('@/pages/admin/AdminStockConvers
 const AdminInventoryTrackingReports = lazy(() => import('@/pages/admin/AdminInventoryTrackingReports'));
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
+const AdminPromotionItems = lazy(() => import('@/pages/admin/AdminPromotionItems'));
 const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
 const AdminFinanceMaintainers = lazy(() => import('@/pages/admin/AdminFinanceMaintainers'));
 const AdminFinanceCurrencies = lazy(() => import('@/pages/admin/AdminFinanceCurrencies'));
@@ -77,7 +82,10 @@ const moduleComponents = {
   'operator-assignments-admin': AdminOperatorAssignments,
   'petty-cash': AdminPettyCashFunds,
   'petty-cash-expenses': PettyCashExpenses,
+  'cash-pos': CashPos,
   'new-sale': NewSale,
+  'sales-history': SalesHistory,
+  returns: SalesReturns,
   'price-query': SalesPriceQuery,
   'petty-cash-admin': AdminPettyCashCategories,
   'petty-cash-categories': AdminPettyCashCategories,
@@ -85,7 +93,7 @@ const moduleComponents = {
   'measurement-units': AdminMeasurementUnits,
   categories: AdminProductCategories,
   'product-attributes': AdminProductAttributes,
-  'document-series': AdminDocumentSeries,
+  'document-series': AdminDocumentTypes,
   products: AdminProducts,
   'price-lists': AdminPriceLists,
   'tax-config': AdminTaxConfig,
@@ -325,6 +333,26 @@ const AppRouter = () => (
             <Page>
               <RequirePermission permissions={['TRANSFERS_ACCESS', 'STOCK_TRANSFER', 'TRANSFER_RECEPTIONS_MANAGE']}>
                 <AdminStockTransfers />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="documents/series/series"
+          element={(
+            <Page>
+              <RequirePermission permissions={['DOCUMENT_SERIES_ACCESS', 'DOCUMENT_SERIES_MANAGE']}>
+                <AdminDocumentSeries />
+              </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="sales/promotions/items"
+          element={(
+            <Page>
+              <RequirePermission permissions={['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE']}>
+                <AdminPromotionItems />
               </RequirePermission>
             </Page>
           )}

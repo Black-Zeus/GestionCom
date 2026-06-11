@@ -75,12 +75,13 @@ const sessionSelectorButtonClassName = 'inline-flex h-8 min-w-32 max-w-56 items-
 const SessionOptionModal = ({ items = [], activeId, emptyMessage, onSelect, onClose }) => (
   <div className="space-y-3">
     <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-      {items.map((item) => {
+      {items.map((item, index) => {
         const itemId = String(item.id ?? item);
         const active = itemId === String(activeId);
+        const itemKey = `${itemId}:${item.assignment_id ?? item.operator_role ?? index}`;
         return (
           <button
-            key={itemId}
+            key={itemKey}
             type="button"
             onClick={() => {
               onSelect(itemId);
@@ -606,6 +607,11 @@ const AppLayout = () => {
     });
   }, [activeLocation, locations, setActiveLocation]);
   const openSalesPointSelector = useCallback(() => {
+    const emptySalesPointMessage = !activeLocationRecord
+      ? 'Selecciona una locacion antes de seleccionar punto de venta.'
+      : salesPoints.length > 0
+        ? 'Hay puntos de venta habilitados para este usuario, pero no en la locacion seleccionada. Cambia la locacion activa.'
+        : 'No hay puntos de venta habilitados para este usuario.';
     ModalManager.show({
       type: 'custom',
       title: 'Seleccionar punto de venta',
@@ -615,13 +621,11 @@ const AppLayout = () => {
       contentProps: {
         items: salesPointsForLocation,
         activeId: activeSalesPoint,
-        emptyMessage: activeLocationRecord
-          ? 'No hay puntos de venta habilitados para este usuario en la locacion seleccionada.'
-          : 'Selecciona una locacion antes de seleccionar punto de venta.',
+        emptyMessage: emptySalesPointMessage,
         onSelect: setActiveSalesPoint,
       },
     });
-  }, [activeLocationRecord, activeSalesPoint, salesPointsForLocation, setActiveSalesPoint]);
+  }, [activeLocationRecord, activeSalesPoint, salesPoints.length, salesPointsForLocation, setActiveSalesPoint]);
   const openCashRegisterSelector = useCallback(() => {
     ModalManager.show({
       type: 'custom',
