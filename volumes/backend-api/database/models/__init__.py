@@ -16,7 +16,7 @@ from .permissions import Permission
 from .warehouses import Warehouse
 from .warehouse_zones import WarehouseZone
 from .cash_registers import CashRegister
-from .sales_operations import CashRegisterUserAssignment, SalesPoint, SalesPointUserAssignment
+from .sales_operations import CashRegisterUserAssignment, SaleDocument, SaleDocumentLine, SaleLineUnit, SaleReturn, SaleStatus, SaleUnitStatus, SalesPoint, SalesPointUserAssignment
 from .petty_cash import PettyCashCategory, PettyCashFund, PettyCashFundStatus
 from .payment_methods import PaymentMethod, PaymentMethodType
 from .measurement_units import MeasurementUnit, MeasurementUnitType
@@ -48,6 +48,10 @@ __all_models__ = [
     "SalesPoint",
     "CashRegisterUserAssignment",
     "SalesPointUserAssignment",
+    "SaleDocument",
+    "SaleDocumentLine",
+    "SaleLineUnit",
+    "SaleReturn",
     "PettyCashCategory",
     "PettyCashFund",
     "PaymentMethod",
@@ -83,6 +87,8 @@ __all_enums__ = [
     "PettyCashFundStatus",
     "PaymentMethodType",
     "MeasurementUnitType",
+    "SaleStatus",
+    "SaleUnitStatus",
     "AttributeType",
     "DocumentCategory",
     "MovementType",

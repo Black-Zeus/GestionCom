@@ -169,6 +169,16 @@ def cash_register_to_session_dict(cash_register: CashRegister, assignment: CashR
     }
 
 
+def dedupe_session_origins(items: list[dict]) -> list[dict]:
+    unique_items = {}
+    for item in items:
+        item_id = item.get("id")
+        current = unique_items.get(item_id)
+        if current is None or (item.get("is_default") and not current.get("is_default")):
+            unique_items[item_id] = item
+    return list(unique_items.values())
+
+
 def sales_point_to_session_dict(sales_point: SalesPoint, assignment: SalesPointUserAssignment) -> dict:
     warehouse = sales_point.warehouse
     cash_register = sales_point.default_cash_register
@@ -188,6 +198,30 @@ def sales_point_to_session_dict(sales_point: SalesPoint, assignment: SalesPointU
         "operator_role": assignment.operator_role,
         "is_default": assignment.is_default,
         "assignment_id": assignment.id,
+        "label": f"{sales_point.sales_point_code} - {sales_point.sales_point_name}",
+    }
+
+
+def sales_point_admin_to_session_dict(sales_point: SalesPoint) -> dict:
+    warehouse = sales_point.warehouse
+    cash_register = sales_point.default_cash_register
+    return {
+        "id": sales_point.id,
+        "sales_point_id": sales_point.id,
+        "sales_point_code": sales_point.sales_point_code,
+        "sales_point_name": sales_point.sales_point_name,
+        "warehouse_id": sales_point.warehouse_id,
+        "warehouse_code": warehouse.warehouse_code if warehouse else None,
+        "warehouse_name": warehouse.warehouse_name if warehouse else None,
+        "default_cash_register_id": sales_point.default_cash_register_id,
+        "default_cash_register_code": cash_register.register_code if cash_register else None,
+        "default_cash_register_name": cash_register.register_name if cash_register else None,
+        "channel_type": sales_point.channel_type,
+        "location_description": sales_point.location_description,
+        "operator_role": "ADMIN",
+        "is_default": False,
+        "assignment_id": None,
+        "is_admin_access": True,
         "label": f"{sales_point.sales_point_code} - {sales_point.sales_point_name}",
     }
 
@@ -306,6 +340,23 @@ async def get_sales_session_context(request: Request, user: dict = Depends(get_c
                     for assignment in sales_point_result.scalars().all()
                     if assignment.sales_point
                 ]
+                if _has_any_permission(user, ["SALES_POINTS_MANAGE", "OPERATOR_ASSIGNMENTS_MANAGE", "CASH_SETTINGS_MANAGE"]):
+                    existing_sales_point_ids = {item["id"] for item in sales_points}
+                    admin_sales_point_result = await session.execute(
+                        select(SalesPoint)
+                        .options(selectinload(SalesPoint.warehouse), selectinload(SalesPoint.default_cash_register))
+                        .where(
+                            SalesPoint.deleted_at.is_(None),
+                            SalesPoint.is_active == True,
+                            SalesPoint.warehouse_id.in_(allowed_warehouse_ids),
+                        )
+                        .order_by(SalesPoint.sales_point_code)
+                    )
+                    sales_points.extend(
+                        sales_point_admin_to_session_dict(sales_point)
+                        for sales_point in admin_sales_point_result.scalars().all()
+                        if sales_point.id not in existing_sales_point_ids
+                    )
 
                 cash_result = await session.execute(
                     select(CashRegisterUserAssignment)
@@ -331,6 +382,8 @@ async def get_sales_session_context(request: Request, user: dict = Depends(get_c
                     for assignment in cash_result.scalars().all()
                     if assignment.cash_register
                 ]
+                sales_points = dedupe_session_origins(sales_points)
+                cash_registers = dedupe_session_origins(cash_registers)
 
             data = {
                 "locations": list(warehouses_by_id.values()),
@@ -498,20 +551,28 @@ async def create_cash_register_assignment(assignment_data: CashRegisterAssignmen
                     and_(
                         CashRegisterUserAssignment.cash_register_id == assignment_data.cash_register_id,
                         CashRegisterUserAssignment.user_id == assignment_data.user_id,
-                        CashRegisterUserAssignment.deleted_at.is_(None),
+                        CashRegisterUserAssignment.operator_role == assignment_data.operator_role,
                     )
                 )
             )
-            if existing_result.scalar_one_or_none():
+            existing_assignment = existing_result.scalar_one_or_none()
+            if existing_assignment and existing_assignment.deleted_at is None:
                 return ResponseManager.error(
-                    message="El usuario ya tiene una asignacion vigente para esta caja",
+                    message="El usuario ya tiene una asignacion vigente para esta caja y rol",
                     status_code=HTTPStatus.CONFLICT,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
                     request=request,
                 )
-            assignment = CashRegisterUserAssignment(**assignment_data.model_dump())
-            session.add(assignment)
+            if existing_assignment:
+                for field, value in assignment_data.model_dump().items():
+                    setattr(existing_assignment, field, value)
+                existing_assignment.deleted_at = None
+                existing_assignment.updated_at = datetime.now(timezone.utc)
+                assignment = existing_assignment
+            else:
+                assignment = CashRegisterUserAssignment(**assignment_data.model_dump())
+                session.add(assignment)
             await session.commit()
             await session.refresh(assignment)
             assignment.cash_register = cash_register
@@ -519,7 +580,7 @@ async def create_cash_register_assignment(assignment_data: CashRegisterAssignmen
             return ResponseManager.success(data=cash_assignment_to_dict(assignment), message="Asignacion de caja creada correctamente", request=request)
     except IntegrityError as exc:
         logger.warning("Asignacion de caja duplicada o invalida: %s", exc)
-        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para esta caja y usuario", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para esta caja, usuario y rol", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except Exception as exc:
         logger.error("Error al crear asignacion de caja: %s", exc)
         return ResponseManager.internal_server_error(message="Error al crear asignacion de caja", details=str(exc), request=request)
@@ -571,20 +632,28 @@ async def create_sales_point_assignment(assignment_data: SalesPointAssignmentCre
                     and_(
                         SalesPointUserAssignment.sales_point_id == assignment_data.sales_point_id,
                         SalesPointUserAssignment.user_id == assignment_data.user_id,
-                        SalesPointUserAssignment.deleted_at.is_(None),
+                        SalesPointUserAssignment.operator_role == assignment_data.operator_role,
                     )
                 )
             )
-            if existing_result.scalar_one_or_none():
+            existing_assignment = existing_result.scalar_one_or_none()
+            if existing_assignment and existing_assignment.deleted_at is None:
                 return ResponseManager.error(
-                    message="El usuario ya tiene una asignacion vigente para este punto de venta",
+                    message="El usuario ya tiene una asignacion vigente para este punto de venta y rol",
                     status_code=HTTPStatus.CONFLICT,
                     error_code=ErrorCode.RESOURCE_DUPLICATE,
                     error_type=ErrorType.RESOURCE_ERROR,
                     request=request,
                 )
-            assignment = SalesPointUserAssignment(**assignment_data.model_dump())
-            session.add(assignment)
+            if existing_assignment:
+                for field, value in assignment_data.model_dump().items():
+                    setattr(existing_assignment, field, value)
+                existing_assignment.deleted_at = None
+                existing_assignment.updated_at = datetime.now(timezone.utc)
+                assignment = existing_assignment
+            else:
+                assignment = SalesPointUserAssignment(**assignment_data.model_dump())
+                session.add(assignment)
             await session.commit()
             await session.refresh(assignment)
             assignment.sales_point = sales_point
@@ -592,7 +661,7 @@ async def create_sales_point_assignment(assignment_data: SalesPointAssignmentCre
             return ResponseManager.success(data=sales_point_assignment_to_dict(assignment), message="Asignacion POS creada correctamente", request=request)
     except IntegrityError as exc:
         logger.warning("Asignacion POS duplicada o invalida: %s", exc)
-        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para este punto de venta y usuario", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        return ResponseManager.error(message="No fue posible crear la asignacion: ya existe una asignacion para este punto de venta, usuario y rol", status_code=HTTPStatus.CONFLICT, error_code=ErrorCode.RESOURCE_DUPLICATE, error_type=ErrorType.RESOURCE_ERROR, request=request)
     except Exception as exc:
         logger.error("Error al crear asignacion POS: %s", exc)
         return ResponseManager.internal_server_error(message="Error al crear asignacion POS", details=str(exc), request=request)

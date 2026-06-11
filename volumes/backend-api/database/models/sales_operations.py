@@ -1,10 +1,25 @@
 """
 Modelos SQLAlchemy para configuracion operativa previa a ventas.
 """
-from sqlalchemy import BigInteger, Boolean, Column, Date, ForeignKey, Index, String, Text, UniqueConstraint
+import enum
+from decimal import Decimal
+
+from sqlalchemy import BigInteger, Boolean, Column, Date, DECIMAL, Enum, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship, validates
 
 from .base import BaseModel, CommonValidators
+
+
+class SaleStatus(enum.Enum):
+    PENDING_CASHIER = "PENDING_CASHIER"
+    CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
+
+
+class SaleUnitStatus(enum.Enum):
+    SOLD = "SOLD"
+    RETURNED = "RETURNED"
+    EXCHANGED = "EXCHANGED"
 
 
 class SalesPoint(BaseModel):
@@ -71,7 +86,7 @@ class CashRegisterUserAssignment(BaseModel):
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("cash_register_id", "user_id", name="uk_cash_register_user_assignment"),
+        UniqueConstraint("cash_register_id", "user_id", "operator_role", name="uk_cash_register_user_assignment"),
         Index("idx_crua_cash_register_id", "cash_register_id"),
         Index("idx_crua_user_id", "user_id"),
         Index("idx_crua_operator_role", "operator_role"),
@@ -102,7 +117,7 @@ class SalesPointUserAssignment(BaseModel):
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint("sales_point_id", "user_id", name="uk_sales_point_user_assignment"),
+        UniqueConstraint("sales_point_id", "user_id", "operator_role", name="uk_sales_point_user_assignment"),
         Index("idx_spua_sales_point_id", "sales_point_id"),
         Index("idx_spua_user_id", "user_id"),
         Index("idx_spua_operator_role", "operator_role"),
@@ -113,3 +128,121 @@ class SalesPointUserAssignment(BaseModel):
     @validates("operator_role")
     def validate_operator_role(self, key, operator_role):
         return CommonValidators.validate_code(operator_role or "SELLER", min_length=2, max_length=30, field_name="Rol operativo")
+
+
+class SaleDocument(BaseModel):
+    """Documento de venta preparado en ventas y cerrado en caja."""
+
+    __tablename__ = "sale_documents"
+
+    sale_code = Column(String(36), nullable=False, unique=True)
+    status = Column(Enum(SaleStatus), nullable=False, default=SaleStatus.PENDING_CASHIER)
+    document_type_code = Column(String(30), nullable=False, default="TICKET")
+    document_type_name = Column(String(100), nullable=False, default="Ticket de venta")
+    ticket_number = Column(String(60), nullable=True, unique=True)
+    warehouse_id = Column(BigInteger, ForeignKey("warehouses.id"), nullable=True)
+    sales_point_id = Column(BigInteger, ForeignKey("sales_points.id"), nullable=True)
+    cash_register_id = Column(BigInteger, ForeignKey("cash_registers.id"), nullable=True)
+    payment_method_code = Column(String(20), nullable=True)
+    payment_method_name = Column(String(100), nullable=True)
+    amount_tendered = Column(DECIMAL(14, 2), nullable=True)
+    change_amount = Column(DECIMAL(14, 2), nullable=True)
+    customer_id = Column(BigInteger, nullable=True)
+    customer_snapshot = Column(JSON, nullable=True)
+    authorized_buyer_snapshot = Column(JSON, nullable=True)
+    prepared_by_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    closed_by_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    prepared_by_name = Column(String(150), nullable=True)
+    subtotal_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    line_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    document_discount_type = Column(String(20), nullable=False, default="NONE")
+    document_discount_value = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    document_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    tax_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    total_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    notes = Column(Text, nullable=True)
+
+    warehouse = relationship("Warehouse")
+    sales_point = relationship("SalesPoint")
+    cash_register = relationship("CashRegister")
+    lines = relationship("SaleDocumentLine", back_populates="sale", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_sale_documents_sale_code", "sale_code"),
+        Index("idx_sale_documents_status", "status"),
+        Index("idx_sale_documents_ticket_number", "ticket_number"),
+        Index("idx_sale_documents_sales_point_id", "sales_point_id"),
+        Index("idx_sale_documents_cash_register_id", "cash_register_id"),
+        Index("idx_sale_documents_deleted_at", "deleted_at"),
+    )
+
+
+class SaleDocumentLine(BaseModel):
+    """Linea consolidada de un documento de venta."""
+
+    __tablename__ = "sale_document_lines"
+
+    sale_document_id = Column(BigInteger, ForeignKey("sale_documents.id", ondelete="CASCADE"), nullable=False)
+    line_number = Column(Integer, nullable=False)
+    product_id = Column(BigInteger, ForeignKey("products.id"), nullable=True)
+    product_variant_id = Column(BigInteger, ForeignKey("product_variants.id"), nullable=True)
+    product_code = Column(String(100), nullable=True)
+    product_name = Column(String(255), nullable=False)
+    unit_name = Column(String(80), nullable=True)
+    quantity = Column(Integer, nullable=False, default=1)
+    unit_price = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    discount_percent = Column(DECIMAL(7, 4), nullable=False, default=Decimal("0.0000"))
+    line_subtotal = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    line_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    document_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    tax_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    paid_total_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+
+    sale = relationship("SaleDocument", back_populates="lines")
+    units = relationship("SaleLineUnit", back_populates="line", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        UniqueConstraint("sale_document_id", "line_number", name="uk_sale_line_number"),
+        Index("idx_sale_document_lines_sale_document_id", "sale_document_id"),
+        Index("idx_sale_document_lines_product_id", "product_id"),
+        Index("idx_sale_document_lines_product_variant_id", "product_variant_id"),
+    )
+
+
+class SaleLineUnit(BaseModel):
+    """Unidad vendida individual para devolver/cambiar con valor exacto."""
+
+    __tablename__ = "sale_line_units"
+
+    sale_document_id = Column(BigInteger, ForeignKey("sale_documents.id", ondelete="CASCADE"), nullable=False)
+    sale_document_line_id = Column(BigInteger, ForeignKey("sale_document_lines.id", ondelete="CASCADE"), nullable=False)
+    unit_sequence = Column(Integer, nullable=False)
+    paid_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    status = Column(Enum(SaleUnitStatus), nullable=False, default=SaleUnitStatus.SOLD)
+    return_reference = Column(String(60), nullable=True)
+
+    line = relationship("SaleDocumentLine", back_populates="units")
+
+    __table_args__ = (
+        UniqueConstraint("sale_document_line_id", "unit_sequence", name="uk_sale_line_unit_sequence"),
+        Index("idx_sale_line_units_sale_document_id", "sale_document_id"),
+        Index("idx_sale_line_units_status", "status"),
+    )
+
+
+class SaleReturn(BaseModel):
+    """Registro simple de devolucion o cambio de una unidad vendida."""
+
+    __tablename__ = "sale_returns"
+
+    sale_document_id = Column(BigInteger, ForeignKey("sale_documents.id", ondelete="CASCADE"), nullable=False)
+    sale_line_unit_id = Column(BigInteger, ForeignKey("sale_line_units.id"), nullable=False)
+    action_type = Column(String(20), nullable=False)
+    amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    reason = Column(String(255), nullable=True)
+    created_by_user_id = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        Index("idx_sale_returns_sale_document_id", "sale_document_id"),
+        Index("idx_sale_returns_sale_line_unit_id", "sale_line_unit_id"),
+    )

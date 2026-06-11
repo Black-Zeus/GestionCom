@@ -145,6 +145,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Sales Operations"]
     },
     {
+        "name": "sales_documents",
+        "prefix": "/sales-documents",
+        "tags": ["Sales Documents"]
+    },
+    {
         "name": "petty_cash_admin",
         "prefix": "/petty-cash-admin",
         "tags": ["Petty Cash Admin"]

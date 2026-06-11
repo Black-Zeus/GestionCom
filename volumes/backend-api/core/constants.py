@@ -358,6 +358,8 @@ PRIVATE_ROUTES = [
     # Módulos de negocio que requieren autenticación
     "/warehouses",                  # Gestión de almacenes y bodegas
     "/cash-registers",              # Configuración de cajas POS
+    "/sales-operations",            # Puntos de venta y asignaciones operativas
+    "/sales-documents",             # Ventas pendientes, caja y devoluciones
     "/petty-cash-admin",            # Administración de caja chica
     "/petty-cash",                  # Operacion de caja chica
     "/payment-methods",             # Mantenedor de metodos de pago
