@@ -4,8 +4,8 @@ const unwrap = (response) => response.data?.data || response.data;
 const list = (data) => (Array.isArray(data) ? data : []);
 
 export const adminMaintainersService = {
-  async list(resource) {
-    return list(unwrap(await apiClient.get(`/admin-maintainers/${resource}`)));
+  async list(resource, params) {
+    return list(unwrap(await apiClient.get(`/admin-maintainers/${resource}`, { params })));
   },
   async create(resource, payload) {
     return unwrap(await apiClient.post(`/admin-maintainers/${resource}`, payload));

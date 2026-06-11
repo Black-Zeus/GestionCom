@@ -96,13 +96,13 @@ RESOURCES = {
     },
     "promotions": {
         "table": "promotions", "code_field": "promotion_code", "prefix": "PRM", "active_field": "is_active", "soft_delete": True,
-        "fields": ["promotion_name", "promotion_type", "target_type", "min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity", "valid_from", "valid_to", "is_combinable", "is_active"],
-        "required": ["promotion_name", "promotion_type", "valid_from", "valid_to"], "bool": ["is_combinable", "is_active"], "decimal": ["min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity"], "datetime": ["valid_from", "valid_to"],
+        "fields": ["promotion_name", "promotion_type", "target_type", "category_id", "min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity", "valid_from", "valid_to", "is_combinable", "is_active"],
+        "required": ["promotion_name", "promotion_type", "valid_from", "valid_to"], "bool": ["is_combinable", "is_active"], "decimal": ["min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity"], "datetime": ["valid_from", "valid_to"], "int": ["category_id"],
     },
     "promotion-items": {
         "table": "promotion_items", "soft_delete": False,
-        "fields": ["promotion_id", "product_variant_id", "category_id"],
-        "required": ["promotion_id"], "int": ["promotion_id", "product_variant_id", "category_id"],
+        "fields": ["promotion_id", "product_id", "product_variant_id"],
+        "required": ["promotion_id", "product_id"], "int": ["promotion_id", "product_id", "product_variant_id"],
     },
     "stock-critical-config": {
         "table": "stock_critical_config", "active_field": "is_active", "soft_delete": False,
@@ -190,6 +190,7 @@ RESOURCES = {
         "table": "product_variants", "active_field": "is_active", "soft_delete": True,
         "fields": ["product_id", "variant_sku", "variant_name", "is_active"],
         "bool": ["is_active"], "int": ["product_id"], "read_only": True,
+        "allow_filters": ["product_id"],
     },
     "categories-options": {
         "table": "categories", "active_field": "is_active", "soft_delete": True,
@@ -576,14 +577,22 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
         _ensure_resource_permission(user, resource, "read", request)
         config = _config(resource)
         conditions = []
+        query_params = {}
         if config.get("soft_delete"):
             conditions.append("deleted_at IS NULL")
         if config.get("where"):
             conditions.append(config["where"])
+        allow_filters = config.get("allow_filters", [])
+        for field in allow_filters:
+            value = request.query_params.get(field)
+            if value is not None:
+                conditions.append(f"{field} = :qf_{field}")
+                query_params[f"qf_{field}"] = value
         where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        limit = 500 if query_params else 1000
         async with db_manager.get_async_session() as session:
             order_by = config.get("order_by") or ("sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC")
-            result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT 1000"))
+            result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT {limit}"), query_params)
             rows = [_row(row) for row in result.mappings().all()]
             if config["table"] in {"customers", "suppliers"}:
                 assets = await _media_map(session, [item.get("logo_media_asset_id") for item in rows] + [item.get("banner_media_asset_id") for item in rows])
