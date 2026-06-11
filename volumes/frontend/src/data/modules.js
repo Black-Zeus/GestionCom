@@ -33,6 +33,10 @@ import {
   ArrowRightLeft,
 } from 'lucide-react';
 
+// IMPORTANTE: El menú lateral (sidebar) es dinámico y viene de la base de datos via useMenuStore → menuService.getUserHierarchy().
+// Las entradas aquí definidas en moduleGroups/systemPages NO controlan qué aparece en el sidebar.
+// Para agregar o habilitar ítems del menú: editar la tabla `menu_items` en la BD (is_active, is_visible, required_permission_id).
+// Este archivo se usa únicamente para: historial de navegación y búsqueda global de páginas.
 export const moduleGroups = [
   {
     id: 'home',
@@ -53,6 +57,7 @@ export const moduleGroups = [
       { id: 'price-query', label: 'Consulta de precio', path: '/sales/price-query', icon: Tags, weight: 20, permissions: ['PRICE_LISTS_ACCESS', 'PRICE_LISTS_MANAGE'] },
       { id: 'promotions', label: 'Promociones comerciales', path: '/sales/promotions', icon: BadgeDollarSign, weight: 30, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
       { id: 'sales-history', label: 'Historial de ventas', path: '/sales/history', icon: ClipboardList, weight: 40 },
+      { id: 'sales-returns', label: 'Devoluciones', path: '/sales/returns', icon: RotateCcw, weight: 50 },
     ],
   },
   {

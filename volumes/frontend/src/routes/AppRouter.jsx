@@ -85,6 +85,7 @@ const moduleComponents = {
   'cash-pos': CashPos,
   'new-sale': NewSale,
   'sales-history': SalesHistory,
+  'sales-returns': SalesReturns,
   returns: SalesReturns,
   'price-query': SalesPriceQuery,
   'petty-cash-admin': AdminPettyCashCategories,
