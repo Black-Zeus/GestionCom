@@ -1222,6 +1222,7 @@ async def price_query(
     request: Request,
     search: str = Query("", max_length=200),
     category_id: int | None = Query(None, gt=0),
+    warehouse_id: int | None = Query(None, gt=0),
     user: dict = Depends(require_prices_read),
 ):
     if not category_id:
@@ -1247,7 +1248,8 @@ async def price_query(
 
         result = await session.execute(
             text(
-                "SELECT p.id AS product_id, p.product_code, p.product_name, p.has_variants, "
+                "SELECT p.id AS product_id, p.product_code, p.product_name, p.has_variants, p.category_id, "
+                "cat.category_name, "
                 "pv.id AS variant_id, pv.variant_sku, pv.variant_name, "
                 "pli.id AS price_item_id, pli.sale_price, pli.base_price, pli.cost_price, pli.margin_percentage, "
                 "mu.id AS unit_id, mu.unit_code, mu.unit_name, mu.unit_symbol "
@@ -1256,6 +1258,7 @@ async def price_query(
                 "JOIN price_list_items pli ON pli.product_variant_id = pv.id "
                 "  AND pli.price_list_id = :price_list_id AND pli.deleted_at IS NULL AND pli.is_active = TRUE "
                 "LEFT JOIN measurement_units mu ON mu.id = pli.measurement_unit_id "
+                "LEFT JOIN categories cat ON cat.id = p.category_id "
                 "WHERE p.deleted_at IS NULL AND p.is_active = TRUE "
                 "AND (p.product_code LIKE :search OR p.product_name LIKE :search "
                 "     OR pv.variant_sku LIKE :search OR pv.variant_name LIKE :search) "
@@ -1272,11 +1275,11 @@ async def price_query(
             vid_params = {f"vid{i}": v for i, v in enumerate(variant_ids)}
             stock_result = await session.execute(
                 text(
-                    f"SELECT s.product_variant_id, w.id AS warehouse_id, w.warehouse_name, "
+                    f"SELECT s.product_variant_id, w.id AS warehouse_id, w.warehouse_name, w.warehouse_type, "
                     f"COALESCE(SUM(s.current_quantity), 0) AS stock_quantity "
                     f"FROM stock s JOIN warehouses w ON w.id = s.warehouse_id AND w.deleted_at IS NULL "
                     f"WHERE s.product_variant_id IN ({placeholders}) "
-                    f"GROUP BY s.product_variant_id, w.id, w.warehouse_name "
+                    f"GROUP BY s.product_variant_id, w.id, w.warehouse_name, w.warehouse_type "
                     f"HAVING stock_quantity > 0 ORDER BY w.warehouse_name"
                 ),
                 vid_params,
@@ -1286,13 +1289,145 @@ async def price_query(
                 stock_map.setdefault(vid, []).append({
                     "warehouse_id": int(srow["warehouse_id"]),
                     "warehouse_name": srow["warehouse_name"],
+                    "warehouse_type": srow["warehouse_type"],
                     "stock_quantity": float(srow["stock_quantity"]),
                 })
+
+        # Load active promotions (filtered by warehouse scope)
+        promo_wh_clause = ""
+        promo_params: dict = {}
+        if warehouse_id:
+            promo_wh_clause = (
+                "AND (p.applies_all_warehouses = 1 "
+                "OR EXISTS (SELECT 1 FROM promotion_warehouses pw "
+                "           WHERE pw.promotion_id = p.id AND pw.warehouse_id = :promo_wh_id))"
+            )
+            promo_params["promo_wh_id"] = warehouse_id
+        promo_result = await session.execute(
+            text(
+                "SELECT p.id, p.promotion_name, p.promotion_type, p.target_type, p.category_id, "
+                "p.min_quantity, p.discount_percentage, p.discount_amount, p.buy_quantity, p.get_quantity "
+                f"FROM promotions p "
+                f"WHERE p.is_active = 1 AND p.deleted_at IS NULL "
+                f"AND p.valid_from <= NOW() AND p.valid_to >= NOW() "
+                f"{promo_wh_clause}"
+            ),
+            promo_params,
+        )
+        active_promos = [dict(r) for r in promo_result.mappings().all()]
+        promo_items: list[dict] = []
+        if active_promos:
+            product_promos = [p for p in active_promos if p["target_type"] == "PRODUCT"]
+            if product_promos:
+                pp_ids = [p["id"] for p in product_promos]
+                ph = ", ".join(f":ppid{i}" for i in range(len(pp_ids)))
+                pp_params = {f"ppid{i}": v for i, v in enumerate(pp_ids)}
+                pi_result = await session.execute(
+                    text(f"SELECT promotion_id, product_id, product_variant_id FROM promotion_items WHERE promotion_id IN ({ph})"),
+                    pp_params,
+                )
+                promo_items = [dict(r) for r in pi_result.mappings().all()]
+
+        def best_promotion_for(vid, pid, cat_id, original_price):
+            if original_price is None:
+                return None, None, None, None
+            best_promo = None
+            best_price = None
+            for promo in active_promos:
+                ttype = promo["target_type"]
+                if ttype == "ALL":
+                    applies = True
+                elif ttype == "CATEGORY":
+                    applies = promo["category_id"] == cat_id
+                elif ttype == "PRODUCT":
+                    applies = any(
+                        (item["product_variant_id"] == vid if item["product_variant_id"] else item["product_id"] == pid)
+                        for item in promo_items if item["promotion_id"] == promo["id"]
+                    )
+                else:
+                    applies = False
+                if not applies:
+                    continue
+                ptype = promo["promotion_type"]
+                op = float(original_price)
+                pct = float(promo["discount_percentage"]) if promo.get("discount_percentage") else None
+                amt = float(promo["discount_amount"]) if promo.get("discount_amount") else None
+
+                if ptype == "PERCENTAGE_OFF":
+                    if pct is None:
+                        continue
+                    pp = op * (1 - pct / 100)
+                elif ptype == "FIXED_AMOUNT":
+                    if amt is None:
+                        continue
+                    pp = max(0.0, op - amt)
+                elif ptype == "QUANTITY_DISCOUNT":
+                    # Apply whichever discount is configured; prefer the lower resulting price
+                    pp_pct = (op * (1 - pct / 100)) if pct is not None else None
+                    pp_amt = (max(0.0, op - amt)) if amt is not None else None
+                    if pp_pct is not None and pp_amt is not None:
+                        pp = min(pp_pct, pp_amt)
+                    elif pp_pct is not None:
+                        pp = pp_pct
+                    elif pp_amt is not None:
+                        pp = pp_amt
+                    else:
+                        continue  # no discount configured — skip
+                elif ptype == "BUY_X_GET_Y":
+                    # Unit price unchanged; discount is expressed as free items, not price reduction
+                    pp = op
+                else:
+                    continue
+
+                if best_price is None or pp < best_price:
+                    best_price = pp
+                    best_promo = promo
+
+            if not best_promo:
+                return None, None, None, None
+
+            ptype  = best_promo["promotion_type"]
+            pct    = float(best_promo["discount_percentage"]) if best_promo.get("discount_percentage") else None
+            amt    = float(best_promo["discount_amount"])     if best_promo.get("discount_amount")     else None
+            min_q  = int(best_promo.get("min_quantity") or 0)
+            min_sfx = f" (min. {min_q} un.)" if min_q > 1 else ""
+
+            if ptype == "PERCENTAGE_OFF":
+                label = f"{pct:.0f}% dto.{min_sfx}"
+            elif ptype == "FIXED_AMOUNT":
+                label = f"-${int(amt):,}{min_sfx}".replace(",", ".")
+            elif ptype == "QUANTITY_DISCOUNT":
+                if pct is not None:
+                    label = f"{pct:.0f}% x cant.{min_sfx}"
+                elif amt is not None:
+                    label = f"-${int(amt):,} x cant.{min_sfx}".replace(",", ".")
+                else:
+                    label = f"Dto. x cant.{min_sfx}"
+            elif ptype == "BUY_X_GET_Y":
+                bq = int(best_promo.get("buy_quantity") or 2)
+                gq = int(best_promo.get("get_quantity") or 3)
+                label = f"{bq}x{gq}"
+            else:
+                label = best_promo["promotion_name"]
+
+            return best_promo["promotion_name"], round(best_price), label, float(original_price)
 
         data = []
         for row in rows:
             vid = row.get("variant_id")
             warehouses = stock_map.get(vid, []) if vid else []
+            if warehouse_id:
+                wh_entry = next((w for w in warehouses if w["warehouse_id"] == warehouse_id), None)
+                context_stock = wh_entry["stock_quantity"] if wh_entry else 0.0
+                display_warehouses = [wh_entry] if wh_entry else []
+            else:
+                context_stock = sum(w["stock_quantity"] for w in warehouses)
+                display_warehouses = warehouses
+            orig_price = _decimal(row.get("sale_price"))
+            promo_name, promo_price, promo_label, original_price = best_promotion_for(
+                vid, row.get("product_id"), row.get("category_id"), orig_price
+            )
+            is_promotion = promo_name is not None
             data.append({
                 "product_id": row["product_id"],
                 "product_code": row["product_code"],
@@ -1304,16 +1439,21 @@ async def price_query(
                 "price_list_id": price_list_id,
                 "price_list_name": price_list_name,
                 "price_item_id": row.get("price_item_id"),
-                "sale_price": _decimal(row.get("sale_price")),
+                "sale_price": promo_price if is_promotion else orig_price,
+                "original_price": original_price if is_promotion else None,
+                "is_promotion": is_promotion,
+                "promotion_name": promo_name,
+                "promotion_discount_label": promo_label,
                 "base_price": _decimal(row.get("base_price")),
                 "cost_price": _decimal(row.get("cost_price")),
                 "margin_percentage": _decimal(row.get("margin_percentage")),
+                "category_name": row.get("category_name"),
                 "unit_id": row.get("unit_id"),
                 "unit_code": row.get("unit_code"),
                 "unit_name": row.get("unit_name"),
                 "unit_symbol": row.get("unit_symbol"),
-                "stock_by_warehouse": warehouses,
-                "total_stock": sum(w["stock_quantity"] for w in warehouses),
+                "stock_by_warehouse": display_warehouses,
+                "total_stock": context_stock,
             })
 
         return ResponseManager.success(data=data, request=request)

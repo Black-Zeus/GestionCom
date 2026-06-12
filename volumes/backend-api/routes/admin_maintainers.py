@@ -96,13 +96,20 @@ RESOURCES = {
     },
     "promotions": {
         "table": "promotions", "code_field": "promotion_code", "prefix": "PRM", "active_field": "is_active", "soft_delete": True,
-        "fields": ["promotion_name", "promotion_type", "target_type", "category_id", "min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity", "valid_from", "valid_to", "is_combinable", "is_active"],
-        "required": ["promotion_name", "promotion_type", "valid_from", "valid_to"], "bool": ["is_combinable", "is_active"], "decimal": ["min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity"], "datetime": ["valid_from", "valid_to"], "int": ["category_id"],
+        "fields": ["promotion_name", "promotion_type", "target_type", "category_id", "min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity", "valid_from", "valid_to", "is_combinable", "is_active", "applies_all_warehouses"],
+        "required": ["promotion_name", "promotion_type", "valid_from", "valid_to"], "bool": ["is_combinable", "is_active", "applies_all_warehouses"], "decimal": ["min_quantity", "discount_percentage", "discount_amount", "buy_quantity", "get_quantity"], "datetime": ["valid_from", "valid_to"], "int": ["category_id"],
     },
     "promotion-items": {
         "table": "promotion_items", "soft_delete": False,
         "fields": ["promotion_id", "product_id", "product_variant_id"],
         "required": ["promotion_id", "product_id"], "int": ["promotion_id", "product_id", "product_variant_id"],
+        "allow_filters": ["promotion_id"],
+    },
+    "promotion-warehouses": {
+        "table": "promotion_warehouses", "soft_delete": False,
+        "fields": ["promotion_id", "warehouse_id"],
+        "required": ["promotion_id", "warehouse_id"], "int": ["promotion_id", "warehouse_id"],
+        "allow_filters": ["promotion_id"],
     },
     "stock-critical-config": {
         "table": "stock_critical_config", "active_field": "is_active", "soft_delete": False,
@@ -592,7 +599,17 @@ async def list_items(request: Request, resource: str = Path(...), user: dict = D
         limit = 500 if query_params else 1000
         async with db_manager.get_async_session() as session:
             order_by = config.get("order_by") or ("sort_order ASC, id ASC" if config["table"] == "system_statuses" else "id DESC")
-            result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT {limit}"), query_params)
+            if config["table"] == "promotion_items":
+                order_by_prefixed = f"pi.{order_by}" if "." not in order_by else order_by
+                result = await session.execute(text(
+                    f"SELECT pi.*, p.product_name, pv.variant_sku, pv.variant_name "
+                    f"FROM promotion_items pi "
+                    f"LEFT JOIN products p ON p.id = pi.product_id "
+                    f"LEFT JOIN product_variants pv ON pv.id = pi.product_variant_id"
+                    f"{where} ORDER BY {order_by_prefixed} LIMIT {limit}"
+                ), query_params)
+            else:
+                result = await session.execute(text(f"SELECT * FROM {config['table']}{where} ORDER BY {order_by} LIMIT {limit}"), query_params)
             rows = [_row(row) for row in result.mappings().all()]
             if config["table"] in {"customers", "suppliers"}:
                 assets = await _media_map(session, [item.get("logo_media_asset_id") for item in rows] + [item.get("banner_media_asset_id") for item in rows])
