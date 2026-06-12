@@ -90,8 +90,8 @@ const SalesHistory = () => {
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
-        title="Historial de ventas"
-        description="Ventas pendientes de cierre en caja."
+        title="Pre-ventas pendientes"
+        description="Cola de ventas listas para ser procesadas en caja."
         actions={[{ id: 'refresh', label: 'Actualizar', icon: RefreshCcw, variant: 'neutral', onClick: load, disabled: loading }]}
       />
 
