@@ -60,6 +60,7 @@ const AdminInventoryTrackingReports = lazy(() => import('@/pages/admin/AdminInve
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
 const AdminPromotionItems = lazy(() => import('@/pages/admin/AdminPromotionItems'));
+const CustomerSalesPage = lazy(() => import('@/pages/customers/CustomerSalesPage'));
 const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
 const AdminFinanceMaintainers = lazy(() => import('@/pages/admin/AdminFinanceMaintainers'));
 const AdminFinanceCurrencies = lazy(() => import('@/pages/admin/AdminFinanceCurrencies'));
@@ -345,6 +346,14 @@ const AppRouter = () => (
               <RequirePermission permissions={['DOCUMENT_SERIES_ACCESS', 'DOCUMENT_SERIES_MANAGE']}>
                 <AdminDocumentSeries />
               </RequirePermission>
+            </Page>
+          )}
+        />
+        <Route
+          path="customers/sales"
+          element={(
+            <Page>
+              <CustomerSalesPage />
             </Page>
           )}
         />

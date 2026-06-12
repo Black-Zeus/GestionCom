@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Image, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, Smartphone, Truck, UserRound, Users } from 'lucide-react';
+import { AtSign, Barcode, Bell, Building2, CircleDollarSign, Contact, CreditCard, FileText, Image, Landmark, MapPin, PackageSearch, Percent, Phone, RotateCcw, Settings, Shield, ShieldCheck, ShoppingBag, Smartphone, Truck, UserRound, Users } from 'lucide-react';
 import AdminGenericMaintainers from './AdminGenericMaintainers';
 import PromotionFormModal from './PromotionFormModal';
 import PromotionItemFormModal from './PromotionItemFormModal';
@@ -176,6 +176,7 @@ const customersTabs = [
       { label: 'Media', icon: Image, type: 'media' },
       { label: 'Personas autorizadas', icon: Shield, path: '/customers/authorized-persons', params: (row) => ({ customer_id: row.id }) },
       { label: 'Credito', disabledLabel: 'Credito no habilitado', icon: CreditCard, path: '/customers/credit-limits', disabled: (row) => !(Number(row.is_credit_customer) === 1 || row.is_credit_customer === true), params: (row) => ({ customer_id: row.id }) },
+      { label: 'Ventas', icon: ShoppingBag, path: '/customers/sales', params: (row) => ({ customer_id: row.id, customer_name: row.commercial_name || row.legal_name || '' }) },
     ],
   },
   {

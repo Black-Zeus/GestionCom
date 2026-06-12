@@ -245,6 +245,32 @@ const detailNavigationRoutes = [
     getLabelFromCode: () => 'Permisos especiales',
     getTooltipFromCode: () => 'Permisos especiales del usuario seleccionado',
   },
+  {
+    id: 'customer-sales-detail',
+    pathname: '/customers/sales',
+    queryParam: 'customer_id',
+    resource: 'customers',
+    codeField: 'id',
+    basePath: '/customers',
+    parentPath: '/customers',
+    group: 'Clientes',
+    fallbackLabel: 'Cliente',
+    getLabel: (record) => `Ventas - ${record?.commercial_name || record?.legal_name || record?.customer_code}`,
+    getTooltip: (record) => `Ventas de cliente: ${record?.legal_name || record?.customer_code}`,
+  },
+  {
+    id: 'promotion-items-detail',
+    pathname: '/sales/promotions/items',
+    queryParam: 'promotion_id',
+    resource: 'promotions',
+    codeField: 'id',
+    basePath: '/sales/promotions',
+    parentPath: '/sales/promotions',
+    group: 'Mantenedor de Promociones',
+    fallbackLabel: 'Promocion',
+    getLabel: (record) => `Items - ${record?.promotion_name || record?.promotion_code}`,
+    getTooltip: (record) => `Items de promocion: ${record?.promotion_name || record?.promotion_code}`,
+  },
 ];
 
 const getDetailNavigationRoute = (pathname, searchParams) => {
