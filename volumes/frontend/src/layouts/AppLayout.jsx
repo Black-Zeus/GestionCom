@@ -11,10 +11,13 @@ import {
   LogOut,
   Menu,
   Moon,
+  MonitorCheck,
   RefreshCw,
   Search,
+  Store,
   Sun,
   UserCircle,
+  Wallet,
   XCircle,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -533,10 +536,12 @@ const AppLayout = () => {
   const [detailNavigationModule, setDetailNavigationModule] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [syncingSession, setSyncingSession] = useState(false);
+  const [footerDropdown, setFooterDropdown] = useState(null);
   const contentRef = useRef(null);
   const sideUserMenuRef = useRef(null);
   const globalSearchRef = useRef(null);
   const notificationsRef = useRef(null);
+  const footerDropdownRef = useRef(null);
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -557,6 +562,7 @@ const AppLayout = () => {
   const setActiveCashRegister = useSessionStore((state) => state.setActiveCashRegister);
   const initializeFromUser = useSessionStore((state) => state.initializeFromUser);
   const setOperationalContext = useSessionStore((state) => state.setOperationalContext);
+  const markSessionContextReady = useSessionStore((state) => state.markSessionContextReady);
   const navigationHistory = useNavigationHistoryStore((state) => state.items);
   const addNavigationVisit = useNavigationHistoryStore((state) => state.addVisit);
   const dbMenuGroups = useMenuStore((state) => state.groups);
@@ -591,58 +597,9 @@ const AppLayout = () => {
     () => salesPoints.find((item) => String(item.id ?? item) === String(activeSalesPoint)) || null,
     [activeSalesPoint, salesPoints]
   );
-  const openLocationSelector = useCallback(() => {
-    ModalManager.show({
-      type: 'custom',
-      title: 'Seleccionar locacion',
-      size: 'large',
-      showFooter: false,
-      contentComponent: SessionOptionModal,
-      contentProps: {
-        items: locations,
-        activeId: activeLocation,
-        emptyMessage: 'No hay locaciones habilitadas para este usuario.',
-        onSelect: setActiveLocation,
-      },
-    });
-  }, [activeLocation, locations, setActiveLocation]);
-  const openSalesPointSelector = useCallback(() => {
-    const emptySalesPointMessage = !activeLocationRecord
-      ? 'Selecciona una locacion antes de seleccionar punto de venta.'
-      : salesPoints.length > 0
-        ? 'Hay puntos de venta habilitados para este usuario, pero no en la locacion seleccionada. Cambia la locacion activa.'
-        : 'No hay puntos de venta habilitados para este usuario.';
-    ModalManager.show({
-      type: 'custom',
-      title: 'Seleccionar punto de venta',
-      size: 'large',
-      showFooter: false,
-      contentComponent: SessionOptionModal,
-      contentProps: {
-        items: salesPointsForLocation,
-        activeId: activeSalesPoint,
-        emptyMessage: emptySalesPointMessage,
-        onSelect: setActiveSalesPoint,
-      },
-    });
-  }, [activeLocationRecord, activeSalesPoint, salesPoints.length, salesPointsForLocation, setActiveSalesPoint]);
-  const openCashRegisterSelector = useCallback(() => {
-    ModalManager.show({
-      type: 'custom',
-      title: 'Seleccionar caja',
-      size: 'large',
-      showFooter: false,
-      contentComponent: SessionOptionModal,
-      contentProps: {
-        items: cashRegistersForLocation,
-        activeId: activeCashRegister,
-        emptyMessage: activeLocationRecord
-          ? 'No hay cajas habilitadas para este usuario en la locacion seleccionada.'
-          : 'Selecciona una locacion antes de seleccionar caja.',
-        onSelect: setActiveCashRegister,
-      },
-    });
-  }, [activeCashRegister, activeLocationRecord, cashRegistersForLocation, setActiveCashRegister]);
+  const toggleFooterDropdown = useCallback((name) => {
+    setFooterDropdown((prev) => (prev === name ? null : name));
+  }, []);
   const moduleGroups = dbMenuGroups;
   const navigablePages = useMemo(() => (
     [...dbMenuPages, ...systemPages].filter((page) => !isHiddenSidebarMenuItem(page))
@@ -709,17 +666,24 @@ const AppLayout = () => {
   }, [initializeFromUser, user]);
 
   useEffect(() => {
-    if (!user || isDemoSession) return;
+    if (!user) return;
+    if (isDemoSession) {
+      markSessionContextReady();
+      return;
+    }
     let ignore = false;
     salesOperationsService.getSessionContext()
       .then((context) => {
         if (!ignore) setOperationalContext(context);
       })
       .catch((error) => {
-        if (!ignore) toast.error(getBackendMessage(error, 'No fue posible cargar locaciones y cajas habilitadas.'));
+        if (!ignore) {
+          markSessionContextReady();
+          toast.error(getBackendMessage(error, 'No fue posible cargar locaciones y cajas habilitadas.'));
+        }
       });
     return () => { ignore = true; };
-  }, [isDemoSession, setOperationalContext, user]);
+  }, [isDemoSession, markSessionContextReady, setOperationalContext, user]);
 
   useEffect(() => {
     if (!user || isDemoSession) {
@@ -836,6 +800,15 @@ const AppLayout = () => {
       document.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [sideUserOpen]);
+
+  useEffect(() => {
+    if (!footerDropdown) return undefined;
+    const handlePointerDown = (event) => {
+      if (!footerDropdownRef.current?.contains(event.target)) setFooterDropdown(null);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [footerDropdown]);
 
   useEffect(() => {
     if (!notificationsOpen) return undefined;
@@ -1420,40 +1393,152 @@ const AppLayout = () => {
         </button>
       </main>
 
-      <footer className="col-start-2 row-start-3 flex h-11 items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 text-xs text-slate-600 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-        <div className="min-w-0 truncate"><span className="font-medium">Usuario:</span> {displayUserName} - {displayUserProfile}</div>
-        <div className="hidden items-center gap-2 md:flex">
-          <span className="font-medium">Locacion:</span>
-          <button
-            type="button"
-            onClick={openLocationSelector}
-            className={sessionSelectorButtonClassName}
-          >
-            <span className="truncate">{activeLocationRecord?.label || activeLocationRecord?.name || activeLocationRecord || 'Sin locacion'}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          </button>
-        </div>
-        <div className="hidden items-center gap-2 lg:flex">
-          <span className="font-medium">Punto venta:</span>
-          <button
-            type="button"
-            onClick={openSalesPointSelector}
-            className={sessionSelectorButtonClassName}
-          >
-            <span className="truncate">{activeSalesPointRecord?.label || activeSalesPointRecord?.name || activeSalesPointRecord || 'Sin punto de venta'}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-medium">Caja:</span>
-          <button
-            type="button"
-            onClick={openCashRegisterSelector}
-            className={sessionSelectorButtonClassName}
-          >
-            <span className="truncate">{activeCashRegisterRecord?.label || activeCashRegisterRecord?.name || activeCashRegisterRecord || 'Sin caja asignada'}</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          </button>
+      <footer ref={footerDropdownRef} className="col-start-2 row-start-3 relative flex h-10 items-stretch border-t border-slate-200 bg-white text-xs text-slate-600 transition-colors duration-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+        <div className="flex flex-1 items-center">
+
+          {/* ── Locacion ── */}
+          <div className="relative flex h-full">
+            <button
+              type="button"
+              title="Cambiar locación"
+              onClick={() => toggleFooterDropdown('location')}
+              className={cn(
+                'flex h-full w-52 items-center justify-between gap-2 border-r border-slate-200 px-4 text-left transition dark:border-slate-800',
+                footerDropdown === 'location' ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              )}
+            >
+              <Store className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="flex-1 truncate font-medium text-slate-700 dark:text-slate-300">
+                {activeLocationRecord?.warehouse_name || activeLocationRecord?.label || 'Sin locación'}
+              </span>
+              <ChevronDown className={cn('h-3 w-3 shrink-0 text-slate-400 transition-transform', footerDropdown === 'location' && 'rotate-180')} />
+            </button>
+            {footerDropdown === 'location' && (
+              <div className="absolute bottom-full left-0 z-50 mb-1 min-w-56 rounded-md border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Locación</div>
+                {locations.length === 0 && <div className="px-3 py-2 text-xs text-slate-400">Sin locaciones disponibles.</div>}
+                {locations.map((loc) => (
+                  <button
+                    key={loc.id}
+                    type="button"
+                    onClick={() => { setActiveLocation(loc.id); setFooterDropdown(null); }}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
+                      String(loc.id) === String(activeLocation)
+                        ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    <Store className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <div className="min-w-0">
+                      <div className="truncate">{loc.warehouse_name || loc.label}</div>
+                      {loc.warehouse_code && <div className="text-[10px] text-slate-400">{loc.warehouse_code}</div>}
+                    </div>
+                    {String(loc.id) === String(activeLocation) && <CheckCircle2 className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-500" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Punto de venta ── */}
+          <div className="relative hidden h-full lg:flex">
+            <button
+              type="button"
+              title="Cambiar punto de venta"
+              onClick={() => toggleFooterDropdown('salesPoint')}
+              className={cn(
+                'flex h-full w-52 items-center justify-between gap-2 border-r border-slate-200 px-4 text-left transition dark:border-slate-800',
+                footerDropdown === 'salesPoint' ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              )}
+            >
+              <MonitorCheck className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="flex-1 truncate text-slate-600 dark:text-slate-400">
+                {activeSalesPointRecord?.sales_point_name || activeSalesPointRecord?.label || 'Sin punto de venta'}
+              </span>
+              <ChevronDown className={cn('h-3 w-3 shrink-0 text-slate-400 transition-transform', footerDropdown === 'salesPoint' && 'rotate-180')} />
+            </button>
+            {footerDropdown === 'salesPoint' && (
+              <div className="absolute bottom-full left-0 z-50 mb-1 min-w-56 rounded-md border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Punto de venta</div>
+                {salesPointsForLocation.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-400">
+                    {activeLocationRecord ? 'Sin puntos de venta en esta locación.' : 'Selecciona una locación primero.'}
+                  </div>
+                )}
+                {salesPointsForLocation.map((sp) => (
+                  <button
+                    key={sp.id}
+                    type="button"
+                    onClick={() => { setActiveSalesPoint(sp.id); setFooterDropdown(null); }}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
+                      String(sp.id) === String(activeSalesPoint)
+                        ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    <MonitorCheck className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <div className="min-w-0">
+                      <div className="truncate">{sp.sales_point_name || sp.label}</div>
+                      {sp.sales_point_code && <div className="text-[10px] text-slate-400">{sp.sales_point_code}</div>}
+                    </div>
+                    {String(sp.id) === String(activeSalesPoint) && <CheckCircle2 className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-500" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Caja ── */}
+          <div className="relative flex h-full">
+            <button
+              type="button"
+              title="Cambiar caja"
+              onClick={() => toggleFooterDropdown('cashRegister')}
+              className={cn(
+                'flex h-full w-44 items-center justify-between gap-2 px-4 text-left transition',
+                footerDropdown === 'cashRegister' ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              )}
+            >
+              <Wallet className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <span className="flex-1 truncate text-slate-600 dark:text-slate-400">
+                {activeCashRegisterRecord?.register_name || activeCashRegisterRecord?.label || 'Sin caja'}
+              </span>
+              <ChevronDown className={cn('h-3 w-3 shrink-0 text-slate-400 transition-transform', footerDropdown === 'cashRegister' && 'rotate-180')} />
+            </button>
+            {footerDropdown === 'cashRegister' && (
+              <div className="absolute bottom-full left-0 z-50 mb-1 min-w-56 rounded-md border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Caja</div>
+                {cashRegistersForLocation.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-slate-400">
+                    {activeLocationRecord ? 'Sin cajas en esta locación.' : 'Selecciona una locación primero.'}
+                  </div>
+                )}
+                {cashRegistersForLocation.map((cr) => (
+                  <button
+                    key={cr.id}
+                    type="button"
+                    onClick={() => { setActiveCashRegister(cr.id); setFooterDropdown(null); }}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
+                      String(cr.id) === String(activeCashRegister)
+                        ? 'bg-blue-50 font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                        : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    <Wallet className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <div className="min-w-0">
+                      <div className="truncate">{cr.register_name || cr.label}</div>
+                      {cr.register_code && <div className="text-[10px] text-slate-400">{cr.register_code}</div>}
+                    </div>
+                    {String(cr.id) === String(activeCashRegister) && <CheckCircle2 className="ml-auto h-3.5 w-3.5 shrink-0 text-blue-500" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
       </footer>
     </div>

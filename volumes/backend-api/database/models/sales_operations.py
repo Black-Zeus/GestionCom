@@ -161,6 +161,8 @@ class SaleDocument(BaseModel):
     tax_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     total_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     notes = Column(Text, nullable=True)
+    exchange_credit_total = Column(DECIMAL(15, 2), nullable=True)
+    exchange_forfeited_credit = Column(DECIMAL(15, 2), nullable=True)
 
     warehouse = relationship("Warehouse")
     sales_point = relationship("SalesPoint")
@@ -226,7 +228,9 @@ class SaleLineUnit(BaseModel):
     __table_args__ = (
         UniqueConstraint("sale_document_line_id", "unit_sequence", name="uk_sale_line_unit_sequence"),
         Index("idx_sale_line_units_sale_document_id", "sale_document_id"),
+        Index("idx_sale_line_units_sale_document_line_id", "sale_document_line_id"),
         Index("idx_sale_line_units_status", "status"),
+        Index("idx_sale_line_units_deleted_at", "deleted_at"),
     )
 
 
@@ -245,4 +249,6 @@ class SaleReturn(BaseModel):
     __table_args__ = (
         Index("idx_sale_returns_sale_document_id", "sale_document_id"),
         Index("idx_sale_returns_sale_line_unit_id", "sale_line_unit_id"),
+        Index("idx_sale_returns_created_by_user_id", "created_by_user_id"),
+        Index("idx_sale_returns_deleted_at", "deleted_at"),
     )

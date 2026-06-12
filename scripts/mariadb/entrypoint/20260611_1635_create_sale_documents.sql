@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS `sale_documents` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `sale_code` varchar(30) NOT NULL,
+  `sale_code` varchar(36) NOT NULL,
   `status` enum('PENDING_CASHIER','CLOSED','CANCELLED') NOT NULL DEFAULT 'PENDING_CASHIER',
   `document_type_code` varchar(30) NOT NULL DEFAULT 'TICKET',
   `document_type_name` varchar(100) NOT NULL DEFAULT 'Ticket de venta',
@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS `sale_documents` (
   `warehouse_id` bigint(20) unsigned DEFAULT NULL,
   `sales_point_id` bigint(20) unsigned DEFAULT NULL,
   `cash_register_id` bigint(20) unsigned DEFAULT NULL,
+  `payment_method_code` varchar(20) DEFAULT NULL,
+  `payment_method_name` varchar(100) DEFAULT NULL,
+  `amount_tendered` decimal(14, 2) DEFAULT NULL,
+  `change_amount` decimal(14, 2) DEFAULT NULL,
   `customer_id` bigint(20) unsigned DEFAULT NULL,
   `customer_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`customer_snapshot`)),
   `authorized_buyer_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`authorized_buyer_snapshot`)),

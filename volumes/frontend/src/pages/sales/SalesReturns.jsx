@@ -1,13 +1,43 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RefreshCcw, RotateCcw, Search, Shuffle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import DataTable from '@/components/common/data/DataTable';
 import StatusBadge from '@/components/common/data/StatusBadge';
-import { ActionButton } from '@/components/common/actions/ActionButton';
+import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import ReturnActionModal from './ReturnActionModal';
 import { salesDocumentsService } from '@/services/sales/salesDocumentsService';
+import { documentConfigService } from '@/services/admin/documentConfigService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
 
 const fieldClassName = 'h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
+
+const TYPE_PREFIX = {
+  TICKET:       'TKT-',
+  SALE_INVOICE: 'FAC-',
+  DTE_33:       'F-',
+  DTE_34:       'FE-',
+  DTE_39:       'B-',
+  DTE_41:       'BE-',
+  DTE_61:       'NC-',
+  DTE_56:       'ND-',
+  PRE_SALE:     'PRV-',
+};
+const getPrefix = (code) => TYPE_PREFIX[code] ?? '';
+
+const UNIT_STATUS = {
+  SOLD:      { label: 'Vendido',   variant: 'active' },
+  RETURNED:  { label: 'Devuelto',  variant: 'warning' },
+  EXCHANGED: { label: 'Cambiado',  variant: 'info' },
+};
+const unitStatus = (status) => UNIT_STATUS[status] ?? { label: status, variant: 'inactive' };
+
+const SALE_STATUS = {
+  CLOSED:          { label: 'Cerrado',   variant: 'active' },
+  CANCELLED:       { label: 'Anulado',   variant: 'danger' },
+  PENDING_CASHIER: { label: 'Pendiente', variant: 'warning' },
+};
+const saleStatus = (status) => SALE_STATUS[status] ?? { label: status, variant: 'inactive' };
 
 const money = (value) => Number(value || 0).toLocaleString('es-CL', {
   style: 'currency',
@@ -25,11 +55,26 @@ const customerName = (customer) => (
 );
 
 const SalesReturns = () => {
-  const [ticketNumber, setTicketNumber] = useState('');
+  const navigate = useNavigate();
+  const [documentTypes, setDocumentTypes] = useState([]);
+  const [documentTypeCode, setDocumentTypeCode] = useState('');
+  const [folio, setFolio] = useState('');
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [processingUnitId, setProcessingUnitId] = useState(null);
-  const [reason, setReason] = useState('');
+  const [actionType, setActionType] = useState('RETURN');
+  const [selectedUnitIds, setSelectedUnitIds] = useState([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  useEffect(() => {
+    documentConfigService.listTypes({ active_only: true }).then((allTypes) => {
+      const saleTypes = (allTypes || [])
+        .filter((t) => t.document_category === 'SALE' && t.movement_type === 'OUT')
+        .map((t) => ({ code: t.document_type_code, name: t.document_type_name }));
+      setDocumentTypes(saleTypes);
+      const ticket = saleTypes.find((t) => t.code === 'TICKET');
+      setDocumentTypeCode(ticket ? ticket.code : saleTypes[0]?.code ?? '');
+    }).catch(() => {});
+  }, []);
 
   const units = useMemo(() => (
     (sale?.items || []).flatMap((line) => (line.units || []).map((unit) => ({
@@ -37,62 +82,112 @@ const SalesReturns = () => {
       line_id: line.id,
       product: line.name,
       code: line.code,
-      unit_name: line.unit_name,
     })))
   ), [sale]);
 
-  const searchTicket = async () => {
-    if (!ticketNumber.trim()) {
-      toast.error('Ingresa el numero de ticket o boleta.');
-      return;
-    }
+  const fullTicket = () => `${getPrefix(documentTypeCode)}${folio.trim()}`;
+
+  const searchSale = async () => {
+    if (!folio.trim()) { toast.error('Ingresa el folio del documento.'); return; }
     setLoading(true);
     try {
-      setSale(await salesDocumentsService.findByTicket(ticketNumber.trim()));
+      setSale(await salesDocumentsService.findByTicket(fullTicket()));
+      setSelectedUnitIds([]);
     } catch (err) {
       setSale(null);
-      toast.error(getBackendMessage(err, 'No fue posible encontrar el ticket.'));
+      setSelectedUnitIds([]);
+      toast.error(getBackendMessage(err, 'No fue posible encontrar el documento.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const registerAction = async (unit, actionType) => {
-    setProcessingUnitId(unit.id);
+  const selectedUnits = useMemo(
+    () => units.filter((unit) => selectedUnitIds.includes(unit.id)),
+    [selectedUnitIds, units],
+  );
+
+  const selectedTotal = useMemo(
+    () => selectedUnits.reduce((sum, unit) => sum + Number(unit.paid_amount || 0), 0),
+    [selectedUnits],
+  );
+
+  const toggleUnit = (unit) => {
+    if (unit.status !== 'SOLD') return;
+    setSelectedUnitIds((current) => (
+      current.includes(unit.id)
+        ? current.filter((id) => id !== unit.id)
+        : [...current, unit.id]
+    ));
+  };
+
+  const confirmAction = async (reason) => {
     try {
       const result = await salesDocumentsService.registerReturn({
-        sale_line_unit_id: unit.id,
+        sale_line_unit_ids: selectedUnitIds,
         action_type: actionType,
-        reason: reason.trim() || null,
+        reason: reason || null,
       });
-      toast.success(`${actionType === 'RETURN' ? 'Devolucion' : 'Cambio'} registrado por ${money(result.amount)}.`);
-      setSale(await salesDocumentsService.findByTicket(ticketNumber.trim()));
+      toast.success(`${actionType === 'RETURN' ? 'Devolucion' : 'Cambio'} generado por ${money(result.amount)}.`);
+      setShowConfirm(false);
+      setSelectedUnitIds([]);
+      if (result.action_url) {
+        navigate(result.action_url);
+        return;
+      }
+      setSale(await salesDocumentsService.findByTicket(fullTicket()));
     } catch (err) {
-      toast.error(getBackendMessage(err, 'No fue posible registrar la operacion.'));
-    } finally {
-      setProcessingUnitId(null);
+      toast.error(getBackendMessage(err, 'No fue posible generar la operacion.'));
+      throw err;
     }
   };
+
+  const reset = () => { setFolio(''); setSale(null); setSelectedUnitIds([]); };
+
+  const docStatus = sale ? saleStatus(sale.status) : null;
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
-        title="Devoluciones de ventas"
-        description="Busca un ticket, selecciona una unidad vendida y registra devolucion o cambio."
+        title="Cambio y devoluciones"
+        description="Selecciona el tipo de documento, ingresa el folio y registra el cambio o devolucion por unidad."
       />
 
       <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="grid gap-3 lg:grid-cols-[minmax(16rem,24rem)_minmax(16rem,1fr)_auto]">
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Ticket / boleta</span>
-            <input className={fieldClassName} value={ticketNumber} onChange={(event) => setTicketNumber(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') searchTicket(); }} />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Motivo</span>
-            <input className={fieldClassName} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Opcional" />
-          </label>
+        <div className="grid gap-3 lg:grid-cols-[minmax(14rem,20rem)_minmax(10rem,16rem)_auto]">
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Tipo de documento</span>
+            <select
+              className={fieldClassName}
+              value={documentTypeCode}
+              onChange={(e) => { setDocumentTypeCode(e.target.value); setFolio(''); setSale(null); }}
+            >
+              {documentTypes.map((t) => (
+                <option key={t.code} value={t.code}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Folio</span>
+            <div className="flex h-10 overflow-hidden rounded-md border border-slate-300 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus-within:border-blue-500 dark:focus-within:ring-blue-950">
+              {getPrefix(documentTypeCode) && (
+                <span className="flex select-none items-center border-r border-slate-200 bg-slate-50 px-3 font-mono text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                  {getPrefix(documentTypeCode)}
+                </span>
+              )}
+              <input
+                className="h-full flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-slate-400"
+                value={folio}
+                onChange={(e) => { setFolio(e.target.value); setSale(null); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') searchSale(); }}
+                placeholder="Folio"
+              />
+            </div>
+          </div>
+
           <div className="flex items-end">
-            <ActionButton label={loading ? 'Buscando...' : 'Buscar'} icon={Search} onClick={searchTicket} disabled={loading} />
+            <ActionButton label={loading ? 'Buscando...' : 'Buscar'} icon={Search} onClick={searchSale} disabled={loading || !folio.trim()} />
           </div>
         </div>
       </div>
@@ -101,47 +196,126 @@ const SalesReturns = () => {
         <div className="mt-4 space-y-4">
           <div className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:grid-cols-4">
             <div>
-              <div className="text-xs text-slate-500">Documento</div>
-              <div className="font-semibold">{sale.document_type_name} {sale.ticket_number}</div>
+              <p className="text-xs text-slate-500">Documento</p>
+              <p className="font-semibold">{sale.document_type_name} · {sale.ticket_number}</p>
             </div>
             <div>
-              <div className="text-xs text-slate-500">Cliente</div>
-              <div className="font-semibold">{customerName(sale.customer)}</div>
+              <p className="text-xs text-slate-500">Cliente</p>
+              <p className="font-semibold">{customerName(sale.customer)}</p>
             </div>
             <div>
-              <div className="text-xs text-slate-500">Total pagado</div>
-              <div className="font-semibold">{money(sale.total_amount)}</div>
+              <p className="text-xs text-slate-500">Total pagado</p>
+              <p className="font-semibold tabular-nums">{money(sale.total_amount)}</p>
             </div>
             <div>
-              <div className="text-xs text-slate-500">Estado</div>
-              <StatusBadge variant="active">{sale.status}</StatusBadge>
+              <p className="text-xs text-slate-500">Estado</p>
+              <StatusBadge variant={docStatus.variant}>{docStatus.label}</StatusBadge>
             </div>
+          </div>
+
+          <div className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:grid-cols-[1fr_auto]">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setActionType('RETURN')}
+                className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium transition ${actionType === 'RETURN' ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Devolucion
+              </button>
+              <button
+                type="button"
+                onClick={() => setActionType('EXCHANGE')}
+                className={`inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-medium transition ${actionType === 'EXCHANGE' ? 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+              >
+                <Shuffle className="h-4 w-4" />
+                Cambio
+              </button>
+              <div className="text-sm text-slate-500">
+                {selectedUnitIds.length} unidad(es) seleccionada(s) · credito {money(selectedTotal)}
+              </div>
+            </div>
+            <ActionButton
+              label={actionType === 'RETURN' ? 'Generar ticket de devolucion' : 'Generar cambio'}
+              icon={actionType === 'RETURN' ? RotateCcw : Shuffle}
+              onClick={() => setShowConfirm(true)}
+              disabled={selectedUnitIds.length === 0}
+            />
           </div>
 
           <DataTable
             data={units}
             getRowKey={(row) => row.id}
-            emptyMessage="No hay unidades disponibles para este ticket."
+            emptyMessage="No hay unidades disponibles para este documento."
             columns={[
-              { id: 'product', label: 'Producto', render: (item) => <div><div className="font-medium">{item.product}</div><div className="font-mono text-xs text-slate-500">{item.code || '-'} · Unidad {item.unit_sequence}</div></div> },
-              { id: 'paid_amount', label: 'Pagado exacto', align: 'right', render: (item) => <span className="font-semibold tabular-nums">{money(item.paid_amount)}</span> },
-              { id: 'status', label: 'Estado', align: 'center', render: (item) => <StatusBadge variant={item.status === 'SOLD' ? 'active' : 'warning'}>{item.status}</StatusBadge> },
               {
-                id: 'actions',
-                label: 'Acciones',
+                id: 'select',
+                label: '',
                 align: 'center',
                 render: (item) => (
-                  <div className="flex gap-2">
-                    <ActionButton label="Devolver" icon={RotateCcw} variant="neutral" onClick={() => registerAction(item, 'RETURN')} disabled={item.status !== 'SOLD' || processingUnitId === item.id} />
-                    <ActionButton label="Cambiar" icon={Shuffle} onClick={() => registerAction(item, 'EXCHANGE')} disabled={item.status !== 'SOLD' || processingUnitId === item.id} />
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    checked={selectedUnitIds.includes(item.id)}
+                    onChange={() => toggleUnit(item)}
+                    disabled={item.status !== 'SOLD'}
+                  />
+                ),
+              },
+              {
+                id: 'product',
+                label: 'Producto',
+                render: (item) => (
+                  <div>
+                    <div className="font-medium">{item.product}</div>
+                    <div className="font-mono text-xs text-slate-500">{item.code || '—'} · Unidad {item.unit_sequence}</div>
                   </div>
+                ),
+              },
+              {
+                id: 'paid_amount',
+                label: 'Pagado exacto',
+                align: 'right',
+                render: (item) => <span className="font-semibold tabular-nums">{money(item.paid_amount)}</span>,
+              },
+              {
+                id: 'status',
+                label: 'Estado',
+                align: 'center',
+                render: (item) => {
+                  const s = unitStatus(item.status);
+                  return <StatusBadge variant={s.variant}>{s.label}</StatusBadge>;
+                },
+              },
+              {
+                id: 'actions',
+                label: 'Seleccion',
+                align: 'center',
+                render: (item) => (
+                  <RowActionButton
+                    label={selectedUnitIds.includes(item.id) ? 'Quitar seleccion' : 'Seleccionar'}
+                    icon={selectedUnitIds.includes(item.id) ? RefreshCcw : actionType === 'RETURN' ? RotateCcw : Shuffle}
+                    variant={selectedUnitIds.includes(item.id) ? 'neutral' : undefined}
+                    onClick={() => toggleUnit(item)}
+                    disabled={item.status !== 'SOLD'}
+                  />
                 ),
               },
             ]}
           />
 
-          <ActionButton label="Buscar nuevamente" icon={RefreshCcw} variant="neutral" onClick={() => setSale(null)} />
+          <ActionButton label="Buscar otro documento" icon={RefreshCcw} variant="neutral" onClick={reset} />
         </div>
+      )}
+
+      {showConfirm && (
+        <ReturnActionModal
+          units={selectedUnits}
+          amount={selectedTotal}
+          actionType={actionType}
+          onConfirm={confirmAction}
+          onClose={() => setShowConfirm(false)}
+        />
       )}
     </section>
   );

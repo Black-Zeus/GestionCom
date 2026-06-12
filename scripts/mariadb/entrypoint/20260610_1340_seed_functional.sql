@@ -956,7 +956,7 @@ INSERT IGNORE INTO `menu_items` (`id`, `parent_id`, `menu_code`, `menu_name`, `m
 (21,4,'sales_process','Procesar Venta','Convertir pre-venta a factura','bank-card-line',NULL,'/sales/process','LINK',NULL,NULL,0,0,0,NULL,20,2,'/sales/process','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
 (22,4,'sales_search_presale','Buscar Pre-venta','Buscar y consultar pre-ventas','search-line',NULL,'/sales/search-presale','LINK',NULL,NULL,0,0,0,NULL,30,2,'/sales/search-presale','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
 (23,4,'sales_search_document','Consultar Documento','Buscar ventas por número de documento','file-search-line',NULL,'/sales/search-document','LINK',NULL,NULL,0,0,0,NULL,40,2,'/sales/search-document','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
-(24,4,'sales_returns','Devoluciones','Procesar devoluciones de productos','refund-line',NULL,'/sales/returns','LINK',NULL,NULL,0,0,0,NULL,50,2,'/sales/returns','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
+(24,4,'sales_returns','Cambio y devoluciones','Procesar cambios y devoluciones de productos','refund-line',NULL,'/sales/returns','LINK',NULL,NULL,0,0,0,NULL,50,2,'/sales/returns','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
 (25,4,'sales_exchanges','Cambios de Producto','Cambios y ajustes de productos vendidos','exchange-cny-line',NULL,'/sales/exchanges','LINK',NULL,NULL,0,0,0,NULL,60,2,'/sales/exchanges','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
 (26,4,'sales_cancel','Anular Venta','Anulación de documentos de venta','close-circle-line',NULL,'/sales/cancel','LINK',NULL,NULL,0,0,0,NULL,70,2,'/sales/cancel','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
 (27,4,'sales_pricing','Listas de Precios','Gestión de precios y promociones','price-tag-line',NULL,'/sales/pricing','LINK',NULL,NULL,0,0,0,NULL,80,2,'/sales/pricing','SELF',NULL,NULL,'2026-06-08 13:24:34','2026-06-08 13:24:43',NULL,NULL),
@@ -1032,7 +1032,7 @@ INSERT IGNORE INTO `menu_items` (`id`, `parent_id`, `menu_code`, `menu_name`, `m
 (101,66,'supplier_payments','Pagos a proveedores','Pagos a proveedores','truck-line',NULL,'/finance/supplier-payments','LINK',165,NULL,1,1,0,NULL,60,2,'/finance/supplier-payments','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
 (102,66,'bank_reconciliation','Conciliacion bancaria','Conciliacion bancaria','bank-card-line',NULL,'/finance/bank-reconciliation','LINK',166,NULL,1,1,0,NULL,70,2,'/finance/bank-reconciliation','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
 (103,67,'commercial_documents','Documentos comerciales','Documentos comerciales','file-text-line',NULL,'/documents/commercial','LINK',167,NULL,1,1,0,NULL,30,2,'/documents/commercial','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
-(104,67,'returns','Devoluciones de ventas','Gestion de devoluciones de ventas.','refund-line',NULL,'/documents/returns','LINK',168,NULL,1,1,0,NULL,50,2,'/documents/returns','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
+(104,67,'returns','Cambio y devoluciones','Gestion de cambios y devoluciones de ventas.','refund-line',NULL,'/documents/returns','LINK',168,NULL,1,1,0,NULL,50,2,'/documents/returns','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
 (105,67,'credit_notes','Notas de credito de ventas','Notas de credito asociadas a ventas.','file-text-line',NULL,'/documents/returns/credit-notes','LINK',169,NULL,1,1,0,NULL,60,2,'/documents/returns/credit-notes','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
 (106,67,'document_series','Tipos y series de documentos','Tipos documentales y series de numeracion.','list-check-line',NULL,'/documents/series','LINK',170,NULL,1,1,0,NULL,10,2,'/documents/series','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
 (107,67,'document_templates','Plantillas de documentos','Plantillas de impresion, PDF o correo.','file-text-line',NULL,'/documents/templates','LINK',171,NULL,1,1,0,NULL,20,2,'/documents/templates','SELF',NULL,NULL,'2026-06-08 13:24:40','2026-06-10 13:04:12',NULL,NULL),
@@ -1316,5 +1316,4 @@ UNLOCK TABLES;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
 

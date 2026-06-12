@@ -2,12 +2,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   ClipboardList,
   PackagePlus,
   Save,
   Search,
   Send,
   Store,
+  Tag,
   Trash2,
   UserRound,
   XCircle,
@@ -67,13 +69,6 @@ const productName = (product) => product.variant_name || product.product_name ||
 const productPrice = (product) => Number(product.sale_price ?? product.base_price ?? product.price ?? 0);
 const productStock = (product) => Number(product.total_stock ?? product.stock_quantity ?? product.available_stock ?? 0);
 
-const buildDraft = ({ customer, authorizedBuyer, items }) => ({
-  customer,
-  authorizedBuyer,
-  items,
-  saved_at: new Date().toISOString(),
-});
-
 const mapLineToItem = (line) => {
   const key = [
     line.product_id,
@@ -91,6 +86,7 @@ const mapLineToItem = (line) => {
     quantity: Number(line.quantity || 1),
     unit_price: Number(line.unit_price || 0),
     discount_percent: Number(line.discount_percent || 0),
+    is_exchange_credit: Number(line.unit_price || 0) < 0 || normalize(line.product_name || line.name).includes('credito por cambio'),
   };
 };
 
@@ -187,18 +183,18 @@ const NoSalesPointAccess = ({ displayUser }) => (
     />
 
     <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-      <div className="w-full max-w-2xl rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
-          <Store className="h-8 w-8" />
+      <div className="w-full max-w-2xl rounded-md border border-amber-200 bg-white p-8 text-center shadow-sm dark:border-amber-900/40 dark:bg-slate-900">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-amber-500 dark:bg-amber-950/40 dark:text-amber-300">
+          <AlertTriangle className="h-8 w-8" />
         </div>
-        <h1 className="mt-5 text-xl font-bold text-slate-950 dark:text-white">Sin puntos de venta autorizados</h1>
+        <h1 className="mt-5 text-xl font-bold text-slate-950 dark:text-white">Punto de venta no configurado</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-          {displayUser} no posee puntos de venta autorizados para operar en este modulo.
-          Contacta al administrador para que asigne un punto de venta activo a tu usuario.
+          <strong>{displayUser}</strong> no tiene un punto de venta activo en esta locación.
+          Selecciona un punto de venta en la barra inferior antes de continuar.
         </p>
         <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-          <div className="font-semibold text-slate-800 dark:text-slate-100">Acceso requerido</div>
-          <div className="mt-1">Asignacion activa a un punto de venta y una locacion operativa habilitada.</div>
+          <div className="font-semibold text-slate-800 dark:text-slate-100">¿Cómo solucionarlo?</div>
+          <div className="mt-1">Usa el menú de <strong>Punto de venta</strong> en la barra inferior de la pantalla para asignar uno. Si no aparecen opciones, contacta al administrador.</div>
         </div>
       </div>
     </div>
@@ -228,12 +224,30 @@ const ProductSelectionModal = ({ products = [], onSelect, onClose }) => {
               label: 'Producto',
               render: (item) => (
                 <div>
-                  <div className="font-medium">{productName(item)}</div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-medium">{productName(item)}</span>
+                    {item.is_promotion && item.promotion_discount_label && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                        <Tag className="h-2.5 w-2.5" />
+                        {item.promotion_discount_label}
+                      </span>
+                    )}
+                  </div>
                   <div className="font-mono text-xs text-slate-500">{productCode(item)}</div>
                 </div>
               ),
             },
-            { id: 'price', label: 'Precio', align: 'right', render: (item) => <span className="font-semibold tabular-nums">{money(productPrice(item))}</span> },
+            {
+              id: 'price',
+              label: 'Precio',
+              align: 'right',
+              render: (item) => item.is_promotion ? (
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="font-bold tabular-nums text-orange-600 dark:text-orange-400">{money(productPrice(item))}</span>
+                  <span className="text-xs tabular-nums text-slate-400 line-through">{money(item.original_price)}</span>
+                </div>
+              ) : <span className="font-semibold tabular-nums">{money(productPrice(item))}</span>,
+            },
             { id: 'stock', label: 'Stock', align: 'right', render: (item) => <span className={productStock(item) > 0 ? 'font-medium text-green-700 dark:text-green-400' : 'text-slate-400'}>{productStock(item).toLocaleString('es-CL')}</span> },
             { id: 'list', label: 'Lista', render: (item) => item.price_list_name || '-' },
             {
@@ -244,6 +258,7 @@ const ProductSelectionModal = ({ products = [], onSelect, onClose }) => {
                 <ActionButton
                   label="Cargar"
                   icon={PackagePlus}
+                  disabled={productStock(item) <= 0}
                   onClick={() => {
                     onSelect(item);
                     onClose?.();
@@ -274,6 +289,7 @@ const NewSale = () => {
   const activeLocationRecord = useSessionStore((state) => state.getActiveLocation());
   const activeSalesPointRecord = useSessionStore((state) => state.getActiveSalesPoint());
   const activeCashRegisterRecord = useSessionStore((state) => state.getActiveCashRegister());
+  const sessionContextReady = useSessionStore((state) => state._sessionContextReady);
   const [customers, setCustomers] = useState([]);
   const [authorizedUsers, setAuthorizedUsers] = useState([]);
   const [priceGroups, setPriceGroups] = useState([]);
@@ -284,6 +300,7 @@ const NewSale = () => {
   const [productSearch, setProductSearch] = useState('');
   const [items, setItems] = useState([]);
   const [editSaleId, setEditSaleId] = useState(null);
+  const [editSale, setEditSale] = useState(null);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [sendingToCashier, setSendingToCashier] = useState(false);
@@ -313,6 +330,7 @@ const NewSale = () => {
     salesDocumentsService.getByCode(editSaleCode)
       .then((sale) => {
         setEditSaleId(sale.id);
+        setEditSale(sale);
         if (sale.customer) {
           setSelectedCustomer(sale.customer);
           setCustomerSearch(customerName(sale.customer));
@@ -375,13 +393,28 @@ const NewSale = () => {
       const base = Number(item.quantity || 0) * Number(item.unit_price || 0);
       return sum + (base * Number(item.discount_percent || 0) / 100);
     }, 0);
-    const total = Math.max(subtotal - lineDiscount, 0);
+    const rawTotal = subtotal - lineDiscount;
+    const total = Math.max(rawTotal, 0);
     const net = total / 1.19;
     const tax = total - net;
-    return { subtotal, lineDiscount, net, tax, total };
+    return { subtotal, lineDiscount, net, tax, rawTotal, total };
   }, [items]);
 
-  const canSend = Boolean(items.length > 0 && selectedCustomer && totals.total > 0 && activeSalesPointRecord);
+  const isExchangeEdit = editSale?.document_type_code === 'EXCHANGE_DRAFT' || editSale?.is_exchange_document;
+  const exchangeCredit = useMemo(
+    () => items.filter((item) => item.is_exchange_credit).reduce((sum, item) => sum + Math.abs(Number(item.quantity || 0) * Number(item.unit_price || 0)), 0),
+    [items],
+  );
+  const hasNewExchangeItems = useMemo(
+    () => items.some((item) => !item.is_exchange_credit && Number(item.quantity || 0) > 0),
+    [items],
+  );
+  const canSend = Boolean(
+    items.length > 0
+    && selectedCustomer
+    && activeSalesPointRecord
+    && (isExchangeEdit ? hasNewExchangeItems : totals.total > 0)
+  );
   const hasCashAccess = hasPermission('CASH_POS_ACCESS') && Boolean(activeCashRegisterRecord);
 
   const selectCustomer = (customer) => {
@@ -399,10 +432,22 @@ const NewSale = () => {
       toast.error('El producto no tiene precio de venta configurado.');
       return;
     }
+    const stock = productStock(product);
+    const hasWarehouse = Boolean(activeLocationRecord?.warehouse_id || activeLocationRecord?.id);
+    if (hasWarehouse && stock <= 0) {
+      toast.error('Sin stock disponible en la bodega actual para este producto.');
+      return;
+    }
+    let blocked = false;
     setItems((current) => {
       const existing = current.find((item) => item.key === key);
       if (existing) {
-        return current.map((item) => item.key === key ? { ...item, quantity: Number(item.quantity || 0) + 1 } : item);
+        const next = Number(existing.quantity || 0) + 1;
+        if (hasWarehouse && next > existing.available_stock) {
+          blocked = true;
+          return current;
+        }
+        return current.map((item) => item.key === key ? { ...item, quantity: next } : item);
       }
       return [
         ...current,
@@ -414,15 +459,19 @@ const NewSale = () => {
           name: productName(product),
           price_list_name: product.price_list_name,
           unit_name: product.unit_name || product.unit_symbol || '',
-          available_stock: productStock(product),
+          available_stock: stock,
           quantity: 1,
           unit_price: price,
           discount_percent: 0,
         },
       ];
     });
+    if (blocked) {
+      toast.error('Stock insuficiente. No hay mas unidades disponibles en bodega.');
+      return;
+    }
     toast.success('Producto agregado.');
-  }, []);
+  }, [activeLocationRecord]);
 
   const openProductPicker = useCallback((products) => {
     ModalManager.show({
@@ -448,6 +497,8 @@ const NewSale = () => {
     try {
       const params = { category_id: Number(priceGroupId) };
       if (productSearch.trim()) params.search = productSearch.trim();
+      const warehouseId = activeLocationRecord?.warehouse_id || activeLocationRecord?.id;
+      if (warehouseId) params.warehouse_id = warehouseId;
       const results = await businessFoundationService.priceQuery.list(params);
       if (results.length === 1) {
         addItem(results[0]);
@@ -467,9 +518,17 @@ const NewSale = () => {
     } finally {
       setLoadingProducts(false);
     }
-  }, [addItem, openProductPicker, priceGroupId, productSearch]);
+  }, [addItem, activeLocationRecord, openProductPicker, priceGroupId, productSearch]);
 
   const updateItem = (key, patch) => {
+    const hasWarehouse = Boolean(activeLocationRecord?.warehouse_id || activeLocationRecord?.id);
+    if (hasWarehouse && patch.quantity !== undefined) {
+      const item = items.find((i) => i.key === key);
+      if (item && !item.is_exchange_credit && patch.quantity > item.available_stock) {
+        toast.error(`Stock insuficiente. Disponible en bodega: ${item.available_stock}`);
+        return;
+      }
+    }
     setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
   };
 
@@ -480,17 +539,8 @@ const NewSale = () => {
     setAuthorizedBuyer(null);
     setCustomerSearch(defaultCustomer ? customerName(defaultCustomer) : '');
     setProductSearch('');
-    setItems([]);
+    setItems((current) => (isExchangeEdit ? current.filter((item) => item.is_exchange_credit) : []));
     localStorage.removeItem(DRAFT_KEY);
-  };
-
-  const saveDraft = () => {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(buildDraft({
-      customer: selectedCustomer,
-      authorizedBuyer,
-      items,
-    })));
-    toast.success('Borrador guardado.');
   };
 
   const sendToCashier = async () => {
@@ -509,6 +559,7 @@ const NewSale = () => {
         authorized_buyer: authorizedBuyer,
         items,
         prepared_by: displayUser,
+        notes: editSale?.notes || null,
       };
       const sale = editSaleId
         ? await salesDocumentsService.updatePending(editSaleId, payload)
@@ -538,6 +589,7 @@ const NewSale = () => {
         authorized_buyer: authorizedBuyer,
         items,
         prepared_by: displayUser,
+        notes: editSale?.notes || null,
       };
       if (editSaleId) {
         await salesDocumentsService.updatePending(editSaleId, payload);
@@ -559,7 +611,8 @@ const NewSale = () => {
     label: group.group_name || group.category_name,
   })), [priceGroups]);
 
-  if (!hasAuthorizedSalesPoint) {
+  if (!sessionContextReady) return null;
+  if (!activeSalesPointRecord) {
     return <NoSalesPointAccess displayUser={displayUser} />;
   }
 
@@ -567,7 +620,7 @@ const NewSale = () => {
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
         title={editSaleCode ? 'Editar venta' : 'Preparacion de venta'}
-        description={editSaleCode ? 'Modifica la venta pendiente y reenvíala a caja.' : 'Arma una venta y dejala pendiente para procesamiento en caja.'}
+        description={isExchangeEdit ? 'Carga los productos nuevos y aplica el credito del cambio antes de enviar a caja.' : editSaleCode ? 'Modifica la venta pendiente y reenvíala a caja.' : 'Arma una venta y dejala pendiente para procesamiento en caja.'}
         actions={[]}
       />
 
@@ -577,7 +630,7 @@ const NewSale = () => {
         </div>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
         <div className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
             <CustomerSearchPanel
@@ -650,9 +703,9 @@ const NewSale = () => {
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Items de la venta</h2>
-                <p className="text-xs text-slate-500">Ajusta cantidades y descuentos antes de enviar a caja.</p>
+                <p className="text-xs text-slate-500">{isExchangeEdit ? 'El credito del cambio descuenta del total de los nuevos productos.' : 'Ajusta cantidades y descuentos antes de enviar a caja.'}</p>
               </div>
-              <ActionButton label="Limpiar" icon={Trash2} variant="neutral" onClick={() => setItems([])} disabled={items.length === 0} />
+              <ActionButton label="Limpiar" icon={Trash2} variant="neutral" onClick={() => setItems((current) => current.filter((item) => item.is_exchange_credit))} disabled={items.every((item) => item.is_exchange_credit)} />
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
@@ -675,16 +728,17 @@ const NewSale = () => {
                         <td className="px-4 py-3">
                           <div className="font-medium">{item.name}</div>
                           <div className="font-mono text-xs text-slate-500">{item.code}{item.unit_name ? ` · ${item.unit_name}` : ''}</div>
+                          {item.is_exchange_credit && <div className="mt-1 text-xs font-semibold text-blue-600 dark:text-blue-300">Credito a favor</div>}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">{money(item.unit_price)}</td>
                         <td className="px-4 py-3">
-                          <input className={`${compactFieldClassName} text-center`} type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: Number(event.target.value || 1) })} />
+                          <input className={`${compactFieldClassName} text-center`} type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: Number(event.target.value || 1) })} disabled={item.is_exchange_credit} />
                         </td>
                         <td className="px-4 py-3">
-                          <input className={`${compactFieldClassName} text-center`} type="number" min="0" max="100" step="0.01" value={item.discount_percent} onChange={(event) => updateItem(item.key, { discount_percent: Number(event.target.value || 0) })} />
+                          <input className={`${compactFieldClassName} text-center`} type="number" min="0" max="100" step="0.01" value={item.discount_percent} onChange={(event) => updateItem(item.key, { discount_percent: Number(event.target.value || 0) })} disabled={item.is_exchange_credit} />
                         </td>
                         <td className="px-4 py-3 text-right font-semibold tabular-nums">{money(base - discount)}</td>
-                        <td className="px-4 py-3 text-center"><RowActionButton label="Quitar" icon={Trash2} variant="danger" onClick={() => removeItem(item.key)} /></td>
+                        <td className="px-4 py-3 text-center"><RowActionButton label="Quitar" icon={Trash2} variant="danger" onClick={() => removeItem(item.key)} disabled={item.is_exchange_credit} /></td>
                       </tr>
                     );
                   })}
@@ -711,11 +765,17 @@ const NewSale = () => {
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between"><span className="text-slate-500">Items</span><span className="font-medium">{items.length}</span></div>
+                {isExchangeEdit && <div className="flex justify-between"><span className="text-slate-500">Credito cambio</span><span className="font-medium text-blue-700 dark:text-blue-300">{money(exchangeCredit)}</span></div>}
                 <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium">{money(totals.subtotal)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">Neto</span><span className="font-medium">{money(totals.net)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">IVA 19%</span><span className="font-medium">{money(totals.tax)}</span></div>
-                <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total</span><span>{money(totals.total)}</span></div>
+                <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total a pagar</span><span>{money(totals.total)}</span></div>
+                {isExchangeEdit && totals.rawTotal < 0 && (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+                    El crédito supera los productos seleccionados. La diferencia de {money(Math.abs(totals.rawTotal))} quedará como crédito no utilizado.
+                  </div>
+                )}
               </div>
               <div className="mt-5 grid gap-2">
                 {hasCashAccess && (

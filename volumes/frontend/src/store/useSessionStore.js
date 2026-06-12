@@ -105,8 +105,19 @@ export const useSessionStore = create(
       activeLocation: defaultLocations[0].id,
       activeSalesPoint: defaultSalesPoints[0].id,
       activeCashRegister: defaultCashRegisters[0].id,
+      preferredLocation: null,
+      preferredSalesPoint: null,
+      preferredCashRegister: null,
+      _sessionContextReady: false,
+
+      markSessionContextReady() {
+        set({ _sessionContextReady: true });
+      },
 
       initializeFromUser(user) {
+        // If setOperationalContext already ran (real API data), don't clobber with mock defaults.
+        if (get()._sessionContextReady) return;
+
         const locations = normalizeLocations(user?.authorizedLocations || user?.authorizedWarehouses || user?.warehouses);
         const salesPoints = normalizeSalesPoints(user?.authorizedSalesPoints || user?.salesPoints);
         const cashRegisters = normalizeCashRegisters(user?.authorizedCashRegisters || user?.cashRegisters);
@@ -139,17 +150,22 @@ export const useSessionStore = create(
         const salesPoints = (context.sales_points || context.salesPoints || []).map(normalizeSalesPoint).filter((item) => item.id);
         const cashRegisters = (context.cash_registers || context.cashRegisters || []).map(normalizeCashRegister).filter((item) => item.id);
         const currentState = get();
-        const activeLocation = locations.some((item) => String(item.id) === String(currentState.activeLocation))
-          ? currentState.activeLocation
+        // Prefer the user's explicit selection (preferredLocation) over currentState.activeLocation
+        // which may have been overwritten by initializeFromUser with mock defaults.
+        const preferredLoc = currentState.preferredLocation || currentState.activeLocation;
+        const activeLocation = locations.some((item) => String(item.id) === String(preferredLoc))
+          ? preferredLoc
           : locations[0]?.id || '';
         const location = getLocationById(locations, activeLocation);
         const availableSalesPoints = getSalesPointsForLocation(salesPoints, location);
         const availableCashRegisters = getCashRegistersForLocation(cashRegisters, location);
-        const activeSalesPoint = availableSalesPoints.some((item) => String(item.id) === String(currentState.activeSalesPoint))
-          ? currentState.activeSalesPoint
+        const preferredSp = currentState.preferredSalesPoint || currentState.activeSalesPoint;
+        const activeSalesPoint = availableSalesPoints.some((item) => String(item.id) === String(preferredSp))
+          ? preferredSp
           : availableSalesPoints[0]?.id || '';
-        const activeCashRegister = availableCashRegisters.some((item) => String(item.id) === String(currentState.activeCashRegister))
-          ? currentState.activeCashRegister
+        const preferredCr = currentState.preferredCashRegister || currentState.activeCashRegister;
+        const activeCashRegister = availableCashRegisters.some((item) => String(item.id) === String(preferredCr))
+          ? preferredCr
           : availableCashRegisters[0]?.id || '';
 
         set({
@@ -159,6 +175,7 @@ export const useSessionStore = create(
           activeLocation,
           activeSalesPoint,
           activeCashRegister,
+          _sessionContextReady: true,
         });
       },
 
@@ -168,6 +185,7 @@ export const useSessionStore = create(
         const cashRegisters = getCashRegistersForLocation(get().cashRegisters, location);
         set({
           activeLocation,
+          preferredLocation: activeLocation,
           activeSalesPoint: salesPoints.some((item) => String(item.id) === String(get().activeSalesPoint))
             ? get().activeSalesPoint
             : salesPoints[0]?.id || '',
@@ -178,11 +196,11 @@ export const useSessionStore = create(
       },
 
       setActiveCashRegister(activeCashRegister) {
-        set({ activeCashRegister });
+        set({ activeCashRegister, preferredCashRegister: activeCashRegister });
       },
 
       setActiveSalesPoint(activeSalesPoint) {
-        set({ activeSalesPoint });
+        set({ activeSalesPoint, preferredSalesPoint: activeSalesPoint });
       },
 
       getActiveLocation() {
@@ -207,6 +225,17 @@ export const useSessionStore = create(
     }),
     {
       name: appConfig.storageKey('session'),
+      partialize: (state) => ({
+        locations: state.locations,
+        salesPoints: state.salesPoints,
+        cashRegisters: state.cashRegisters,
+        activeLocation: state.activeLocation,
+        activeSalesPoint: state.activeSalesPoint,
+        activeCashRegister: state.activeCashRegister,
+        preferredLocation: state.preferredLocation,
+        preferredSalesPoint: state.preferredSalesPoint,
+        preferredCashRegister: state.preferredCashRegister,
+      }),
     }
   )
 );

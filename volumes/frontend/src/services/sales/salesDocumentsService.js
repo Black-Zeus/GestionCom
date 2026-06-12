@@ -39,6 +39,11 @@ export const salesDocumentsService = {
     return unwrap(response);
   },
 
+  async listClosed() {
+    const response = await apiClient.get('/sales-documents/closed');
+    return normalizeList(unwrap(response));
+  },
+
   async findByTicket(ticketNumber) {
     const response = await apiClient.get(`/sales-documents/by-ticket/${encodeURIComponent(ticketNumber)}`);
     return unwrap(response);
