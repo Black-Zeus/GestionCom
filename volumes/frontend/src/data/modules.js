@@ -55,9 +55,9 @@ export const moduleGroups = [
     items: [
       { id: 'new-sale', label: 'Nueva venta', path: '/sales/new', icon: ShoppingCart, weight: 10 },
       { id: 'price-query', label: 'Consulta de precio', path: '/sales/price-query', icon: Tags, weight: 20, permissions: ['PRICE_LISTS_ACCESS', 'PRICE_LISTS_MANAGE'] },
-      { id: 'promotions', label: 'Promociones comerciales', path: '/sales/promotions', icon: BadgeDollarSign, weight: 30, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
+      { id: 'promotions', label: 'Mantenedor de Promociones', path: '/sales/promotions', icon: BadgeDollarSign, weight: 30, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
       { id: 'sales-history', label: 'Historial de ventas', path: '/sales/history', icon: ClipboardList, weight: 40 },
-      { id: 'sales-returns', label: 'Devoluciones', path: '/sales/returns', icon: RotateCcw, weight: 50 },
+      { id: 'sales-returns', label: 'Cambio y devoluciones', path: '/sales/returns', icon: RotateCcw, weight: 50, permissions: ['RETURNS_ACCESS'] },
     ],
   },
   {
@@ -134,7 +134,7 @@ export const moduleGroups = [
       { id: 'document-templates', label: 'Plantillas de documentos', path: '/documents/templates', icon: FileText, weight: 20, permissions: ['DOCUMENT_TEMPLATES_ACCESS', 'DOCUMENT_TEMPLATES_MANAGE'] },
       { id: 'commercial-documents', label: 'Documentos comerciales', path: '/documents/commercial', icon: FileText, weight: 30 },
       { id: 'return-reasons', label: 'Motivos de devolucion', path: '/documents/returns/reasons', icon: RotateCcw, weight: 40, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
-      { id: 'returns', label: 'Devoluciones de ventas', path: '/documents/returns', icon: Receipt, weight: 50 },
+      { id: 'returns', label: 'Cambio y devoluciones', path: '/documents/returns', icon: Receipt, weight: 50 },
       { id: 'credit-notes', label: 'Notas de credito de ventas', path: '/documents/returns/credit-notes', icon: FileText, weight: 60 },
     ],
   },

@@ -443,13 +443,68 @@ const inventoryTabs = [
 
 const salesConfigTabs = [
   {
-    id: 'promotions', resource: 'promotions', label: 'Promociones', singular: 'promocion', icon: Percent, codeField: 'promotion_code', activeField: 'is_active',
+    id: 'promotions', resource: 'promotions', label: 'Promociones', singular: 'promocion', icon: Percent, codeField: 'promotion_code', activeField: 'is_active', size: 'xlarge',
     formComponent: PromotionFormModal,
     empty: { promotion_name: '', promotion_type: 'PERCENTAGE_OFF', target_type: 'PRODUCT', valid_from: new Date().toISOString().slice(0, 16), valid_to: new Date().toISOString().slice(0, 16), is_combinable: false, is_active: true },
     fields: [],
-    tableFields: [{ id: 'promotion_name', label: 'Promocion', primary: true }, { id: 'promotion_type', label: 'Tipo' }, { id: 'target_type', label: 'Objetivo' }, { id: 'valid_to', label: 'Hasta' }],
+    tableFields: [
+      { id: 'promotion_name', label: 'Promocion', primary: true, sortable: true, sortValue: (item) => item.promotion_name || '' },
+      { id: 'promotion_type', label: 'Tipo', sortable: true, sortValue: (item) => {
+        const TYPE_LABELS = { PERCENTAGE_OFF: 'Desc. porcentual', FIXED_AMOUNT: 'Desc. monto fijo', QUANTITY_DISCOUNT: 'Desc. por cantidad', BUY_X_GET_Y: 'Compra X lleva Y' };
+        return TYPE_LABELS[item.promotion_type] || item.promotion_type || '';
+      }, format: (value, item) => {
+        const TYPE_LABELS = {
+          PERCENTAGE_OFF:    'Desc. porcentual',
+          FIXED_AMOUNT:      'Desc. monto fijo',
+          QUANTITY_DISCOUNT: 'Desc. por cantidad',
+          BUY_X_GET_Y:       'Compra X lleva Y',
+        };
+        const label = TYPE_LABELS[value] || value || '-';
+        const pct = item.discount_percentage != null && item.discount_percentage !== '' ? Number(item.discount_percentage) : null;
+        const amt = item.discount_amount     != null && item.discount_amount     !== '' ? Number(item.discount_amount)     : null;
+        let sub = '';
+        if (value === 'PERCENTAGE_OFF' && pct !== null) {
+          sub = `${Number.isInteger(pct) ? pct : pct.toFixed(2)}%`;
+        } else if (value === 'FIXED_AMOUNT' && amt !== null) {
+          sub = `-$${new Intl.NumberFormat('es-CL').format(amt)}`;
+        } else if (value === 'QUANTITY_DISCOUNT') {
+          if (pct !== null && amt !== null) sub = `${pct}% / -$${new Intl.NumberFormat('es-CL').format(amt)}`;
+          else if (pct !== null) sub = `${pct}%`;
+          else if (amt !== null) sub = `-$${new Intl.NumberFormat('es-CL').format(amt)}`;
+        } else if (value === 'BUY_X_GET_Y' && item.buy_quantity && item.get_quantity) {
+          sub = `${item.buy_quantity}x${item.get_quantity}`;
+        }
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span>{label}</span>
+            {sub && <span className="text-xs text-slate-400">{sub}</span>}
+          </div>
+        );
+      }},
+      { id: 'target_type', label: 'Objetivo', sortable: true, sortValue: (item) => {
+        const TARGET_LABELS = { PRODUCT: 'Producto', CATEGORY: 'Categoria', ALL: 'Todos los productos' };
+        return TARGET_LABELS[item.target_type] || item.target_type || '';
+      }, options: [
+        { value: 'PRODUCT',  label: 'Producto' },
+        { value: 'CATEGORY', label: 'Categoria' },
+        { value: 'ALL',      label: 'Todos los productos' },
+      ]},
+      { id: 'valid_from', label: 'Vigencia', sortable: true, sortValue: (item) => item.valid_from || '', format: (value, item) => {
+        const fmt = (val) => {
+          if (!val) return '-';
+          const [y, m, d] = String(val).slice(0, 10).split('-');
+          return `${d}/${m}/${y}`;
+        };
+        return (
+          <div className="flex flex-col gap-0.5 text-xs leading-4">
+            <span><span className="text-slate-400">Desde</span> {fmt(value)}</span>
+            <span><span className="text-slate-400">Hasta</span> {fmt(item.valid_to)}</span>
+          </div>
+        );
+      }},
+    ],
     rowActions: [
-      { label: 'Items', icon: PackageSearch, path: '/sales/promotions/items', params: (row) => ({ promotion_id: row.id }) },
+      { label: 'Items', icon: PackageSearch, path: '/sales/promotions/items', params: (row) => ({ promotion_id: row.id }), disabled: (item) => item.target_type !== 'PRODUCT', disabledLabel: 'Items' },
     ],
   },
   {
@@ -460,7 +515,10 @@ const salesConfigTabs = [
     scope: { field: 'promotion_id', optionsResource: 'promotions', fallback: 'Promocion', backPath: '/sales/promotions' },
     empty: { promotion_id: '', product_id: '', product_variant_id: '' },
     fields: [{ id: 'promotion_id', label: 'Promocion', type: 'select', optionsResource: 'promotions', required: true }, { id: 'product_id', label: 'Producto', type: 'select', optionsResource: 'products-options', required: true }, { id: 'product_variant_id', label: 'Variante', type: 'select', optionsResource: 'product-variants-options' }],
-    tableFields: [{ id: 'promotion_id', label: 'Promocion', primary: true, optionsResource: 'promotions' }, { id: 'product_id', label: 'Producto', optionsResource: 'products-options' }, { id: 'product_variant_id', label: 'Variante', optionsResource: 'product-variants-options' }],
+    tableFields: [
+      { id: 'product_id', label: 'Producto', primary: true, sortable: true, sortValue: (item) => item.product_name || '', format: (value, item) => item.product_name || String(value) },
+      { id: 'product_variant_id', label: 'Variante', sortable: true, sortValue: (item) => item.variant_name || item.variant_sku || '', format: (value, item) => item.variant_name || item.variant_sku || (value ? String(value) : '-') },
+    ],
   },
   {
     id: 'returns', resource: 'return-reasons', label: 'Devoluciones', singular: 'motivo de devolucion', icon: RotateCcw, codeField: 'reason_code', activeField: 'is_active',
@@ -605,15 +663,17 @@ export const InventoryMaintainers = ({ initialTab, visibleTabs }) => {
 export const SalesConfigMaintainers = ({ initialTab, visibleTabs }) => {
   const scopedTabs = visibleTabs?.length ? salesConfigTabs.filter((tab) => visibleTabs.includes(tab.id)) : salesConfigTabs;
   const singleTabTitles = {
+    promotions: 'Mantenedor de Promociones',
     items: 'Items de promocion',
     returns: 'Motivos de devolucion',
   };
   const singleTabDescriptions = {
+    promotions: 'Promociones, vigencias y productos o categorias asociadas.',
     items: 'Productos o categorias asociados a una promocion comercial.',
     returns: 'Reglas base para cambios, reembolsos y devoluciones de venta.',
   };
-  const title = scopedTabs.length === 1 ? singleTabTitles[scopedTabs[0].id] || 'Mantenedores comerciales' : 'Promociones comerciales';
-  const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Configuracion comercial no transaccional.' : 'Promociones, vigencias y productos o categorias asociadas.';
+  const title = scopedTabs.length === 1 ? singleTabTitles[scopedTabs[0].id] || 'Mantenedor de Promociones' : 'Mantenedor de Promociones';
+  const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Promociones, vigencias y productos o categorias asociadas.' : 'Promociones, vigencias y productos o categorias asociadas.';
   return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
 };
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;

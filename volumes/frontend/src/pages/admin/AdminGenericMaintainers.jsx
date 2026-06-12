@@ -57,7 +57,7 @@ const getStatus = (item, config, optionData = {}) => {
     const option = getStatusOption(item, config, optionData);
     return option ? option.code === (config.activeValue || 'ACTIVE') : item[config.statusField] === (config.activeValue || 'ACTIVE');
   }
-  if (config.activeField) return item[config.activeField] !== false;
+  if (config.activeField) return !!item[config.activeField];
   return true;
 };
 
@@ -357,12 +357,13 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
 
     const initialValues = item ? { ...item } : { ...activeConfig.empty, ...routePrefill };
     const savePayload = async (payload) => {
-      await notifyPromise(item ? adminMaintainersService.update(activeConfig.resource, item.id, payload) : adminMaintainersService.create(activeConfig.resource, payload), {
+      const result = await notifyPromise(item ? adminMaintainersService.update(activeConfig.resource, item.id, payload) : adminMaintainersService.create(activeConfig.resource, payload), {
         loading: 'Guardando registro...',
         success: 'Registro guardado.',
         error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.'),
       });
       await load();
+      return result;
     };
 
     if (activeConfig.formComponent) {
@@ -479,16 +480,18 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
     }
 
     const nextValue = activeConfig.statusField ? (isActive ? 'INACTIVE' : (activeConfig.activeValue || 'ACTIVE')) : !isActive;
-    const nextLabel = isActive ? 'inactivo' : 'activo';
+    const actionLabel = isActive ? 'desactivar' : 'activar';
+    const actionDoneLabel = isActive ? 'desactivado' : 'activado';
     if (!await ModalManager.confirm({
-      title: `Forzar estado de ${activeConfig.singular}`,
-      message: `Confirma cambiar este registro a estado ${nextLabel}.`,
-      buttons: { cancel: 'Cancelar', confirm: isActive ? 'Inactivar' : 'Activar' },
+      title: `${isActive ? 'Desactivar' : 'Activar'} ${activeConfig.singular}`,
+      message: `¿Confirmas ${actionLabel} este registro? ${isActive ? 'Dejará de estar disponible para operaciones.' : 'Quedará habilitado para operaciones.'}`,
+      buttons: { cancel: 'Cancelar', confirm: isActive ? 'Desactivar' : 'Activar' },
+      variant: isActive ? 'warning' : 'info',
     })) return;
 
     await notifyPromise(adminMaintainersService.update(activeConfig.resource, item.id, { [field]: nextValue }), {
-      loading: 'Actualizando estado...',
-      success: `Registro ${nextLabel}.`,
+      loading: `${isActive ? 'Desactivando' : 'Activando'}...`,
+      success: `Registro ${actionDoneLabel}.`,
       error: (requestError) => getBackendMessage(requestError, 'No fue posible actualizar el estado.'),
     });
     await load();
@@ -566,6 +569,8 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
           ...activeConfig.tableFields.map((field) => ({
             id: field.id,
             label: field.label,
+            sortable: field.sortable || false,
+            sortValue: field.sortValue,
             render: (item) => (field.primary || field.detailField || field.detailResolver ? renderTableValue(item, field) : formatValue(item, field, optionData, timezone, hourFormat)),
           })),
           ...(activeConfig.showStatus === false ? [] : [{ id: 'status', label: 'Estado', render: renderStatus }]),
@@ -591,7 +596,11 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
                 })}
                 <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove(item)} />
                 {(activeConfig.forceStatusToggle || activeConfig.statusField || activeConfig.activeField) && (
-                  <RowActionButton label="Cambiar estado" icon={Power} onClick={() => changeStatus(item)} />
+                  <RowActionButton
+                    label={getStatus(item, activeConfig, optionData) ? 'Desactivar' : 'Activar'}
+                    icon={Power}
+                    onClick={() => changeStatus(item)}
+                  />
                 )}
               </div>
             ),
