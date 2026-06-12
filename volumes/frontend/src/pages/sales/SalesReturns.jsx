@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RefreshCcw, RotateCcw, Search, Shuffle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import DataTable from '@/components/common/data/DataTable';
@@ -56,6 +56,7 @@ const customerName = (customer) => (
 
 const SalesReturns = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [documentTypes, setDocumentTypes] = useState([]);
   const [documentTypeCode, setDocumentTypeCode] = useState('');
   const [folio, setFolio] = useState('');
@@ -75,6 +76,32 @@ const SalesReturns = () => {
       setDocumentTypeCode(ticket ? ticket.code : saleTypes[0]?.code ?? '');
     }).catch(() => {});
   }, []);
+
+  // Pre-load sale when navigated from CustomerSalesPage with ?sale_code=&action=
+  useEffect(() => {
+    const saleCode   = searchParams.get('sale_code');
+    const actionParam = searchParams.get('action');
+    if (!saleCode) return;
+    setActionType(actionParam === 'EXCHANGE' ? 'EXCHANGE' : 'RETURN');
+    setLoading(true);
+    salesDocumentsService.getByCode(saleCode)
+      .then((loadedSale) => {
+        setSale(loadedSale);
+        setSelectedUnitIds([]);
+        const dtCode = loadedSale.document_type_code;
+        if (dtCode) setDocumentTypeCode(dtCode);
+        if (loadedSale.ticket_number) {
+          const prefix = getPrefix(dtCode ?? '');
+          setFolio(
+            loadedSale.ticket_number.startsWith(prefix)
+              ? loadedSale.ticket_number.slice(prefix.length)
+              : loadedSale.ticket_number,
+          );
+        }
+      })
+      .catch(() => toast.error('No fue posible cargar el documento indicado.'))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const units = useMemo(() => (
     (sale?.items || []).flatMap((line) => (line.units || []).map((unit) => ({
