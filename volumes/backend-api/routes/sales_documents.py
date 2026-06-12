@@ -674,13 +674,13 @@ async def get_sale_by_code(sale_code: str, request: Request, user: dict = Depend
     async with db_manager.get_async_session() as session:
         result = await session.execute(
             select(SaleDocument)
-            .options(selectinload(SaleDocument.lines))
+            .options(selectinload(SaleDocument.lines).selectinload(SaleDocumentLine.units))
             .where(and_(SaleDocument.sale_code == sale_code, SaleDocument.deleted_at.is_(None)))
         )
         sale = result.scalar_one_or_none()
         if not sale:
             return ResponseManager.error(message="Venta no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_NOT_FOUND, request=request)
-        return ResponseManager.success(data=sale_to_dict(sale), request=request)
+        return ResponseManager.success(data=sale_to_dict(sale, include_units=True), request=request)
 
 
 @router.get("/by-ticket/{ticket_number}", response_class=JSONResponse)
@@ -695,6 +695,56 @@ async def get_sale_by_ticket(ticket_number: str, request: Request, user: dict = 
         if not sale:
             return ResponseManager.error(message="Ticket no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_NOT_FOUND, request=request)
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), request=request)
+
+
+@router.get("/by-customer/{customer_id}", response_class=JSONResponse)
+async def list_sales_by_customer(
+    customer_id: int,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    from datetime import date, timedelta
+    from sqlalchemy import func
+
+    params = request.query_params
+    try:
+        from_date = date.fromisoformat(params.get("from_date")) if params.get("from_date") else date.today() - timedelta(days=30)
+        to_date   = date.fromisoformat(params.get("to_date"))   if params.get("to_date")   else date.today()
+    except ValueError:
+        return ResponseManager.error(message="Formato de fecha invalido. Use YYYY-MM-DD.", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_ERROR, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+    doc_type = params.get("doc_type")  # TICKET | RETURN_TICKET | EXCHANGE_DRAFT | None
+
+    conditions = [
+        SaleDocument.customer_id == customer_id,
+        SaleDocument.status == SaleStatus.CLOSED,
+        SaleDocument.deleted_at.is_(None),
+        func.date(SaleDocument.created_at) >= from_date,
+        func.date(SaleDocument.created_at) <= to_date,
+    ]
+    if doc_type:
+        conditions.append(SaleDocument.document_type_code == doc_type)
+
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            select(SaleDocument)
+            .where(and_(*conditions))
+            .order_by(SaleDocument.created_at.desc())
+            .limit(500)
+        )
+        rows = result.scalars().all()
+        return ResponseManager.success(data=[
+            {
+                "id": s.id,
+                "sale_code": s.sale_code,
+                "ticket_number": s.ticket_number,
+                "document_type_code": s.document_type_code,
+                "document_type_name": s.document_type_name,
+                "total_amount": float(s.total_amount or 0),
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+            }
+            for s in rows
+        ], request=request)
 
 
 @router.delete("/{sale_id}/pending", response_class=JSONResponse)
