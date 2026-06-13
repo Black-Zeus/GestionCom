@@ -143,6 +143,7 @@ class SaleDocument(BaseModel):
     warehouse_id = Column(BigInteger, ForeignKey("warehouses.id"), nullable=True)
     sales_point_id = Column(BigInteger, ForeignKey("sales_points.id"), nullable=True)
     cash_register_id = Column(BigInteger, ForeignKey("cash_registers.id"), nullable=True)
+    cash_register_session_id = Column(BigInteger, ForeignKey("cash_register_sessions.id"), nullable=True)
     payment_method_code = Column(String(20), nullable=True)
     payment_method_name = Column(String(100), nullable=True)
     amount_tendered = Column(DECIMAL(14, 2), nullable=True)
@@ -175,6 +176,7 @@ class SaleDocument(BaseModel):
         Index("idx_sale_documents_ticket_number", "ticket_number"),
         Index("idx_sale_documents_sales_point_id", "sales_point_id"),
         Index("idx_sale_documents_cash_register_id", "cash_register_id"),
+        Index("idx_sale_documents_session_id", "cash_register_session_id"),
         Index("idx_sale_documents_deleted_at", "deleted_at"),
     )
 

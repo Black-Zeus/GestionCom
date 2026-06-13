@@ -23,6 +23,7 @@ from database.models.sales_operations import (
     SaleStatus,
     SaleUnitStatus,
 )
+from database.models.cash_sessions import CashRegisterSession, CASH_SESSION_OPEN
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Sales Documents"])
@@ -838,6 +839,20 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
             new_products_total = money(sale.total_amount) + credit  # total_amount = new - credit
             refunded = money(sale.change_amount or 0)
             sale.exchange_forfeited_credit = max(Decimal("0.00"), credit - new_products_total - refunded)
+
+        if sale.cash_register_id:
+            active_sess_result = await session.execute(
+                select(CashRegisterSession).where(
+                    and_(
+                        CashRegisterSession.cash_register_id == sale.cash_register_id,
+                        CashRegisterSession.status_id == CASH_SESSION_OPEN,
+                        CashRegisterSession.deleted_at.is_(None),
+                    )
+                ).limit(1)
+            )
+            active_sess = active_sess_result.scalar_one_or_none()
+            if active_sess:
+                sale.cash_register_session_id = active_sess.id
 
         await session.flush()
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), message="Venta cerrada", request=request)

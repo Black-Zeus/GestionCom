@@ -16,6 +16,7 @@ from .permissions import Permission
 from .warehouses import Warehouse
 from .warehouse_zones import WarehouseZone
 from .cash_registers import CashRegister
+from .cash_sessions import CashRegisterSession, CashSessionDenominationCount, CashSessionObservation, CurrencyDenomination
 from .sales_operations import CashRegisterUserAssignment, SaleDocument, SaleDocumentLine, SaleLineUnit, SaleReturn, SaleStatus, SaleUnitStatus, SalesPoint, SalesPointUserAssignment
 from .petty_cash import PettyCashCategory, PettyCashFund, PettyCashFundStatus
 from .payment_methods import PaymentMethod, PaymentMethodType
@@ -45,6 +46,10 @@ __all_models__ = [
     "Warehouse",
     "WarehouseZone",
     "CashRegister",
+    "CashRegisterSession",
+    "CashSessionDenominationCount",
+    "CashSessionObservation",
+    "CurrencyDenomination",
     "SalesPoint",
     "CashRegisterUserAssignment",
     "SalesPointUserAssignment",
