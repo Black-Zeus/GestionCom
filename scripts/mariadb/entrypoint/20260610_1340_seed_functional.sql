@@ -711,25 +711,25 @@ UNLOCK TABLES;
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
--- Credenciales de prueba para testing:
--- - admin.demo      -> admin.demo1
--- - contador.demo   -> contador.demo1
--- - jefe.bodega     -> jefe.bodega1
--- - vendedor.centro -> vendedor.centro1
--- - vendedor.mall   -> vendedor.mall1
--- - cajero.demo     -> cajero.demo1
--- - consultor.demo  -> consultor.demo1
--- - supervisor.demo -> supervisor.demo1
--- - root            -> GCom#R7xP9!v2
+-- Credenciales iniciales (cambiar en produccion):
+-- admin             -> admin.demo1
+-- contador          -> contador.demo1
+-- jefe.bodega       -> jefe.bodega1
+-- vendedor.centro   -> vendedor.centro1
+-- vendedor.santa.filomena -> vendedor.mall1
+-- cajero            -> cajero.demo1
+-- consultor         -> consultor.demo1
+-- supervisor        -> supervisor.demo1
+-- root              -> GCom#R7xP9!v2
 INSERT IGNORE INTO `users` (`id`, `username`, `email`, `password_hash`, `secret`, `first_name`, `last_name`, `phone`, `is_active`, `last_login_at`, `last_login_ip`, `password_changed_at`, `created_at`, `updated_at`, `deleted_at`, `petty_cash_limit`, `avatar_media_asset_id`) VALUES
-(1,'admin.demo','admin@demo.com','$2b$12$GJwjcMJpY.k3PjB9pwG9mePxRG5FymNnRFOYiZCdDLPbF.9c9CGLm','8690caa47b4d52532f931d7c1e0c5202e619a9dafcedf26f6c5d97275b52c9f1','Carlos','Administrador','+56912345678',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,NULL,NULL),
-(2,'contador.demo','contador@demo.com','$2b$12$A4TxmFH.8ZL2VGt/vBJFIOBuEuUJnhEtl/XSv0Zrff4uj34kotmwC','59901f2b127a2a6d753d643683b35c5952f7d665c31f50ac232d98444b7ef083','María','Contador','+56912345679',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,100000.00,NULL),
-(3,'jefe.bodega','jefe.bodega@demo.com','$2b$12$ZH6CK0cuVAJFRjYv8jX0dOWLKlS0Wjo124wlujPH60lwp1p4wDc42','f6753c0fcd4e798d60a1739d7c88d7ed7f71eaced09d7f014b4351d1aec18e37','Pedro','Jefe Bodega','+56912345680',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,50000.00,NULL),
-(4,'vendedor.centro','vendedor.centro@demo.com','$2b$12$2aWNQuHFExYh4Bca3dL0dO3xv72rWZSBzFQJK2ljLc97tYhBxCx8K','6a50a5531ec2dcaa37fb2c556b9b8bc75ad181f8cb900ca9cbaeeea6747447d4','Ana','Vendedora Centro','+56912345681',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,30000.00,NULL),
-(5,'vendedor.mall','vendedor.mall@demo.com','$2b$12$xE4SPV5Y6lGfFCwYkZgNHuQ/3c56InAqWWiTqSggDVgg6KQfcOgBC','d5a8c779360b26f0a5f7ca305cf2199d9459c9e6c04189801ef5bafc9ef528a3','Luis','Vendedor Mall','+56912345682',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,30000.00,NULL),
-(6,'cajero.demo','cajero@demo.com','$2b$12$XuvsSdw1ZVQKVhBIGePPZuBOHay.Aq58rjvFujHBF4hhdb8CfxwrG','7dd7660253bf2fb1a9c491623302474a1ff992ae716e7ba1fe3aab95ca9b8630','Sofia','Cajera','+56912345683',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,20000.00,NULL),
-(7,'consultor.demo','consultor@demo.com','$2b$12$GS2iDtNwdNoqo1DQvM4ZEufjoDBsLV0UpKs275x0Lz7BWwxc6ATfe','adbb988e41e6271bdf6c36d48ffbd70c7bf2f350a85441d8c77902ba8e0bd7b4','Roberto','Consultor','+56912345684',1,NULL,NULL,'2026-06-08 13:24:38','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,NULL,NULL),
-(8,'supervisor.demo','supervisor@demo.com','$2b$12$tOWtYs1w.c.CM4vBYMTaC.jUPiFo/JqrBjcSQRreJx8G0MEmATI46','cbfe2de25df18ac379ca49c7b01154ebb78553a11dafcf034e4c5db08a004a2f','Carmen','Supervisora','+56912345685',1,NULL,NULL,'2026-06-08 13:24:38','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,75000.00,NULL),
+(1,'admin','admin@cecichic.cl','$2b$12$GJwjcMJpY.k3PjB9pwG9mePxRG5FymNnRFOYiZCdDLPbF.9c9CGLm','8690caa47b4d52532f931d7c1e0c5202e619a9dafcedf26f6c5d97275b52c9f1','Carlos','Administrador','+56912345678',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,NULL,NULL),
+(2,'contador','contador@cecichic.cl','$2b$12$A4TxmFH.8ZL2VGt/vBJFIOBuEuUJnhEtl/XSv0Zrff4uj34kotmwC','59901f2b127a2a6d753d643683b35c5952f7d665c31f50ac232d98444b7ef083','María','Contador','+56912345679',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,100000.00,NULL),
+(3,'jefe.bodega','jefe.bodega@cecichic.cl','$2b$12$ZH6CK0cuVAJFRjYv8jX0dOWLKlS0Wjo124wlujPH60lwp1p4wDc42','f6753c0fcd4e798d60a1739d7c88d7ed7f71eaced09d7f014b4351d1aec18e37','Pedro','Jefe Bodega','+56912345680',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,50000.00,NULL),
+(4,'vendedor.centro','vendedor.centro@cecichic.cl','$2b$12$2aWNQuHFExYh4Bca3dL0dO3xv72rWZSBzFQJK2ljLc97tYhBxCx8K','6a50a5531ec2dcaa37fb2c556b9b8bc75ad181f8cb900ca9cbaeeea6747447d4','Ana','Vendedora Centro','+56912345681',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,30000.00,NULL),
+(5,'vendedor.santa.filomena','vendedor.santa.filomena@cecichic.cl','$2b$12$xE4SPV5Y6lGfFCwYkZgNHuQ/3c56InAqWWiTqSggDVgg6KQfcOgBC','d5a8c779360b26f0a5f7ca305cf2199d9459c9e6c04189801ef5bafc9ef528a3','Luis','Vendedor Santa Filomena','+56912345682',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,30000.00,NULL),
+(6,'cajero','cajero@cecichic.cl','$2b$12$XuvsSdw1ZVQKVhBIGePPZuBOHay.Aq58rjvFujHBF4hhdb8CfxwrG','7dd7660253bf2fb1a9c491623302474a1ff992ae716e7ba1fe3aab95ca9b8630','Sofia','Cajera','+56912345683',1,NULL,NULL,'2026-06-08 13:24:37','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,20000.00,NULL),
+(7,'consultor','consultor@cecichic.cl','$2b$12$GS2iDtNwdNoqo1DQvM4ZEufjoDBsLV0UpKs275x0Lz7BWwxc6ATfe','adbb988e41e6271bdf6c36d48ffbd70c7bf2f350a85441d8c77902ba8e0bd7b4','Roberto','Consultor','+56912345684',1,NULL,NULL,'2026-06-08 13:24:38','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,NULL,NULL),
+(8,'supervisor','supervisor@cecichic.cl','$2b$12$tOWtYs1w.c.CM4vBYMTaC.jUPiFo/JqrBjcSQRreJx8G0MEmATI46','cbfe2de25df18ac379ca49c7b01154ebb78553a11dafcf034e4c5db08a004a2f','Carmen','Supervisora','+56912345685',1,NULL,NULL,'2026-06-08 13:24:38','2026-06-08 13:24:35','2026-06-08 13:24:40',NULL,75000.00,NULL),
 (9,'root','root@gestioncom.local','$2b$12$7o2dTIA0yj42HCqgN.YmWe4J0NdY4mKYXLsCRm1HOiM4cCHZshX06','656f6853b1995a517fee08fa48a7b035a01d2fb23daea17ff424ad17cea72d44','Root','Super Administrador',NULL,1,'2026-06-08 21:25:41','10.201.1.1','2026-06-08 13:24:40','2026-06-08 13:24:40','2026-06-08 21:25:41',NULL,NULL,NULL);
 
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
@@ -1230,11 +1230,11 @@ UNLOCK TABLES;
 LOCK TABLES `warehouses` WRITE;
 /*!40000 ALTER TABLE `warehouses` DISABLE KEYS */;
 INSERT IGNORE INTO `warehouses` (`id`, `warehouse_code`, `warehouse_name`, `warehouse_type`, `responsible_user_id`, `address`, `city`, `country`, `phone`, `email`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1,'BOD_25','Taller','WAREHOUSE',9,'Patronato','Santiago','Chile','2732 5728','no@mail.com',1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
-(2,'BOD_26','PYME','STORE',9,'Patronato','Santiago','Chile','2732 9497','no@mail.com',1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
-(3,'BOD_27','Santa Filomena','STORE',9,'Santa Filomena, Patronato','Santiago','Chile','2735 1922','no@mail.com',1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
-(4,'BOD_28','Patronato','STORE',9,'Patronato','Santiago','Chile','2737 1769','no@mail.com',1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
-(5,'BOD_29','Cecilia','STORE',9,'Cecilia','Santiago','Chile','2732 5728','no@mail.com',1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL);
+(1,'BOD_25','Taller','WAREHOUSE',9,'Patronato','Santiago','Chile','2732 5728',NULL,1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
+(2,'BOD_26','PYME','STORE',9,'Patronato','Santiago','Chile','2732 9497',NULL,1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
+(3,'BOD_27','Santa Filomena','STORE',9,'Santa Filomena, Patronato','Santiago','Chile','2735 1922',NULL,1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
+(4,'BOD_28','Patronato','STORE',9,'Patronato','Santiago','Chile','2737 1769',NULL,1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL),
+(5,'BOD_29','Cecilia','STORE',9,'Cecilia','Santiago','Chile','2732 5728',NULL,1,'2026-06-08 13:24:46','2026-06-08 13:24:46',NULL);
 
 /*!40000 ALTER TABLE `warehouses` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -1281,13 +1281,13 @@ UNLOCK TABLES;
 
 LOCK TABLES `cash_registers` WRITE;
 /*!40000 ALTER TABLE `cash_registers` DISABLE KEYS */;
-INSERT IGNORE INTO `cash_registers` (`id`, `register_code`, `register_name`, `warehouse_id`, `terminal_identifier`, `ip_address`, `location_description`, `is_active`, `requires_supervisor_approval`, `max_difference_amount`, `created_at`, `updated_at`, `deleted_at`) VALUES (1,'POS_0001','vxcvxcv',5,NULL,NULL,'vxcvcxv',1,1,1000.00,'2026-06-10 12:10:14','2026-06-10 12:10:14',NULL);
+INSERT IGNORE INTO `cash_registers` (`id`, `register_code`, `register_name`, `warehouse_id`, `terminal_identifier`, `ip_address`, `location_description`, `is_active`, `requires_supervisor_approval`, `max_difference_amount`, `created_at`, `updated_at`, `deleted_at`) VALUES (1,'POS_0001','Caja 1 - Cecilia',5,NULL,NULL,'Mostrador principal - Local Cecilia, Patronato',1,1,1000.00,'2026-06-10 12:10:14','2026-06-10 12:10:14',NULL);
 /*!40000 ALTER TABLE `cash_registers` ENABLE KEYS */;
 UNLOCK TABLES;
 
 LOCK TABLES `sales_points` WRITE;
 /*!40000 ALTER TABLE `sales_points` DISABLE KEYS */;
-INSERT IGNORE INTO `sales_points` (`id`, `sales_point_code`, `sales_point_name`, `warehouse_id`, `default_cash_register_id`, `channel_type`, `location_description`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES (1,'PV_0001','edqweqwe',5,1,'STORE','eqweqwe',1,'2026-06-10 12:16:00','2026-06-10 12:16:00',NULL);
+INSERT IGNORE INTO `sales_points` (`id`, `sales_point_code`, `sales_point_name`, `warehouse_id`, `default_cash_register_id`, `channel_type`, `location_description`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES (1,'PV_0001','Punto de Venta - Cecilia',5,1,'STORE','Sala de venta - Local Cecilia, Patronato',1,'2026-06-10 12:16:00','2026-06-10 12:16:00',NULL);
 /*!40000 ALTER TABLE `sales_points` ENABLE KEYS */;
 UNLOCK TABLES;
 
