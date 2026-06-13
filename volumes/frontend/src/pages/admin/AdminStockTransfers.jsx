@@ -9,6 +9,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
+import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { stockTransfersService } from '@/services/inventory/stockTransfersService';
 import { getBackendMessage, notifyPromise, toast } from '@/services/ui/notify';
@@ -129,7 +130,21 @@ const TransferFormModal = ({ transfer, warehouses = [], onSubmit, onClose }) => 
 };
 
 const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], locations = [], onSubmit, onClose }) => {
+  const initialProductId = useMemo(() => {
+    if (!item?.product_variant_id) return '';
+    const found = variants.find((v) => String(v.id) === String(item.product_variant_id));
+    return found ? String(found.product_id) : '';
+  }, [item, variants]);
+
+  const productOptions = useMemo(() => {
+    const seen = new Set();
+    return variants
+      .filter((v) => { if (seen.has(v.product_id)) return false; seen.add(v.product_id); return true; })
+      .map((v) => ({ value: String(v.product_id), label: [v.product_code, v.product_name].filter(Boolean).join(' — ') }));
+  }, [variants]);
+
   const [form, setForm] = useState({
+    product_id: initialProductId,
     product_variant_id: item?.product_variant_id ? String(item.product_variant_id) : '',
     quantity: item?.quantity ? String(item.quantity) : '1',
     measurement_unit_id: item?.measurement_unit_id ? String(item.measurement_unit_id) : '',
@@ -145,18 +160,24 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
   const [error, setError] = useState('');
   const [availability, setAvailability] = useState(null);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const sourceWarehouseId = transfer?.source_warehouse_id ? Number(transfer.source_warehouse_id) : null;
   const zoneOptions = zones.filter((zone) => (
-    String(zone.warehouse_id) === String(transfer.source_warehouse_id)
+    String(zone.warehouse_id) === String(sourceWarehouseId)
     && !String(zone.zone_code || '').startsWith('REC_')
   ));
   const locationOptions = locations.filter((location) => !form.source_warehouse_zone_id || String(location.warehouse_zone_id) === String(form.source_warehouse_zone_id));
+  const variantOptions = useMemo(() => variants
+    .filter((v) => !form.product_id || String(v.product_id) === form.product_id)
+    .map((v) => ({ value: String(v.id), label: nameLabel(v, 'variant_name', 'variant_sku') })),
+  [variants, form.product_id]);
+
   const selectedVariant = variants.find((variant) => String(variant.id) === String(form.product_variant_id));
   const needsLocation = Boolean(selectedVariant?.has_location_tracking);
   const needsBatch = Boolean(selectedVariant?.has_batch_control || selectedVariant?.has_expiry_date);
   const needsExpiry = Boolean(selectedVariant?.has_expiry_date);
   const needsSerial = Boolean(selectedVariant?.has_serial_numbers);
   const availableQuantity = Number(availability?.available_quantity ?? 0);
-  const hasAvailability = Boolean(form.product_variant_id) && availability !== null;
+  const hasAvailability = Boolean(form.product_variant_id) && availability !== null && sourceWarehouseId;
   const availabilityScope = form.source_warehouse_zone_location_id
     ? 'ubicacion seleccionada'
     : form.source_warehouse_zone_id
@@ -167,11 +188,13 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
       ? loadingAvailability
         ? 'Consultando stock disponible...'
         : `Disponible origen (${availabilityScope}, base): ${quantity(availableQuantity)}`
-      : 'Selecciona SKU / Variacion para ver stock disponible.');
+      : form.product_id
+        ? 'Selecciona SKU / Variante para ver stock disponible.'
+        : 'Selecciona un producto base para comenzar.');
   const messageTone = error ? 'danger' : hasAvailability && Number(form.quantity || 0) > availableQuantity ? 'warning' : 'neutral';
 
   useEffect(() => {
-    if (!form.product_variant_id) {
+    if (!form.product_variant_id || !sourceWarehouseId) {
       setAvailability(null);
       return undefined;
     }
@@ -179,7 +202,7 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
     setLoadingAvailability(true);
     stockTransfersService.getAvailableStock({
       product_variant_id: Number(form.product_variant_id),
-      warehouse_id: Number(transfer.source_warehouse_id),
+      warehouse_id: sourceWarehouseId,
       warehouse_zone_id: form.source_warehouse_zone_id ? Number(form.source_warehouse_zone_id) : undefined,
       warehouse_zone_location_id: form.source_warehouse_zone_location_id ? Number(form.source_warehouse_zone_location_id) : undefined,
       batch_lot_number: form.batch_lot_number.trim() || undefined,
@@ -198,16 +221,16 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
     return () => {
       active = false;
     };
-  }, [form.batch_lot_number, form.expiry_date, form.product_variant_id, form.serial_number, form.source_warehouse_zone_id, form.source_warehouse_zone_location_id, transfer.source_warehouse_id]);
+  }, [form.batch_lot_number, form.expiry_date, form.product_variant_id, form.serial_number, form.source_warehouse_zone_id, form.source_warehouse_zone_location_id, sourceWarehouseId]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError('');
     if (!form.product_variant_id || Number(form.quantity) <= 0) {
-      setError('Selecciona SKU / Variacion e indica cantidad.');
+      setError('Selecciona producto y variante, e indica cantidad.');
       return;
     }
-    if (needsLocation && !form.source_warehouse_zone_location_id) {
+    if (needsLocation && zoneOptions.length > 0 && !form.source_warehouse_zone_location_id) {
       setError('Este producto controla ubicacion; selecciona una ubicacion interna de origen.');
       return;
     }
@@ -253,62 +276,97 @@ const AddItemModal = ({ transfer, item, variants = [], units = [], zones = [], l
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-6">
+        {/* Fila 1: Producto | SKU */}
+        <div className="space-y-1 text-sm md:col-span-3">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Producto</span>
+          <AutocompleteSelect
+            value={form.product_id}
+            onChange={(nextValue) => setForm((current) => ({ ...current, product_id: nextValue || '', product_variant_id: '', batch_lot_number: '', expiry_date: '', serial_number: '' }))}
+            options={productOptions}
+            placeholder="Selecciona producto"
+            searchPlaceholder="Buscar por nombre o codigo..."
+            clearable
+          />
+        </div>
+        <div className="space-y-1 text-sm md:col-span-3">
+          <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variante</span>
+          <AutocompleteSelect
+            value={form.product_variant_id}
+            onChange={(nextValue) => {
+              const found = variants.find((v) => String(v.id) === String(nextValue));
+              setForm((current) => ({
+                ...current,
+                product_variant_id: nextValue || '',
+                batch_lot_number: '',
+                expiry_date: '',
+                serial_number: '',
+                unit_cost: found?.cost_price != null ? String(found.cost_price) : '',
+              }));
+            }}
+            options={variantOptions}
+            placeholder={form.product_id ? 'Selecciona variante' : 'Primero selecciona un producto'}
+            searchPlaceholder="Buscar por variante o SKU..."
+            clearable
+            disabled={!form.product_id}
+          />
+        </div>
+        {/* Fila 2: Cantidad | Unidad | Costo Unitario */}
         <label className="space-y-1 text-sm md:col-span-2">
-          <span className="font-medium text-slate-700 dark:text-slate-200">SKU / Variacion</span>
-          <select className={selectClassName} value={form.product_variant_id} onChange={(event) => setForm((current) => ({ ...current, product_variant_id: event.target.value, batch_lot_number: '', expiry_date: '', serial_number: '' }))} required>
-            <option value="">Selecciona SKU</option>
-            {variants.map((variant) => <option key={variant.id} value={variant.id}>{[variant.product_name, nameLabel(variant, 'variant_name', 'variant_sku')].filter(Boolean).join(' / ')}</option>)}
-          </select>
-        </label>
-        <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad</span>
           <input className={fieldClassName} type="number" min="0.0001" step="0.0001" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} required />
         </label>
-        <label className="space-y-1 text-sm">
+        <label className="space-y-1 text-sm md:col-span-2">
           <span className="font-medium text-slate-700 dark:text-slate-200">Unidad</span>
           <select className={selectClassName} value={form.measurement_unit_id} onChange={(event) => setForm((current) => ({ ...current, measurement_unit_id: event.target.value }))}>
             <option value="">Unidad base del producto</option>
             {units.map((unit) => <option key={unit.id} value={unit.id}>{nameLabel(unit, 'unit_name', 'unit_symbol')}</option>)}
           </select>
         </label>
-        <label className="space-y-1 text-sm">
+        <label className="space-y-1 text-sm md:col-span-2">
+          <span className="font-medium text-slate-700 dark:text-slate-200">
+            Costo unitario
+            {selectedVariant?.cost_price != null && (
+              <span className="ml-1 font-normal text-slate-400">(del producto)</span>
+            )}
+          </span>
+          <input className={fieldClassName} type="number" min="0" step="0.0001" value={form.unit_cost} onChange={(event) => setForm((current) => ({ ...current, unit_cost: event.target.value }))} placeholder="Desde producto" />
+        </label>
+        {/* Fila 3: Zona Origen | Ubicacion Origen */}
+        <label className="space-y-1 text-sm md:col-span-3">
           <span className="font-medium text-slate-700 dark:text-slate-200">Zona origen</span>
           <select className={selectClassName} value={form.source_warehouse_zone_id} onChange={(event) => setForm((current) => ({ ...current, source_warehouse_zone_id: event.target.value, source_warehouse_zone_location_id: '' }))}>
             <option value="">Stock general</option>
             {zoneOptions.map((zone) => <option key={zone.id} value={zone.id}>{nameLabel(zone, 'zone_name', 'zone_code')}</option>)}
           </select>
         </label>
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion origen{needsLocation ? ' *' : ''}</span>
+        <label className="space-y-1 text-sm md:col-span-3">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion origen{needsLocation && zoneOptions.length > 0 ? ' *' : ''}</span>
           <select className={selectClassName} value={form.source_warehouse_zone_location_id} onChange={(event) => setForm((current) => ({ ...current, source_warehouse_zone_location_id: event.target.value }))} disabled={!form.source_warehouse_zone_id}>
             <option value="">Sin ubicacion interna</option>
             {locationOptions.map((location) => <option key={location.id} value={location.id}>{nameLabel(location, 'location_name', 'location_code')}</option>)}
           </select>
         </label>
+        {/* Campos condicionales de tracking */}
         {needsBatch && (
-          <label className="space-y-1 text-sm">
+          <label className="space-y-1 text-sm md:col-span-2">
             <span className="font-medium text-slate-700 dark:text-slate-200">Lote *</span>
             <input className={fieldClassName} value={form.batch_lot_number} onChange={(event) => setForm((current) => ({ ...current, batch_lot_number: event.target.value.toUpperCase() }))} maxLength={100} required />
           </label>
         )}
         {needsExpiry && (
-          <label className="space-y-1 text-sm">
+          <label className="space-y-1 text-sm md:col-span-2">
             <span className="font-medium text-slate-700 dark:text-slate-200">Vencimiento *</span>
             <input className={fieldClassName} type="date" value={form.expiry_date} onChange={(event) => setForm((current) => ({ ...current, expiry_date: event.target.value }))} required />
           </label>
         )}
         {needsSerial && (
-          <label className="space-y-1 text-sm">
+          <label className="space-y-1 text-sm md:col-span-2">
             <span className="font-medium text-slate-700 dark:text-slate-200">Serial *</span>
             <input className={fieldClassName} value={form.serial_number} onChange={(event) => setForm((current) => ({ ...current, serial_number: event.target.value.toUpperCase() }))} maxLength={100} required />
           </label>
         )}
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Costo unitario</span>
-          <input className={fieldClassName} type="number" min="0" step="0.0001" value={form.unit_cost} onChange={(event) => setForm((current) => ({ ...current, unit_cost: event.target.value }))} />
-        </label>
-        <label className="space-y-1 text-sm md:col-span-3">
+        <label className="space-y-1 text-sm md:col-span-6">
           <span className="font-medium text-slate-700 dark:text-slate-200">Notas</span>
           <textarea className={textareaClassName} value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} />
         </label>

@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search, XCircle } from 'lucide-react';
 
+const VISIBLE_LIMIT = 80;
+
 const AutocompleteSelect = ({
   value = '',
   onChange,
@@ -202,7 +204,7 @@ const AutocompleteSelect = ({
                 <span className="min-w-0 flex-1 truncate">{`${customOptionLabel} "${term.trim()}"`}</span>
               </button>
             )}
-            {filteredOptions.map((option) => {
+            {filteredOptions.slice(0, VISIBLE_LIMIT).map((option) => {
               const selected = multiple
                 ? selectedValues.includes(String(option.value))
                 : String(option.value) === String(value);
@@ -226,6 +228,11 @@ const AutocompleteSelect = ({
                 </button>
               );
             })}
+            {filteredOptions.length > VISIBLE_LIMIT && (
+              <div className="border-t border-slate-100 px-3 py-2 text-center text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                {filteredOptions.length - VISIBLE_LIMIT} más — escribe para filtrar
+              </div>
+            )}
           </div>
         </div>,
         document.body
