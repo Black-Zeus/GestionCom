@@ -89,6 +89,13 @@ RESOURCES = {
         "required": ["currency_code", "currency_name", "currency_symbol"],
         "bool": ["is_base_currency", "is_active"], "int": ["decimal_places"],
     },
+    "currency-denominations": {
+        "table": "currency_denominations", "active_field": "is_active", "soft_delete": False,
+        "fields": ["denomination_label", "denomination_type", "denomination_value", "sort_order", "is_active"],
+        "required": ["denomination_label", "denomination_type", "denomination_value"], "bool": ["is_active"], "int": ["denomination_value", "sort_order"],
+        "enum": {"denomination_type": ["COIN", "BILL"]},
+        "order_by": "sort_order ASC, id ASC",
+    },
     "return-reasons": {
         "table": "return_reasons", "code_field": "reason_code", "prefix": "RET", "active_field": "is_active", "soft_delete": True,
         "fields": ["reason_name", "reason_description", "requires_approval", "affects_stock", "allows_exchange", "allows_refund", "max_days_after_sale", "default_account_code", "is_active"],

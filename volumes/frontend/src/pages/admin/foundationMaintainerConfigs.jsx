@@ -678,6 +678,27 @@ export const SalesConfigMaintainers = ({ initialTab, visibleTabs }) => {
   return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
 };
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
+
+const cashDenominationsTabs = [
+  {
+    id: 'denominations', resource: 'currency-denominations', label: 'Denominaciones', singular: 'denominacion', icon: CircleDollarSign, activeField: 'is_active',
+    empty: { denomination_label: '', denomination_type: 'BILL', denomination_value: 0, sort_order: 0, is_active: true },
+    fields: [
+      { id: 'denomination_label', label: 'Etiqueta', required: true },
+      { id: 'denomination_type', label: 'Tipo', type: 'select', options: [{ value: 'COIN', label: 'Moneda' }, { value: 'BILL', label: 'Billete' }] },
+      { id: 'denomination_value', label: 'Valor ($)', type: 'number', min: 1, required: true },
+      { id: 'sort_order', label: 'Orden', type: 'number', min: 0 },
+      { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
+    ],
+    tableFields: [
+      { id: 'denomination_label', label: 'Denominacion', primary: true },
+      { id: 'denomination_type', label: 'Tipo' },
+      { id: 'denomination_value', label: 'Valor' },
+      { id: 'sort_order', label: 'Orden' },
+    ],
+  },
+];
+export const CashMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Denominaciones de efectivo" description="Billetes y monedas utilizados en arqueo y apertura de caja." tabs={cashDenominationsTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;
 export const NotificationSettingsMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Configuracion de notificaciones" description="Tipos, reglas de emision y preferencias de recepcion." tabs={notificationSettingsTabs} initialTab={initialTab} />;
 export const SystemParameterMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Parametros del sistema" description="Estados, bancos, monedas, devoluciones y reglas de stock critico." tabs={systemTabs} initialTab={initialTab} />;

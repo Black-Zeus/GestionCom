@@ -21,6 +21,9 @@ const AdminPettyCashCategories = lazy(() => import('@/pages/admin/AdminPettyCash
 const AdminPettyCashFunds = lazy(() => import('@/pages/admin/AdminPettyCashFunds'));
 const PettyCashExpenses = lazy(() => import('@/pages/cash/PettyCashExpenses'));
 const CashPos = lazy(() => import('@/pages/cash/CashPos'));
+const CashOpening = lazy(() => import('@/pages/cash/CashOpening'));
+const CashCount = lazy(() => import('@/pages/cash/CashCount'));
+const AdminCashMaintainers = lazy(() => import('@/pages/admin/AdminCashMaintainers'));
 const NewSale = lazy(() => import('@/pages/sales/NewSale'));
 const SalesHistory = lazy(() => import('@/pages/sales/SalesHistory'));
 const SalesReturns = lazy(() => import('@/pages/sales/SalesReturns'));
@@ -84,6 +87,9 @@ const moduleComponents = {
   'petty-cash': AdminPettyCashFunds,
   'petty-cash-expenses': PettyCashExpenses,
   'cash-pos': CashPos,
+  'cash-opening': CashOpening,
+  'cash-count': CashCount,
+  'cash-denominations': AdminCashMaintainers,
   'new-sale': NewSale,
   'sales-history': SalesHistory,
   'sales-returns': SalesReturns,
@@ -400,6 +406,7 @@ const AppRouter = () => (
             />
           );
         })}
+        <Route path="cash/count" element={<Page><CashCount /></Page>} />
         <Route path="error/301" element={<Page><ErrorPage code="301" /></Page>} />
         <Route path="error/302" element={<Page><ErrorPage code="302" /></Page>} />
         <Route path="error/400" element={<Page><ErrorPage code="400" /></Page>} />

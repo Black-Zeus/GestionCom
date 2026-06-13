@@ -271,6 +271,17 @@ const detailNavigationRoutes = [
     getLabel: (record) => `Items - ${record?.promotion_name || record?.promotion_code}`,
     getTooltip: (record) => `Items de promocion: ${record?.promotion_name || record?.promotion_code}`,
   },
+  {
+    id: 'cash-count-detail',
+    pathname: '/cash/count',
+    queryParam: 'session_id',
+    basePath: '/cash/opening',
+    parentPath: '/cash/opening',
+    group: 'Apertura / cierre de caja',
+    fallbackLabel: 'Arqueo de caja',
+    getLabelFromCode: () => 'Arqueo de caja',
+    getTooltipFromCode: () => 'Arqueo y cierre de sesion de caja',
+  },
 ];
 
 const getDetailNavigationRoute = (pathname, searchParams) => {
