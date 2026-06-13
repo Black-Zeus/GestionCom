@@ -13,8 +13,9 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
-from utils.inventory_tracking import validate_serial_quantity, validate_tracking_dimensions
+from utils.inventory_tracking import get_variant_tracking, normalize_batch_lot, normalize_serial, validate_serial_quantity, validate_tracking_dimensions
 from utils.permissions_utils import get_current_user
+from utils.product_feature_flags import product_flag_visibility
 
 router = APIRouter(tags=["Stock Transfers"])
 
@@ -286,8 +287,7 @@ async def _stock_row(
         text(
             "SELECT * FROM stock WHERE product_variant_id = :product_variant_id AND warehouse_id = :warehouse_id "
             "AND warehouse_zone_id <=> :zone_id AND warehouse_zone_location_id <=> :location_id "
-            "AND batch_lot_number <=> :batch_lot_number AND expiry_date <=> :expiry_date "
-            "AND serial_number <=> :serial_number LIMIT 1"
+            "AND batch_lot_number <=> :batch_lot_number AND expiry_date <=> :expiry_date LIMIT 1"
         ),
         {
             "product_variant_id": product_variant_id,
@@ -296,7 +296,6 @@ async def _stock_row(
             "location_id": location_id,
             "batch_lot_number": batch_lot_number,
             "expiry_date": expiry_date,
-            "serial_number": serial_number,
         },
     )
     return _row(result.mappings().first())
@@ -350,8 +349,8 @@ async def _apply_stock_delta(
     else:
         await session.execute(
             text(
-                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number, current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
-                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :batch_lot_number, :expiry_date, :serial_number, :qty, 0, CURRENT_TIMESTAMP, :movement_type)"
+                "INSERT INTO stock (product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, batch_lot_number, expiry_date, current_quantity, reserved_quantity, last_movement_date, last_movement_type) "
+                "VALUES (:product_variant_id, :warehouse_id, :zone_id, :location_id, :batch_lot_number, :expiry_date, :qty, 0, CURRENT_TIMESTAMP, :movement_type)"
             ),
             {
                 "product_variant_id": product_variant_id,
@@ -360,7 +359,6 @@ async def _apply_stock_delta(
                 "location_id": location_id,
                 "batch_lot_number": batch_lot_number,
                 "expiry_date": expiry_date,
-                "serial_number": serial_number,
                 "qty": after,
                 "movement_type": movement_type,
             },
@@ -433,8 +431,12 @@ async def get_available_stock(
 ):
     try:
         async with db_manager.get_async_session() as session:
-            tracking = await validate_tracking_dimensions(session, product_variant_id, warehouse_zone_location_id, batch_lot_number, expiry_date, serial_number)
-            stock = await _stock_row(session, product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, tracking["batch_lot_number"], tracking["expiry_date"], tracking["serial_number"])
+            # Solo obtener metadatos del variant sin forzar campos de tracking
+            # (la validacion estricta ocurre al agregar el item, no al consultar disponibilidad)
+            await get_variant_tracking(session, product_variant_id)
+            norm_batch = normalize_batch_lot(batch_lot_number)
+            norm_serial = normalize_serial(serial_number)
+            stock = await _stock_row(session, product_variant_id, warehouse_id, warehouse_zone_id, warehouse_zone_location_id, norm_batch, expiry_date, norm_serial)
             current_quantity = Decimal(str(stock["current_quantity"])) if stock else Decimal("0")
             reserved_quantity = Decimal(str(stock["reserved_quantity"])) if stock else Decimal("0")
             available_quantity = current_quantity - reserved_quantity
@@ -444,9 +446,9 @@ async def get_available_stock(
                     "warehouse_id": warehouse_id,
                     "warehouse_zone_id": warehouse_zone_id,
                     "warehouse_zone_location_id": warehouse_zone_location_id,
-                    "batch_lot_number": tracking["batch_lot_number"],
-                    "expiry_date": _json_value(tracking["expiry_date"]),
-                    "serial_number": tracking["serial_number"],
+                    "batch_lot_number": norm_batch,
+                    "expiry_date": _json_value(expiry_date),
+                    "serial_number": norm_serial,
                     "current_quantity": _json_value(current_quantity),
                     "reserved_quantity": _json_value(reserved_quantity),
                     "available_quantity": _json_value(available_quantity),
@@ -880,7 +882,8 @@ async def putaway_transfer(data: PutawayPayload, request: Request, transfer_id: 
                 if data.quantity > pending:
                     raise ValueError("La cantidad a ubicar supera lo pendiente")
                 zone_id, location_id = await _validate_location(session, int(transfer["target_warehouse_id"]), data.warehouse_zone_id, data.warehouse_zone_location_id)
-                if item.get("has_location_tracking") and not location_id:
+                flags = await product_flag_visibility(session)
+                if item.get("has_location_tracking") and flags.get("has_location_tracking", True) and not location_id:
                     raise ValueError("El producto controla ubicacion; selecciona una ubicacion interna final")
                 if zone_id == item.get("target_pending_warehouse_zone_id") and location_id == item.get("target_pending_warehouse_zone_location_id"):
                     raise ValueError("Selecciona una ubicacion final distinta a Recepcion")

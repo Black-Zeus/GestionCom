@@ -15,6 +15,7 @@ from core.response import ResponseManager
 from database.database import db_manager
 from services.inventory_expiry_alerts import emit_expiring_lot_alerts as emit_expiring_lot_notifications
 from utils.inventory_tracking import validate_serial_quantity, validate_tracking_dimensions
+from utils.product_feature_flags import product_flag_visibility
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Stock Movements"])
@@ -803,17 +804,21 @@ async def list_variant_units(product_variant_id: int, request: Request, user: di
 async def list_inventory_variant_options(request: Request, user: dict = Depends(require_stock_movements_read)):
     try:
         async with db_manager.get_async_session() as session:
+            flags = await product_flag_visibility(session)
             result = await session.execute(
                 text(
                     "SELECT pv.id, pv.product_id, pv.variant_sku, pv.variant_name, pv.is_active, "
-                    "p.product_code, p.product_name, p.has_location_tracking, p.has_batch_control, p.has_expiry_date, p.has_serial_numbers "
+                    "p.product_code, p.product_name, p.has_location_tracking, p.has_batch_control, p.has_expiry_date, p.has_serial_numbers, "
+                    "p.cost_price "
                     "FROM product_variants pv "
                     "JOIN products p ON p.id = pv.product_id "
                     "WHERE pv.deleted_at IS NULL AND p.deleted_at IS NULL AND pv.is_active = TRUE AND p.is_active = TRUE "
                     "ORDER BY p.product_name, pv.variant_name, pv.variant_sku"
                 )
             )
-            return ResponseManager.success(data=[_row(row) for row in result.mappings().all()], request=request)
+            overrides = {f: False for f in ["has_location_tracking", "has_batch_control", "has_expiry_date", "has_serial_numbers"] if not flags.get(f, True)}
+            rows = [{**_row(row), **overrides} for row in result.mappings().all()]
+            return ResponseManager.success(data=rows, request=request)
     except Exception as exc:
         return ResponseManager.internal_server_error(message="Error al listar SKU para inventario", details=str(exc), request=request)
 
