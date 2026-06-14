@@ -62,6 +62,7 @@ const AdminTaxConfig = () => {
         { id: 'is_default', label: 'Defecto', type: 'checkbox', checkLabel: 'Impuesto por defecto' },
         { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
       ],
+      actionBarClassName: '',
       onSubmit: async (form) => {
         const payload = { ...form, rate_percentage: Number(form.rate_percentage || 0), valid_to: form.valid_to || null };
         delete payload.tax_code;

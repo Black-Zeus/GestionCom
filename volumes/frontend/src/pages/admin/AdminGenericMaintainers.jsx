@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, Image, Pencil, Plus, Power, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, EyeOff, Image, Pencil, Plus, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { RowActionButton } from '@/components/common/actions/ActionButton';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
@@ -397,6 +397,7 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
         initialValues,
         fields: buildFormFields(item),
         submitLabel: item ? 'Guardar cambios' : 'Crear registro',
+        actionBarClassName: activeConfig.actionBarClassName,
         onSubmit: async (form) => {
           const payload = {};
           activeConfig.fields.forEach((field) => {
@@ -598,7 +599,8 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
                 {(activeConfig.forceStatusToggle || activeConfig.statusField || activeConfig.activeField) && (
                   <RowActionButton
                     label={getStatus(item, activeConfig, optionData) ? 'Desactivar' : 'Activar'}
-                    icon={Power}
+                    icon={getStatus(item, activeConfig, optionData) ? EyeOff : CheckCircle2}
+                    variant={getStatus(item, activeConfig, optionData) ? 'danger' : 'neutral'}
                     onClick={() => changeStatus(item)}
                   />
                 )}
