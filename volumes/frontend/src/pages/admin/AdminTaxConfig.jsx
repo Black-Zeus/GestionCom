@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
+import { CheckCircle2, EyeOff, Pencil, Plus, Receipt, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -76,6 +76,21 @@ const AdminTaxConfig = () => {
     },
   });
 
+  const toggle = async (tax) => {
+    const isActive = tax.is_active;
+    if (!await ModalManager.confirm({
+      title: `${isActive ? 'Desactivar' : 'Activar'} impuesto`,
+      message: `¿Confirmas ${isActive ? 'desactivar' : 'activar'} ${tax.tax_name}?`,
+      buttons: { cancel: 'Cancelar', confirm: isActive ? 'Desactivar' : 'Activar' },
+    })) return;
+    await notifyPromise(businessFoundationService.taxes.update(tax.id, { is_active: !isActive }), {
+      loading: isActive ? 'Desactivando...' : 'Activando...',
+      success: `Impuesto ${isActive ? 'desactivado' : 'activado'}.`,
+      error: (requestError) => getBackendMessage(requestError, 'No fue posible actualizar el estado.'),
+    });
+    await load();
+  };
+
   const remove = async (tax) => {
     if (!await ModalManager.confirm({ title: 'Eliminar impuesto', message: `Confirma eliminar ${tax.tax_name}.`, buttons: { cancel: 'Cancelar', confirm: 'Eliminar' } })) return;
     await notifyPromise(businessFoundationService.taxes.remove(tax.id), { loading: 'Eliminando...', success: 'Impuesto eliminado.', error: (requestError) => getBackendMessage(requestError, 'No fue posible eliminar.') });
@@ -103,7 +118,7 @@ const AdminTaxConfig = () => {
           { id: 'validity', label: 'Vigencia', render: (item) => `${item.valid_from || '-'} / ${item.valid_to || 'sin termino'}` },
           { id: 'default', label: 'Defecto', render: (item) => item.is_default ? <span className="inline-flex items-center gap-1 text-sm text-blue-700"><Receipt className="h-4 w-4" /> Si</span> : 'No' },
           { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) },
-          { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove(item)} /></div> },
+          { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openForm(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} onClick={() => toggle(item)} /></div> },
         ]}
       />
     </section>
