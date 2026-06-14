@@ -202,7 +202,7 @@ export const moduleGroups = [
       { id: 'roles', label: 'Administracion de roles y permisos', path: '/admin/roles', icon: Shield, weight: 20, permissions: ['USER_MANAGER'] },
       { id: 'product-flag-settings', label: 'Checks de producto', path: '/admin/product-flags', icon: SlidersHorizontal, weight: 30, permissions: ['PRODUCT_FLAG_SETTINGS_ACCESS', 'PRODUCT_FLAG_SETTINGS_MANAGE', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'cash-pos-admin', label: 'Configuracion de caja POS', path: '/admin/cash/pos', icon: CreditCard, weight: 40, permissions: ['CASH_POS_ADMIN_ACCESS', 'CASH_SETTINGS_MANAGE'] },
-      { id: 'cash-denominations', label: 'Denominaciones de efectivo', path: '/admin/cash/denominations', icon: WalletCards, weight: 45 },
+      { id: 'cash-denominations', label: 'Denominaciones de efectivo', path: '/admin/cash/denominations', icon: WalletCards, weight: 45, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE', 'FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'petty-cash-categories', label: 'Categorias de caja chica', path: '/admin/cash/petty-cash-categories', icon: Tags, weight: 50, permissions: ['PETTY_CASH_CATEGORIES_ACCESS', 'PETTY_CASH_ADMIN_ACCESS', 'PETTY_CASH_CATEGORIES_MANAGE', 'PETTY_CASH_MANAGE'] },
       { id: 'backup', label: 'Backup y restauracion', path: '/admin/backup', icon: Database, weight: 60 },
     ],

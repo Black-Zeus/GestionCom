@@ -522,7 +522,7 @@ const salesConfigTabs = [
     ],
   },
   {
-    id: 'returns', resource: 'return-reasons', label: 'Devoluciones', singular: 'motivo de devolucion', icon: RotateCcw, codeField: 'reason_code', activeField: 'is_active',
+    id: 'returns', resource: 'return-reasons', label: 'Devoluciones', singular: 'motivo de devolucion', icon: RotateCcw, codeField: 'reason_code', activeField: 'is_active', actionBarClassName: '',
     empty: { reason_name: '', requires_approval: false, affects_stock: true, allows_exchange: true, allows_refund: true, is_active: true },
     fields: [{ id: 'reason_name', label: 'Motivo', required: true }, { id: 'reason_description', label: 'Descripcion', wide: true }, { id: 'max_days_after_sale', label: 'Dias maximos', type: 'number', min: 0 }, { id: 'default_account_code', label: 'Cuenta contable' }, { id: 'requires_approval', label: 'Aprobacion', type: 'checkbox', checkLabel: 'Requiere aprobacion' }, { id: 'affects_stock', label: 'Stock', type: 'checkbox', checkLabel: 'Afecta stock' }, { id: 'allows_exchange', label: 'Cambio', type: 'checkbox', checkLabel: 'Permite cambio' }, { id: 'allows_refund', label: 'Reembolso', type: 'checkbox', checkLabel: 'Permite reembolso' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'reason_name', label: 'Motivo', primary: true }, { id: 'max_days_after_sale', label: 'Dias max.' }, { id: 'affects_stock', label: 'Stock' }],
@@ -531,7 +531,7 @@ const salesConfigTabs = [
 
 const financeTabs = [
   {
-    id: 'banks', resource: 'banks', label: 'Bancos', singular: 'banco', icon: Landmark, codeField: 'bank_code', activeField: 'is_active',
+    id: 'banks', resource: 'banks', label: 'Bancos', singular: 'banco', icon: Landmark, codeField: 'bank_code', activeField: 'is_active', actionBarClassName: '',
     empty: { bank_name: '', country: 'Chile', is_active: true },
     fields: [{ id: 'bank_name', label: 'Banco', required: true }, { id: 'country', label: 'Pais' }, { id: 'swift_code', label: 'SWIFT' }, { id: 'routing_code', label: 'Routing' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'bank_name', label: 'Banco', primary: true }, { id: 'country', label: 'Pais' }, { id: 'swift_code', label: 'SWIFT' }],
@@ -543,7 +543,7 @@ const financeTabs = [
     tableFields: [{ id: 'account_name', label: 'Cuenta', primary: true }, { id: 'bank_id', label: 'Banco' }, { id: 'currency_code', label: 'Moneda' }, { id: 'current_balance', label: 'Saldo' }],
   },
   {
-    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',
+    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active', actionBarClassName: '',
     empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, is_base_currency: false, is_active: true },
     fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'is_base_currency', label: 'Base', type: 'checkbox', checkLabel: 'Moneda base' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'decimal_places', label: 'Decimales' }],
@@ -555,7 +555,7 @@ const financeTabs = [
     tableFields: [{ id: 'currency_code', label: 'Moneda', primary: true }, { id: 'rate_date', label: 'Fecha' }, { id: 'rate_to_clp', label: 'Valor CLP' }],
   },
   {
-    id: 'reconciliation', resource: 'bank-reconciliation-settings', label: 'Conciliacion', singular: 'configuracion de conciliacion', icon: Settings, codeField: 'setting_code', activeField: 'is_active',
+    id: 'reconciliation', resource: 'bank-reconciliation-settings', label: 'Conciliacion', singular: 'configuracion de conciliacion', icon: Settings, codeField: 'setting_code', activeField: 'is_active', actionBarClassName: '',
     empty: { bank_account_id: '', match_reference_enabled: true, match_amount_enabled: true, match_date_tolerance_days: 3, amount_tolerance: 0, auto_match_enabled: false, is_active: true },
     fields: [{ id: 'bank_account_id', label: 'Cuenta bancaria', type: 'select', optionsResource: 'bank-accounts' }, { id: 'match_reference_enabled', label: 'Referencia', type: 'checkbox', checkLabel: 'Cruzar por referencia' }, { id: 'match_amount_enabled', label: 'Monto', type: 'checkbox', checkLabel: 'Cruzar por monto' }, { id: 'match_date_tolerance_days', label: 'Tolerancia dias', type: 'number', min: 0 }, { id: 'amount_tolerance', label: 'Tolerancia monto', type: 'number', min: 0 }, { id: 'auto_match_enabled', label: 'Automatico', type: 'checkbox', checkLabel: 'Permite conciliacion automatica' }, { id: 'require_review_over_amount', label: 'Revision sobre monto', type: 'number', min: 0 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'setting_code', label: 'Regla', primary: true }, { id: 'bank_account_id', label: 'Cuenta' }, { id: 'match_date_tolerance_days', label: 'Dias' }, { id: 'amount_tolerance', label: 'Tolerancia' }],
@@ -564,7 +564,7 @@ const financeTabs = [
 
 const documentTemplateTabs = [
   {
-    id: 'templates', resource: 'document-templates', label: 'Plantillas', singular: 'plantilla', icon: FileText, codeField: 'template_code', activeField: 'is_active',
+    id: 'templates', resource: 'document-templates', label: 'Plantillas', singular: 'plantilla', icon: FileText, codeField: 'template_code', activeField: 'is_active', actionBarClassName: '',
     empty: { template_name: '', document_type_id: '', template_channel: 'PDF', paper_size: 'A4', orientation: 'PORTRAIT', is_default: false, is_active: true },
     fields: [{ id: 'template_name', label: 'Plantilla', required: true }, { id: 'document_type_id', label: 'Tipo documento', type: 'select', optionsResource: 'document-types-options' }, { id: 'template_channel', label: 'Canal', type: 'select', options: ['PRINT', 'EMAIL', 'PDF', 'THERMAL', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'template_subject', label: 'Asunto' }, { id: 'template_body', label: 'Contenido', wide: true }, { id: 'paper_size', label: 'Papel' }, { id: 'orientation', label: 'Orientacion', type: 'select', options: [{ value: 'PORTRAIT', label: 'Vertical' }, { value: 'LANDSCAPE', label: 'Horizontal' }] }, { id: 'is_default', label: 'Defecto', type: 'checkbox', checkLabel: 'Plantilla por defecto' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'template_name', label: 'Plantilla', primary: true }, { id: 'document_type_id', label: 'Documento' }, { id: 'template_channel', label: 'Canal' }, { id: 'is_default', label: 'Defecto' }],
@@ -573,7 +573,7 @@ const documentTemplateTabs = [
 
 const notificationSettingsTabs = [
   {
-    id: 'types', resource: 'notification-types', label: 'Tipos', singular: 'tipo de notificacion', icon: Bell, activeField: 'is_active',
+    id: 'types', resource: 'notification-types', label: 'Tipos', singular: 'tipo de notificacion', icon: Bell, activeField: 'is_active', actionBarClassName: '',
     empty: { type_code: '', type_name: '', severity: 'INFO', icon_name: 'bell-line', is_user_visible: true, is_active: true },
     fields: [{ id: 'type_code', label: 'Codigo', required: true }, { id: 'type_name', label: 'Tipo', required: true }, { id: 'type_description', label: 'Descripcion', wide: true }, { id: 'severity', label: 'Severidad', type: 'select', options: ['INFO', 'SUCCESS', 'WARNING', 'ERROR'].map((value) => ({ value, label: value })) }, { id: 'icon_name', label: 'Icono' }, { id: 'default_action_label', label: 'Accion sugerida' }, { id: 'is_user_visible', label: 'Visible', type: 'checkbox', checkLabel: 'Visible para usuario' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'type_name', label: 'Tipo', primary: true }, { id: 'type_code', label: 'Codigo' }, { id: 'severity', label: 'Severidad' }],
@@ -600,7 +600,7 @@ const systemTabs = [
     tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'decimal_places', label: 'Decimales' }],
   },
   {
-    id: 'statuses', resource: 'system-statuses', label: 'Estados', singular: 'estado', icon: ShieldCheck, activeField: 'is_active',
+    id: 'statuses', resource: 'system-statuses', label: 'Estados', singular: 'estado', icon: ShieldCheck, activeField: 'is_active', actionBarClassName: '',
     empty: { status_group: '', status_code: '', status_name: '', status_display_es: '', is_active: true, sort_order: 0 },
     fields: [{ id: 'status_group', label: 'Grupo', required: true }, { id: 'status_code', label: 'Codigo', required: true }, { id: 'status_name', label: 'Nombre interno', required: true }, { id: 'status_display_es', label: 'Nombre visible', required: true }, { id: 'status_color', label: 'Color' }, { id: 'status_icon', label: 'Icono' }, { id: 'sort_order', label: 'Orden', type: 'number', min: 0 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'status_display_es', label: 'Estado', primary: true }, { id: 'status_group', label: 'Grupo' }, { id: 'status_code', label: 'Codigo' }],
@@ -679,20 +679,23 @@ export const SalesConfigMaintainers = ({ initialTab, visibleTabs }) => {
 };
 export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
 
+const denominationTypeOptions = [{ value: 'COIN', label: 'Moneda' }, { value: 'BILL', label: 'Billete' }];
 const cashDenominationsTabs = [
   {
     id: 'denominations', resource: 'currency-denominations', label: 'Denominaciones', singular: 'denominacion', icon: CircleDollarSign, activeField: 'is_active',
-    empty: { denomination_label: '', denomination_type: 'BILL', denomination_value: 0, sort_order: 0, is_active: true },
+    empty: { currency_code: 'CLP', denomination_label: '', denomination_type: 'BILL', denomination_value: 0, sort_order: 0, is_active: true },
     fields: [
+      { id: 'currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies', required: true },
       { id: 'denomination_label', label: 'Etiqueta', required: true },
-      { id: 'denomination_type', label: 'Tipo', type: 'select', options: [{ value: 'COIN', label: 'Moneda' }, { value: 'BILL', label: 'Billete' }] },
+      { id: 'denomination_type', label: 'Tipo', type: 'select', options: denominationTypeOptions },
       { id: 'denomination_value', label: 'Valor ($)', type: 'number', min: 1, required: true },
       { id: 'sort_order', label: 'Orden', type: 'number', min: 0 },
       { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
     ],
     tableFields: [
+      { id: 'currency_code', label: 'Moneda', format: currencyDisplay },
       { id: 'denomination_label', label: 'Denominacion', primary: true },
-      { id: 'denomination_type', label: 'Tipo' },
+      { id: 'denomination_type', label: 'Tipo', options: denominationTypeOptions },
       { id: 'denomination_value', label: 'Valor' },
       { id: 'sort_order', label: 'Orden' },
     ],

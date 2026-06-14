@@ -91,7 +91,7 @@ RESOURCES = {
     },
     "currency-denominations": {
         "table": "currency_denominations", "active_field": "is_active", "soft_delete": False,
-        "fields": ["denomination_label", "denomination_type", "denomination_value", "sort_order", "is_active"],
+        "fields": ["currency_code", "denomination_label", "denomination_type", "denomination_value", "sort_order", "is_active"],
         "required": ["denomination_label", "denomination_type", "denomination_value"], "bool": ["is_active"], "int": ["denomination_value", "sort_order"],
         "enum": {"denomination_type": ["COIN", "BILL"]},
         "order_by": "sort_order ASC, id ASC",
