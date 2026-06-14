@@ -487,7 +487,6 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       title: `${isActive ? 'Desactivar' : 'Activar'} ${activeConfig.singular}`,
       message: `¿Confirmas ${actionLabel} este registro? ${isActive ? 'Dejará de estar disponible para operaciones.' : 'Quedará habilitado para operaciones.'}`,
       buttons: { cancel: 'Cancelar', confirm: isActive ? 'Desactivar' : 'Activar' },
-      variant: isActive ? 'warning' : 'info',
     })) return;
 
     await notifyPromise(adminMaintainersService.update(activeConfig.resource, item.id, { [field]: nextValue }), {
