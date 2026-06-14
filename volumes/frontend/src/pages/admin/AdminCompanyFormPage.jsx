@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Building2, Camera, FileText, Landmark, MapPin } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import RecordNotFoundState from '@/components/common/states/RecordNotFoundState';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
@@ -254,35 +255,22 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
   if (!initialValues) return null;
 
   return (
-    <section className="space-y-5 pb-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
-            <Building2 className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-slate-950 dark:text-white">{isEdit ? 'Editar empresa' : 'Nueva empresa'}</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {isEdit ? 'Actualiza los datos legales, visuales y operativos de la empresa.' : 'Completa los datos base para crear la empresa.'}
-            </p>
-          </div>
-        </div>
-        <button type="button" onClick={backToList} className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-          <ArrowLeft className="h-4 w-4" />
-          Volver
-        </button>
-      </div>
-
-      <div className="w-full">
-        <SimpleFormContent
-          fields={fields}
-          initialValues={initialValues}
-          onSubmit={save}
-          onClose={backToList}
-          submitLabel={isEdit ? 'Guardar cambios' : 'Crear empresa'}
-          actionBarClassName="rounded-md shadow-sm"
-        />
-      </div>
+    <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
+      <ModuleHeader
+        title={isEdit ? 'Editar empresa' : 'Nueva empresa'}
+        description={isEdit ? 'Actualiza los datos legales, visuales y operativos de la empresa.' : 'Completa los datos base para crear la empresa.'}
+        actions={[
+          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: backToList },
+        ]}
+      />
+      <SimpleFormContent
+        fields={fields}
+        initialValues={initialValues}
+        onSubmit={save}
+        onClose={backToList}
+        submitLabel={isEdit ? 'Guardar cambios' : 'Crear empresa'}
+        actionBarClassName="rounded-md shadow-sm"
+      />
     </section>
   );
 };
