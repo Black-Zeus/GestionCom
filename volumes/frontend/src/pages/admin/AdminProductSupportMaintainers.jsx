@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, EyeOff, ListTree, Pencil, Power, RefreshCw, Tags, Trash2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, EyeOff, ListTree, Pencil, RefreshCw, Tags, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -229,14 +229,14 @@ const AdminProductSupportMaintainers = () => {
     { id: 'description', label: 'Descripcion', render: (item) => item.brand_description || '-' },
     { id: 'models', label: 'Modelos', align: 'center', sortable: true, sortValue: (item) => modelCountByBrand[String(item.id)] || 0, render: (item) => <span className="font-medium">{activeModelCountByBrand[String(item.id)] || 0}</span> },
     { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === `product-brands:${item.id}`} onClick={() => openBrandModal(item)} /><RowActionButton label="Modelos" icon={ListTree} disabled={busyId === `product-brands:${item.id}`} onClick={() => openBrandModels(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === `product-brands:${item.id}`} onClick={() => remove({ resource: 'product-brands', item, label: 'marca' })} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? Power : CheckCircle2} disabled={busyId === `product-brands:${item.id}`} onClick={() => toggle({ resource: 'product-brands', item, label: 'marca' })} /></> },
+    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === `product-brands:${item.id}`} onClick={() => openBrandModal(item)} /><RowActionButton label="Modelos" icon={ListTree} disabled={busyId === `product-brands:${item.id}`} onClick={() => openBrandModels(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === `product-brands:${item.id}`} onClick={() => remove({ resource: 'product-brands', item, label: 'marca' })} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} disabled={busyId === `product-brands:${item.id}`} onClick={() => toggle({ resource: 'product-brands', item, label: 'marca' })} /></> },
   ];
 
   const modelColumns = [
     { id: 'model', label: 'Modelo', sortable: true, sortValue: (item) => item.model_name, render: (item) => <div className="font-medium">{item.model_name}</div> },
     { id: 'description', label: 'Descripcion', render: (item) => item.model_description || '-' },
     { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === `product-models:${item.id}`} onClick={() => openModelModal(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === `product-models:${item.id}`} onClick={() => remove({ resource: 'product-models', item, label: 'modelo' })} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? Power : CheckCircle2} disabled={busyId === `product-models:${item.id}`} onClick={() => toggle({ resource: 'product-models', item, label: 'modelo' })} /></> },
+    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === `product-models:${item.id}`} onClick={() => openModelModal(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === `product-models:${item.id}`} onClick={() => remove({ resource: 'product-models', item, label: 'modelo' })} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} disabled={busyId === `product-models:${item.id}`} onClick={() => toggle({ resource: 'product-models', item, label: 'modelo' })} /></> },
   ];
 
   return (

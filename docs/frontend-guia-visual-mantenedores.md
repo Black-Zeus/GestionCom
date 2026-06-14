@@ -119,15 +119,82 @@ Reglas:
 
 La iconografia se rige por [frontend-iconografia-ui.md](frontend-iconografia-ui.md).
 
-Resumen obligatorio:
+La tabla siguiente es el contrato fijo. Un mismo icono no puede usarse para dos semanticas distintas. Una misma semantica no puede usar mas de un icono. Las excepciones deben quedar documentadas en el componente con un comentario explicito.
 
-- `RefreshCw`: refrescar.
-- `XCircle`: limpiar filtros.
-- `Pencil`: editar.
-- `Trash2`: eliminar.
-- `EyeOff`: desactivar/ocultar/suspender.
-- `CheckCircle2`: activar en mantenedores generales.
-- `ShieldCheck`: activar solo en acciones operacionales o sensibles.
+### Acciones de fila estandar
+
+Presentes en practicamente todos los mantenedores:
+
+| Icono | Accion | Variante |
+|-------|--------|----------|
+| `Pencil` | Editar — abrir formulario de edicion | (default) |
+| `Trash2` | Eliminar — con confirmacion | `danger` |
+| `EyeOff` | Desactivar — cambiar estado activo → inactivo | `danger` |
+| `CheckCircle2` | Activar — cambiar estado inactivo → activo | `neutral` |
+
+Reglas:
+
+- `EyeOff` y `CheckCircle2` son siempre un par excluyente segun el estado del registro. Si esta activo, se muestra `EyeOff` (Desactivar). Si esta inactivo, se muestra `CheckCircle2` (Activar).
+- **Prohibido usar `Power` para toggle de estado.** Es semanticamente ambiguo y ha sido eliminado del catalogo.
+- `ShieldCheck` esta reservado para acciones operacionales que implican responsabilidad explicita (aprobar, validar una sesion sensible). No es un alias de `CheckCircle2` para activar registros comunes.
+- El boton de cambio de estado siempre va al final de la fila, despues del de eliminar.
+
+Orden de acciones por fila (siempre en este orden):
+
+1. `Pencil` — Editar
+2. Acciones de navegacion a sub-recursos (ver detalle, ver usuarios, etc.)
+3. `Trash2` — Eliminar (variante `danger`)
+4. `EyeOff` / `CheckCircle2` — Cambio de estado (siempre al final)
+
+### Filtros en FilterBar
+
+| Icono | Accion |
+|-------|--------|
+| `RefreshCw` | Refrescar datos |
+| `XCircle` | Limpiar filtros |
+
+### Navegacion a sub-recursos
+
+| Icono | Accion | Contexto |
+|-------|--------|----------|
+| `Eye` | Ver detalle / Ver preview / Ver perfil | Vista de solo lectura de un registro |
+| `ListChecks` | Ver sub-listado con seleccion | Precios de lista de precios, valores de atributo |
+| `ListTree` | Ver sub-jerarquia | Modelos de una marca |
+| `Tags` | Atributos del grupo | Grupos de atributos de producto |
+| `ClipboardList` | Ver series | Series de un tipo de documento |
+| `PackageSearch` | Ver productos de transferencia | Transferencias de stock |
+| `Boxes` | SKU / Variaciones | Variantes de un producto base |
+| `MapPin` | Zonas / Ubicaciones | Zonas de una bodega |
+| `Users` | Ver usuarios / Personal asignado | Usuarios de un perfil, personal de bodega |
+
+### Gestion de usuarios
+
+| Icono | Accion |
+|-------|--------|
+| `UserCog` | Administrar roles de un usuario |
+| `SlidersHorizontal` | Permisos especiales de un usuario |
+| `KeyRound` | Cambiar clave de un usuario |
+
+### Operaciones especiales
+
+| Icono | Accion | Contexto |
+|-------|--------|----------|
+| `Image` | Ver / editar media | Logo, banner u otro recurso multimedia |
+| `ServerCog` | Cambiar ambiente | Ambiente DTE (certificacion / produccion) |
+| `FileText` | Ver documento | Movimientos o documentos de stock; no intercambiable con `Eye` |
+| `Send` | Despachar | Despacho de transferencias |
+| `PackageCheck` | Recibir | Recepcion de transferencias |
+| `AlertTriangle` | Anotar incidencia | Registrar observacion sobre un movimiento o sesion |
+| `Lock` | Cerrar fondo | Cierre de caja chica |
+| `RotateCcw` | Revertir estado | Reversion de cierre de caja chica |
+| `Check` | Registrar conteo | Conteo en inventario fisico |
+| `ShieldCheck` | Accion sensible | Aprobar, validar o confirmar con responsabilidad operacional |
+
+### Iconos prohibidos en acciones de fila
+
+| Icono | Motivo |
+|-------|--------|
+| `Power` | Semantica ambigua. Reemplazado por `EyeOff` (desactivar) + `CheckCircle2` (activar) |
 
 ## Modales y formularios
 

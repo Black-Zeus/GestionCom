@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CircleCheck, EyeOff, FolderTree, Layers3, Pencil, Power, RefreshCw, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, CircleCheck, EyeOff, FolderTree, Layers3, Pencil, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -164,7 +164,7 @@ const AdminProductCategories = () => {
     { id: 'level', label: 'Nivel', sortable: true, sortValue: (item) => item.category_level },
     { id: 'order', label: 'Orden', sortable: true, sortValue: (item) => item.sort_order, render: (item) => item.sort_order ?? 0 },
     { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activa' : 'Inactiva'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openModal(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === item.id} onClick={() => remove(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? Power : CheckCircle2} disabled={busyId === item.id} onClick={() => toggle(item)} /></div> },
+    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openModal(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === item.id} onClick={() => remove(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} disabled={busyId === item.id} onClick={() => toggle(item)} /></div> },
   ];
 
   return (

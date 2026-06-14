@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CreditCard, EyeOff, MapPin, Pencil, RefreshCw, ShieldCheck, Trash2, Wifi, XCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, EyeOff, MapPin, Pencil, RefreshCw, Trash2, Wifi, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -549,7 +549,7 @@ const AdminCashPos = () => {
       render: (cashRegister) => (
         <div className="flex justify-end gap-2">
           <RowActionButton label="Editar caja POS" icon={Pencil} disabled={busyCashRegisterId === cashRegister.id} onClick={() => openEditModal(cashRegister)} />
-          <RowActionButton label={cashRegister.is_active ? 'Desactivar caja POS' : 'Activar caja POS'} icon={cashRegister.is_active ? EyeOff : ShieldCheck} disabled={busyCashRegisterId === cashRegister.id} variant={cashRegister.is_active ? 'danger' : 'neutral'} onClick={() => toggleCashRegister(cashRegister)} />
+          <RowActionButton label={cashRegister.is_active ? 'Desactivar caja POS' : 'Activar caja POS'} icon={cashRegister.is_active ? EyeOff : CheckCircle2} disabled={busyCashRegisterId === cashRegister.id} variant={cashRegister.is_active ? 'danger' : 'neutral'} onClick={() => toggleCashRegister(cashRegister)} />
           <RowActionButton label="Eliminar caja POS" icon={Trash2} disabled={busyCashRegisterId === cashRegister.id} variant="danger" onClick={() => removeCashRegister(cashRegister)} />
         </div>
       ),

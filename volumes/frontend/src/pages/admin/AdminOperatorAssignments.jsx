@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Pencil, RefreshCw, Trash2, UserCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, EyeOff, Pencil, RefreshCw, Trash2, UserCheck, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -418,7 +418,7 @@ const AdminOperatorAssignments = () => {
     { id: 'role', label: 'Rol', sortable: true, sortValue: (item) => roleLabels[item.operator_role] || item.operator_role || '', render: (item) => <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"><UserCheck className="h-3.5 w-3.5" />{roleLabels[item.operator_role] || item.operator_role || '-'}</span> },
     { id: 'validity', label: 'Vigencia', render: (item) => <div className="text-sm text-slate-600 dark:text-slate-300">{item.valid_from || 'Sin inicio'} - {item.valid_until || 'Sin termino'}{item.is_default && <div className="text-xs font-medium text-blue-600 dark:text-blue-300">Predeterminado</div>}</div> },
     { id: 'status', label: 'Estado', sortable: true, sortValue: (item) => item.is_active, render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyKey === assignmentKey(item)} onClick={() => openModal(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={CheckCircle2} disabled={busyKey === assignmentKey(item)} onClick={() => toggle(item)} /><RowActionButton label="Eliminar" icon={Trash2} disabled={busyKey === assignmentKey(item)} variant="danger" onClick={() => remove(item)} /></div> },
+    { id: 'actions', label: 'Acciones', align: 'right', render: (item) => <div className="flex justify-end gap-2"><RowActionButton label="Editar" icon={Pencil} disabled={busyKey === assignmentKey(item)} onClick={() => openModal(item)} /><RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} disabled={busyKey === assignmentKey(item)} onClick={() => toggle(item)} /><RowActionButton label="Eliminar" icon={Trash2} disabled={busyKey === assignmentKey(item)} variant="danger" onClick={() => remove(item)} /></div> },
   ];
 
   return (

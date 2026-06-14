@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import JsBarcode from 'jsbarcode';
 import QRCode from 'qrcode';
-import { Barcode, CheckCircle2, Eye, EyeOff, Pencil, Power, QrCode, RefreshCw, Trash2 } from 'lucide-react';
+import { Barcode, CheckCircle2, Eye, EyeOff, Pencil, QrCode, RefreshCw, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -507,7 +507,7 @@ const AdminProductBarcodes = () => {
     { id: 'measurement_unit_id', label: 'Unidad', render: (item) => unitLabelById[String(item.measurement_unit_id)] || '-' },
     { id: 'preview', label: 'Vista', align: 'center', render: (item) => <BarcodePreview type={item.barcode_type} value={item.barcode_value} compact /> },
     { id: 'status', label: 'Estado', render: (item) => <StatusBadge variant={item.is_active !== false ? 'active' : 'inactive'}>{item.is_active !== false ? 'Activo' : 'Inactivo'}</StatusBadge> },
-    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openForm(item)} /><RowActionButton label="Ver codigo" icon={Eye} disabled={busyId === item.id} onClick={() => showPreview(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === item.id} onClick={() => remove(item)} /><RowActionButton label={item.is_active !== false ? 'Desactivar' : 'Activar'} icon={item.is_active !== false ? Power : CheckCircle2} disabled={busyId === item.id} onClick={() => toggle(item)} /></> },
+    { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <><RowActionButton label="Editar" icon={Pencil} disabled={busyId === item.id} onClick={() => openForm(item)} /><RowActionButton label="Ver codigo" icon={Eye} disabled={busyId === item.id} onClick={() => showPreview(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" disabled={busyId === item.id} onClick={() => remove(item)} /><RowActionButton label={item.is_active !== false ? 'Desactivar' : 'Activar'} icon={item.is_active !== false ? EyeOff : CheckCircle2} variant={item.is_active !== false ? 'danger' : 'neutral'} disabled={busyId === item.id} onClick={() => toggle(item)} /></> },
   ];
 
   return (

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Image, Pencil, Plus, Power, ServerCog, Trash2 } from 'lucide-react';
+import { Building2, CheckCircle2, EyeOff, Image, Pencil, Plus, ServerCog, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ModalManager from '@/components/ui/modal';
 import { RowActionButton } from '@/components/common/actions/ActionButton';
@@ -193,7 +193,7 @@ const AdminCompanyConfig = () => {
                 <RowActionButton label="Ver media" icon={Image} onClick={() => openMedia(item)} />
                 <RowActionButton label="Cambiar ambiente" icon={ServerCog} onClick={() => changeEnvironment(item)} />
                 <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => removeCompany(item)} />
-                <RowActionButton label={item.is_active ? 'Inactivar' : 'Activar'} icon={Power} onClick={() => changeStatus(item)} />
+                <RowActionButton label={item.is_active ? 'Desactivar' : 'Activar'} icon={item.is_active ? EyeOff : CheckCircle2} variant={item.is_active ? 'danger' : 'neutral'} onClick={() => changeStatus(item)} />
               </div>
             ),
           },
