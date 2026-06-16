@@ -6,7 +6,7 @@ import { ActionButton, RowActionButton } from '@/components/common/actions/Actio
 import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import KpiBar from '@/components/common/data/KpiBar';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
@@ -86,7 +86,7 @@ const AdminProductAttributes = () => {
   useEffect(() => { setPage(0); }, [activeLevel, filters, search, tablePageSize]);
 
   const openGroup = (group = null) => ModalManager.show({
-    type: 'custom', title: group ? 'Editar grupo' : 'Nuevo grupo', size: 'xlarge', showFooter: false, contentComponent: SimpleFormContent,
+    type: 'custom', title: group ? 'Editar grupo' : 'Nuevo grupo', size: 'xlarge', showFooter: false, contentComponent: MaintainerFormModal,
     contentProps: {
       initialValues: group ? { group_code: group.group_code, group_name: group.group_name, group_description: group.group_description || '', sort_order: group.sort_order || 0, is_active: group.is_active } : { group_name: '', group_description: '', sort_order: 0, is_active: true },
       fields: [
@@ -108,7 +108,7 @@ const AdminProductAttributes = () => {
   const openAttribute = (attribute = null) => {
     const lockedGroupId = selectedGroup?.id ? String(selectedGroup.id) : '';
     ModalManager.show({
-      type: 'custom', title: attribute ? 'Editar atributo' : 'Nuevo atributo', size: 'xlarge', showFooter: false, contentComponent: SimpleFormContent,
+      type: 'custom', title: attribute ? 'Editar atributo' : 'Nuevo atributo', size: 'xlarge', showFooter: false, contentComponent: MaintainerFormModal,
       contentProps: {
         initialValues: attribute ? { attribute_name: attribute.attribute_name, attribute_type: attribute.attribute_type, is_required: attribute.is_required, affects_sku: attribute.affects_sku, sort_order: attribute.sort_order || 0, is_active: attribute.is_active } : { attribute_name: '', attribute_type: 'TEXT', is_required: false, affects_sku: false, sort_order: 0, is_active: true },
         fields: [
@@ -143,7 +143,7 @@ const AdminProductAttributes = () => {
   };
 
   const openValue = (value = null) => ModalManager.show({
-    type: 'custom', title: value ? 'Editar valor' : 'Nuevo valor', size: 'xlarge', showFooter: false, contentComponent: SimpleFormContent,
+    type: 'custom', title: value ? 'Editar valor' : 'Nuevo valor', size: 'xlarge', showFooter: false, contentComponent: MaintainerFormModal,
     contentProps: {
       initialValues: value ? { value_code: value.value_code, value_name: value.value_name, sort_order: value.sort_order || 0, is_active: value.is_active } : { value_name: '', sort_order: 0, is_active: true },
       fields: [

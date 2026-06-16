@@ -8,7 +8,7 @@ import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -120,7 +120,7 @@ const AdminProductSupportMaintainers = () => {
     title: brand ? 'Editar marca' : 'Nueva marca',
     size: 'xlarge',
     showFooter: false,
-    contentComponent: SimpleFormContent,
+    contentComponent: MaintainerFormModal,
     contentProps: {
       initialValues: brand ? { brand_name: brand.brand_name || '', brand_description: brand.brand_description || '', is_active: brand.is_active !== false } : { brand_name: '', brand_description: '', is_active: true },
       fields: [
@@ -149,7 +149,7 @@ const AdminProductSupportMaintainers = () => {
       title: model ? 'Editar modelo' : 'Nuevo modelo',
       size: 'xlarge',
       showFooter: false,
-      contentComponent: SimpleFormContent,
+      contentComponent: MaintainerFormModal,
       contentProps: {
         initialValues: model ? { model_name: model.model_name || '', model_description: model.model_description || '', is_active: model.is_active !== false } : { model_name: '', model_description: '', is_active: true },
         fields: [

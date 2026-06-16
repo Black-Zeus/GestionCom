@@ -6,7 +6,7 @@ import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { activeFilter, fieldOptions, filterActions, includesTerm, statusCell, tableFooter } from './businessFoundationShared';
@@ -50,7 +50,7 @@ const AdminTaxConfig = () => {
     title: tax ? 'Editar impuesto' : 'Nuevo impuesto',
     size: 'medium',
     showFooter: false,
-    contentComponent: SimpleFormContent,
+    contentComponent: MaintainerFormModal,
     contentProps: {
       initialValues: tax ? { tax_code: tax.tax_code, tax_name: tax.tax_name, tax_type: tax.tax_type, rate_percentage: tax.rate_percentage, valid_from: tax.valid_from, valid_to: tax.valid_to || '', is_default: tax.is_default, is_active: tax.is_active } : { tax_name: '', tax_type: 'VAT', rate_percentage: 0, valid_from: today(), valid_to: '', is_default: false, is_active: true },
       fields: [
@@ -62,7 +62,6 @@ const AdminTaxConfig = () => {
         { id: 'is_default', label: 'Defecto', type: 'checkbox', checkLabel: 'Impuesto por defecto' },
         { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
       ],
-      actionBarClassName: '',
       onSubmit: async (form) => {
         const payload = { ...form, rate_percentage: Number(form.rate_percentage || 0), valid_to: form.valid_to || null };
         delete payload.tax_code;

@@ -6,7 +6,7 @@ import DataTable from '@/components/common/data/DataTable';
 import DataTablePagination from '@/components/common/data/DataTablePagination';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { productConfigService } from '@/services/admin/productConfigService';
@@ -95,7 +95,7 @@ const AdminProductCategories = () => {
       title: category ? 'Editar categoria' : 'Nueva categoria',
       size: 'xlarge',
       showFooter: false,
-      contentComponent: SimpleFormContent,
+      contentComponent: MaintainerFormModal,
       contentProps: {
         initialValues: category ? toForm(category) : emptyForm,
         fields: [

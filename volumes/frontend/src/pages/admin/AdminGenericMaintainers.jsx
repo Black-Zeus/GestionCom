@@ -10,7 +10,7 @@ import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import ModuleTabs from '@/components/common/navigation/ModuleTabs';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
@@ -392,12 +392,11 @@ const AdminGenericMaintainers = ({ title, description, tabs, initialTab }) => {
       icon: activeConfig.formIcon || activeConfig.icon,
       size: activeConfig.size || 'large',
       showFooter: false,
-      contentComponent: SimpleFormContent,
+      contentComponent: MaintainerFormModal,
       contentProps: {
         initialValues,
         fields: buildFormFields(item),
         submitLabel: item ? 'Guardar cambios' : 'Crear registro',
-        actionBarClassName: activeConfig.actionBarClassName,
         onSubmit: async (form) => {
           const payload = {};
           activeConfig.fields.forEach((field) => {

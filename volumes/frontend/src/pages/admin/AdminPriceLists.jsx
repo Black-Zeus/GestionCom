@@ -8,7 +8,7 @@ import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
-import SimpleFormContent from '@/components/common/forms/SimpleFormContent';
+import MaintainerFormModal from '@/components/common/forms/MaintainerFormModal';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
 import { businessFoundationService } from '@/services/admin/businessFoundationService';
 import { measurementUnitsService } from '@/services/admin/measurementUnitsService';
@@ -304,7 +304,7 @@ const AdminPriceLists = () => {
     title: list ? 'Editar lista' : 'Nueva lista',
     size: 'xlarge',
     showFooter: false,
-    contentComponent: SimpleFormContent,
+    contentComponent: MaintainerFormModal,
     contentProps: {
       initialValues: list
         ? {
@@ -597,7 +597,7 @@ const AdminPriceLists = () => {
       title: item ? 'Editar precio' : 'Nuevo precio',
       size: 'xlarge',
       showFooter: false,
-      contentComponent: SimpleFormContent,
+      contentComponent: MaintainerFormModal,
       contentProps: {
         initialValues: item
           ? { price_list_id: String(item.price_list_id), product_id: String(item.product_id), product_variant_id: item.product_variant_id ? String(item.product_variant_id) : '', measurement_unit_id: String(item.measurement_unit_id), base_price: item.base_price, sale_price: item.sale_price, cost_price: item.cost_price ?? '', is_active: item.is_active }
