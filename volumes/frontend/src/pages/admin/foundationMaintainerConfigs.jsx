@@ -83,7 +83,7 @@ const locationTypeOptions = [
   { value: 'OTHER', label: 'Otro' },
 ];
 
-const productUnitUses = (value, item = {}) => {
+const productUnitUses = (_value, item = {}) => {
   const uses = [
     item.is_purchase_unit && 'Compra',
     item.is_sale_unit && 'Venta',
@@ -527,6 +527,14 @@ const salesConfigTabs = [
   },
 ];
 
+const currencyTabs = [
+  {
+    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, conversion_fee_pct: 0, is_active: true },
+    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'conversion_fee_pct', label: 'Fee conversion (%)', type: 'number', min: 0, max: 100, step: 0.01, description: 'Porcentaje de cargo aplicado al convertir. Ej: 10 = el usuario recibe 10% menos.' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
+    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true, sortable: true }, { id: 'currency_code', label: 'Codigo', sortable: true }, { id: 'currency_symbol', label: 'Simbolo', sortable: true }, { id: 'conversion_fee_pct', label: 'Fee (%)', sortable: true }, { id: 'decimal_places', label: 'Decimales', sortable: true }],
+  },
+];
+
 const financeTabs = [
   {
     id: 'banks', resource: 'banks', label: 'Bancos', singular: 'banco', icon: Landmark, codeField: 'bank_code', activeField: 'is_active',    empty: { bank_name: '', country: 'Chile', is_active: true },
@@ -537,17 +545,6 @@ const financeTabs = [
     id: 'accounts', resource: 'bank-accounts', label: 'Cuentas', singular: 'cuenta bancaria', icon: CircleDollarSign, codeField: 'account_code', activeField: 'is_active',    empty: { bank_id: '', account_number: '', account_name: '', account_type: 'CHECKING', currency_code: 'CLP', opening_balance: 0, current_balance: 0, is_active: true },
     fields: [{ id: 'bank_id', label: 'Banco', type: 'select', optionsResource: 'banks', required: true }, { id: 'account_number', label: 'Numero', required: true }, { id: 'account_name', label: 'Nombre', required: true }, { id: 'account_type', label: 'Tipo', type: 'select', options: ['CHECKING', 'SAVINGS', 'CREDIT_LINE', 'CASH', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies' }, { id: 'opening_balance', label: 'Saldo inicial', type: 'number' }, { id: 'current_balance', label: 'Saldo actual', type: 'number' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
     tableFields: [{ id: 'account_name', label: 'Cuenta', primary: true }, { id: 'bank_id', label: 'Banco' }, { id: 'currency_code', label: 'Moneda' }, { id: 'current_balance', label: 'Saldo' }],
-  },
-  {
-    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, conversion_fee_pct: 0, is_active: true },
-    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'conversion_fee_pct', label: 'Fee conversion (%)', type: 'number', min: 0, max: 100, step: 0.01, description: 'Porcentaje de cargo aplicado al convertir. Ej: 10 = el usuario recibe 10% menos.' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'conversion_fee_pct', label: 'Fee (%)' }, { id: 'decimal_places', label: 'Decimales' }],
-  },
-  {
-    id: 'currency', resource: 'currency-rates', label: 'Tipos de cambio', singular: 'tipo de cambio', icon: CircleDollarSign, showStatus: false,
-    empty: { currency_code: 'USD', rate_date: new Date().toISOString().slice(0, 10), rate_to_clp: 0 },
-    fields: [{ id: 'currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies', required: true }, { id: 'rate_date', label: 'Fecha', type: 'date', required: true }, { id: 'rate_to_clp', label: 'Valor CLP', type: 'number', min: 0, required: true }, { id: 'source_name', label: 'Fuente' }, { id: 'source_reference', label: 'Referencia' }],
-    tableFields: [{ id: 'currency_code', label: 'Moneda', primary: true }, { id: 'rate_date', label: 'Fecha' }, { id: 'rate_to_clp', label: 'Valor CLP' }],
   },
   {
     id: 'reconciliation', resource: 'bank-reconciliation-settings', label: 'Conciliacion', singular: 'configuracion de conciliacion', icon: Settings, codeField: 'setting_code', activeField: 'is_active',    empty: { bank_account_id: '', match_reference_enabled: true, match_amount_enabled: true, match_date_tolerance_days: 3, amount_tolerance: 0, auto_match_enabled: false, is_active: true },
@@ -582,44 +579,7 @@ const notificationSettingsTabs = [
   },
 ];
 
-const systemTabs = [
-  {
-    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, conversion_fee_pct: 0, is_active: true },
-    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'conversion_fee_pct', label: 'Fee conversion (%)', type: 'number', min: 0, max: 100, step: 0.01, description: 'Porcentaje de cargo aplicado al convertir. Ej: 10 = el usuario recibe 10% menos.' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'conversion_fee_pct', label: 'Fee (%)' }, { id: 'decimal_places', label: 'Decimales' }],
-  },
-  {
-    id: 'statuses', resource: 'system-statuses', label: 'Estados', singular: 'estado', icon: ShieldCheck, activeField: 'is_active',    empty: { status_group: '', status_code: '', status_name: '', status_display_es: '', is_active: true, sort_order: 0 },
-    fields: [{ id: 'status_group', label: 'Grupo', required: true }, { id: 'status_code', label: 'Codigo', required: true }, { id: 'status_name', label: 'Nombre interno', required: true }, { id: 'status_display_es', label: 'Nombre visible', required: true }, { id: 'status_color', label: 'Color' }, { id: 'status_icon', label: 'Icono' }, { id: 'sort_order', label: 'Orden', type: 'number', min: 0 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'status_display_es', label: 'Estado', primary: true }, { id: 'status_group', label: 'Grupo' }, { id: 'status_code', label: 'Codigo' }],
-  },
-  {
-    id: 'banks', resource: 'banks', label: 'Bancos', singular: 'banco', icon: Landmark, codeField: 'bank_code', activeField: 'is_active',    empty: { bank_name: '', country: 'Chile', is_active: true },
-    fields: [{ id: 'bank_name', label: 'Banco', required: true }, { id: 'country', label: 'Pais' }, { id: 'swift_code', label: 'SWIFT' }, { id: 'routing_code', label: 'Routing' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'bank_name', label: 'Banco', primary: true }, { id: 'country', label: 'Pais' }, { id: 'swift_code', label: 'SWIFT' }],
-  },
-  {
-    id: 'accounts', resource: 'bank-accounts', label: 'Cuentas', singular: 'cuenta bancaria', icon: CircleDollarSign, codeField: 'account_code', activeField: 'is_active',    empty: { bank_id: '', account_number: '', account_name: '', account_type: 'CHECKING', currency_code: 'CLP', opening_balance: 0, current_balance: 0, is_active: true },
-    fields: [{ id: 'bank_id', label: 'ID banco', type: 'number', required: true }, { id: 'account_number', label: 'Numero', required: true }, { id: 'account_name', label: 'Nombre', required: true }, { id: 'account_type', label: 'Tipo', type: 'select', options: ['CHECKING', 'SAVINGS', 'CREDIT_LINE', 'CASH', 'OTHER'].map((value) => ({ value, label: value })) }, { id: 'currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies' }, { id: 'opening_balance', label: 'Saldo inicial', type: 'number' }, { id: 'current_balance', label: 'Saldo actual', type: 'number' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'account_name', label: 'Cuenta', primary: true }, { id: 'bank_id', label: 'ID banco' }, { id: 'currency_code', label: 'Moneda' }, { id: 'current_balance', label: 'Saldo' }],
-  },
-  {
-    id: 'currency', resource: 'currency-rates', label: 'Tipos de cambio', singular: 'tipo de cambio', icon: CircleDollarSign, showStatus: false,
-    empty: { currency_code: 'USD', rate_date: new Date().toISOString().slice(0, 10), rate_to_clp: 0 },
-    fields: [{ id: 'currency_code', label: 'Moneda', type: 'select', optionsResource: 'currencies', required: true }, { id: 'rate_date', label: 'Fecha', type: 'date', required: true }, { id: 'rate_to_clp', label: 'Valor CLP', type: 'number', min: 0, required: true }, { id: 'source_name', label: 'Fuente' }, { id: 'source_reference', label: 'Referencia' }],
-    tableFields: [{ id: 'currency_code', label: 'Moneda', primary: true }, { id: 'rate_date', label: 'Fecha' }, { id: 'rate_to_clp', label: 'Valor CLP' }],
-  },
-  {
-    id: 'returns', resource: 'return-reasons', label: 'Devoluciones', singular: 'motivo de devolucion', icon: RotateCcw, codeField: 'reason_code', activeField: 'is_active',    empty: { reason_name: '', requires_approval: false, affects_stock: true, allows_exchange: true, allows_refund: true, is_active: true },
-    fields: [{ id: 'reason_name', label: 'Motivo', required: true }, { id: 'reason_description', label: 'Descripcion', wide: true }, { id: 'max_days_after_sale', label: 'Dias maximos', type: 'number', min: 0 }, { id: 'default_account_code', label: 'Cuenta contable' }, { id: 'requires_approval', label: 'Aprobacion', type: 'checkbox', checkLabel: 'Requiere aprobacion' }, { id: 'affects_stock', label: 'Stock', type: 'checkbox', checkLabel: 'Afecta stock' }, { id: 'allows_exchange', label: 'Cambio', type: 'checkbox', checkLabel: 'Permite cambio' }, { id: 'allows_refund', label: 'Reembolso', type: 'checkbox', checkLabel: 'Permite reembolso' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'reason_name', label: 'Motivo', primary: true }, { id: 'max_days_after_sale', label: 'Dias max.' }, { id: 'affects_stock', label: 'Stock' }],
-  },
-  {
-    id: 'stock', resource: 'stock-critical-config', label: 'Stock critico', singular: 'regla de stock', icon: Settings, activeField: 'is_active',    empty: { product_variant_id: '', warehouse_id: '', minimum_stock: 0, safety_stock: 0, lead_time_days: 7, avg_daily_sales: 0, alert_enabled: true, alert_frequency_hours: 24, is_active: true },
-    fields: [{ id: 'product_variant_id', label: 'ID SKU', type: 'number', required: true }, { id: 'warehouse_id', label: 'ID bodega', type: 'number', required: true }, { id: 'minimum_stock', label: 'Stock minimo', type: 'number', min: 0 }, { id: 'maximum_stock', label: 'Stock maximo', type: 'number', min: 0 }, { id: 'safety_stock', label: 'Stock seguridad', type: 'number', min: 0 }, { id: 'reorder_quantity', label: 'Cantidad reorden', type: 'number', min: 0 }, { id: 'lead_time_days', label: 'Lead time', type: 'number', min: 0 }, { id: 'alert_enabled', label: 'Alerta', type: 'checkbox', checkLabel: 'Alerta activa' }, { id: 'alert_frequency_hours', label: 'Frecuencia horas', type: 'number', min: 1 }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'product_variant_id', label: 'ID SKU', primary: true }, { id: 'warehouse_id', label: 'ID bodega' }, { id: 'minimum_stock', label: 'Minimo' }, { id: 'safety_stock', label: 'Seguridad' }],
-  },
-];
+const systemTabs = [];
 
 export const CustomersMaintainers = ({ initialTab, visibleTabs }) => {
   const scopedTabs = visibleTabs?.length ? customersTabs.filter((tab) => visibleTabs.includes(tab.id)) : customersTabs;
@@ -661,7 +621,8 @@ export const SalesConfigMaintainers = ({ initialTab, visibleTabs }) => {
   const description = scopedTabs.length === 1 ? singleTabDescriptions[scopedTabs[0].id] || 'Promociones, vigencias y productos o categorias asociadas.' : 'Promociones, vigencias y productos o categorias asociadas.';
   return <AdminGenericMaintainers title={title} description={description} tabs={scopedTabs} initialTab={initialTab} />;
 };
-export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas, monedas y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
+export const CurrenciesMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Monedas" description="Catalogo de divisas y configuracion de fee de conversion por divisa." tabs={currencyTabs} initialTab={initialTab} />;
+export const FinanceMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Mantenedores financieros" description="Bancos, cuentas bancarias y parametros de conciliacion." tabs={financeTabs} initialTab={initialTab} />;
 
 const denominationTypeOptions = [{ value: 'COIN', label: 'Moneda' }, { value: 'BILL', label: 'Billete' }];
 const cashDenominationsTabs = [
@@ -687,4 +648,4 @@ const cashDenominationsTabs = [
 export const CashMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Denominaciones de efectivo" description="Billetes y monedas utilizados en arqueo y apertura de caja." tabs={cashDenominationsTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;
 export const NotificationSettingsMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Configuracion de notificaciones" description="Tipos, reglas de emision y preferencias de recepcion." tabs={notificationSettingsTabs} initialTab={initialTab} />;
-export const SystemParameterMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Parametros del sistema" description="Estados, bancos, monedas, devoluciones y reglas de stock critico." tabs={systemTabs} initialTab={initialTab} />;
+export const SystemParameterMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Parametros del sistema" description="Monedas y estados del sistema." tabs={systemTabs} initialTab={initialTab} />;

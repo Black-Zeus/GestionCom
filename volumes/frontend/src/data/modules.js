@@ -115,13 +115,11 @@ export const moduleGroups = [
     permissions: ['FINANCE_VISIBLE'],
     items: [
       { id: 'finance-banking', label: 'Bancos y cuentas bancarias', path: '/finance/banking', icon: Building2, weight: 10, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
-      { id: 'finance-currencies', label: 'Monedas y tipos de cambio', path: '/finance/currencies', icon: CircleDollarSign, weight: 20, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
-      { id: 'finance-exchange-rates', label: 'Tipos de cambio', path: '/finance/exchange-rates', icon: ArrowRightLeft, weight: 25, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
-      { id: 'bank-reconciliation-settings', label: 'Configuracion de conciliacion bancaria', path: '/finance/bank-reconciliation/settings', icon: Settings, weight: 30, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
+      { id: 'finance-currencies', label: 'Monedas', path: '/finance/currencies', icon: CircleDollarSign, weight: 20, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
+      { id: 'finance-exchange-rates', label: 'Conversion monetaria', path: '/finance/exchange-rates', icon: ArrowRightLeft, weight: 25, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'expenses', label: 'Gastos operativos', path: '/finance/expenses', icon: Receipt, weight: 40 },
       { id: 'additional-income', label: 'Ingresos adicionales', path: '/finance/additional-income', icon: BadgeDollarSign, weight: 50 },
       { id: 'supplier-payments', label: 'Pagos a proveedores', path: '/finance/supplier-payments', icon: Truck, weight: 60 },
-      { id: 'bank-reconciliation', label: 'Conciliacion bancaria', path: '/finance/bank-reconciliation', icon: Building2, weight: 70 },
     ],
   },
   {
@@ -184,7 +182,6 @@ export const moduleGroups = [
     permissions: ['SETTINGS_VISIBLE'],
     items: [
       { id: 'company-config', label: 'Configuracion de empresa', path: '/config/company', icon: Building2, weight: 10, permissions: ['COMPANY_CONFIG_ACCESS', 'COMPANY_CONFIG_MANAGE'] },
-      { id: 'system-parameters', label: 'Parametros del sistema', path: '/config/system-parameters', icon: Settings, weight: 20, permissions: ['FOUNDATION_MAINTAINERS_ACCESS', 'FOUNDATION_MAINTAINERS_MANAGE'] },
       { id: 'tax-config', label: 'Configuracion de impuestos', path: '/config/taxes', icon: Receipt, weight: 30, permissions: ['TAX_CONFIG_ACCESS', 'TAX_CONFIG_MANAGE'] },
       { id: 'payment-methods', label: 'Configuracion de metodos de pago', path: '/config/payment-methods', icon: CreditCard, weight: 40 },
       { id: 'measurement-units', label: 'Configuracion de unidades de medida', path: '/config/measurement-units', icon: Ruler, weight: 50, permissions: ['MEASUREMENT_UNITS_ACCESS', 'MEASUREMENT_UNITS_MANAGE'] },
@@ -215,7 +212,7 @@ export const getMenuItemPermissionCode = (item) => (
   || `${item.id.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase()}_ACCESS`
 );
 
-export const getMenuItemPermissions = (group, item) => (
+export const getMenuItemPermissions = (_group, item) => (
   item.permissions?.length ? item.permissions : [getMenuItemPermissionCode(item)]
 );
 

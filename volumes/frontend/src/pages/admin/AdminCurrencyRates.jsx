@@ -222,7 +222,7 @@ const AdminCurrencyRates = () => {
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
-        title="Tipos de cambio"
+        title="Conversion monetaria"
         description="Tipos de cambio a CLP por divisa, sincronizados desde ExchangeRate-API."
       >
         <ActionButton label="Actualizar" icon={RefreshCcw} variant="neutral" onClick={load} disabled={loading || syncing} className={loading ? '[&>svg]:animate-spin' : ''} />
