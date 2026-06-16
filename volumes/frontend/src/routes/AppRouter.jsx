@@ -8,6 +8,10 @@ import RequireAuth from './guards/RequireAuth';
 import RequirePermission from './guards/RequirePermission';
 
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
+const SalesMetrics = lazy(() => import('@/pages/metrics/SalesMetrics'));
+const InventoryMetrics = lazy(() => import('@/pages/metrics/InventoryMetrics'));
+const CashMetrics = lazy(() => import('@/pages/metrics/CashMetrics'));
+const CustomerMetrics = lazy(() => import('@/pages/metrics/CustomerMetrics'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
@@ -80,6 +84,10 @@ const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
 
 const moduleComponents = {
   dashboard: Dashboard,
+  'sales-metrics': SalesMetrics,
+  'inventory-metrics': InventoryMetrics,
+  'cash-metrics': CashMetrics,
+  'customer-metrics': CustomerMetrics,
   users: AdminUsers,
   roles: AdminRoles,
   warehouses: AdminWarehouses,
