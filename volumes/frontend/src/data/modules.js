@@ -116,6 +116,7 @@ export const moduleGroups = [
     items: [
       { id: 'finance-banking', label: 'Bancos y cuentas bancarias', path: '/finance/banking', icon: Building2, weight: 10, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'finance-currencies', label: 'Monedas y tipos de cambio', path: '/finance/currencies', icon: CircleDollarSign, weight: 20, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
+      { id: 'finance-exchange-rates', label: 'Tipos de cambio', path: '/finance/exchange-rates', icon: ArrowRightLeft, weight: 25, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'bank-reconciliation-settings', label: 'Configuracion de conciliacion bancaria', path: '/finance/bank-reconciliation/settings', icon: Settings, weight: 30, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'expenses', label: 'Gastos operativos', path: '/finance/expenses', icon: Receipt, weight: 40 },
       { id: 'additional-income', label: 'Ingresos adicionales', path: '/finance/additional-income', icon: BadgeDollarSign, weight: 50 },

@@ -67,6 +67,7 @@ const CustomerSalesPage = lazy(() => import('@/pages/customers/CustomerSalesPage
 const AdminReturnReasons = lazy(() => import('@/pages/admin/AdminReturnReasons'));
 const AdminFinanceMaintainers = lazy(() => import('@/pages/admin/AdminFinanceMaintainers'));
 const AdminFinanceCurrencies = lazy(() => import('@/pages/admin/AdminFinanceCurrencies'));
+const AdminCurrencyRates = lazy(() => import('@/pages/admin/AdminCurrencyRates'));
 const AdminBankReconciliationSettings = lazy(() => import('@/pages/admin/AdminBankReconciliationSettings'));
 const AdminDocumentTemplates = lazy(() => import('@/pages/admin/AdminDocumentTemplates'));
 const AdminNotificationSettings = lazy(() => import('@/pages/admin/AdminNotificationSettings'));
@@ -128,6 +129,7 @@ const moduleComponents = {
   'return-reasons': AdminReturnReasons,
   'finance-banking': AdminFinanceMaintainers,
   'finance-currencies': AdminFinanceCurrencies,
+  'finance-exchange-rates': AdminCurrencyRates,
   'bank-reconciliation-settings': AdminBankReconciliationSettings,
   'document-templates': AdminDocumentTemplates,
   'notification-settings': AdminNotificationSettings,
