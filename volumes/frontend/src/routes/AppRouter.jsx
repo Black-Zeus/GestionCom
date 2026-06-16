@@ -60,7 +60,6 @@ const AdminStockTransfers = lazy(() => import('@/pages/admin/AdminStockTransfers
 const AdminStockMovements = lazy(() => import('@/pages/admin/AdminStockMovements'));
 const AdminStockConversions = lazy(() => import('@/pages/admin/AdminStockConversions'));
 const AdminInventoryTrackingReports = lazy(() => import('@/pages/admin/AdminInventoryTrackingReports'));
-const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminSalesConfigMaintainers = lazy(() => import('@/pages/admin/AdminSalesConfigMaintainers'));
 const AdminPromotionItems = lazy(() => import('@/pages/admin/AdminPromotionItems'));
 const CustomerSalesPage = lazy(() => import('@/pages/customers/CustomerSalesPage'));
@@ -124,13 +123,11 @@ const moduleComponents = {
   'stock-conversions': AdminStockConversions,
   'inventory-tracking-reports': AdminInventoryTrackingReports,
   transfers: AdminStockTransfers,
-  'system-parameters': AdminSystemParameterMaintainers,
   promotions: AdminSalesConfigMaintainers,
   'return-reasons': AdminReturnReasons,
   'finance-banking': AdminFinanceMaintainers,
   'finance-currencies': AdminFinanceCurrencies,
   'finance-exchange-rates': AdminCurrencyRates,
-  'bank-reconciliation-settings': AdminBankReconciliationSettings,
   'document-templates': AdminDocumentTemplates,
   'notification-settings': AdminNotificationSettings,
   notifications: NotificationInbox,

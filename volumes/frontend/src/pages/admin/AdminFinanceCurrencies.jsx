@@ -1,5 +1,5 @@
-import { FinanceMaintainers } from './foundationMaintainerConfigs';
+import { CurrenciesMaintainers } from './foundationMaintainerConfigs';
 
-const AdminFinanceCurrencies = () => <FinanceMaintainers initialTab="currencies" />;
+const AdminFinanceCurrencies = () => <CurrenciesMaintainers />;
 
 export default AdminFinanceCurrencies;
