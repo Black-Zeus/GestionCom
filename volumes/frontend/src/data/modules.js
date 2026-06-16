@@ -117,9 +117,6 @@ export const moduleGroups = [
       { id: 'finance-banking', label: 'Bancos y cuentas bancarias', path: '/finance/banking', icon: Building2, weight: 10, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'finance-currencies', label: 'Monedas', path: '/finance/currencies', icon: CircleDollarSign, weight: 20, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'finance-exchange-rates', label: 'Conversion monetaria', path: '/finance/exchange-rates', icon: ArrowRightLeft, weight: 25, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
-      { id: 'expenses', label: 'Gastos operativos', path: '/finance/expenses', icon: Receipt, weight: 40 },
-      { id: 'additional-income', label: 'Ingresos adicionales', path: '/finance/additional-income', icon: BadgeDollarSign, weight: 50 },
-      { id: 'supplier-payments', label: 'Pagos a proveedores', path: '/finance/supplier-payments', icon: Truck, weight: 60 },
     ],
   },
   {
