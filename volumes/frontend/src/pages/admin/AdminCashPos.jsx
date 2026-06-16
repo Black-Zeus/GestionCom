@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CreditCard, EyeOff, MapPin, Pencil, RefreshCw, Trash2, Wifi, XCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, EyeOff, MapPin, Pencil, RefreshCw, ShieldCheck, Trash2, Wifi, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
