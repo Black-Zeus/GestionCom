@@ -7,6 +7,7 @@ import { navigablePages } from '@/data/modules';
 import RequireAuth from './guards/RequireAuth';
 import RequirePermission from './guards/RequirePermission';
 
+const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
@@ -78,6 +79,7 @@ const AdminUserPermissions = lazy(() => import('@/pages/admin/AdminUserPermissio
 const ErrorPage = lazy(() => import('@/pages/errors/ErrorPage'));
 
 const moduleComponents = {
+  dashboard: Dashboard,
   users: AdminUsers,
   roles: AdminRoles,
   warehouses: AdminWarehouses,
