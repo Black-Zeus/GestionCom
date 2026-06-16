@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { ActionButton } from '@/components/common/actions/ActionButton';
@@ -41,6 +41,7 @@ const CashCount = () => {
   const [summary, setSummary] = useState(null);
   const [denominations, setDenominations] = useState([]);
   const [counts, setCounts] = useState({});
+  const [adhocRows, setAdhocRows] = useState([]);
   const [closingNotes, setClosingNotes] = useState('');
   const [cashCountNotes, setCashCountNotes] = useState('');
   const [loading, setLoading] = useState(true);
@@ -90,9 +91,30 @@ const CashCount = () => {
     setCounts((prev) => ({ ...prev, [id]: qty }));
   };
 
+  const addAdhocRow = () => setAdhocRows((prev) => [...prev, { id: Date.now(), label: '', currency_code: 'USD', denomination_value: '', quantity: '' }]);
+  const removeAdhocRow = (rowId) => setAdhocRows((prev) => prev.filter((r) => r.id !== rowId));
+  const updateAdhocRow = (rowId, field, value) => setAdhocRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
+
+  const primaryCurrency = useMemo(() => {
+    const clpDenom = denominations.find((d) => (d.currency_code || 'CLP') === 'CLP');
+    return clpDenom ? 'CLP' : (denominations[0]?.currency_code || 'CLP');
+  }, [denominations]);
+
+  const currencyGroups = useMemo(() => {
+    const map = {};
+    denominations.forEach((d) => {
+      const code = d.currency_code || 'CLP';
+      if (!map[code]) map[code] = [];
+      map[code].push(d);
+    });
+    return Object.entries(map).sort(([a], [b]) => (a === primaryCurrency ? -1 : b === primaryCurrency ? 1 : a.localeCompare(b)));
+  }, [denominations, primaryCurrency]);
+
   const physicalTotal = useMemo(() => (
-    denominations.reduce((sum, d) => sum + (d.denomination_value * (counts[d.id] || 0)), 0)
-  ), [denominations, counts]);
+    denominations
+      .filter((d) => (d.currency_code || 'CLP') === primaryCurrency)
+      .reduce((sum, d) => sum + (d.denomination_value * (counts[d.id] || 0)), 0)
+  ), [denominations, counts, primaryCurrency]);
 
   const theoreticalCash = useMemo(() => (
     summary ? Number(summary.theoretical_cash || 0) : 0
@@ -111,11 +133,20 @@ const CashCount = () => {
       const denominationCounts = denominations
         .filter((d) => (counts[d.id] || 0) > 0)
         .map((d) => ({ denomination_id: d.id, quantity: counts[d.id] }));
+      const validAdhoc = adhocRows.filter(
+        (r) => r.label.trim() && r.currency_code && Number(r.denomination_value) > 0 && Number(r.quantity) >= 1,
+      ).map((r) => ({
+        label: r.label.trim(),
+        currency_code: r.currency_code.toUpperCase(),
+        denomination_value: Number(r.denomination_value),
+        quantity: parseInt(r.quantity, 10),
+      }));
       await cashSessionsService.close(sessionId, {
         physical_amount: physicalTotal,
         closing_notes: closingNotes.trim() || null,
         cash_count_notes: cashCountNotes.trim(),
         denomination_counts: denominationCounts,
+        adhoc_denomination_counts: validAdhoc,
       });
       toast.success('Sesion cerrada correctamente.');
       navigate('/cash/opening');
@@ -152,8 +183,8 @@ const CashCount = () => {
   }
 
   const statusInfo = STATUS_MAP[session.status_id] || { label: String(session.status_id), variant: 'inactive' };
-  const coins = denominations.filter((d) => d.denomination_type === 'COIN');
-  const bills = denominations.filter((d) => d.denomination_type === 'BILL');
+
+  const inputCls = 'h-7 w-16 rounded border border-slate-200 px-2 text-center text-xs dark:border-slate-700 dark:bg-slate-900';
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
@@ -214,52 +245,66 @@ const CashCount = () => {
           <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">
             Conteo de efectivo {!isOpen && <span className="ml-2 text-xs font-normal text-slate-400">(solo lectura)</span>}
           </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {[{ label: 'Monedas', items: coins }, { label: 'Billetes', items: bills }].map(({ label, items }) => (
-              <div key={label}>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-                <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-800">
-                      <tr>
-                        <th className="px-3 py-1.5 text-left font-medium text-slate-600 dark:text-slate-300">Denominacion</th>
-                        <th className="px-3 py-1.5 text-center font-medium text-slate-600 dark:text-slate-300">Cantidad</th>
-                        <th className="px-3 py-1.5 text-right font-medium text-slate-600 dark:text-slate-300">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {items.map((d) => (
-                        <tr key={d.id}>
-                          <td className="px-3 py-1.5 font-mono text-xs">{d.denomination_label}</td>
-                          <td className="px-2 py-1 text-center">
-                            {isOpen ? (
-                              <input
-                                type="number"
-                                min="0"
-                                className="h-7 w-16 rounded border border-slate-200 px-2 text-center text-xs dark:border-slate-700 dark:bg-slate-900"
-                                value={counts[d.id] || ''}
-                                onChange={(e) => handleCount(d.id, e.target.value)}
-                                placeholder="0"
-                              />
-                            ) : (
-                              <span className="text-xs">{counts[d.id] || 0}</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-1.5 text-right tabular-nums text-xs">
-                            {(counts[d.id] || 0) > 0 ? money(d.denomination_value * (counts[d.id] || 0)) : '—'}
-                          </td>
-                        </tr>
+
+          <div className="space-y-5">
+            {currencyGroups.map(([code, denoms]) => {
+              const coins = denoms.filter((d) => d.denomination_type === 'COIN');
+              const bills = denoms.filter((d) => d.denomination_type === 'BILL');
+              return (
+                <div key={code}>
+                  {currencyGroups.length > 1 && (
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                      {code}
+                      {code !== primaryCurrency && (
+                        <span className="ml-2 font-normal text-slate-400">(referencia — no suma al total {primaryCurrency})</span>
+                      )}
+                    </p>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {[{ label: 'Monedas', items: coins }, { label: 'Billetes', items: bills }]
+                      .filter(({ items }) => items.length > 0)
+                      .map(({ label, items }) => (
+                        <div key={label}>
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                          <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+                            <table className="w-full text-sm">
+                              <thead className="bg-slate-50 dark:bg-slate-800">
+                                <tr>
+                                  <th className="px-3 py-1.5 text-left font-medium text-slate-600 dark:text-slate-300">Denominacion</th>
+                                  <th className="px-3 py-1.5 text-center font-medium text-slate-600 dark:text-slate-300">Cantidad</th>
+                                  <th className="px-3 py-1.5 text-right font-medium text-slate-600 dark:text-slate-300">Subtotal</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {items.map((d) => (
+                                  <tr key={d.id}>
+                                    <td className="px-3 py-1.5 font-mono text-xs">{d.denomination_label}</td>
+                                    <td className="px-2 py-1 text-center">
+                                      {isOpen ? (
+                                        <input type="number" min="0" className={inputCls} value={counts[d.id] || ''} onChange={(e) => handleCount(d.id, e.target.value)} placeholder="0" />
+                                      ) : (
+                                        <span className="text-xs">{counts[d.id] || 0}</span>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-right tabular-nums text-xs">
+                                      {(counts[d.id] || 0) > 0 ? money(d.denomination_value * (counts[d.id] || 0)) : '—'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-4 grid gap-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800 sm:grid-cols-3">
             <div className="text-center">
-              <p className="text-xs text-slate-500">Efectivo fisico contado</p>
+              <p className="text-xs text-slate-500">Efectivo fisico contado ({primaryCurrency})</p>
               <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{money(physicalTotal)}</p>
             </div>
             <div className="text-center">
@@ -273,6 +318,99 @@ const CashCount = () => {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {isOpen && (
+        <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Otras divisas</h3>
+              <p className="mt-0.5 text-xs text-slate-400">Registra billetes o monedas de otras monedas recibidos durante la sesion. Solo para referencia, no afectan el total en {primaryCurrency}.</p>
+            </div>
+            <button
+              type="button"
+              onClick={addAdhocRow}
+              className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Agregar
+            </button>
+          </div>
+          {adhocRows.length === 0 ? (
+            <p className="text-center text-xs text-slate-400 py-3">Sin denominaciones adicionales. Usa "Agregar" si recibiste pago en otra divisa.</p>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800">
+                  <tr>
+                    <th className="px-3 py-1.5 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Etiqueta</th>
+                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Moneda</th>
+                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Valor</th>
+                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Cantidad</th>
+                    <th className="px-2 py-1.5 text-right text-xs font-medium text-slate-600 dark:text-slate-300">Subtotal</th>
+                    <th className="px-2 py-1.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {adhocRows.map((row) => {
+                    const sub = Number(row.denomination_value || 0) * Number(row.quantity || 0);
+                    return (
+                      <tr key={row.id}>
+                        <td className="px-2 py-1">
+                          <input
+                            type="text"
+                            className="h-7 w-full min-w-[80px] rounded border border-slate-200 px-2 text-xs dark:border-slate-700 dark:bg-slate-900"
+                            value={row.label}
+                            onChange={(e) => updateAdhocRow(row.id, 'label', e.target.value)}
+                            placeholder="Ej: USD 100"
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <input
+                            type="text"
+                            maxLength={3}
+                            className="h-7 w-14 rounded border border-slate-200 px-2 text-center text-xs uppercase dark:border-slate-700 dark:bg-slate-900"
+                            value={row.currency_code}
+                            onChange={(e) => updateAdhocRow(row.id, 'currency_code', e.target.value.toUpperCase())}
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className="h-7 w-20 rounded border border-slate-200 px-2 text-right text-xs dark:border-slate-700 dark:bg-slate-900"
+                            value={row.denomination_value}
+                            onChange={(e) => updateAdhocRow(row.id, 'denomination_value', e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <input
+                            type="number"
+                            min="1"
+                            className={inputCls}
+                            value={row.quantity}
+                            onChange={(e) => updateAdhocRow(row.id, 'quantity', e.target.value)}
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="px-3 py-1.5 text-right tabular-nums text-xs">
+                          {sub > 0 ? `${sub.toLocaleString('es-CL')} ${row.currency_code}` : '—'}
+                        </td>
+                        <td className="px-2 py-1 text-right">
+                          <button type="button" onClick={() => removeAdhocRow(row.id)} className="text-slate-400 hover:text-red-500">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

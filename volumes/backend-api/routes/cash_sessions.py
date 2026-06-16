@@ -196,10 +196,14 @@ def session_to_dict(
                 "count_type": c.count_type,
                 "quantity": c.quantity,
                 "subtotal": str(c.subtotal),
+                "adhoc_label": c.adhoc_label,
+                "adhoc_currency_code": c.adhoc_currency_code,
+                "adhoc_denomination_value": str(c.adhoc_denomination_value) if c.adhoc_denomination_value is not None else None,
                 "denomination": {
                     "id": c.denomination.id,
                     "denomination_value": c.denomination.denomination_value,
                     "denomination_type": c.denomination.denomination_type,
+                    "currency_code": c.denomination.currency_code or "CLP",
                     "denomination_label": c.denomination.denomination_label,
                 } if c.denomination else None,
             }
@@ -211,6 +215,13 @@ def session_to_dict(
 class DenominationCountPayload(PydanticBaseModel):
     denomination_id: int
     quantity: int = Field(ge=0)
+
+
+class AdhocDenominationCountPayload(PydanticBaseModel):
+    label: str = Field(min_length=1, max_length=100)
+    currency_code: str = Field(min_length=3, max_length=3)
+    denomination_value: Decimal = Field(gt=0)
+    quantity: int = Field(ge=1)
 
 
 class OpenSessionPayload(PydanticBaseModel):
@@ -225,6 +236,7 @@ class CloseSessionPayload(PydanticBaseModel):
     closing_notes: str | None = Field(None, max_length=500)
     cash_count_notes: str | None = Field(None, max_length=500)
     denomination_counts: list[DenominationCountPayload] = []
+    adhoc_denomination_counts: list[AdhocDenominationCountPayload] = []
 
 
 class ApproveSessionPayload(PydanticBaseModel):
@@ -249,6 +261,7 @@ async def list_denominations(request: Request, user: dict = Depends(get_current_
                 "id": d.id,
                 "denomination_value": d.denomination_value,
                 "denomination_type": d.denomination_type,
+                "currency_code": d.currency_code or "CLP",
                 "denomination_label": d.denomination_label,
                 "sort_order": d.sort_order,
             }
@@ -653,6 +666,19 @@ async def close_session(
                     subtotal=money(Decimal(str(denom.denomination_value)) * dc.quantity),
                 )
                 session.add(count)
+
+        for adc in payload.adhoc_denomination_counts:
+            adhoc = CashSessionDenominationCount(
+                cash_register_session_id=session_id,
+                currency_denomination_id=None,
+                count_type="CLOSING",
+                adhoc_label=adc.label,
+                adhoc_currency_code=adc.currency_code.upper(),
+                adhoc_denomination_value=money(adc.denomination_value),
+                quantity=adc.quantity,
+                subtotal=money(adc.denomination_value * adc.quantity),
+            )
+            session.add(adhoc)
 
         cashier_id = int(user.get("user_id") or user.get("id") or 0)
         _add_cash_session_observation(

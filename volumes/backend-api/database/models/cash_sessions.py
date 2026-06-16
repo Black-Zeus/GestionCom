@@ -64,6 +64,7 @@ class CurrencyDenomination(SimpleBaseModel):
 
     denomination_value = Column(Integer, nullable=False, unique=True)
     denomination_type = Column(Enum("COIN", "BILL", name="denomination_type_enum"), nullable=False)
+    currency_code = Column(String(3), nullable=True, default="CLP")
     denomination_label = Column(String(50), nullable=False)
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
@@ -110,9 +111,12 @@ class CashSessionDenominationCount(SimpleBaseModel):
         BigInteger, ForeignKey("cash_register_sessions.id"), nullable=False
     )
     currency_denomination_id = Column(
-        BigInteger, ForeignKey("currency_denominations.id"), nullable=False
+        BigInteger, ForeignKey("currency_denominations.id"), nullable=True
     )
     count_type = Column(Enum("OPENING", "CLOSING", name="count_type_enum"), nullable=False)
+    adhoc_label = Column(String(100), nullable=True)
+    adhoc_currency_code = Column(String(3), nullable=True)
+    adhoc_denomination_value = Column(DECIMAL(15, 2), nullable=True)
     quantity = Column(Integer, nullable=False, default=0)
     subtotal = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
 
