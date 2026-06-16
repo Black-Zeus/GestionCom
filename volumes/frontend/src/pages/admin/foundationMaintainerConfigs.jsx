@@ -539,9 +539,9 @@ const financeTabs = [
     tableFields: [{ id: 'account_name', label: 'Cuenta', primary: true }, { id: 'bank_id', label: 'Banco' }, { id: 'currency_code', label: 'Moneda' }, { id: 'current_balance', label: 'Saldo' }],
   },
   {
-    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, is_base_currency: false, is_active: true },
-    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'is_base_currency', label: 'Base', type: 'checkbox', checkLabel: 'Moneda base' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'decimal_places', label: 'Decimales' }],
+    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, conversion_fee_pct: 0, is_active: true },
+    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'conversion_fee_pct', label: 'Fee conversion (%)', type: 'number', min: 0, max: 100, step: 0.01, description: 'Porcentaje de cargo aplicado al convertir. Ej: 10 = el usuario recibe 10% menos.' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
+    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'conversion_fee_pct', label: 'Fee (%)' }, { id: 'decimal_places', label: 'Decimales' }],
   },
   {
     id: 'currency', resource: 'currency-rates', label: 'Tipos de cambio', singular: 'tipo de cambio', icon: CircleDollarSign, showStatus: false,
@@ -584,9 +584,9 @@ const notificationSettingsTabs = [
 
 const systemTabs = [
   {
-    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, is_base_currency: false, is_active: true },
-    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'is_base_currency', label: 'Base', type: 'checkbox', checkLabel: 'Moneda base' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
-    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'decimal_places', label: 'Decimales' }],
+    id: 'currencies', resource: 'currencies', label: 'Monedas', singular: 'moneda', icon: CircleDollarSign, activeField: 'is_active',    empty: { currency_code: '', currency_name: '', currency_symbol: '', decimal_places: 2, conversion_fee_pct: 0, is_active: true },
+    fields: [{ id: 'currency_code', label: 'Codigo ISO', required: true }, { id: 'currency_name', label: 'Nombre', required: true }, { id: 'currency_symbol', label: 'Simbolo', required: true }, { id: 'decimal_places', label: 'Decimales', type: 'number', min: 0 }, { id: 'conversion_fee_pct', label: 'Fee conversion (%)', type: 'number', min: 0, max: 100, step: 0.01, description: 'Porcentaje de cargo aplicado al convertir. Ej: 10 = el usuario recibe 10% menos.' }, { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' }],
+    tableFields: [{ id: 'currency_name', label: 'Moneda', primary: true }, { id: 'currency_code', label: 'Codigo' }, { id: 'currency_symbol', label: 'Simbolo' }, { id: 'conversion_fee_pct', label: 'Fee (%)' }, { id: 'decimal_places', label: 'Decimales' }],
   },
   {
     id: 'statuses', resource: 'system-statuses', label: 'Estados', singular: 'estado', icon: ShieldCheck, activeField: 'is_active',    empty: { status_group: '', status_code: '', status_name: '', status_display_es: '', is_active: true, sort_order: 0 },

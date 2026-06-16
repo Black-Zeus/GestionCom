@@ -85,9 +85,9 @@ RESOURCES = {
     },
     "currencies": {
         "table": "currencies", "active_field": "is_active", "soft_delete": True,
-        "fields": ["currency_code", "currency_name", "currency_symbol", "decimal_places", "is_base_currency", "is_active"],
+        "fields": ["currency_code", "currency_name", "currency_symbol", "decimal_places", "conversion_fee_pct", "is_active"],
         "required": ["currency_code", "currency_name", "currency_symbol"],
-        "bool": ["is_base_currency", "is_active"], "int": ["decimal_places"],
+        "bool": ["is_active"], "int": ["decimal_places"], "decimal": ["conversion_fee_pct"],
     },
     "currency-denominations": {
         "table": "currency_denominations", "active_field": "is_active", "soft_delete": False,
