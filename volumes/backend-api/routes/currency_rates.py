@@ -56,6 +56,7 @@ async def list_rates(request: Request, user: dict = Depends(get_current_user)):
                     r.base_currency_code,
                     c.currency_name,
                     c.currency_symbol,
+                    c.conversion_fee_pct,
                     r.rate_date,
                     r.rate_value,
                     r.fee_pct,
@@ -77,22 +78,24 @@ async def list_rates(request: Request, user: dict = Depends(get_current_user)):
             """)
         )
         rows = [dict(row._mapping) for row in result]
-        data = [
-            {
+        data = []
+        for r in rows:
+            current_fee_pct = Decimal(str(r["conversion_fee_pct"] or 0))
+            rate_value = Decimal(str(r["rate_value"] or 0))
+            effective_rate = _six(rate_value * (1 - current_fee_pct / 100)) if rate_value else Decimal("0")
+            data.append({
                 "id": r["id"],
                 "currency_code": r["currency_code"],
                 "base_currency_code": r["base_currency_code"],
                 "currency_name": r["currency_name"],
                 "currency_symbol": r["currency_symbol"],
                 "rate_date": str(r["rate_date"]),
-                "rate_value": str(r["rate_value"]),
-                "fee_pct": str(r["fee_pct"]),
-                "effective_rate": str(r["effective_rate"]),
+                "rate_value": str(rate_value),
+                "fee_pct": str(current_fee_pct),
+                "effective_rate": str(effective_rate),
                 "source_name": r["source_name"],
                 "fetched_at": r["created_at"].isoformat() if r["created_at"] else None,
-            }
-            for r in rows
-        ]
+            })
         return ResponseManager.success(data=data, request=request)
 
 
