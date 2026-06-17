@@ -16,6 +16,8 @@ class PaymentMethodBase(BaseModel):
     allows_postdated: bool = False
     requires_bank_info: bool = False
     default_terms_days: Optional[int] = Field(None, ge=0)
+    icon_name: Optional[str] = Field(None, max_length=80)
+    display_order: int = Field(default=100, ge=0)
 
 
 class PaymentMethodCreate(PaymentMethodBase):
@@ -32,3 +34,5 @@ class PaymentMethodUpdate(BaseModel):
     allows_postdated: Optional[bool] = None
     requires_bank_info: Optional[bool] = None
     default_terms_days: Optional[int] = Field(None, ge=0)
+    icon_name: Optional[str] = Field(None, max_length=80)
+    display_order: Optional[int] = Field(None, ge=0)

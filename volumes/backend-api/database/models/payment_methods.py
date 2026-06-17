@@ -32,6 +32,8 @@ class PaymentMethod(BaseModel):
     allows_postdated = Column(Boolean, nullable=False, default=False)
     requires_bank_info = Column(Boolean, nullable=False, default=False)
     default_terms_days = Column(Integer, nullable=True)
+    icon_name = Column(String(80), nullable=True)
+    display_order = Column(Integer, nullable=False, default=100)
 
     __table_args__ = (
         Index("idx_method_code", "method_code"),

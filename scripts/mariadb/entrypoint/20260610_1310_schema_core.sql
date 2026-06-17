@@ -1975,6 +1975,8 @@ CREATE TABLE `payment_methods` (
   `allows_postdated` tinyint(1) DEFAULT 0 COMMENT 'Permite cheques/pagos a fecha',
   `requires_bank_info` tinyint(1) DEFAULT 0 COMMENT 'Requiere información bancaria',
   `default_terms_days` int(10) unsigned DEFAULT NULL COMMENT 'Días por defecto para este método',
+  `icon_name` varchar(80) DEFAULT NULL COMMENT 'Icono UI sugerido',
+  `display_order` int(10) unsigned NOT NULL DEFAULT 100 COMMENT 'Orden sugerido en POS',
   PRIMARY KEY (`id`),
   UNIQUE KEY `method_code` (`method_code`),
   KEY `idx_method_code` (`method_code`),

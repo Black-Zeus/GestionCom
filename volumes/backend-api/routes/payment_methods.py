@@ -101,6 +101,8 @@ def payment_method_to_dict(payment_method: PaymentMethod) -> dict:
         "allows_postdated": payment_method.allows_postdated,
         "requires_bank_info": payment_method.requires_bank_info,
         "default_terms_days": payment_method.default_terms_days,
+        "icon_name": payment_method.icon_name,
+        "display_order": payment_method.display_order,
         "display_name": payment_method.display_name,
         "created_at": payment_method.created_at.isoformat() if payment_method.created_at else None,
         "updated_at": payment_method.updated_at.isoformat() if payment_method.updated_at else None,
@@ -129,7 +131,7 @@ async def list_payment_methods(
             if method_type:
                 stmt = stmt.where(PaymentMethod.method_type == _method_type(method_type))
 
-            stmt = stmt.order_by(PaymentMethod.method_code).offset(skip).limit(limit)
+            stmt = stmt.order_by(PaymentMethod.display_order, PaymentMethod.method_name).offset(skip).limit(limit)
             result = await session.execute(stmt)
             methods = [payment_method_to_dict(method) for method in result.scalars().all()]
 
@@ -160,6 +162,8 @@ async def create_payment_method(
                 allows_postdated=payment_method_data.allows_postdated,
                 requires_bank_info=payment_method_data.requires_bank_info,
                 default_terms_days=payment_method_data.default_terms_days,
+                icon_name=payment_method_data.icon_name,
+                display_order=payment_method_data.display_order,
             )
             session.add(payment_method)
             await session.commit()
@@ -203,6 +207,8 @@ async def update_payment_method(
                 "allows_postdated",
                 "requires_bank_info",
                 "default_terms_days",
+                "icon_name",
+                "display_order",
             ]:
                 value = getattr(payment_method_data, field)
                 if value is not None:

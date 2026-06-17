@@ -1171,22 +1171,21 @@ UNLOCK TABLES;
 
 LOCK TABLES `payment_methods` WRITE;
 /*!40000 ALTER TABLE `payment_methods` DISABLE KEYS */;
-INSERT IGNORE INTO `payment_methods` (`id`, `method_code`, `method_name`, `method_type`, `affects_cash_flow`, `requires_authorization`, `currency_code`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `allows_postdated`, `requires_bank_info`, `default_terms_days`) VALUES
-(1,'CASH','Efectivo','CASH',1,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(2,'DEBIT','Tarjeta de Débito','CARD',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(3,'CREDIT','Tarjeta de Crédito','CARD',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(4,'TRANSFER','Transferencia Bancaria','TRANSFER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:34',NULL,0,1,0),
-(5,'CHECK','Cheque','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:34',NULL,1,1,30),
-(6,'VOUCHER','Vale Vista','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(7,'GIFT_CARD','Tarjeta Regalo','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(8,'STORE_CREDIT','Crédito de Tienda','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL),
-(9,'CREDIT_TERMS','Crédito Empresa','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,0,0,NULL),
-(10,'POSTDATED_CHECK','Cheque a Fecha','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,1,1,NULL),
-(11,'WIRE_TRANSFER','Transferencia Bancaria','TRANSFER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,0,1,NULL),
-(12,'PROMISSORY_NOTE','Pagaré','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,1,0,NULL),
-(13,'DEMO_CASH','Efectivo demo','CASH',1,0,'CLP',1,'2026-06-08 13:24:42','2026-06-08 13:24:42',NULL,0,0,NULL),
-(14,'DEMO_CARD','Tarjeta demo','CARD',1,1,'CLP',1,'2026-06-08 13:24:42','2026-06-08 13:24:42',NULL,0,0,0),
-(15,'DEMO_TRANS','Transferencia demo','TRANSFER',1,0,'CLP',1,'2026-06-08 13:24:42','2026-06-08 13:24:42',NULL,0,1,1);
+INSERT IGNORE INTO `payment_methods` (`id`, `method_code`, `method_name`, `method_type`, `affects_cash_flow`, `requires_authorization`, `currency_code`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `allows_postdated`, `requires_bank_info`, `default_terms_days`, `icon_name`, `display_order`) VALUES
+(1,'CASH','Efectivo','CASH',1,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'banknote',20),
+(2,'DEBIT','Tarjeta de Débito','CARD',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'credit-card',30),
+(3,'CREDIT','Tarjeta de Crédito','CARD',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'credit-card',110),
+(4,'TRANSFER','Transferencia Bancaria','TRANSFER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:34',NULL,0,1,0,'receipt',120),
+(5,'CHECK','Cheque','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:34',NULL,1,1,30,'receipt-text',100),
+(6,'VOUCHER','Vale Vista','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'receipt',130),
+(7,'GIFT_CARD','Tarjeta Regalo','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'badge-dollar-sign',100),
+(8,'STORE_CREDIT','Crédito de Tienda','OTHER',0,0,'CLP',1,'2026-06-08 13:24:33','2026-06-08 13:24:33',NULL,0,0,NULL,'wallet-cards',100),
+(9,'CREDIT_TERMS','Crédito Empresa','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,0,0,NULL,'clipboard-list',100),
+(10,'POSTDATED_CHECK','Cheque a Fecha','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,1,1,NULL,'calendar-clock',100),
+(11,'WIRE_TRANSFER','Transferencia Bancaria','TRANSFER',0,0,'CLP',0,'2026-06-08 13:24:34','2026-06-08 13:24:34','2026-06-16 00:00:00',0,1,NULL,'receipt',999),
+(12,'PROMISSORY_NOTE','Pagaré','OTHER',0,0,'CLP',1,'2026-06-08 13:24:34','2026-06-08 13:24:34',NULL,1,0,NULL,'file-pen-line',100),
+(13,'FOREIGN_CURRENCY','Divisa Extranjera','OTHER',1,0,'CLP',1,'2026-06-08 13:24:42','2026-06-08 13:24:42',NULL,0,0,NULL,'repeat-2',40),
+(14,'MIXED','Mixto','OTHER',1,0,'CLP',1,'2026-06-08 13:24:42','2026-06-08 13:24:42',NULL,0,0,NULL,'split-square-horizontal',10);
 
 /*!40000 ALTER TABLE `payment_methods` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -1316,4 +1315,3 @@ UNLOCK TABLES;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
-
