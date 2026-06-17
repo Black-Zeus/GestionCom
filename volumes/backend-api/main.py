@@ -145,6 +145,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Cash Sessions"]
     },
     {
+        "name": "cash_movements",
+        "prefix": "/cash-movements",
+        "tags": ["Cash Movements"]
+    },
+    {
         "name": "currency_rates",
         "prefix": "/currency-rates",
         "tags": ["Currency Rates"]

@@ -31,6 +31,7 @@ const PettyCashExpenses = lazy(() => import('@/pages/cash/PettyCashExpenses'));
 const CashPos = lazy(() => import('@/pages/cash/CashPos'));
 const CashOpening = lazy(() => import('@/pages/cash/CashOpening'));
 const CashCount = lazy(() => import('@/pages/cash/CashCount'));
+const CashMovements = lazy(() => import('@/pages/cash/CashMovements'));
 const AdminCashMaintainers = lazy(() => import('@/pages/admin/AdminCashMaintainers'));
 const NewSale = lazy(() => import('@/pages/sales/NewSale'));
 const SalesHistory = lazy(() => import('@/pages/sales/SalesHistory'));
@@ -109,6 +110,7 @@ const moduleComponents = {
   'cash-pos': CashPos,
   'cash-opening': CashOpening,
   'cash-count': CashCount,
+  'cash-movements': CashMovements,
   'cash-denominations': AdminCashMaintainers,
   'new-sale': NewSale,
   'sales-history': SalesHistory,

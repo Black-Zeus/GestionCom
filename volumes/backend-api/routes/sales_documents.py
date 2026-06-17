@@ -113,6 +113,115 @@ def display_user(user: dict) -> str:
     return user.get("display_name") or user.get("full_name") or user.get("username") or "Usuario"
 
 
+def _payment_detail_type(payment_details) -> str | None:
+    if isinstance(payment_details, dict):
+        return str(payment_details.get("type") or "").upper() or None
+    return None
+
+
+def _reference_for_sale(sale: SaleDocument) -> str:
+    return sale.ticket_number or sale.sale_code or f"VENTA-{sale.id}"
+
+
+def _movement_description(sale: SaleDocument, payment_method_name: str | None) -> str:
+    doc_label = "Devolucion POS" if money(sale.total_amount) < 0 else "Venta POS"
+    method_label = payment_method_name or sale.payment_method_name or sale.payment_method_code or "Sin metodo"
+    return f"{doc_label} {_reference_for_sale(sale)} - {method_label}"
+
+
+async def register_cash_movements_for_sale(session, sale: SaleDocument, payload: CloseSalePayload, user_id: int) -> None:
+    if not sale.cash_register_session_id:
+        return
+
+    total = money(sale.total_amount)
+    if total == 0 and not payload.payment_details:
+        return
+
+    method_result = await session.execute(
+        text(
+            "SELECT id, method_code, method_name FROM payment_methods "
+            "WHERE deleted_at IS NULL AND is_active = 1"
+        )
+    )
+    method_map = {str(row["method_code"]).upper(): dict(row) for row in method_result.mappings().all()}
+    if not method_map:
+        return
+
+    reference = _reference_for_sale(sale)
+    movement_type = "RETURN" if total < 0 else "SALE"
+    expected_total = abs(total)
+    detail_type = _payment_detail_type(payload.payment_details)
+    rows: list[dict] = []
+
+    if detail_type == "MIXED" and isinstance(payload.payment_details, dict):
+        remaining = expected_total
+        change_remaining = money(payload.change_amount or 0)
+        for item in payload.payment_details.get("payments") or []:
+            method_code = str(item.get("payment_method_code") or "").upper()
+            method = method_map.get(method_code)
+            received = money(item.get("amount") or 0)
+            if not method or received <= 0:
+                continue
+            applied = min(received, remaining) if remaining > 0 else Decimal("0.00")
+            extra = money(received - applied)
+            change = min(change_remaining, extra) if change_remaining > 0 and extra > 0 else Decimal("0.00")
+            change_remaining -= change
+            remaining -= applied
+            rows.append(
+                {
+                    "payment_method_id": method["id"],
+                    "payment_method_name": method["method_name"],
+                    "amount": -applied if total < 0 else applied,
+                    "received_amount": received,
+                    "change_amount": change,
+                }
+            )
+        if change_remaining > 0 and rows:
+            rows[-1]["change_amount"] = money(rows[-1]["change_amount"] + change_remaining)
+    else:
+        method_code = str(payload.payment_method_code or "").upper()
+        method = method_map.get(method_code)
+        if not method and detail_type == "FOREIGN_CURRENCY":
+            method = method_map.get("FOREIGN_CURRENCY")
+        if not method and total < 0:
+            method = method_map.get("CASH")
+        if not method and method_map:
+            method = method_map.get("CASH") or next(iter(method_map.values()))
+
+        if method and expected_total > 0:
+            received = money(payload.amount_tendered or expected_total)
+            rows.append(
+                {
+                    "payment_method_id": method["id"],
+                    "payment_method_name": method["method_name"],
+                    "amount": -expected_total if total < 0 else expected_total,
+                    "received_amount": Decimal("0.00") if total < 0 else received,
+                    "change_amount": money(payload.change_amount or 0),
+                }
+            )
+
+    for row in rows:
+        await session.execute(
+            text(
+                "INSERT INTO cash_movements (cash_register_session_id, movement_type, document_id, payment_method_id, "
+                "amount, change_amount, received_amount, reference_number, description, created_by_user_id) "
+                "VALUES (:cash_register_session_id, :movement_type, NULL, :payment_method_id, :amount, :change_amount, "
+                ":received_amount, :reference_number, :description, :created_by_user_id)"
+            ),
+            {
+                "cash_register_session_id": sale.cash_register_session_id,
+                "movement_type": movement_type,
+                "payment_method_id": row["payment_method_id"],
+                "amount": row["amount"],
+                "change_amount": row["change_amount"],
+                "received_amount": row["received_amount"],
+                "reference_number": reference,
+                "description": _movement_description(sale, row["payment_method_name"]),
+                "created_by_user_id": user_id,
+            },
+        )
+
+
 def sale_to_dict(sale: SaleDocument, include_units: bool = False) -> dict:
     lines = sorted(sale.lines or [], key=lambda item: item.line_number)
     return {
@@ -864,6 +973,7 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
             if active_sess:
                 sale.cash_register_session_id = active_sess.id
 
+        await register_cash_movements_for_sale(session, sale, payload, user_id)
         await session.flush()
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), message="Venta cerrada", request=request)
 
