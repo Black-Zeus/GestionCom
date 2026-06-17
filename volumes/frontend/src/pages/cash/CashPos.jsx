@@ -35,6 +35,38 @@ const formatMoney = (value, currencyCode = 'CLP') => {
   });
 };
 
+const parseLocalizedAmount = (value) => {
+  if (typeof value === 'number') return value;
+  const text = String(value || '').trim().replace(/[^\d.,-]/g, '');
+  if (!text) return 0;
+  let normalized = text;
+  if (normalized.includes(',')) {
+    normalized = normalized.replace(/\./g, '').replace(',', '.');
+  } else if (normalized.includes('.')) {
+    const parts = normalized.split('.');
+    if (parts.length > 1 && parts.slice(1).every((part) => part.length === 3)) {
+      normalized = parts.join('');
+    }
+  }
+  return Number(normalized) || 0;
+};
+
+const rawAmount = (value) => {
+  const number = parseLocalizedAmount(value);
+  return number ? String(number) : '';
+};
+
+const formatAmountForInput = (value, currencyCode = 'CLP') => {
+  const number = parseLocalizedAmount(value);
+  if (!number) return '';
+  return formatMoney(number, currencyCode);
+};
+
+const focusAmountInput = (event, setter) => {
+  setter(rawAmount(event.target.value));
+  requestAnimationFrame(() => event.target.select());
+};
+
 const rateValue = (rate) => Number(rate?.effective_rate || rate?.rate_value || 0);
 const marketRateValue = (rate) => Number(rate?.rate_value || 0);
 const feeValue = (rate) => Number(rate?.fee_pct || 0);
@@ -43,6 +75,8 @@ const convertFromBase = (amount, rate) => {
   const value = rateValue(rate);
   return value > 0 ? Number(amount || 0) / value : 0;
 };
+
+const convertToBase = (amount, rate) => Number(amount || 0) * rateValue(rate);
 
 const customerName = (customer) => (
   customer?.commercial_name
@@ -108,17 +142,19 @@ const DIRECT_METHOD_RANK = {
   DEBIT: 20,
   FOREIGN_CURRENCY: 30,
 };
+const MAX_MIXED_PAYMENTS = 3;
 const inputCls = 'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:focus:border-blue-500';
+const compactInputCls = inputCls.replace('h-11', 'h-10');
 
 const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', onConfirm, onClose }) => {
   const [step, setStep] = useState(1);
-  const [paymentMode, setPaymentMode] = useState('MIXED');
+  const [paymentMode, setPaymentMode] = useState('DIRECT');
   const [methods, setMethods] = useState([]);
   const [selected, setSelected] = useState(null);
   const [importe, setImporte] = useState('');
   const [foreignCurrencyCode, setForeignCurrencyCode] = useState(preferredCurrencyCode || '');
   const [foreignReceived, setForeignReceived] = useState('');
-  const [mixedPayments, setMixedPayments] = useState([{ method_code: '', amount: '' }]);
+  const [mixedPayments, setMixedPayments] = useState([{ method_code: 'CASH', amount: '' }]);
   const [email, setEmail] = useState(initialEmail || '');
   const [processing, setProcessing] = useState(false);
 
@@ -154,6 +190,15 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   };
   const directMethods = sortPaymentMethods(methods.filter((method) => method.method_code !== 'MIXED'));
   const paymentMethodOptions = directMethods;
+  const mixedOptionsForIndex = (index) => {
+    const selectedCodes = new Set(mixedPayments.map((item, itemIndex) => (itemIndex === index ? null : item.method_code)).filter(Boolean));
+    return paymentMethodOptions.filter((method) => !selectedCodes.has(method.method_code));
+  };
+  const defaultMixedMethodCode = (items = mixedPayments) => {
+    const selectedCodes = new Set(items.map((item) => item.method_code).filter(Boolean));
+    return (paymentMethodOptions.find((method) => method.method_code === 'CASH' && !selectedCodes.has(method.method_code)) || paymentMethodOptions.find((method) => !selectedCodes.has(method.method_code)) || paymentMethodOptions[0])?.method_code || 'CASH';
+  };
+  const newMixedPayment = (items = mixedPayments) => ({ method_code: defaultMixedMethodCode(items), amount: '' });
 
   const isCash = selected?.method_type === 'CASH';
   const isForeign = selected?.method_code === 'FOREIGN_CURRENCY';
@@ -163,14 +208,22 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   const availableRates = exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
   const selectedForeignRate = availableRates.find((rate) => rate.currency_code === foreignCurrencyCode) || availableRates[0];
   const expectedForeignAmount = selectedForeignRate ? convertFromBase(absoluteTotal, selectedForeignRate) : 0;
-  const foreignReceivedNum = Number(foreignReceived || 0);
-  const importeNum = Number(importe || 0);
+  const foreignReceivedNum = parseLocalizedAmount(foreignReceived);
+  const importeNum = parseLocalizedAmount(importe);
   const vuelto = isCash && !isRefund ? Math.max(importeNum - total, 0) : 0;
   const foreignChange = isForeign && !isRefund && selectedForeignRate ? Math.max((foreignReceivedNum - expectedForeignAmount) * rateValue(selectedForeignRate), 0) : 0;
   const importeInsuficiente = isCash && !isRefund && importe !== '' && importeNum < total;
-  const mixedTotal = mixedPayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const mixedForeignRate = (item) => availableRates.find((rate) => rate.currency_code === item.currency_code) || availableRates[0] || null;
+  const mixedPaymentAmount = (item) => {
+    if (item.method_code === 'FOREIGN_CURRENCY') {
+      const rate = mixedForeignRate(item);
+      return rate ? convertToBase(parseLocalizedAmount(item.foreign_amount), rate) : 0;
+    }
+    return parseLocalizedAmount(item.amount);
+  };
+  const mixedTotal = mixedPayments.reduce((sum, item) => sum + mixedPaymentAmount(item), 0);
   const mixedRemaining = Math.max(absoluteTotal - mixedTotal, 0);
-  const mixedValid = isMixed && mixedPayments.length > 0 && mixedPayments.every((item) => item.method_code && Number(item.amount || 0) > 0) && mixedTotal >= absoluteTotal;
+  const mixedValid = isMixed && mixedPayments.length > 0 && mixedPayments.every((item) => item.method_code && mixedPaymentAmount(item) > 0) && mixedTotal >= absoluteTotal;
   const canContinue = isMixed
     ? (isRefund || mixedValid)
     : Boolean(selected) && (
@@ -179,10 +232,30 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
     );
 
   const updateMixedPayment = (index, field, value) => {
-    setMixedPayments((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)));
+    setMixedPayments((current) => current.map((item, itemIndex) => {
+      if (itemIndex !== index) return item;
+      const next = { ...item, [field]: value };
+      if (field === 'method_code' && value === 'FOREIGN_CURRENCY') {
+        next.currency_code = next.currency_code || availableRates[0]?.currency_code || '';
+        next.amount = '';
+      }
+      if (field === 'method_code' && value !== 'FOREIGN_CURRENCY') {
+        next.currency_code = '';
+        next.foreign_amount = '';
+      }
+      return next;
+    }));
   };
 
-  const removeMixedPayment = (index) => {
+  const removeMixedPayment = async (index) => {
+    const item = mixedPayments[index];
+    const method = methods.find((candidate) => candidate.method_code === item?.method_code);
+    const confirmed = await ModalManager.confirm({
+      title: 'Quitar medio de pago',
+      message: `Confirma quitar ${method?.method_name || 'este medio de pago'} del pago mixto.`,
+      buttons: { cancel: 'Cancelar', confirm: 'Quitar' },
+    });
+    if (!confirmed) return;
     setMixedPayments((current) => (current.length <= 1 ? current : current.filter((_, itemIndex) => itemIndex !== index)));
   };
 
@@ -196,13 +269,23 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
       received_amount: foreignReceived ? foreignReceivedNum : expectedForeignAmount,
     } : null;
     const mixedDetails = mixedPayments
-      .filter((item) => item.method_code && Number(item.amount || 0) > 0)
+      .filter((item) => item.method_code && mixedPaymentAmount(item) > 0)
       .map((item) => {
         const method = methods.find((candidate) => candidate.method_code === item.method_code);
+        const rate = item.method_code === 'FOREIGN_CURRENCY' ? mixedForeignRate(item) : null;
         return {
           payment_method_code: item.method_code,
           payment_method_name: method?.method_name || item.method_code,
-          amount: Number(item.amount || 0),
+          amount: mixedPaymentAmount(item),
+          ...(rate ? {
+            foreign_currency: {
+              currency_code: rate.currency_code,
+              currency_name: rate.currency_name,
+              rate_value: rateValue(rate),
+              received_amount: parseLocalizedAmount(item.foreign_amount),
+              clp_amount: mixedPaymentAmount(item),
+            },
+          } : {}),
         };
       });
     setProcessing(true);
@@ -239,6 +322,17 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
               <button
                 type="button"
                 onClick={() => {
+                  setPaymentMode('DIRECT');
+                  setMixedPayments([newMixedPayment()]);
+                }}
+                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+              >
+                <CreditCard className="h-4 w-4" />
+                Pago directo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   setPaymentMode('MIXED');
                   setSelected(null);
                   setImporte('');
@@ -248,17 +342,6 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
               >
                 <SplitSquareHorizontal className="h-4 w-4" />
                 Pago mixto
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentMode('DIRECT');
-                  setMixedPayments([{ method_code: '', amount: '' }]);
-                }}
-                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
-              >
-                <CreditCard className="h-4 w-4" />
-                Pago directo
               </button>
             </div>
 
@@ -299,12 +382,13 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
                 <input
                   className={inputCls}
-                  type="number"
-                  min={total}
-                  step="1"
+                  type="text"
+                  inputMode="numeric"
                   placeholder={money(total)}
                   value={importe}
                   onChange={(e) => setImporte(e.target.value)}
+                  onFocus={(e) => focusAmountInput(e, setImporte)}
+                  onBlur={(e) => setImporte(formatAmountForInput(e.target.value))}
                   autoFocus
                 />
                 {importeInsuficiente && (
@@ -345,12 +429,13 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
                 <input
                   className={inputCls}
-                  type="number"
-                  min={expectedForeignAmount}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   placeholder={selectedForeignRate ? formatMoney(expectedForeignAmount, selectedForeignRate.currency_code) : ''}
                   value={foreignReceived}
                   onChange={(e) => setForeignReceived(e.target.value)}
+                  onFocus={(e) => focusAmountInput(e, setForeignReceived)}
+                  onBlur={(e) => setForeignReceived(formatAmountForInput(e.target.value, selectedForeignRate?.currency_code || 'CLP'))}
                 />
                 {foreignReceived !== '' && foreignReceivedNum < expectedForeignAmount && (
                   <p className="text-xs text-red-600 dark:text-red-400">El importe es menor al esperado.</p>
@@ -368,28 +453,86 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 </span>
               </div>
               {mixedPayments.map((item, index) => (
-                <div key={index} className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]">
-                  <select className={inputCls} value={item.method_code} onChange={(e) => updateMixedPayment(index, 'method_code', e.target.value)}>
-                    <option value="">Medio de pago</option>
-                    {paymentMethodOptions.map((method) => (
-                      <option key={method.method_code} value={method.method_code}>{method.method_name}</option>
-                    ))}
-                  </select>
-                  <input
-                    className={inputCls}
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder={money(mixedRemaining || absoluteTotal)}
-                    value={item.amount}
-                    onChange={(e) => updateMixedPayment(index, 'amount', e.target.value)}
-                  />
-                  <button type="button" className="h-11 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" onClick={() => removeMixedPayment(index)}>
-                    Quitar
-                  </button>
+                <div key={index} className="py-0.5">
+                  {index === 0 && (
+                    <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_10rem_2.5rem] gap-2 px-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 sm:grid">
+                      <span>Medio</span>
+                      <span>Importe</span>
+                      <span className="text-right">Acciones</span>
+                    </div>
+                  )}
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_2.5rem]">
+                    <select className={compactInputCls} value={item.method_code || defaultMixedMethodCode()} onChange={(e) => updateMixedPayment(index, 'method_code', e.target.value)}>
+                      {mixedOptionsForIndex(index).map((method) => (
+                        <option key={method.method_code} value={method.method_code}>{method.method_name}</option>
+                      ))}
+                    </select>
+                    {item.method_code === 'FOREIGN_CURRENCY' ? (
+                      <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold tabular-nums text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        {money(mixedPaymentAmount(item))}
+                      </div>
+                    ) : (
+                      <input
+                        className={compactInputCls}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder={money(mixedRemaining || absoluteTotal)}
+                        value={item.amount}
+                        onChange={(e) => updateMixedPayment(index, 'amount', e.target.value)}
+                        onFocus={(e) => focusAmountInput(e, (value) => updateMixedPayment(index, 'amount', value))}
+                        onBlur={(e) => updateMixedPayment(index, 'amount', formatAmountForInput(e.target.value))}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Quitar medio de pago"
+                      title="Quitar medio de pago"
+                      disabled={mixedPayments.length <= 1}
+                      onClick={() => removeMixedPayment(index)}
+                      className="inline-flex h-10 w-10 items-center justify-center justify-self-end rounded-md border border-red-300 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {item.method_code === 'FOREIGN_CURRENCY' && (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr]">
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Divisa</span>
+                        <select className={inputCls} value={mixedForeignRate(item)?.currency_code || ''} onChange={(e) => updateMixedPayment(index, 'currency_code', e.target.value)} disabled={availableRates.length === 0}>
+                          {availableRates.length === 0 && <option value="">Sin tasas disponibles</option>}
+                          {availableRates.map((rate) => (
+                            <option key={rate.currency_code} value={rate.currency_code}>{rate.currency_code} - {rate.currency_name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Importe en divisa</span>
+                        <input
+                          className={inputCls}
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={mixedForeignRate(item) ? formatMoney(convertFromBase(mixedRemaining || absoluteTotal, mixedForeignRate(item)), mixedForeignRate(item).currency_code) : ''}
+                          value={item.foreign_amount || ''}
+                          onChange={(e) => updateMixedPayment(index, 'foreign_amount', e.target.value)}
+                          onFocus={(e) => focusAmountInput(e, (value) => updateMixedPayment(index, 'foreign_amount', value))}
+                          onBlur={(e) => updateMixedPayment(index, 'foreign_amount', formatAmountForInput(e.target.value, mixedForeignRate(item)?.currency_code || 'CLP'))}
+                        />
+                      </label>
+                      <div className="sm:col-span-2 text-xs text-slate-500 dark:text-slate-400">
+                        {mixedForeignRate(item)
+                          ? `Equivalencia: ${formatMoney(parseLocalizedAmount(item.foreign_amount), mixedForeignRate(item).currency_code)} = ${money(mixedPaymentAmount(item))} CLP · Fee ${feeValue(mixedForeignRate(item)).toLocaleString('es-CL')}%`
+                          : 'Selecciona una divisa con tasa vigente.'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-              <button type="button" className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" onClick={() => setMixedPayments((current) => [...current, { method_code: '', amount: '' }])}>
+              <button
+                type="button"
+                className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                disabled={mixedPayments.length >= MAX_MIXED_PAYMENTS || mixedPayments.length >= paymentMethodOptions.length}
+                onClick={() => setMixedPayments((current) => (current.length >= MAX_MIXED_PAYMENTS || current.length >= paymentMethodOptions.length ? current : [...current, newMixedPayment(current)]))}
+              >
                 Agregar medio
               </button>
             </div>
@@ -408,12 +551,16 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
               <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Monto a entregar</span><span className="font-semibold tabular-nums text-red-700 dark:text-red-400">{money(absoluteTotal)}</span></div>
             ) : isMixed ? (
               <>
-                {mixedPayments.filter((item) => item.method_code && Number(item.amount || 0) > 0).map((item, index) => {
+                {mixedPayments.filter((item) => item.method_code && mixedPaymentAmount(item) > 0).map((item, index) => {
                   const method = methods.find((candidate) => candidate.method_code === item.method_code);
+                  const rate = item.method_code === 'FOREIGN_CURRENCY' ? mixedForeignRate(item) : null;
                   return (
                     <div key={`${item.method_code}-${index}`} className="flex justify-between gap-3 mt-1">
-                      <span className="text-slate-500">{method?.method_name || item.method_code}</span>
-                      <span className="font-semibold tabular-nums">{money(item.amount)}</span>
+                      <span className="text-slate-500">
+                        {method?.method_name || item.method_code}
+                        {rate && <span className="ml-1 text-xs">({formatMoney(parseLocalizedAmount(item.foreign_amount), rate.currency_code)})</span>}
+                      </span>
+                      <span className="font-semibold tabular-nums">{money(mixedPaymentAmount(item))}</span>
                     </div>
                   );
                 })}
