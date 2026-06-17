@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, EyeOff, Pencil, Trash2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, EyeOff, Pencil, Trash2 } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
@@ -12,7 +12,7 @@ import StatusBadge from '@/components/common/data/StatusBadge';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { warehousesService } from '@/services/admin/warehousesService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
-import { tableFooter, filterActions, PAGE_SIZE_OPTIONS } from '@/pages/admin/businessFoundationShared';
+import { tableFooter, filterActions } from '@/pages/admin/businessFoundationShared';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950';
 
@@ -187,6 +187,23 @@ const AdminDocumentSeries = () => {
     await load();
   };
 
+  const toggleSeries = async (item) => {
+    const nextState = !item.is_active;
+    const action = nextState ? 'activar' : 'desactivar';
+    if (!await ModalManager.confirm({
+      title: `${nextState ? 'Activar' : 'Desactivar'} serie`,
+      message: `Deseas ${action} ${item.series_code}?`,
+      buttons: { cancel: 'Cancelar', confirm: nextState ? 'Activar' : 'Desactivar' },
+    })) return;
+
+    await notifyPromise(documentConfigService.updateSeries(item.id, { is_active: nextState }), {
+      loading: 'Actualizando estado...',
+      success: `Serie ${nextState ? 'activada' : 'desactivada'}.`,
+      error: (err) => getBackendMessage(err, 'No fue posible cambiar el estado.'),
+    });
+    await load();
+  };
+
   const descriptionParts = [typeName && `Tipo: ${typeName}`, 'Series de numeracion por bodega o global.'].filter(Boolean);
 
   return (
@@ -277,7 +294,8 @@ const AdminDocumentSeries = () => {
                 <RowActionButton
                   label={item.is_active ? 'Desactivar' : 'Activar'}
                   icon={item.is_active ? EyeOff : CheckCircle2}
-                  onClick={() => openSeries({ ...item, is_active: !item.is_active })}
+                  variant={item.is_active ? 'danger' : 'neutral'}
+                  onClick={() => toggleSeries(item)}
                 />
                 <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => removeSeries(item)} />
               </div>

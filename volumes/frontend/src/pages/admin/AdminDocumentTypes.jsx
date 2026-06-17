@@ -1,9 +1,9 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, FileText, Pencil, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, ClipboardList, EyeOff, Pencil } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
-import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
 import KpiBar from '@/components/common/data/KpiBar';
@@ -11,7 +11,7 @@ import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
-import { tableFooter, filterActions, PAGE_SIZE_OPTIONS } from '@/pages/admin/businessFoundationShared';
+import { tableFooter, filterActions } from '@/pages/admin/businessFoundationShared';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950';
 const categoryLabels = { PURCHASE: 'Compra', SALE: 'Venta', INVENTORY: 'Inventario', TRANSFER: 'Transferencia' };
@@ -140,6 +140,23 @@ const AdminDocumentTypes = () => {
     },
   });
 
+  const toggleType = async (type) => {
+    const nextState = !type.is_active;
+    const action = nextState ? 'activar' : 'desactivar';
+    if (!await ModalManager.confirm({
+      title: `${nextState ? 'Activar' : 'Desactivar'} tipo`,
+      message: `Deseas ${action} ${type.document_type_name}?`,
+      buttons: { cancel: 'Cancelar', confirm: nextState ? 'Activar' : 'Desactivar' },
+    })) return;
+
+    await notifyPromise(documentConfigService.updateType(type.id, { is_active: nextState }), {
+      loading: 'Actualizando estado...',
+      success: `Tipo ${nextState ? 'activado' : 'desactivado'}.`,
+      error: (err) => getBackendMessage(err, 'No fue posible cambiar el estado.'),
+    });
+    await load();
+  };
+
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
@@ -220,6 +237,12 @@ const AdminDocumentTypes = () => {
             render: (item) => (
               <div className="flex justify-center gap-1">
                 <RowActionButton label="Editar" icon={Pencil} onClick={() => openEdit(item)} />
+                <RowActionButton
+                  label={item.is_active ? 'Desactivar' : 'Activar'}
+                  icon={item.is_active ? EyeOff : CheckCircle2}
+                  variant={item.is_active ? 'danger' : 'neutral'}
+                  onClick={() => toggleType(item)}
+                />
                 <RowActionButton
                   label="Ver series"
                   icon={ClipboardList}
