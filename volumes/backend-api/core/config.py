@@ -68,6 +68,7 @@ class Settings:
     # ====== Servicios externos ======
     DOCS_API_URL: Optional[str] = os.getenv("DOCS_API_URL")
     TASKS_API_URL: Optional[str] = os.getenv("TASKS_API_URL")
+    GOTENBERG_URL: str = os.getenv("GOTENBERG_URL", "http://gotenberg:3000")
 
     # ====== Inventory alerts ======
     INVENTORY_EXPIRY_ALERTS_ENABLED: bool = os.getenv("INVENTORY_EXPIRY_ALERTS_ENABLED", "true").lower() == "true"

@@ -358,6 +358,32 @@ services:
       - ${INTERNAL_NETWORK}
     deploy: *deploy-medium
 
+  gotenberg:
+    <<: *runtime-defaults
+    container_name: ${PROJECT_NAME}-gotenberg
+    image: gotenberg/gotenberg:8
+    labels:
+      stack: ${PROJECT_NAME}
+      env: ${ENV}
+      service.group: tools
+      service.lifecycle: support
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--log-level=warn"
+    networks:
+      - ${INTERNAL_NETWORK}
+    environment:
+      <<: *timezone-env
+    logging: *default-logging
+    deploy: *deploy-small
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   mailpit:
     <<: *runtime-defaults
     container_name: ${PROJECT_NAME}-mailpit
