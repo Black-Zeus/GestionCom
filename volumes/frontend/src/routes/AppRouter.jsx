@@ -12,6 +12,9 @@ const SalesMetrics = lazy(() => import('@/pages/metrics/SalesMetrics'));
 const InventoryMetrics = lazy(() => import('@/pages/metrics/InventoryMetrics'));
 const CashMetrics = lazy(() => import('@/pages/metrics/CashMetrics'));
 const CustomerMetrics = lazy(() => import('@/pages/metrics/CustomerMetrics'));
+const ReportsHub      = lazy(() => import('@/pages/reports/ReportsHub'));
+const DailySales      = lazy(() => import('@/pages/reports/DailySales'));
+const ReportAreaPage  = lazy(() => import('@/pages/reports/ReportAreaPage'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
@@ -88,6 +91,13 @@ const moduleComponents = {
   'inventory-metrics': InventoryMetrics,
   'cash-metrics': CashMetrics,
   'customer-metrics': CustomerMetrics,
+  'reports-hub':            ReportsHub,
+  'reports-sales':          ReportAreaPage,
+  'reports-inventory':      ReportAreaPage,
+  'reports-transfers':      ReportAreaPage,
+  'reports-cash':           ReportAreaPage,
+  'reports-customers':      ReportAreaPage,
+  'daily-sales':            DailySales,
   users: AdminUsers,
   roles: AdminRoles,
   warehouses: AdminWarehouses,

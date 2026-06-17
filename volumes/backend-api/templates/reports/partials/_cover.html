@@ -1,0 +1,57 @@
+<!-- ═══════════════ PARTIAL: PORTADA ═══════════════
+     Variables: {{LOGO_HTML}} {{REPORT_STATUS}} {{PERIOD_LABEL}}
+                {{TOTAL_DAYS}} {{BRANCH_LABEL}} {{CURRENCY_LABEL}}
+                {{COMPANY_NAME}} {{TODAY}} {{REPORT_ID}}
+     ═══════════════════════════════════════════════ -->
+<section class="cover">
+  <div class="cover-accent"></div>
+
+  <div class="cover-content">
+
+    <header class="cover-header">
+      <div class="cover-logo">
+        {{LOGO_HTML}}
+      </div>
+      <div>
+        <span class="cover-status">{{REPORT_STATUS}}</span>
+      </div>
+    </header>
+
+    <main class="cover-main">
+      <div class="cover-eyebrow">Sistema de Gestión Comercial</div>
+      <div class="cover-rule"></div>
+      <h1 class="cover-title">{{COVER_TITLE}}</h1>
+      <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+    </main>
+
+    <section class="cover-period-card">
+      <div class="cover-period-grid">
+
+        <div class="cover-period-primary">
+          <div class="cover-data-label">Período analizado</div>
+          <div class="cover-period-value">{{PERIOD_LABEL}}</div>
+          <div class="cover-days">Período compuesto por {{TOTAL_DAYS}} días calendario</div>
+        </div>
+
+        <div class="cover-period-secondary">
+          <div class="cover-data-label">Alcance</div>
+          <div class="cover-branch-value">{{BRANCH_LABEL}}</div>
+          <div class="cover-days">Moneda: {{CURRENCY_LABEL}}</div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="cover-footer">
+      <div class="cover-footer-left">
+        <strong>{{COMPANY_NAME}}</strong><br>
+        Reporte comercial interno
+      </div>
+      <div class="cover-footer-right">
+        <strong>Generado el {{TODAY}}</strong><br>
+        ID de reporte: {{REPORT_ID}}
+      </div>
+    </footer>
+
+  </div>
+</section>

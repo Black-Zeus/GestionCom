@@ -241,9 +241,14 @@ ROUTERS_TO_LOAD = [
     },
     {
         "name": "user_menus",
-        "prefix": "/user-menus", 
+        "prefix": "/user-menus",
         "tags": ["User Menus"]
-    }
+    },
+    {
+        "name": "reports",
+        "prefix": "/reports",
+        "tags": ["Reports"]
+    },
 ]
 
 ROUTERS_TO_LOAD = sorted(ROUTERS_TO_LOAD, key=lambda x: x["tags"][0].lower())

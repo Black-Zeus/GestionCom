@@ -147,18 +147,17 @@ export const moduleGroups = [
   },
   {
     id: 'management-reports',
-    label: 'Reportes de gestion',
+    label: 'Reportes de gestión',
     icon: BarChart3,
     permissions: ['REPORTS_VISIBLE'],
     items: [
-      { id: 'daily-sales', label: 'Ventas diarias', path: '/reports/daily-sales', icon: BarChart3, weight: 10 },
-      { id: 'sales-by-seller', label: 'Ventas por vendedor', path: '/reports/sales-by-seller', icon: BarChart3, weight: 20 },
-      { id: 'top-products', label: 'Productos mas vendidos', path: '/reports/top-selling-products', icon: BarChart3, weight: 30 },
-      { id: 'low-stock', label: 'Inventario bajo stock', path: '/reports/low-stock', icon: Boxes, weight: 40 },
-      { id: 'cash-flow', label: 'Flujo de caja', path: '/reports/financial/cash-flow', icon: CircleDollarSign, weight: 50 },
-      { id: 'profitability', label: 'Analisis de rentabilidad', path: '/reports/financial/profitability-analysis', icon: BarChart3, weight: 60 },
-      { id: 'account-status', label: 'Estado de cuenta de clientes', path: '/customers/account-status', icon: FileText, weight: 70 },
-      { id: 'purchase-history', label: 'Historial de compras de clientes', path: '/customers/purchase-history', icon: Receipt, weight: 80 },
+      { id: 'reports-hub',           label: 'Reportes de gestión',        path: '/reports',                  icon: FileText,      weight: 5,  permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-sales',         label: 'Reportes de ventas',          path: '/reports/sales',            icon: BarChart3,     weight: 10, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-inventory',     label: 'Reportes de inventario',      path: '/reports/inventory',        icon: FileText,      weight: 20, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-transfers',     label: 'Reportes de transferencias',  path: '/reports/transfers',        icon: ArrowRightLeft,weight: 30, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-cash',          label: 'Reportes de caja',            path: '/reports/cash',             icon: FileText,      weight: 40, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-customers',     label: 'Reportes de clientes',        path: '/reports/customers',        icon: FileText,      weight: 50, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'daily-sales',           label: 'Ventas diarias',              path: '/reports/sales?report=daily-sales',  icon: BarChart3, weight: 60, permissions: ['REPORTS_VISIBLE'] },
     ],
   },
   {
@@ -241,6 +240,15 @@ export const systemPages = [
     group: 'Usuario',
     groupId: 'system',
     description: 'Datos del usuario conectado',
+  },
+  {
+    id: 'notifications',
+    label: 'Centro de notificaciones',
+    path: '/notifications',
+    group: 'Sistema',
+    groupId: 'system',
+    description: 'Bandeja de entrada de avisos emitidos por el sistema',
+    permissions: ['NOTIFICATIONS_ACCESS'],
   },
 ];
 

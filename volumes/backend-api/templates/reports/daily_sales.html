@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    {{> _styles}}
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       PORTADA
+       ══════════════════════════════════════════ -->
+  {{> _cover}}
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINA 1 — RESUMEN EJECUTIVO
+       ══════════════════════════════════════════ -->
+  <section class="report-page">
+
+    {{> _page_header}}
+
+    <div class="section-heading">
+      <div class="section-label">Visión general</div>
+      <h2 class="section-title">Resumen ejecutivo</h2>
+      <p class="section-description">
+        Consolidado general del período seleccionado, incluyendo alcance,
+        criterios utilizados e indicadores principales de desempeño comercial.
+      </p>
+    </div>
+
+    <div class="summary-banner no-break">
+      <div class="summary-banner-icon">i</div>
+      <div class="summary-banner-content">
+        <div class="summary-banner-title">Alcance del análisis</div>
+        <div class="summary-banner-text">
+          Los valores presentados consideran las transacciones registradas
+          para {{BRANCH_LABEL}} durante el período {{PERIOD_LABEL}}.
+          Las ventas anuladas se informan de manera independiente.
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Información del reporte</div>
+      <div class="subsection-context">Parámetros de generación</div>
+    </div>
+
+    <div class="meta-card no-break">
+      <table class="meta-table">
+        <tbody>{{META_ROWS}}</tbody>
+      </table>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Indicadores clave</div>
+      <div class="subsection-context">Resultados consolidados del período</div>
+    </div>
+
+    <div class="kpi-grid">{{KPI_CARDS}}</div>
+
+    <div class="highlight-card no-break">
+      <div class="highlight-icon">&#9733;</div>
+      <div class="highlight-content">
+        <div class="highlight-title">Mejor jornada del período</div>
+        <div class="highlight-detail">{{BEST_DETAIL}}</div>
+      </div>
+    </div>
+
+    <div class="executive-note no-break">
+      <strong>Observación ejecutiva:</strong> {{EXECUTIVE_NOTE}}
+    </div>
+
+    {{> _page_footer}}
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINA 2 — ANÁLISIS COMPARATIVO
+       ══════════════════════════════════════════ -->
+  <section class="report-page">
+
+    {{> _page_header}}
+
+    <div class="section-heading">
+      <div class="section-label">Análisis comparativo</div>
+      <h2 class="section-title">Evolución de las ventas</h2>
+      <p class="section-description">
+        Comparación entre el período actualmente seleccionado y el período
+        anterior equivalente en duración.
+      </p>
+    </div>
+
+    <div class="chart-card no-break">
+      <div class="chart-header">
+        <div class="chart-header-title">Ventas diarias comparadas</div>
+        <div class="chart-header-period">Período anterior: {{PREV_PERIOD}}</div>
+      </div>
+      <div class="chart-section">{{COMPARISON_CHART}}</div>
+      <div class="chart-legend">
+        Los valores se presentan en {{CURRENCY_LABEL}}.
+        La comparación utiliza períodos equivalentes según los filtros seleccionados.
+      </div>
+    </div>
+
+    {{> _page_footer}}
+
+  </section>
+
+
+  {{DETAIL_PAGES}}
+
+</body>
+</html>
