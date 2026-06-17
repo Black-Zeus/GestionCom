@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Banknote, CheckCircle2, ClipboardList, CreditCard, Eye, Mail, Percent, Receipt, RefreshCcw, Trash2, Wallet, XCircle } from 'lucide-react';
+import { AlertTriangle, Banknote, CheckCircle2, ClipboardList, CreditCard, Eye, Mail, Percent, Receipt, RefreshCcw, Repeat2, SplitSquareHorizontal, Trash2, Wallet, XCircle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
@@ -11,17 +11,38 @@ import ModalManager from '@/components/ui/modal';
 import { salesDocumentsService } from '@/services/sales/salesDocumentsService';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { paymentMethodsService } from '@/services/admin/paymentMethodsService';
+import { currencyRatesService } from '@/services/admin/currencyRatesService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
 import { useSessionStore } from '@/store/useSessionStore';
 
 const fieldClassName = 'h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
-const disabledFieldClassName = 'h-10 w-full rounded-md border border-slate-200 bg-slate-100 px-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 cursor-not-allowed';
 
 const money = (value) => Number(value || 0).toLocaleString('es-CL', {
   style: 'currency',
   currency: 'CLP',
   maximumFractionDigits: 0,
 });
+
+const currencyDecimals = (currencyCode = 'CLP') => (['CLP', 'PYG', 'JPY'].includes(currencyCode) ? 0 : 2);
+
+const formatMoney = (value, currencyCode = 'CLP') => {
+  const decimals = currencyDecimals(currencyCode);
+  return Number(value || 0).toLocaleString('es-CL', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+};
+
+const rateValue = (rate) => Number(rate?.effective_rate || rate?.rate_value || 0);
+const marketRateValue = (rate) => Number(rate?.rate_value || 0);
+const feeValue = (rate) => Number(rate?.fee_pct || 0);
+
+const convertFromBase = (amount, rate) => {
+  const value = rateValue(rate);
+  return value > 0 ? Number(amount || 0) / value : 0;
+};
 
 const customerName = (customer) => (
   customer?.commercial_name
@@ -40,10 +61,13 @@ const AUTO_DOCUMENT_PREFIX = {
   EXCHANGE_DRAFT: 'CMB',
 };
 
+const isDteDocument = (documentTypeCode = '') => String(documentTypeCode || '').startsWith('DTE_');
+
 const generateTicketNumber = (documentTypeCode = TICKET_CODE) => {
+  if (isDteDocument(documentTypeCode)) return '0';
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
-  const prefix = AUTO_DOCUMENT_PREFIX[documentTypeCode] || 'DOC';
+  const prefix = AUTO_DOCUMENT_PREFIX[documentTypeCode] || String(documentTypeCode || 'DOC').replace(/[^A-Z0-9]+/gi, '_').slice(0, 10) || 'DOC';
   return `${prefix}-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 };
 
@@ -71,37 +95,129 @@ const SaleDetailModal = ({ items = [], onClose }) => (
 );
 
 const METHOD_ICONS = { CASH: Banknote, CARD: CreditCard, TRANSFER: Receipt, OTHER: CheckCircle2 };
+const METHOD_ICON_NAMES = {
+  banknote: Banknote,
+  'credit-card': CreditCard,
+  receipt: Receipt,
+  'repeat-2': Repeat2,
+  'split-square-horizontal': SplitSquareHorizontal,
+  'clipboard-list': ClipboardList,
+};
+const DIRECT_METHOD_RANK = {
+  CASH: 10,
+  DEBIT: 20,
+  FOREIGN_CURRENCY: 30,
+};
 const inputCls = 'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:focus:border-blue-500';
 
-const PaymentModal = ({ total, onConfirm, onClose }) => {
+const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', onConfirm, onClose }) => {
   const [step, setStep] = useState(1);
+  const [paymentMode, setPaymentMode] = useState('MIXED');
   const [methods, setMethods] = useState([]);
   const [selected, setSelected] = useState(null);
   const [importe, setImporte] = useState('');
-  const [email, setEmail] = useState('');
+  const [foreignCurrencyCode, setForeignCurrencyCode] = useState(preferredCurrencyCode || '');
+  const [foreignReceived, setForeignReceived] = useState('');
+  const [mixedPayments, setMixedPayments] = useState([{ method_code: '', amount: '' }]);
+  const [email, setEmail] = useState(initialEmail || '');
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    paymentMethodsService.list({ active_only: true }).then(setMethods).catch(() => {});
+    paymentMethodsService.list({ active_only: true })
+      .then((items) => {
+        const filtered = items.filter((item) => !String(item.method_code || '').startsWith('DEMO_') && !String(item.method_name || '').toLowerCase().includes('demo'));
+        const normalized = [...filtered];
+        if (!normalized.some((item) => item.method_code === 'FOREIGN_CURRENCY')) {
+          normalized.push({ id: 'FOREIGN_CURRENCY', method_code: 'FOREIGN_CURRENCY', method_name: 'Divisa Extranjera', method_type: 'OTHER' });
+        }
+        if (!normalized.some((item) => item.method_code === 'MIXED')) {
+          normalized.push({ id: 'MIXED', method_code: 'MIXED', method_name: 'Mixto', method_type: 'OTHER' });
+        }
+        setMethods(normalized);
+      })
+      .catch(() => {});
   }, []);
 
+  const getMethodRank = (method) => DIRECT_METHOD_RANK[method.method_code] ?? 1000;
+  const sortPaymentMethods = (items) => [...items].sort((left, right) => {
+    const leftRank = getMethodRank(left);
+    const rightRank = getMethodRank(right);
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return String(left.method_name || '').localeCompare(String(right.method_name || ''), 'es');
+  });
+  const mixedMethod = methods.find((method) => method.method_code === 'MIXED') || {
+    id: 'MIXED',
+    method_code: 'MIXED',
+    method_name: 'Mixto',
+    method_type: 'OTHER',
+    icon_name: 'split-square-horizontal',
+  };
+  const directMethods = sortPaymentMethods(methods.filter((method) => method.method_code !== 'MIXED'));
+  const paymentMethodOptions = directMethods;
+
   const isCash = selected?.method_type === 'CASH';
+  const isForeign = selected?.method_code === 'FOREIGN_CURRENCY';
+  const isMixed = paymentMode === 'MIXED';
   const isRefund = total < 0;
   const absoluteTotal = Math.abs(total);
+  const availableRates = exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
+  const selectedForeignRate = availableRates.find((rate) => rate.currency_code === foreignCurrencyCode) || availableRates[0];
+  const expectedForeignAmount = selectedForeignRate ? convertFromBase(absoluteTotal, selectedForeignRate) : 0;
+  const foreignReceivedNum = Number(foreignReceived || 0);
   const importeNum = Number(importe || 0);
   const vuelto = isCash && !isRefund ? Math.max(importeNum - total, 0) : 0;
+  const foreignChange = isForeign && !isRefund && selectedForeignRate ? Math.max((foreignReceivedNum - expectedForeignAmount) * rateValue(selectedForeignRate), 0) : 0;
   const importeInsuficiente = isCash && !isRefund && importe !== '' && importeNum < total;
-  const canContinue = selected && (isRefund || !isCash || importeNum >= total);
+  const mixedTotal = mixedPayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const mixedRemaining = Math.max(absoluteTotal - mixedTotal, 0);
+  const mixedValid = isMixed && mixedPayments.length > 0 && mixedPayments.every((item) => item.method_code && Number(item.amount || 0) > 0) && mixedTotal >= absoluteTotal;
+  const canContinue = isMixed
+    ? (isRefund || mixedValid)
+    : Boolean(selected) && (
+      isRefund
+      || (isForeign ? Boolean(selectedForeignRate) && (foreignReceived === '' || foreignReceivedNum >= expectedForeignAmount) : !isCash || importeNum >= total)
+    );
+
+  const updateMixedPayment = (index, field, value) => {
+    setMixedPayments((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, [field]: value } : item)));
+  };
+
+  const removeMixedPayment = (index) => {
+    setMixedPayments((current) => (current.length <= 1 ? current : current.filter((_, itemIndex) => itemIndex !== index)));
+  };
 
   const confirm = async () => {
+    const paymentMethod = isMixed ? mixedMethod : selected;
+    const selectedForeignPayload = selectedForeignRate ? {
+      currency_code: selectedForeignRate.currency_code,
+      currency_name: selectedForeignRate.currency_name,
+      rate_value: rateValue(selectedForeignRate),
+      expected_amount: expectedForeignAmount,
+      received_amount: foreignReceived ? foreignReceivedNum : expectedForeignAmount,
+    } : null;
+    const mixedDetails = mixedPayments
+      .filter((item) => item.method_code && Number(item.amount || 0) > 0)
+      .map((item) => {
+        const method = methods.find((candidate) => candidate.method_code === item.method_code);
+        return {
+          payment_method_code: item.method_code,
+          payment_method_name: method?.method_name || item.method_code,
+          amount: Number(item.amount || 0),
+        };
+      });
     setProcessing(true);
     try {
       await onConfirm({
-        payment_method_code: selected.method_code,
-        payment_method_name: selected.method_name,
-        amount_tendered: isRefund ? 0 : isCash ? importeNum : total,
-        change_amount: isRefund ? absoluteTotal : isCash ? vuelto : 0,
-        email: email.trim() || null,
+        payment_method_code: paymentMethod.method_code,
+        payment_method_name: paymentMethod.method_name,
+        amount_tendered: isRefund ? 0 : isCash ? importeNum : isMixed ? mixedTotal : total,
+        change_amount: isRefund ? absoluteTotal : isCash ? vuelto : isForeign ? foreignChange : isMixed ? Math.max(mixedTotal - absoluteTotal, 0) : 0,
+        payment_details: isMixed
+          ? { type: 'MIXED', payments: mixedDetails, total_paid: mixedTotal, remaining: mixedRemaining }
+          : isForeign
+            ? { type: 'FOREIGN_CURRENCY', foreign_currency: selectedForeignPayload }
+            : null,
+        receipt_email: email.trim() || null,
       });
       onClose?.();
     } finally {
@@ -119,27 +235,65 @@ const PaymentModal = ({ total, onConfirm, onClose }) => {
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Medio de pago</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {methods.map((m) => {
-                const Icon = METHOD_ICONS[m.method_type] || CheckCircle2;
-                const active = selected?.id === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => { setSelected(m); setImporte(''); }}
-                    className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition ${active ? 'border-blue-400 bg-blue-50 font-semibold text-blue-800 dark:border-blue-600 dark:bg-blue-950/40 dark:text-blue-200' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{m.method_name}</span>
-                  </button>
-                );
-              })}
+            <div className="mb-3 grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1 text-sm dark:border-slate-700 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMode('MIXED');
+                  setSelected(null);
+                  setImporte('');
+                  setForeignReceived('');
+                }}
+                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+              >
+                <SplitSquareHorizontal className="h-4 w-4" />
+                Pago mixto
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMode('DIRECT');
+                  setMixedPayments([{ method_code: '', amount: '' }]);
+                }}
+                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+              >
+                <CreditCard className="h-4 w-4" />
+                Pago directo
+              </button>
             </div>
+
+            {paymentMode === 'DIRECT' && (
+              <>
+                <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Medio de pago</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {directMethods.map((m) => {
+                    const Icon = METHOD_ICON_NAMES[m.icon_name] || (m.method_code === 'FOREIGN_CURRENCY' ? Repeat2 : METHOD_ICONS[m.method_type] || CheckCircle2);
+                    const active = selected?.id === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          setSelected(m);
+                          setImporte('');
+                          setForeignReceived('');
+                          if (m.method_code === 'FOREIGN_CURRENCY' && !foreignCurrencyCode && availableRates[0]) {
+                            setForeignCurrencyCode(availableRates[0].currency_code);
+                          }
+                        }}
+                        className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition ${active ? 'border-blue-400 bg-blue-50 font-semibold text-blue-800 dark:border-blue-600 dark:bg-blue-950/40 dark:text-blue-200' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{m.method_name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
-          {isCash && !isRefund && (
+          {paymentMode === 'DIRECT' && isCash && !isRefund && (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
@@ -166,6 +320,81 @@ const PaymentModal = ({ total, onConfirm, onClose }) => {
             </div>
           )}
 
+          {paymentMode === 'DIRECT' && isForeign && !isRefund && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Divisa</span>
+                <select
+                  className={inputCls}
+                  value={selectedForeignRate?.currency_code || ''}
+                  onChange={(e) => setForeignCurrencyCode(e.target.value)}
+                  disabled={availableRates.length === 0}
+                >
+                  {availableRates.length === 0 && <option value="">Sin tasas disponibles</option>}
+                  {availableRates.map((rate) => (
+                    <option key={rate.currency_code} value={rate.currency_code}>{rate.currency_code} - {rate.currency_name}</option>
+                  ))}
+                </select>
+                {selectedForeignRate && (
+                  <p className="text-xs text-slate-400">
+                    Esperado: {formatMoney(expectedForeignAmount, selectedForeignRate.currency_code)} · Fee {feeValue(selectedForeignRate).toLocaleString('es-CL')}%
+                  </p>
+                )}
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
+                <input
+                  className={inputCls}
+                  type="number"
+                  min={expectedForeignAmount}
+                  step="0.01"
+                  placeholder={selectedForeignRate ? formatMoney(expectedForeignAmount, selectedForeignRate.currency_code) : ''}
+                  value={foreignReceived}
+                  onChange={(e) => setForeignReceived(e.target.value)}
+                />
+                {foreignReceived !== '' && foreignReceivedNum < expectedForeignAmount && (
+                  <p className="text-xs text-red-600 dark:text-red-400">El importe es menor al esperado.</p>
+                )}
+              </label>
+            </div>
+          )}
+
+          {paymentMode === 'MIXED' && !isRefund && (
+            <div className="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Pagos mixtos</span>
+                <span className={`font-semibold tabular-nums ${mixedRemaining > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-green-700 dark:text-green-400'}`}>
+                  Restante {money(mixedRemaining)}
+                </span>
+              </div>
+              {mixedPayments.map((item, index) => (
+                <div key={index} className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]">
+                  <select className={inputCls} value={item.method_code} onChange={(e) => updateMixedPayment(index, 'method_code', e.target.value)}>
+                    <option value="">Medio de pago</option>
+                    {paymentMethodOptions.map((method) => (
+                      <option key={method.method_code} value={method.method_code}>{method.method_name}</option>
+                    ))}
+                  </select>
+                  <input
+                    className={inputCls}
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder={money(mixedRemaining || absoluteTotal)}
+                    value={item.amount}
+                    onChange={(e) => updateMixedPayment(index, 'amount', e.target.value)}
+                  />
+                  <button type="button" className="h-11 rounded-md border border-slate-200 px-3 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" onClick={() => removeMixedPayment(index)}>
+                    Quitar
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800" onClick={() => setMixedPayments((current) => [...current, { method_code: '', amount: '' }])}>
+                Agregar medio
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
             <ActionButton label="Cancelar" icon={XCircle} variant="neutral" onClick={onClose} />
             <ActionButton label="Continuar" icon={CheckCircle2} onClick={() => setStep(2)} disabled={!canContinue} />
@@ -174,9 +403,29 @@ const PaymentModal = ({ total, onConfirm, onClose }) => {
       ) : (
         <>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex justify-between gap-3"><span className="text-slate-500">Medio de pago</span><span className="font-semibold">{selected.method_name}</span></div>
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Medio de pago</span><span className="font-semibold">{isMixed ? mixedMethod.method_name : selected.method_name}</span></div>
             {isRefund ? (
               <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Monto a entregar</span><span className="font-semibold tabular-nums text-red-700 dark:text-red-400">{money(absoluteTotal)}</span></div>
+            ) : isMixed ? (
+              <>
+                {mixedPayments.filter((item) => item.method_code && Number(item.amount || 0) > 0).map((item, index) => {
+                  const method = methods.find((candidate) => candidate.method_code === item.method_code);
+                  return (
+                    <div key={`${item.method_code}-${index}`} className="flex justify-between gap-3 mt-1">
+                      <span className="text-slate-500">{method?.method_name || item.method_code}</span>
+                      <span className="font-semibold tabular-nums">{money(item.amount)}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Total recibido</span><span className="font-semibold tabular-nums">{money(mixedTotal)}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Vuelto</span><span className="font-semibold tabular-nums text-green-700 dark:text-green-400">{money(Math.max(mixedTotal - absoluteTotal, 0))}</span></div>
+              </>
+            ) : isForeign && selectedForeignRate ? (
+              <>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Divisa</span><span className="font-semibold">{selectedForeignRate.currency_code}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Importe esperado</span><span className="font-semibold tabular-nums">{formatMoney(expectedForeignAmount, selectedForeignRate.currency_code)}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Vuelto referencia</span><span className="font-semibold tabular-nums text-green-700 dark:text-green-400">{money(foreignChange)}</span></div>
+              </>
             ) : isCash && (
               <>
                 <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Importe</span><span className="font-semibold tabular-nums">{money(importeNum)}</span></div>
@@ -198,7 +447,7 @@ const PaymentModal = ({ total, onConfirm, onClose }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <p className="text-xs text-slate-400">El envio de comprobante por correo no esta disponible aun.</p>
+            <p className="text-xs text-slate-400">Se sugiere el correo del cliente y se guardara en la venta procesada.</p>
           </div>
 
           <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
@@ -246,18 +495,15 @@ const CashPos = () => {
   const [documentTypeCode, setDocumentTypeCode] = useState(TICKET_CODE);
   const [discountType, setDiscountType] = useState('NONE');
   const [discountValue, setDiscountValue] = useState(0);
+  const [exchangeRates, setExchangeRates] = useState([]);
+  const [currencyCode, setCurrencyCode] = useState('');
 
-  const isAutoDocument = Boolean(AUTO_DOCUMENT_PREFIX[documentTypeCode]);
   const isReturnDocument = selectedSale?.document_type_code === 'RETURN_TICKET' || selectedSale?.is_return_document;
   const isExchangeDocument = selectedSale?.document_type_code === 'EXCHANGE_DRAFT' || selectedSale?.is_exchange_document;
 
   useEffect(() => {
-    if (isAutoDocument) {
-      setTicketNumber(generateTicketNumber(documentTypeCode));
-    } else {
-      setTicketNumber('');
-    }
-  }, [documentTypeCode, isAutoDocument]);
+    setTicketNumber(generateTicketNumber(documentTypeCode));
+  }, [documentTypeCode]);
 
   // Solo actualiza la lista de pendientes — no toca el formulario ni selectedSale
   const refreshPendingList = useCallback(async () => {
@@ -276,17 +522,24 @@ const CashPos = () => {
   const loadAll = useCallback(async () => {
     setLoadingList(true);
     try {
-      const [data, allTypes] = await Promise.all([
+      const [data, allTypes, rates] = await Promise.all([
         salesDocumentsService.listPending(),
         documentConfigService.listTypes({ active_only: true }).catch(() => []),
+        currencyRatesService.list().catch(() => []),
       ]);
       setPendingSales(data);
+      setExchangeRates(rates);
+      const firstForeignRate = rates.find((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
+      if (firstForeignRate) {
+        setCurrencyCode((current) => current || firstForeignRate.currency_code);
+      }
       const saleTypes = allTypes
         .filter((t) => t.document_category === 'SALE' && t.movement_type === 'OUT')
         .map((t) => ({ code: t.document_type_code, name: t.document_type_name }));
       if (saleTypes.length > 0) {
+        const defaultSaleType = saleTypes.find((t) => t.code === TICKET_CODE)?.code || saleTypes[0].code;
         setDocumentTypes(saleTypes);
-        setDocumentTypeCode((current) => (saleTypes.some((t) => t.code === current) ? current : saleTypes[0].code));
+        setDocumentTypeCode((current) => (saleTypes.some((t) => t.code === current) ? current : defaultSaleType));
       }
       const saleId = searchParams.get('saleId');
       if (saleId) {
@@ -332,6 +585,21 @@ const CashPos = () => {
     return { base, discount: boundedDiscount, total: Math.max(base - boundedDiscount, 0) };
   }, [discountType, discountValue, selectedSale]);
 
+  const availableExchangeRates = useMemo(
+    () => exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code),
+    [exchangeRates],
+  );
+
+  const selectedExchangeRate = useMemo(
+    () => availableExchangeRates.find((rate) => rate.currency_code === currencyCode) || availableExchangeRates[0] || null,
+    [availableExchangeRates, currencyCode],
+  );
+
+  const convertedTotal = useMemo(
+    () => (selectedExchangeRate ? convertFromBase(Math.abs(closingTotals.total), selectedExchangeRate) : 0),
+    [closingTotals.total, selectedExchangeRate],
+  );
+
   const selectSale = (sale) => {
     const isDifferentSale = selectedSale?.id !== sale.id;
     setSelectedSale(sale);
@@ -343,6 +611,7 @@ const CashPos = () => {
     setDocumentTypeCode(sale.document_type_code || TICKET_CODE);
     setDiscountType('NONE');
     setDiscountValue(0);
+    if (!currencyCode && availableExchangeRates[0]) setCurrencyCode(availableExchangeRates[0].currency_code);
     navigate(`/cash/pos?saleId=${sale.sale_code}`, { replace: true });
   };
 
@@ -375,17 +644,13 @@ const CashPos = () => {
 
   const closeSale = () => {
     if (!selectedSale) return;
-    const folio = selectedSale.ticket_number || ticketNumber;
-    if (!folio.trim()) {
-      ModalManager.warning({ title: 'Folio requerido', message: 'Ingresa el numero de ticket o boleta antes de cerrar.' });
-      return;
-    }
+    const folio = selectedSale.ticket_number || ticketNumber || generateTicketNumber(documentTypeCode);
 
-    const doClose = async ({ payment_method_code = null, payment_method_name = null, amount_tendered = 0, change_amount = 0 } = {}) => {
+    const doClose = async ({ payment_method_code = null, payment_method_name = null, amount_tendered = 0, change_amount = 0, payment_details = null, receipt_email = null } = {}) => {
       setClosing(true);
       try {
         await salesDocumentsService.close(selectedSale.id, {
-          ticket_number: folio.trim(),
+          ticket_number: String(folio).trim(),
           document_type_code: selectedDocumentType.code,
           document_type_name: selectedDocumentType.name,
           cash_register_id: activeCashRegisterRecord?.id || selectedSale.cash_register_id || null,
@@ -395,6 +660,8 @@ const CashPos = () => {
           payment_method_name,
           amount_tendered,
           change_amount,
+          payment_details,
+          receipt_email,
         });
         const successTitle = isExchangeDocument ? 'Cambio procesado' : isReturnDocument ? 'Devolucion procesada' : 'Venta cerrada';
         const successMsg = isExchangeDocument ? 'El cambio fue cerrado correctamente.' : isReturnDocument ? 'La devolucion fue cerrada correctamente.' : 'La venta fue cerrada y registrada correctamente.';
@@ -427,8 +694,11 @@ const CashPos = () => {
       contentComponent: PaymentModal,
       contentProps: {
         total: closingTotals.total,
-        onConfirm: async ({ payment_method_code, payment_method_name, amount_tendered, change_amount }) => {
-          await doClose({ payment_method_code, payment_method_name, amount_tendered, change_amount });
+        exchangeRates,
+        preferredCurrencyCode: selectedExchangeRate?.currency_code || currencyCode,
+        initialEmail: selectedSale.customer?.email || '',
+        onConfirm: async ({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email }) => {
+          await doClose({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email });
         },
       },
     });
@@ -510,7 +780,7 @@ const CashPos = () => {
             </div>
 
             {selectedSale ? (
-              <div className="grid gap-3 lg:grid-cols-4">
+              <div className="grid gap-3 lg:grid-cols-3">
                 <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
                   <div className="text-xs text-slate-500">Venta</div>
                   <div className="font-mono text-xs font-semibold">···{selectedSale.sale_code.slice(-5)}</div>
@@ -528,18 +798,6 @@ const CashPos = () => {
                     {documentTypes.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
                   </select>
                 </label>
-                <label className="space-y-1 text-sm">
-                  <span className="font-medium text-slate-700 dark:text-slate-200">
-                    {isAutoDocument ? 'Folio (auto)' : 'Numero ticket / boleta'}
-                  </span>
-                  <input
-                    className={isAutoDocument || isClosed ? disabledFieldClassName : fieldClassName}
-                    value={selectedSale.ticket_number || ticketNumber}
-                    onChange={(e) => setTicketNumber(e.target.value)}
-                    disabled={isAutoDocument || isClosed}
-                    readOnly={isAutoDocument}
-                  />
-                </label>
               </div>
             ) : (
               <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-slate-300 text-sm text-slate-500 dark:border-slate-700">
@@ -549,13 +807,13 @@ const CashPos = () => {
           </div>
 
           {selectedSale && (
-            <div className="grid gap-4 lg:grid-cols-[1fr_22rem]">
+            <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(18rem,1fr)_22rem]">
               <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-3 flex items-center gap-2">
                   <Percent className="h-5 w-5 text-blue-600" />
                   <h2 className="text-sm font-semibold">Descuento final</h2>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                   <label className="space-y-1 text-sm">
                     <span className="font-medium text-slate-700 dark:text-slate-200">Tipo descuento</span>
                     <select className={fieldClassName} value={discountType} onChange={(e) => setDiscountType(e.target.value)} disabled={isClosed || isReturnDocument || isExchangeDocument}>
@@ -566,12 +824,48 @@ const CashPos = () => {
                   </label>
                   <label className="space-y-1 text-sm">
                     <span className="font-medium text-slate-700 dark:text-slate-200">Valor</span>
-                    <input className={fieldClassName} type="number" min="0" max={discountType === 'PERCENT' ? 100 : undefined} step="0.01" value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value || 0))} disabled={discountType === 'NONE' || isClosed || isReturnDocument || isExchangeDocument} />
+                    <input className={fieldClassName} type="number" min="0" max={discountType === 'PERCENT' ? 100 : undefined} step="0.01" value={discountValue} onFocus={(event) => event.target.select()} onChange={(e) => setDiscountValue(Number(e.target.value || 0))} disabled={discountType === 'NONE' || isClosed || isReturnDocument || isExchangeDocument} />
                   </label>
                 </div>
               </div>
 
               <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                <div className="mb-3 flex items-center gap-2">
+                  <Repeat2 className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-sm font-semibold">Cambio Divisa</h2>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <label className="space-y-1 text-sm">
+                    <span className="font-medium text-slate-700 dark:text-slate-200">Divisa destino</span>
+                    <select
+                      className={fieldClassName}
+                      value={selectedExchangeRate?.currency_code || ''}
+                      onChange={(e) => setCurrencyCode(e.target.value)}
+                      disabled={availableExchangeRates.length === 0 || isClosed}
+                    >
+                      {availableExchangeRates.length === 0 && <option value="">Sin tasas disponibles</option>}
+                      {availableExchangeRates.map((rate) => (
+                        <option key={rate.currency_code} value={rate.currency_code}>{rate.currency_code} - {rate.currency_name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-950">
+                    <div className="text-xs text-slate-500">Total convertido</div>
+                    <div className="mt-1 text-lg font-bold tabular-nums text-slate-950 dark:text-white">
+                      {selectedExchangeRate ? formatMoney(convertedTotal, selectedExchangeRate.currency_code) : 'Sin tasa'}
+                    </div>
+                    {selectedExchangeRate && (
+                      <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                        <div>Mercado: 1 {selectedExchangeRate.currency_code} = {money(marketRateValue(selectedExchangeRate))}</div>
+                        <div>Fee: {feeValue(selectedExchangeRate).toLocaleString('es-CL')}%</div>
+                        <div>Tasa aplicada: 1 {selectedExchangeRate.currency_code} = {money(rateValue(selectedExchangeRate))}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex min-h-48 flex-col rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-3 flex items-center gap-2">
                   <ClipboardList className="h-5 w-5 text-blue-600" />
                   <h2 className="text-sm font-semibold">Resumen caja</h2>
@@ -579,7 +873,10 @@ const CashPos = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-slate-500">{isReturnDocument ? 'Credito devolucion' : isExchangeDocument ? 'Total cambio' : 'Total venta'}</span><span className="font-medium">{money(Math.abs(closingTotals.base))}</span></div>
                   <div className="flex justify-between"><span className="text-slate-500">Descuento final</span><span className="font-medium">{money(selectedSale.document_discount_amount || closingTotals.discount)}</span></div>
-                  <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>{closingTotals.total < 0 ? (isExchangeDocument ? 'Credito no utilizado' : 'Monto a devolver') : 'Total a pagar'}</span><span>{money(Math.abs(isClosed ? selectedSale.total_amount : closingTotals.total))}</span></div>
+                </div>
+                <div className="mt-auto flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800">
+                  <span>{closingTotals.total < 0 ? (isExchangeDocument ? 'Credito no utilizado' : 'Monto a devolver') : 'Total a pagar'}</span>
+                  <span>{money(Math.abs(isClosed ? selectedSale.total_amount : closingTotals.total))}</span>
                 </div>
               </div>
             </div>
