@@ -150,6 +150,8 @@ const moduleComponents = {
   'finance-banking': AdminFinanceMaintainers,
   'finance-currencies': AdminFinanceCurrencies,
   'finance-exchange-rates': AdminCurrencyRates,
+  bank_reconciliation_settings: AdminBankReconciliationSettings,
+  'bank-reconciliation-settings': AdminBankReconciliationSettings,
   'document-templates': AdminDocumentTemplates,
   'notification-settings': AdminNotificationSettings,
   notifications: NotificationInbox,
