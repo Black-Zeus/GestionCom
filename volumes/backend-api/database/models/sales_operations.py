@@ -148,6 +148,8 @@ class SaleDocument(BaseModel):
     payment_method_name = Column(String(100), nullable=True)
     amount_tendered = Column(DECIMAL(14, 2), nullable=True)
     change_amount = Column(DECIMAL(14, 2), nullable=True)
+    payment_details = Column(JSON, nullable=True)
+    receipt_email = Column(String(255), nullable=True)
     customer_id = Column(BigInteger, nullable=True)
     customer_snapshot = Column(JSON, nullable=True)
     authorized_buyer_snapshot = Column(JSON, nullable=True)

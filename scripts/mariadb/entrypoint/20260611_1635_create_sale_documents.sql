@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `sale_documents` (
   `payment_method_name` varchar(100) DEFAULT NULL,
   `amount_tendered` decimal(14, 2) DEFAULT NULL,
   `change_amount` decimal(14, 2) DEFAULT NULL,
+  `payment_details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`payment_details`)),
   `customer_id` bigint(20) unsigned DEFAULT NULL,
   `customer_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`customer_snapshot`)),
   `authorized_buyer_snapshot` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`authorized_buyer_snapshot`)),

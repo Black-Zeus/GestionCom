@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Path, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from sqlalchemy import and_, delete, select, text
 from sqlalchemy.orm import selectinload
 
@@ -73,6 +73,8 @@ class CloseSalePayload(BaseModel):
     payment_method_name: str | None = Field(default=None, max_length=100)
     amount_tendered: Decimal | None = Field(default=None, ge=0)
     change_amount: Decimal | None = Field(default=None, ge=0)
+    payment_details: dict | list[dict] | None = None
+    receipt_email: EmailStr | None = None
 
     @model_validator(mode="after")
     def validate_discount(self):
@@ -123,6 +125,12 @@ def sale_to_dict(sale: SaleDocument, include_units: bool = False) -> dict:
         "warehouse_id": sale.warehouse_id,
         "sales_point_id": sale.sales_point_id,
         "cash_register_id": sale.cash_register_id,
+        "payment_method_code": sale.payment_method_code,
+        "payment_method_name": sale.payment_method_name,
+        "amount_tendered": float(sale.amount_tendered) if sale.amount_tendered is not None else None,
+        "change_amount": float(sale.change_amount) if sale.change_amount is not None else None,
+        "payment_details": sale.payment_details,
+        "receipt_email": sale.receipt_email,
         "customer": sale.customer_snapshot,
         "authorized_buyer": sale.authorized_buyer_snapshot,
         "prepared_by": sale.prepared_by_name,
@@ -819,6 +827,8 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
         sale.payment_method_name = payload.payment_method_name
         sale.amount_tendered = payload.amount_tendered
         sale.change_amount = payload.change_amount
+        sale.payment_details = payload.payment_details
+        sale.receipt_email = str(payload.receipt_email).lower() if payload.receipt_email else None
         apply_close_amounts(sale, payload)
         try:
             await apply_inventory_for_closed_sale(session, sale, user_id)
