@@ -1,18 +1,32 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Pencil, Plus, Trash2, XCircle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import StatusBadge from '@/components/common/data/StatusBadge';
-import { ActionButton } from '@/components/common/actions/ActionButton';
+import DataTable from '@/components/common/data/DataTable';
+import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
+import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
+import ModalManager from '@/components/ui/modal';
 import { getBackendMessage, toast } from '@/services/ui/notify';
 import { cashSessionsService } from '@/services/cash/cashSessionsService';
+import { currencyRatesService } from '@/services/admin/currencyRatesService';
 
 const money = (value) => Number(value || 0).toLocaleString('es-CL', {
   style: 'currency',
   currency: 'CLP',
   maximumFractionDigits: 0,
 });
+
+const exchangeMoney = (value) => {
+  const amount = Number(value || 0);
+  return amount.toLocaleString('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    minimumFractionDigits: amount > 0 && amount < 1 ? 2 : 0,
+    maximumFractionDigits: amount > 0 && amount < 1 ? 4 : 2,
+  });
+};
 
 const STATUS_MAP = {
   14: { label: 'Abierta',           variant: 'active' },
@@ -32,6 +46,178 @@ const formatDateTime = (value) => (
   value ? new Date(value).toLocaleString('es-CL', { hour12: false }) : '—'
 );
 
+const OBSERVATION_META = {
+  CASH_COUNT: { label: 'Arqueo', role: 'cajero', variant: 'info' },
+  CLOSING: { label: 'Cierre', role: 'cajero', variant: 'neutral' },
+  APPROVAL: { label: 'Aprobacion', role: 'supervisor', variant: 'active' },
+  REJECTION: { label: 'Rechazo', role: 'supervisor', variant: 'danger' },
+};
+
+const parseAmount = (value) => Number(String(value ?? '').replace(',', '.')) || 0;
+const isActiveRecord = (record) => record?.is_active !== false && record?.is_active !== 0;
+const getRateInfo = (rate, currency = null) => {
+  const marketRate = parseAmount(rate?.rate_value);
+  const feePct = parseAmount(rate?.fee_pct ?? currency?.conversion_fee_pct);
+  const effectiveRate = parseAmount(rate?.effective_rate) || (marketRate > 0 ? marketRate * (1 - feePct / 100) : 0);
+  return { marketRate, feePct, effectiveRate };
+};
+const currencyLabel = (currency) => (
+  `${currency.currency_code} - ${currency.currency_symbol || ''} - ${currency.currency_name || ''}`.replace(/\s+-\s+$/, '')
+);
+
+const ForeignCurrencyForm = ({
+  currencies = [],
+  ratesByCurrency = new Map(),
+  primaryCurrency = 'CLP',
+  initialValues = null,
+  submitLabel = 'Agregar divisa',
+  onSubmit,
+  onClose,
+}) => {
+  const [form, setForm] = useState({
+    currency_code: initialValues?.currency_code || '',
+    denomination_value: initialValues?.denomination_value ? String(initialValues.denomination_value) : '',
+    quantity: initialValues?.quantity ? String(initialValues.quantity) : '1',
+  });
+
+  const currencyOptions = useMemo(() => (
+    currencies
+      .filter(isActiveRecord)
+      .filter((currency) => currency.currency_code && currency.currency_code !== primaryCurrency)
+      .sort((left, right) => String(left.currency_code).localeCompare(String(right.currency_code)))
+      .map((currency) => ({ value: currency.currency_code, label: currencyLabel(currency) }))
+  ), [currencies, primaryCurrency]);
+
+  const selectedCurrency = useMemo(
+    () => currencies.find((currency) => currency.currency_code === form.currency_code) || null,
+    [currencies, form.currency_code],
+  );
+  const selectedRate = ratesByCurrency.get(form.currency_code);
+  const { marketRate, feePct, effectiveRate } = getRateInfo(selectedRate, selectedCurrency);
+  const denominationValue = parseAmount(form.denomination_value);
+  const quantity = Math.max(0, parseInt(form.quantity, 10) || 0);
+  const foreignSubtotal = denominationValue * quantity;
+  const convertedSubtotal = foreignSubtotal * effectiveRate;
+
+  const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const handleSubmit = () => {
+    if (!form.currency_code) {
+      toast.error('Selecciona una divisa.');
+      return;
+    }
+    if (!effectiveRate) {
+      toast.error(`No hay tasa de conversion activa para ${form.currency_code}.`);
+      return;
+    }
+    if (denominationValue <= 0) {
+      toast.error('Ingresa el valor de la denominacion.');
+      return;
+    }
+    if (quantity < 1) {
+      toast.error('Ingresa una cantidad mayor a cero.');
+      return;
+    }
+
+    onSubmit({
+      id: initialValues?.id || Date.now(),
+      label: `${form.currency_code} ${denominationValue.toLocaleString('es-CL', { maximumFractionDigits: 2 })}`,
+      currency_code: form.currency_code,
+      currency_name: selectedCurrency?.currency_name || form.currency_code,
+      currency_symbol: selectedCurrency?.currency_symbol || '',
+      denomination_value: denominationValue,
+      quantity,
+      exchange_rate: effectiveRate,
+      market_rate: marketRate,
+      fee_pct: feePct,
+      base_currency_code: selectedRate?.base_currency_code || primaryCurrency,
+      rate_date: selectedRate?.rate_date || null,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="space-y-4 p-1">
+      <div className="space-y-1 text-sm">
+        <span className="font-medium text-slate-700 dark:text-slate-200">Divisa</span>
+        <AutocompleteSelect
+          value={form.currency_code}
+          onChange={(value) => set('currency_code', value)}
+          options={currencyOptions}
+          placeholder="Seleccionar divisa"
+          searchPlaceholder="Buscar por codigo o nombre"
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Valor denominacion</span>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950"
+            value={form.denomination_value}
+            onChange={(event) => set('denomination_value', event.target.value)}
+            placeholder="Ej: 100"
+          />
+        </div>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Cantidad</span>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950"
+            value={form.quantity}
+            onChange={(event) => set('quantity', event.target.value)}
+            placeholder="1"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between py-1">
+          <span className="text-slate-500">Tipo de cambio mercado</span>
+          <span className="font-semibold tabular-nums">
+            {marketRate ? `1 ${form.currency_code} = ${exchangeMoney(marketRate)} ${primaryCurrency}` : 'Sin tasa'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between py-1">
+          <span className="text-slate-500">Fee conversion</span>
+          <span className="font-semibold tabular-nums">
+            {marketRate ? `${feePct.toLocaleString('es-CL', { maximumFractionDigits: 2 })}%` : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between py-1">
+          <span className="text-slate-500">Tipo de cambio aplicado</span>
+          <span className="font-semibold tabular-nums">
+            {effectiveRate ? `1 ${form.currency_code} = ${exchangeMoney(effectiveRate)} ${primaryCurrency}` : 'Sin tasa'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between py-1">
+          <span className="text-slate-500">Subtotal divisa</span>
+          <span className="font-semibold tabular-nums">
+            {foreignSubtotal > 0 ? `${foreignSubtotal.toLocaleString('es-CL', { maximumFractionDigits: 2 })} ${form.currency_code || ''}` : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-200 pt-2 dark:border-slate-800">
+          <span className="text-slate-500">Equivalente en pesos</span>
+          <span className="text-base font-bold tabular-nums text-slate-950 dark:text-white">{convertedSubtotal > 0 ? money(convertedSubtotal) : '—'}</span>
+        </div>
+        {selectedRate?.rate_date && (
+          <p className="mt-2 text-xs text-slate-400">Tipo de cambio vigente al {selectedRate.rate_date}.</p>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <ActionButton label="Cancelar" variant="neutral" icon={XCircle} onClick={onClose} />
+        <ActionButton label={submitLabel} icon={Plus} onClick={handleSubmit} disabled={!currencyOptions.length} />
+      </div>
+    </div>
+  );
+};
+
 const CashCount = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,6 +226,8 @@ const CashCount = () => {
   const [session, setSession] = useState(null);
   const [summary, setSummary] = useState(null);
   const [denominations, setDenominations] = useState([]);
+  const [currencies, setCurrencies] = useState([]);
+  const [currencyRates, setCurrencyRates] = useState([]);
   const [counts, setCounts] = useState({});
   const [adhocRows, setAdhocRows] = useState([]);
   const [closingNotes, setClosingNotes] = useState('');
@@ -64,9 +252,25 @@ const CashCount = () => {
       const initialCounts = {};
       const closingCounts = (sess.denomination_counts || []).filter((c) => c.count_type === 'CLOSING');
       if (closingCounts.length > 0) {
-        closingCounts.forEach((c) => { initialCounts[c.currency_denomination_id] = c.quantity; });
+        closingCounts
+          .filter((c) => c.currency_denomination_id)
+          .forEach((c) => { initialCounts[c.currency_denomination_id] = c.quantity; });
       }
       setCounts(initialCounts);
+      setAdhocRows(closingCounts
+        .filter((c) => !c.currency_denomination_id && c.adhoc_currency_code)
+        .map((c) => ({
+          id: c.id,
+          label: c.adhoc_label || `${c.adhoc_currency_code} ${c.adhoc_denomination_value}`,
+          currency_code: c.adhoc_currency_code,
+          denomination_value: Number(c.adhoc_denomination_value || 0),
+          quantity: Number(c.quantity || 0),
+          exchange_rate: 0,
+          market_rate: 0,
+          fee_pct: 0,
+          base_currency_code: 'CLP',
+          rate_date: null,
+        })));
       const observations = sess.observations || [];
       const latestByType = (type) => [...observations].reverse().find((obs) => obs.observation_type === type)?.observation_text || '';
       setClosingNotes(latestByType('CLOSING') || sess.closing_notes || '');
@@ -86,14 +290,40 @@ const CashCount = () => {
     }
   }, [sessionId, load]);
 
+  useEffect(() => {
+    let active = true;
+    const loadCurrencyData = async () => {
+      try {
+        const [currenciesData, ratesData] = await Promise.all([
+          currencyRatesService.listCurrencies(),
+          currencyRatesService.list(),
+        ]);
+        if (!active) return;
+        setCurrencies(currenciesData.filter(isActiveRecord));
+        setCurrencyRates(ratesData);
+      } catch (error) {
+        if (active) toast.error(getBackendMessage(error, 'No fue posible cargar divisas activas.'));
+      }
+    };
+    loadCurrencyData();
+    return () => { active = false; };
+  }, []);
+
   const handleCount = (id, value) => {
     const qty = Math.max(0, parseInt(value, 10) || 0);
     setCounts((prev) => ({ ...prev, [id]: qty }));
   };
 
-  const addAdhocRow = () => setAdhocRows((prev) => [...prev, { id: Date.now(), label: '', currency_code: 'USD', denomination_value: '', quantity: '' }]);
-  const removeAdhocRow = (rowId) => setAdhocRows((prev) => prev.filter((r) => r.id !== rowId));
-  const updateAdhocRow = (rowId, field, value) => setAdhocRows((prev) => prev.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)));
+  const removeAdhocRow = async (row) => {
+    const foreignSubtotal = parseAmount(row.denomination_value) * Number(row.quantity || 0);
+    const confirmed = await ModalManager.confirm({
+      title: 'Eliminar divisa',
+      message: `Confirma eliminar ${foreignSubtotal.toLocaleString('es-CL', { maximumFractionDigits: 2 })} ${row.currency_code} del arqueo.`,
+      buttons: { cancel: 'Cancelar', confirm: 'Eliminar' },
+    });
+    if (!confirmed) return;
+    setAdhocRows((prev) => prev.filter((item) => item.id !== row.id));
+  };
 
   const primaryCurrency = useMemo(() => {
     const clpDenom = denominations.find((d) => (d.currency_code || 'CLP') === 'CLP');
@@ -116,11 +346,69 @@ const CashCount = () => {
       .reduce((sum, d) => sum + (d.denomination_value * (counts[d.id] || 0)), 0)
   ), [denominations, counts, primaryCurrency]);
 
+  const ratesByCurrency = useMemo(() => (
+    new Map(currencyRates.map((rate) => [rate.currency_code, rate]))
+  ), [currencyRates]);
+
+  const addAdhocRow = () => {
+    const modalId = ModalManager.show({
+      type: 'custom',
+      title: 'Agregar divisa',
+      size: 'medium',
+      showFooter: false,
+      contentComponent: ForeignCurrencyForm,
+      contentProps: {
+        currencies,
+        ratesByCurrency,
+        primaryCurrency,
+        onSubmit: (row) => setAdhocRows((prev) => [...prev, row]),
+        onClose: () => ModalManager.close(modalId),
+      },
+    });
+  };
+
+  const editAdhocRow = (row) => {
+    const modalId = ModalManager.show({
+      type: 'custom',
+      title: 'Editar divisa',
+      size: 'medium',
+      showFooter: false,
+      contentComponent: ForeignCurrencyForm,
+      contentProps: {
+        currencies,
+        ratesByCurrency,
+        primaryCurrency,
+        initialValues: row,
+        submitLabel: 'Guardar cambios',
+        onSubmit: (updatedRow) => setAdhocRows((prev) => prev.map((item) => (item.id === row.id ? updatedRow : item))),
+        onClose: () => ModalManager.close(modalId),
+      },
+    });
+  };
+
+  const adhocClpTotal = useMemo(() => (
+    adhocRows.reduce((sum, row) => {
+      const foreignSubtotal = parseAmount(row.denomination_value) * (parseInt(row.quantity, 10) || 0);
+      const currency = currencies.find((item) => item.currency_code === row.currency_code);
+      const rateInfo = getRateInfo(ratesByCurrency.get(row.currency_code), currency);
+      const effectiveRate = parseAmount(row.exchange_rate) || rateInfo.effectiveRate;
+      return sum + (foreignSubtotal * effectiveRate);
+    }, 0)
+  ), [adhocRows, currencies, ratesByCurrency]);
+
+  const totalPhysicalWithForeign = useMemo(
+    () => physicalTotal + adhocClpTotal,
+    [adhocClpTotal, physicalTotal],
+  );
+
   const theoreticalCash = useMemo(() => (
     summary ? Number(summary.theoretical_cash || 0) : 0
   ), [summary]);
 
-  const difference = useMemo(() => physicalTotal - theoreticalCash, [physicalTotal, theoreticalCash]);
+  const difference = useMemo(
+    () => totalPhysicalWithForeign - theoreticalCash,
+    [totalPhysicalWithForeign, theoreticalCash],
+  );
 
   const handleClose = async () => {
     if (!sessionId) return;
@@ -142,7 +430,7 @@ const CashCount = () => {
         quantity: parseInt(r.quantity, 10),
       }));
       await cashSessionsService.close(sessionId, {
-        physical_amount: physicalTotal,
+        physical_amount: totalPhysicalWithForeign,
         closing_notes: closingNotes.trim() || null,
         cash_count_notes: cashCountNotes.trim(),
         denomination_counts: denominationCounts,
@@ -183,6 +471,38 @@ const CashCount = () => {
   }
 
   const statusInfo = STATUS_MAP[session.status_id] || { label: String(session.status_id), variant: 'inactive' };
+  const sessionContext = [
+    session.cash_register?.register_name ? `Caja: ${session.cash_register.register_name}` : null,
+    session.cashier_name ? `Cajero: ${session.cashier_name}` : null,
+  ].filter(Boolean).join(' · ') || 'Conteo y cierre de caja';
+  const rawObservations = (session.observations || []).filter((obs) => OBSERVATION_META[obs.observation_type]);
+  const fallbackObservations = rawObservations.length === 0 ? [
+    session.cashier_notes && {
+      id: 'fallback-cashier',
+      observation_type: 'CASH_COUNT',
+      observation_text: session.cashier_notes,
+      created_by_name: session.cashier_name || 'Cajero',
+      observed_at: null,
+      source: 'fallback',
+    },
+    session.supervisor_notes && {
+      id: 'fallback-supervisor',
+      observation_type: session.is_approved ? 'APPROVAL' : 'REJECTION',
+      observation_text: session.supervisor_notes,
+      created_by_name: session.supervisor_name || 'Supervisor',
+      observed_at: null,
+      source: 'fallback',
+    },
+  ].filter(Boolean) : [];
+  const visibleObservations = rawObservations.length > 0 ? rawObservations : fallbackObservations;
+  const loadedObservationTypes = new Set(visibleObservations.map((obs) => obs.observation_type));
+  const expectedObservationTypes = [
+    ...(!isOpen ? ['CASH_COUNT', 'CLOSING'] : []),
+    ...(session.status_id === 15 ? ['APPROVAL'] : []),
+    ...(session.status_id === 16 && session.requires_supervisor_approval ? ['APPROVAL'] : []),
+  ];
+  const missingObservationTypes = [...new Set(expectedObservationTypes)]
+    .filter((type) => !loadedObservationTypes.has(type));
 
   const inputCls = 'h-7 w-16 rounded border border-slate-200 px-2 text-center text-xs dark:border-slate-700 dark:bg-slate-900';
 
@@ -190,7 +510,7 @@ const CashCount = () => {
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
       <ModuleHeader
         title="Arqueo de caja"
-        description={`Sesion: ${session.session_code?.slice(0, 8)}...`}
+        description={sessionContext}
         actions={[
           { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate('/cash/opening') },
         ]}
@@ -201,7 +521,7 @@ const CashCount = () => {
           <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Informacion de la sesion</h3>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             <InfoRow label="Caja" value={session.cash_register?.register_name || '—'} />
-            <InfoRow label="Codigo de sesion" value={session.session_code?.slice(0, 12) + '...' || '—'} />
+            <InfoRow label="Cajero" value={session.cashier_name || '—'} />
             <InfoRow label="Apertura" value={formatDateTime(session.opening_datetime)} />
             <InfoRow label="Monto de apertura" value={money(session.opening_amount)} highlight />
             <InfoRow label="Estado" value={<StatusBadge variant={statusInfo.variant}>{statusInfo.label}</StatusBadge>} />
@@ -302,10 +622,14 @@ const CashCount = () => {
             })}
           </div>
 
-          <div className="mt-4 grid gap-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800 sm:grid-cols-3">
+          <div className="mt-4 grid gap-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800 sm:grid-cols-4">
             <div className="text-center">
               <p className="text-xs text-slate-500">Efectivo fisico contado ({primaryCurrency})</p>
               <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{money(physicalTotal)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-slate-500">Otras divisas convertidas</p>
+              <p className="text-lg font-bold tabular-nums text-slate-900 dark:text-white">{money(adhocClpTotal)}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-slate-500">Efectivo esperado</p>
@@ -326,7 +650,7 @@ const CashCount = () => {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Otras divisas</h3>
-              <p className="mt-0.5 text-xs text-slate-400">Registra billetes o monedas de otras monedas recibidos durante la sesion. Solo para referencia, no afectan el total en {primaryCurrency}.</p>
+              <p className="mt-0.5 text-xs text-slate-400">Registra billetes o monedas de otras monedas recibidos durante la sesion. Se convierten a {primaryCurrency} usando el tipo de cambio vigente.</p>
             </div>
             <button
               type="button"
@@ -338,142 +662,141 @@ const CashCount = () => {
             </button>
           </div>
           {adhocRows.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-3">Sin denominaciones adicionales. Usa "Agregar" si recibiste pago en otra divisa.</p>
+            <p className="text-center text-xs text-slate-400 py-3">Sin denominaciones adicionales. Usa el boton Agregar si recibiste pago en otra divisa.</p>
           ) : (
-            <div className="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800">
-                  <tr>
-                    <th className="px-3 py-1.5 text-left text-xs font-medium text-slate-600 dark:text-slate-300">Etiqueta</th>
-                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Moneda</th>
-                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Valor</th>
-                    <th className="px-2 py-1.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">Cantidad</th>
-                    <th className="px-2 py-1.5 text-right text-xs font-medium text-slate-600 dark:text-slate-300">Subtotal</th>
-                    <th className="px-2 py-1.5" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {adhocRows.map((row) => {
-                    const sub = Number(row.denomination_value || 0) * Number(row.quantity || 0);
-                    return (
-                      <tr key={row.id}>
-                        <td className="px-2 py-1">
-                          <input
-                            type="text"
-                            className="h-7 w-full min-w-[80px] rounded border border-slate-200 px-2 text-xs dark:border-slate-700 dark:bg-slate-900"
-                            value={row.label}
-                            onChange={(e) => updateAdhocRow(row.id, 'label', e.target.value)}
-                            placeholder="Ej: USD 100"
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          <input
-                            type="text"
-                            maxLength={3}
-                            className="h-7 w-14 rounded border border-slate-200 px-2 text-center text-xs uppercase dark:border-slate-700 dark:bg-slate-900"
-                            value={row.currency_code}
-                            onChange={(e) => updateAdhocRow(row.id, 'currency_code', e.target.value.toUpperCase())}
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            className="h-7 w-20 rounded border border-slate-200 px-2 text-right text-xs dark:border-slate-700 dark:bg-slate-900"
-                            value={row.denomination_value}
-                            onChange={(e) => updateAdhocRow(row.id, 'denomination_value', e.target.value)}
-                            placeholder="0"
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          <input
-                            type="number"
-                            min="1"
-                            className={inputCls}
-                            value={row.quantity}
-                            onChange={(e) => updateAdhocRow(row.id, 'quantity', e.target.value)}
-                            placeholder="0"
-                          />
-                        </td>
-                        <td className="px-3 py-1.5 text-right tabular-nums text-xs">
-                          {sub > 0 ? `${sub.toLocaleString('es-CL')} ${row.currency_code}` : '—'}
-                        </td>
-                        <td className="px-2 py-1 text-right">
-                          <button type="button" onClick={() => removeAdhocRow(row.id)} className="text-slate-400 hover:text-red-500">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div>
+              <DataTable
+                data={adhocRows}
+                emptyMessage="Sin denominaciones adicionales."
+                columns={[
+                  { id: 'label', label: 'Etiqueta', render: (row) => <span className="text-xs font-medium">{row.label}</span> },
+                  { id: 'currency_code', label: 'Divisa', align: 'center', render: (row) => <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">{row.currency_code}</span> },
+                  { id: 'denomination_value', label: 'Valor', align: 'right', sortable: true, sortValue: (row) => parseAmount(row.denomination_value), render: (row) => <span className="tabular-nums text-xs">{parseAmount(row.denomination_value).toLocaleString('es-CL', { maximumFractionDigits: 2 })}</span> },
+                  { id: 'quantity', label: 'Cantidad', align: 'center', sortable: true, sortValue: (row) => Number(row.quantity || 0), render: (row) => <span className="text-xs">{row.quantity}</span> },
+                  {
+                    id: 'fee_pct',
+                    label: 'Fee',
+                    align: 'right',
+                    sortable: true,
+                    sortValue: (row) => {
+                      const currency = currencies.find((item) => item.currency_code === row.currency_code);
+                      const rateInfo = getRateInfo(ratesByCurrency.get(row.currency_code), currency);
+                      return parseAmount(row.fee_pct) || rateInfo.feePct;
+                    },
+                    render: (row) => {
+                      const currency = currencies.find((item) => item.currency_code === row.currency_code);
+                      const rateInfo = getRateInfo(ratesByCurrency.get(row.currency_code), currency);
+                      const feePct = parseAmount(row.fee_pct) || rateInfo.feePct;
+                      return <span className="tabular-nums text-xs">{feePct.toLocaleString('es-CL', { maximumFractionDigits: 2 })}%</span>;
+                    },
+                  },
+                  {
+                    id: 'foreign_subtotal',
+                    label: 'Subtotal divisa',
+                    align: 'right',
+                    sortable: true,
+                    sortValue: (row) => parseAmount(row.denomination_value) * Number(row.quantity || 0),
+                    render: (row) => {
+                      const sub = parseAmount(row.denomination_value) * Number(row.quantity || 0);
+                      return <span className="tabular-nums text-xs">{sub > 0 ? `${sub.toLocaleString('es-CL')} ${row.currency_code}` : '—'}</span>;
+                    },
+                  },
+                  {
+                    id: 'converted_subtotal',
+                    label: 'Equiv. pesos',
+                    align: 'right',
+                    sortable: true,
+                    sortValue: (row) => {
+                      const sub = parseAmount(row.denomination_value) * Number(row.quantity || 0);
+                      const currency = currencies.find((item) => item.currency_code === row.currency_code);
+                      const rateInfo = getRateInfo(ratesByCurrency.get(row.currency_code), currency);
+                      const effectiveRate = parseAmount(row.exchange_rate) || rateInfo.effectiveRate;
+                      return sub * effectiveRate;
+                    },
+                    render: (row) => {
+                      const sub = parseAmount(row.denomination_value) * Number(row.quantity || 0);
+                      const currency = currencies.find((item) => item.currency_code === row.currency_code);
+                      const rateInfo = getRateInfo(ratesByCurrency.get(row.currency_code), currency);
+                      const effectiveRate = parseAmount(row.exchange_rate) || rateInfo.effectiveRate;
+                      const clpSub = sub * effectiveRate;
+                      return <span className="tabular-nums text-xs font-semibold">{clpSub > 0 ? money(clpSub) : '—'}</span>;
+                    },
+                  },
+                  {
+                    id: 'actions',
+                    label: 'Acciones',
+                    align: 'center',
+                    render: (row) => (
+                      <div className="flex justify-center gap-2">
+                        <RowActionButton
+                          label="Editar divisa"
+                          icon={Pencil}
+                          onClick={() => editAdhocRow(row)}
+                        />
+                        <RowActionButton
+                          label="Eliminar divisa"
+                          icon={Trash2}
+                          variant="danger"
+                          onClick={() => removeAdhocRow(row)}
+                        />
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+              <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <span className="text-slate-500">Total otras divisas convertido</span>
+                <span className="font-bold tabular-nums">{money(adhocClpTotal)}</span>
+              </div>
             </div>
           )}
         </div>
       )}
 
-      {(session?.observations?.length > 0 || session?.cashier_notes || session?.supervisor_notes) && (
-        <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Observaciones</h3>
-          <div className="space-y-4 divide-y divide-slate-100 dark:divide-slate-800">
-            {(session.observations || [])
-              .filter((obs) => ['CLOSING', 'CASH_COUNT'].includes(obs.observation_type))
-              .map((obs) => {
-                const name = obs.created_by_name || session.cashier_name || 'Cajero';
-                return (
-                  <div key={obs.id} className="pt-4 first:pt-0 text-sm text-slate-700 dark:text-slate-300">
-                    <p>
-                      <span className="font-semibold">{name} (cajero):</span>{' '}
-                      {obs.observation_text}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">fecha: {formatDateTime(obs.observed_at)}</p>
-                  </div>
-                );
-              })}
-
-            {(session.observations || [])
-              .filter((obs) => ['APPROVAL', 'REJECTION'].includes(obs.observation_type))
-              .map((obs) => {
-                const name = obs.created_by_name || session.supervisor_name || 'Supervisor';
-                const isApproved = obs.observation_type === 'APPROVAL';
-                return (
-                  <div key={obs.id} className="pt-4 first:pt-0 text-sm text-slate-700 dark:text-slate-300">
-                    <p>
-                      <span className="font-semibold">{name} (supervisor):</span>{' '}
-                      {obs.observation_text}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">fecha: {formatDateTime(obs.observed_at)}</p>
-                    <p className={`mt-0.5 text-xs font-semibold ${isApproved ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      Estado: {isApproved ? 'Aprobado' : 'Rechazado'}
-                    </p>
-                  </div>
-                );
-              })}
-
-            {(session.observations || []).length === 0 && session.cashier_notes && (
-              <div className="pt-4 first:pt-0 text-sm text-slate-700 dark:text-slate-300">
-                <p>
-                  <span className="font-semibold">{session.cashier_name || 'Cajero'} (cajero):</span>{' '}
-                  {session.cashier_notes}
-                </p>
-              </div>
-            )}
-            {(session.observations || []).length === 0 && session.supervisor_notes && (
-              <div className="pt-4 first:pt-0 text-sm text-slate-700 dark:text-slate-300">
-                <p>
-                  <span className="font-semibold">{session.supervisor_name || 'Supervisor'} (supervisor):</span>{' '}
-                  {session.supervisor_notes}
-                </p>
-                <p className={`mt-0.5 text-xs font-semibold ${session.is_approved ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  Estado: {session.is_approved ? 'Aprobado' : 'Rechazado'}
-                </p>
-              </div>
-            )}
-          </div>
+      <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Observaciones</h3>
+          <span className="text-xs text-slate-400">
+            {visibleObservations.length} cargada(s)
+            {missingObservationTypes.length > 0 ? ` · ${missingObservationTypes.length} pendiente(s)` : ''}
+          </span>
         </div>
-      )}
+        <div className="space-y-3">
+          {visibleObservations.length === 0 && (
+            <div className="rounded-md border border-dashed border-slate-200 px-3 py-3 text-sm text-slate-500 dark:border-slate-700">
+              Sin observaciones cargadas para esta sesion.
+            </div>
+          )}
+
+          {visibleObservations.map((obs) => {
+            const meta = OBSERVATION_META[obs.observation_type] || { label: obs.observation_type, role: 'usuario', variant: 'neutral' };
+            const name = obs.created_by_name || (meta.role === 'supervisor' ? session.supervisor_name : session.cashier_name) || meta.role;
+            return (
+              <div key={obs.id} className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <StatusBadge variant={meta.variant}>{meta.label}</StatusBadge>
+                  <span className="font-mono text-xs text-slate-500">observacion={obs.observation_type}</span>
+                  <span className="text-xs text-slate-400">{name} ({meta.role})</span>
+                  {obs.source === 'fallback' && <span className="text-xs font-medium text-amber-600 dark:text-amber-400">recuperada desde notas antiguas</span>}
+                </div>
+                <p className="whitespace-pre-wrap">{obs.observation_text || 'Sin texto registrado.'}</p>
+                <p className="mt-2 text-xs text-slate-400">fecha: {formatDateTime(obs.observed_at || obs.created_at)}</p>
+              </div>
+            );
+          })}
+
+          {missingObservationTypes.map((type) => {
+            const meta = OBSERVATION_META[type];
+            return (
+              <div key={`missing-${type}`} className="rounded-md border border-dashed border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                <span className="font-semibold">{meta.label}</span>
+                <span className="ml-2 font-mono text-xs">observacion={type}</span>
+                <span className="ml-2">no cargada o pendiente.</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {isOpen && (
         <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
