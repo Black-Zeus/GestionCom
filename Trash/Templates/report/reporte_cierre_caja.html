@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<!--
+  PLANTILLA: Reporte de Cierre de Caja
+  Formato recomendado para generación PDF con Chromium / Gotenberg.
+
+  PRINCIPALES VARIABLES
+  ------------------------------------------------------------------
+  {{COMPANY_NAME}}                  Nombre de la empresa
+  {{LOGO_HTML}}                     <img> del logotipo o bloque HTML
+  {{REPORT_STATUS}}                 CIERRE DEFINITIVO / BORRADOR
+  {{REPORT_ID}}                     Identificador único del reporte
+  {{GENERATED_AT}}                  Fecha y hora de generación
+  {{GENERATED_BY}}                  Usuario que genera el documento
+  {{FOOTER_NOTE}}                   Nota interna o legal
+
+  IDENTIFICACIÓN DE LA SESIÓN
+  ------------------------------------------------------------------
+  {{BRANCH_NAME}}                   Sucursal / local
+  {{POS_NAME}}                      Punto de venta
+  {{CASH_REGISTER_NAME}}            Caja
+  {{SESSION_ID}}                    Identificador de sesión
+  {{CASHIER_NAME}}                  Cajero responsable
+  {{OPENED_BY}}                     Usuario que abrió la caja
+  {{CLOSED_BY}}                     Usuario que cerró la caja
+  {{OPENED_AT}}                     Fecha/hora de apertura
+  {{CLOSED_AT}}                     Fecha/hora de cierre
+  {{SESSION_DURATION}}              Duración de la sesión
+  {{SESSION_STATUS}}                Cerrada / Cerrada con diferencia
+  {{SESSION_STATUS_CLASS}}          success / warning / danger / neutral
+
+  INDICADORES Y CONCILIACIÓN
+  ------------------------------------------------------------------
+  {{OPENING_AMOUNT}}                Fondo inicial
+  {{VALID_SALES_COUNT}}             Cantidad de ventas válidas
+  {{CANCELLED_SALES_COUNT}}         Cantidad de ventas anuladas
+  {{GROSS_SALES}}                   Venta bruta
+  {{DISCOUNTS_TOTAL}}               Descuentos
+  {{RETURNS_TOTAL}}                 Devoluciones
+  {{CANCELLED_TOTAL}}               Monto anulado
+  {{NET_SALES_TOTAL}}               Venta neta
+  {{AVERAGE_TICKET}}                Ticket promedio
+
+  {{CASH_SALES}}                    Ventas pagadas en efectivo CLP
+  {{DEBIT_SALES}}                   Ventas con débito
+  {{CREDIT_SALES}}                  Ventas con crédito
+  {{TRANSFER_SALES}}                Ventas por transferencia
+  {{OTHER_PAYMENT_SALES}}           Otros medios de pago
+  {{PAYMENT_METHOD_ROWS}}           Filas HTML del resumen por medio de pago
+
+  {{CASH_IN_TOTAL}}                 Ingresos extraordinarios de efectivo
+  {{CASH_OUT_TOTAL}}                Retiros / egresos de efectivo
+  {{CASH_REFUNDS_TOTAL}}            Devoluciones entregadas en efectivo
+  {{EXPECTED_CASH}}                 Efectivo esperado al cierre
+  {{COUNTED_CLP}}                   Efectivo CLP contado físicamente
+  {{FOREIGN_CURRENCY_CLP}}          Divisas extranjeras convertidas a CLP
+  {{TOTAL_DECLARED_CASH}}           Total declarado equivalente en CLP
+  {{CASH_DIFFERENCE}}               Declarado - esperado
+  {{DIFFERENCE_STATUS}}             Cuadratura / Sobrante / Faltante
+  {{DIFFERENCE_CLASS}}              success / warning / danger / neutral
+
+  DETALLE OPERACIONAL
+  ------------------------------------------------------------------
+  {{CLP_COIN_ROWS}}                 Filas de conteo de monedas
+  {{CLP_BILL_ROWS}}                 Filas de conteo de billetes
+  {{FOREIGN_CURRENCY_ROWS}}         Filas de divisas extranjeras
+  {{CASH_MOVEMENT_ROWS}}            Filas de movimientos de efectivo
+  {{SALES_ROWS}}                    Filas del listado de ventas
+
+  OBSERVACIONES Y CONTROL
+  ------------------------------------------------------------------
+  {{SESSION_OBSERVATIONS}}          Observaciones cargadas durante la sesión
+  {{CLOSING_OBSERVATION}}           Observación administrativa del cierre
+  {{DIFFERENCE_REASON}}             Justificación de diferencia
+  {{SUPERVISOR_NAME}}               Supervisor que revisa
+  {{SUPERVISOR_AUTHORIZATION}}      Folio, estado o referencia de autorización
+
+  El backend debe reemplazar variables vacías por "—" o por bloques HTML
+  alternativos, según corresponda.
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de cierre de caja</title>
+
+  <style>
+    :root {
+      --navy-950: #07111f;
+      --navy-900: #0f172a;
+      --navy-800: #17233a;
+      --green-700: #047857;
+      --green-600: #059669;
+      --green-500: #10b981;
+      --green-100: #d1fae5;
+      --green-50: #ecfdf5;
+      --blue-600: #2563eb;
+      --blue-100: #dbeafe;
+      --blue-50: #eff6ff;
+      --red-700: #b91c1c;
+      --red-600: #dc2626;
+      --red-100: #fee2e2;
+      --red-50: #fef2f2;
+      --amber-700: #b45309;
+      --amber-600: #d97706;
+      --amber-100: #fef3c7;
+      --amber-50: #fffbeb;
+      --slate-900: #0f172a;
+      --slate-800: #1e293b;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-300: #cbd5e1;
+      --slate-200: #e2e8f0;
+      --slate-100: #f1f5f9;
+      --slate-50: #f8fafc;
+      --white: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    @page {
+      size: Letter;
+      margin: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+    }
+
+    body {
+      color: var(--slate-800);
+      background: var(--white);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10px;
+      line-height: 1.4;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      counter-reset: report-page;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    .tabular {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+
+    .no-break {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .page-break {
+      break-before: page;
+      page-break-before: always;
+    }
+
+    /* ============================================================
+       PORTADA
+       ============================================================ */
+
+    .cover {
+      position: relative;
+      width: 8.5in;
+      height: 11in;
+      overflow: hidden;
+      color: var(--white);
+      background: linear-gradient(145deg, var(--navy-950), #122742 55%, #064e3b);
+      page-break-after: always;
+    }
+
+    .cover::before {
+      content: "";
+      position: absolute;
+      top: -1.4in;
+      right: -1.2in;
+      width: 4.5in;
+      height: 4.5in;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    .cover::after {
+      content: "";
+      position: absolute;
+      right: -0.8in;
+      bottom: -1.7in;
+      width: 4.8in;
+      height: 4.8in;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .cover-accent {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0.12in;
+      background: var(--green-500);
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 0.8in 0.8in 0.65in 0.9in;
+    }
+
+    .cover-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      min-height: 0.75in;
+    }
+
+    .cover-logo {
+      display: flex;
+      align-items: center;
+      min-height: 0.55in;
+      max-width: 3.1in;
+    }
+
+    .cover-logo img {
+      display: block;
+      max-height: 0.55in;
+      max-width: 2.9in;
+      object-fit: contain;
+      object-position: left center;
+    }
+
+    .cover-status {
+      display: inline-block;
+      padding: 5px 12px;
+      border: 1px solid rgba(52, 211, 153, 0.38);
+      border-radius: 99px;
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.12);
+      font-size: 7.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .cover-main {
+      margin-top: 1.15in;
+    }
+
+    .cover-eyebrow {
+      margin-bottom: 0.2in;
+      color: #6ee7b7;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+    }
+
+    .cover-rule {
+      width: 0.72in;
+      height: 3px;
+      margin-bottom: 0.28in;
+      border-radius: 5px;
+      background: var(--green-500);
+    }
+
+    .cover-title {
+      max-width: 6in;
+      color: var(--white);
+      font-size: 45px;
+      font-weight: 800;
+      line-height: 1.03;
+      letter-spacing: -1.5px;
+    }
+
+    .cover-subtitle {
+      max-width: 5.8in;
+      margin-top: 0.22in;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .cover-session-card {
+      width: 100%;
+      margin-top: auto;
+      margin-bottom: 0.5in;
+      padding: 0.25in 0.3in;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.055);
+    }
+
+    .cover-session-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 0.28in;
+    }
+
+    .cover-session-grid > div:last-child {
+      padding-left: 0.28in;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .cover-data-label {
+      margin-bottom: 5px;
+      color: #94a3b8;
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .cover-primary-value {
+      color: var(--white);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .cover-secondary-value {
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .cover-hint {
+      margin-top: 4px;
+      color: #94a3b8;
+      font-size: 9px;
+    }
+
+    .cover-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding-top: 0.18in;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94a3b8;
+      font-size: 8px;
+    }
+
+    .cover-footer-right {
+      text-align: right;
+    }
+
+    .cover-footer strong {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       PÁGINAS INTERIORES
+       ============================================================ */
+
+    .report-page {
+      position: relative;
+      width: 8.5in;
+      min-height: 11in;
+      padding: 0.55in 0.6in 0.58in;
+      background: var(--white);
+      page-break-before: always;
+      counter-increment: report-page;
+    }
+
+    .report-page.flow-page {
+      min-height: auto;
+      padding-bottom: 0.4in;
+    }
+
+    .page-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      margin-bottom: 0.28in;
+      padding-bottom: 0.11in;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    .header-company {
+      color: var(--slate-900);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .header-report {
+      margin-top: 1px;
+      color: var(--slate-500);
+      font-size: 7.5px;
+    }
+
+    .page-header-right {
+      color: var(--slate-500);
+      font-size: 7.5px;
+      text-align: right;
+    }
+
+    .page-footer {
+      position: absolute;
+      right: 0.6in;
+      bottom: 0.22in;
+      left: 0.6in;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      width: calc(100% - 1.2in);
+      padding-top: 0.08in;
+      border-top: 1px solid var(--slate-200);
+      color: var(--slate-400);
+      font-size: 7px;
+    }
+
+    .page-footer > :nth-child(2) {
+      text-align: center;
+    }
+
+    .page-footer > :last-child {
+      text-align: right;
+    }
+
+    .page-number::after {
+      content: counter(report-page);
+    }
+
+    .section-heading {
+      margin-bottom: 0.22in;
+    }
+
+    .section-label {
+      color: var(--green-600);
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      margin-top: 3px;
+      color: var(--slate-900);
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.2px;
+    }
+
+    .section-description {
+      max-width: 6.5in;
+      margin-top: 5px;
+      color: var(--slate-500);
+      font-size: 9px;
+      line-height: 1.45;
+    }
+
+    .subsection-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      margin-top: 0.23in;
+      margin-bottom: 0.1in;
+    }
+
+    .subsection-title {
+      color: var(--slate-900);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .subsection-context {
+      color: var(--slate-500);
+      font-size: 7.5px;
+      text-align: right;
+    }
+
+    /* ============================================================
+       COMPONENTES GENERALES
+       ============================================================ */
+
+    .summary-banner {
+      display: grid;
+      grid-template-columns: 0.32in 1fr;
+      gap: 0.04in;
+      margin-bottom: 0.2in;
+      padding: 0.16in 0.18in;
+      border: 1px solid var(--slate-200);
+      border-left: 4px solid var(--green-500);
+      border-radius: 6px;
+      background: var(--slate-50);
+    }
+
+    .summary-banner-icon {
+      color: var(--green-600);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .summary-banner-title {
+      margin-bottom: 2px;
+      color: var(--slate-900);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .summary-banner-text {
+      color: var(--slate-600);
+      font-size: 8px;
+      line-height: 1.45;
+    }
+
+    .meta-card,
+    .panel,
+    .table-wrapper {
+      overflow: hidden;
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      background: var(--white);
+    }
+
+    .meta-table td {
+      padding: 6px 9px;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 8.4px;
+    }
+
+    .meta-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .meta-table td:nth-child(odd) {
+      width: 18%;
+      color: var(--slate-500);
+      font-weight: 500;
+    }
+
+    .meta-table td:nth-child(even) {
+      width: 32%;
+      color: var(--slate-900);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 99px;
+      font-size: 6px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .badge.success {
+      color: var(--green-700);
+      background: var(--green-100);
+    }
+
+    .badge.warning {
+      color: var(--amber-700);
+      background: var(--amber-100);
+    }
+
+    .badge.danger {
+      color: var(--red-700);
+      background: var(--red-100);
+    }
+
+    .badge.neutral {
+      color: var(--slate-600);
+      background: var(--slate-100);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.12in;
+    }
+
+    .kpi-card {
+      min-height: 0.9in;
+      padding: 0.14in 0.15in;
+      border: 1px solid var(--slate-200);
+      border-top: 3px solid var(--green-500);
+      border-radius: 7px;
+      background: var(--white);
+    }
+
+    .kpi-card.info {
+      border-top-color: var(--blue-600);
+    }
+
+    .kpi-card.warning {
+      border-top-color: var(--amber-600);
+    }
+
+    .kpi-card.danger {
+      border-top-color: var(--red-600);
+    }
+
+    .kpi-label {
+      margin-bottom: 4px;
+      color: var(--slate-500);
+      font-size: 6.8px;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      color: var(--slate-900);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-hint {
+      margin-top: 4px;
+      color: var(--slate-400);
+      font-size: 7px;
+      line-height: 1.3;
+    }
+
+    .status-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 0.2in;
+      margin-top: 0.18in;
+      padding: 0.16in 0.18in;
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      background: var(--slate-50);
+    }
+
+    .status-card-title {
+      color: var(--slate-900);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .status-card-text {
+      margin-top: 2px;
+      color: var(--slate-500);
+      font-size: 8px;
+    }
+
+    .difference-value {
+      font-size: 18px;
+      font-weight: 800;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .difference-value.success {
+      color: var(--green-700);
+    }
+
+    .difference-value.warning {
+      color: var(--amber-700);
+    }
+
+    .difference-value.danger {
+      color: var(--red-700);
+    }
+
+    .difference-value.neutral {
+      color: var(--slate-700);
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.14in;
+    }
+
+    .panel-title {
+      padding: 0.1in 0.12in;
+      color: var(--slate-900);
+      background: var(--slate-50);
+      border-bottom: 1px solid var(--slate-200);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .panel-body {
+      padding: 0.12in;
+    }
+
+    .formula-box {
+      margin-top: 0.18in;
+      padding: 0.12in 0.14in;
+      border: 1px solid var(--blue-100);
+      border-radius: 7px;
+      color: var(--slate-700);
+      background: var(--blue-50);
+      font-size: 7.6px;
+      line-height: 1.5;
+    }
+
+    .formula-box strong {
+      color: #1d4ed8;
+    }
+
+    /* ============================================================
+       TABLAS
+       ============================================================ */
+
+    .report-table {
+      table-layout: fixed;
+      font-size: 7.2px;
+    }
+
+    .report-table thead {
+      display: table-header-group;
+    }
+
+    .report-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .report-table thead tr {
+      color: var(--white);
+      background: var(--navy-900);
+    }
+
+    .report-table thead th {
+      padding: 6px 5px;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--white);
+      font-size: 6.2px;
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .report-table thead th:last-child,
+    .report-table tbody td:last-child,
+    .report-table tfoot td:last-child {
+      border-right: 0;
+    }
+
+    .report-table tbody td {
+      padding: 5px;
+      border-right: 1px solid var(--slate-100);
+      border-bottom: 1px solid var(--slate-100);
+      color: var(--slate-700);
+      vertical-align: middle;
+    }
+
+    .report-table tbody tr:nth-child(even) {
+      background: var(--slate-50);
+    }
+
+    .report-table tbody tr:nth-child(odd) {
+      background: var(--white);
+    }
+
+    .report-table tbody tr.alert-row {
+      background: var(--red-50);
+    }
+
+    .report-table tbody tr.warning-row {
+      background: var(--amber-50);
+    }
+
+    .report-table .num {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .report-table .strong {
+      color: var(--slate-900);
+      font-weight: 700;
+    }
+
+    .report-table .muted {
+      color: var(--slate-500);
+    }
+
+    .report-table .negative {
+      color: var(--red-600);
+      font-weight: 700;
+    }
+
+    .report-table tfoot tr {
+      color: var(--white);
+      background: var(--navy-900);
+    }
+
+    .report-table tfoot td {
+      padding: 7px 5px;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--white);
+      font-size: 6.8px;
+      font-weight: 700;
+    }
+
+    .compact-table {
+      font-size: 7.4px;
+    }
+
+    .compact-table th,
+    .compact-table td {
+      padding: 5px 6px;
+    }
+
+    .totals-table td {
+      padding: 5px 7px;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 8px;
+    }
+
+    .totals-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .totals-table td:first-child {
+      color: var(--slate-600);
+    }
+
+    .totals-table td:last-child {
+      color: var(--slate-900);
+      font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .totals-table .grand-total td {
+      padding-top: 7px;
+      color: var(--slate-900);
+      background: var(--slate-50);
+      font-weight: 800;
+    }
+
+    .table-note {
+      margin-top: 0.09in;
+      color: var(--slate-400);
+      font-size: 6.8px;
+      line-height: 1.4;
+    }
+
+    /* ============================================================
+       OBSERVACIONES Y VALIDACIÓN
+       ============================================================ */
+
+    .observation-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.14in;
+    }
+
+    .observation-card {
+      min-height: 0.85in;
+      padding: 0.13in 0.15in;
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      background: var(--slate-50);
+    }
+
+    .observation-card.full {
+      grid-column: 1 / -1;
+    }
+
+    .observation-label {
+      margin-bottom: 4px;
+      color: var(--slate-500);
+      font-size: 6.8px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .observation-text {
+      color: var(--slate-800);
+      font-size: 8px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .approval-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.22in;
+      margin-top: 0.22in;
+      padding: 0.16in 0.18in;
+      border: 1px solid var(--slate-200);
+      border-radius: 7px;
+      background: var(--white);
+    }
+
+    .signature-block {
+      min-height: 0.8in;
+      padding-top: 0.55in;
+      border-bottom: 1px solid var(--slate-400);
+      color: var(--slate-600);
+      font-size: 7px;
+      text-align: center;
+    }
+
+    .approval-meta {
+      margin-top: 0.08in;
+      color: var(--slate-500);
+      font-size: 7px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    /* ============================================================
+       IMPRESIÓN
+       ============================================================ */
+
+    @media print {
+      body {
+        background: var(--white);
+      }
+
+      .cover,
+      .report-page {
+        margin: 0;
+        box-shadow: none;
+      }
+
+      .report-table thead {
+        display: table-header-group;
+      }
+
+      .report-table tr,
+      .kpi-card,
+      .panel,
+      .meta-card,
+      .observation-card,
+      .status-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================================
+       PORTADA
+       ============================================================ -->
+  <section class="cover">
+    <div class="cover-accent"></div>
+
+    <div class="cover-content">
+      <header class="cover-header">
+        <div class="cover-logo">{{LOGO_HTML}}</div>
+        <span class="cover-status">{{REPORT_STATUS}}</span>
+      </header>
+
+      <main class="cover-main">
+        <div class="cover-eyebrow">Sistema de gestión comercial</div>
+        <div class="cover-rule"></div>
+
+        <h1 class="cover-title">
+          Reporte de<br>
+          Cierre de Caja
+        </h1>
+
+        <p class="cover-subtitle">
+          Conciliación de la sesión de caja, detalle de ventas, medios de pago,
+          efectivo contado, divisas extranjeras y diferencias detectadas al cierre.
+        </p>
+      </main>
+
+      <section class="cover-session-card">
+        <div class="cover-session-grid">
+          <div>
+            <div class="cover-data-label">Caja y sesión</div>
+            <div class="cover-primary-value">{{CASH_REGISTER_NAME}}</div>
+            <div class="cover-hint">
+              Sesión {{SESSION_ID}} · {{BRANCH_NAME}}
+            </div>
+          </div>
+
+          <div>
+            <div class="cover-data-label">Responsable</div>
+            <div class="cover-secondary-value">{{CASHIER_NAME}}</div>
+            <div class="cover-hint">
+              {{OPENED_AT}} — {{CLOSED_AT}}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="cover-footer">
+        <div>
+          <strong>{{COMPANY_NAME}}</strong><br>
+          Documento de control interno
+        </div>
+
+        <div class="cover-footer-right">
+          <strong>Generado: {{GENERATED_AT}}</strong><br>
+          ID de reporte: {{REPORT_ID}}
+        </div>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       RESUMEN DE LA SESIÓN
+       ============================================================ -->
+  <section class="report-page">
+    <header class="page-header">
+      <div>
+        <div class="header-company">{{COMPANY_NAME}}</div>
+        <div class="header-report">
+          Cierre de caja · {{CASH_REGISTER_NAME}} · Sesión {{SESSION_ID}}
+        </div>
+      </div>
+
+      <div class="page-header-right">
+        {{BRANCH_NAME}}<br>
+        Cierre: {{CLOSED_AT}}
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div class="section-label">Visión general</div>
+      <h2 class="section-title">Resumen del cierre</h2>
+      <p class="section-description">
+        Identificación de la sesión, resultados comerciales y estado general
+        de la conciliación realizada al momento del cierre.
+      </p>
+    </div>
+
+    <div class="summary-banner no-break">
+      <div class="summary-banner-icon">i</div>
+      <div>
+        <div class="summary-banner-title">Criterio del reporte</div>
+        <div class="summary-banner-text">
+          El documento considera únicamente las operaciones asociadas a la sesión
+          {{SESSION_ID}} de la caja {{CASH_REGISTER_NAME}}. Las ventas anuladas,
+          devoluciones y movimientos de caja se informan separadamente para conservar
+          la trazabilidad del cierre.
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Información de la sesión</div>
+      <div class="subsection-context">Datos operacionales</div>
+    </div>
+
+    <div class="meta-card no-break">
+      <table class="meta-table">
+        <tbody>
+          <tr>
+            <td>Sucursal</td>
+            <td>{{BRANCH_NAME}}</td>
+            <td>Punto de venta</td>
+            <td>{{POS_NAME}}</td>
+          </tr>
+          <tr>
+            <td>Caja</td>
+            <td>{{CASH_REGISTER_NAME}}</td>
+            <td>Sesión</td>
+            <td>{{SESSION_ID}}</td>
+          </tr>
+          <tr>
+            <td>Cajero</td>
+            <td>{{CASHIER_NAME}}</td>
+            <td>Estado</td>
+            <td><span class="badge {{SESSION_STATUS_CLASS}}">{{SESSION_STATUS}}</span></td>
+          </tr>
+          <tr>
+            <td>Apertura</td>
+            <td>{{OPENED_AT}}</td>
+            <td>Cierre</td>
+            <td>{{CLOSED_AT}}</td>
+          </tr>
+          <tr>
+            <td>Abierta por</td>
+            <td>{{OPENED_BY}}</td>
+            <td>Cerrada por</td>
+            <td>{{CLOSED_BY}}</td>
+          </tr>
+          <tr>
+            <td>Duración</td>
+            <td>{{SESSION_DURATION}}</td>
+            <td>Generado por</td>
+            <td>{{GENERATED_BY}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Indicadores principales</div>
+      <div class="subsection-context">Resultados de la sesión</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card primary no-break">
+        <div class="kpi-label">Ventas válidas</div>
+        <div class="kpi-value">{{VALID_SALES_COUNT}}</div>
+        <div class="kpi-hint">Transacciones cursadas y no anuladas</div>
+      </div>
+
+      <div class="kpi-card info no-break">
+        <div class="kpi-label">Venta neta</div>
+        <div class="kpi-value">{{NET_SALES_TOTAL}}</div>
+        <div class="kpi-hint">Después de descuentos y devoluciones</div>
+      </div>
+
+      <div class="kpi-card no-break">
+        <div class="kpi-label">Ticket promedio</div>
+        <div class="kpi-value">{{AVERAGE_TICKET}}</div>
+        <div class="kpi-hint">Venta neta / ventas válidas</div>
+      </div>
+
+      <div class="kpi-card warning no-break">
+        <div class="kpi-label">Ventas anuladas</div>
+        <div class="kpi-value">{{CANCELLED_SALES_COUNT}}</div>
+        <div class="kpi-hint">Monto anulado: {{CANCELLED_TOTAL}}</div>
+      </div>
+
+      <div class="kpi-card info no-break">
+        <div class="kpi-label">Efectivo esperado</div>
+        <div class="kpi-value">{{EXPECTED_CASH}}</div>
+        <div class="kpi-hint">Según fondo, ventas y movimientos</div>
+      </div>
+
+      <div class="kpi-card {{DIFFERENCE_CLASS}} no-break">
+        <div class="kpi-label">Diferencia de caja</div>
+        <div class="kpi-value">{{CASH_DIFFERENCE}}</div>
+        <div class="kpi-hint">{{DIFFERENCE_STATUS}}</div>
+      </div>
+    </div>
+
+    <div class="status-card no-break">
+      <div>
+        <div class="status-card-title">Resultado de la conciliación</div>
+        <div class="status-card-text">
+          Total declarado: {{TOTAL_DECLARED_CASH}} · Efectivo esperado: {{EXPECTED_CASH}}
+        </div>
+      </div>
+
+      <div>
+        <div class="difference-value {{DIFFERENCE_CLASS}}">{{CASH_DIFFERENCE}}</div>
+        <div class="text-right">
+          <span class="badge {{DIFFERENCE_CLASS}}">{{DIFFERENCE_STATUS}}</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div>{{COMPANY_NAME}}</div>
+      <div>Uso interno</div>
+      <div>Página <span class="page-number"></span></div>
+    </footer>
+  </section>
+
+  <!-- ============================================================
+       CONCILIACIÓN Y MEDIOS DE PAGO
+       ============================================================ -->
+  <section class="report-page">
+    <header class="page-header">
+      <div>
+        <div class="header-company">{{COMPANY_NAME}}</div>
+        <div class="header-report">
+          Cierre de caja · {{CASH_REGISTER_NAME}} · Sesión {{SESSION_ID}}
+        </div>
+      </div>
+
+      <div class="page-header-right">
+        {{BRANCH_NAME}}<br>
+        Cierre: {{CLOSED_AT}}
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div class="section-label">Conciliación financiera</div>
+      <h2 class="section-title">Origen y destino de los valores</h2>
+      <p class="section-description">
+        Composición de las ventas, medios de pago y cálculo utilizado para
+        determinar el efectivo esperado y la diferencia final de la sesión.
+      </p>
+    </div>
+
+    <div class="two-column">
+      <div class="panel no-break">
+        <div class="panel-title">Resultado comercial</div>
+        <div class="panel-body">
+          <table class="totals-table">
+            <tbody>
+              <tr><td>Venta bruta</td><td>{{GROSS_SALES}}</td></tr>
+              <tr><td>Descuentos</td><td>{{DISCOUNTS_TOTAL}}</td></tr>
+              <tr><td>Devoluciones</td><td>{{RETURNS_TOTAL}}</td></tr>
+              <tr><td>Monto anulado</td><td>{{CANCELLED_TOTAL}}</td></tr>
+              <tr class="grand-total"><td>Venta neta</td><td>{{NET_SALES_TOTAL}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel no-break">
+        <div class="panel-title">Conciliación de efectivo</div>
+        <div class="panel-body">
+          <table class="totals-table">
+            <tbody>
+              <tr><td>Fondo de apertura</td><td>{{OPENING_AMOUNT}}</td></tr>
+              <tr><td>Ventas en efectivo CLP</td><td>{{CASH_SALES}}</td></tr>
+              <tr><td>Ingresos extraordinarios</td><td>{{CASH_IN_TOTAL}}</td></tr>
+              <tr><td>Retiros / egresos</td><td>{{CASH_OUT_TOTAL}}</td></tr>
+              <tr><td>Devoluciones en efectivo</td><td>{{CASH_REFUNDS_TOTAL}}</td></tr>
+              <tr class="grand-total"><td>Efectivo esperado</td><td>{{EXPECTED_CASH}}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Resumen por medio de pago</div>
+      <div class="subsection-context">Cantidad y monto procesado</div>
+    </div>
+
+    <div class="table-wrapper no-break">
+      <table class="report-table compact-table">
+        <thead>
+          <tr>
+            <th style="width: 29%;">Medio de pago</th>
+            <th style="width: 14%;" class="text-right">Operaciones</th>
+            <th style="width: 19%;" class="text-right">Monto bruto</th>
+            <th style="width: 19%;" class="text-right">Devoluciones</th>
+            <th style="width: 19%;" class="text-right">Monto neto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{PAYMENT_METHOD_ROWS}}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td>TOTAL</td>
+            <td class="num">{{VALID_SALES_COUNT}}</td>
+            <td class="num">{{GROSS_SALES}}</td>
+            <td class="num">{{RETURNS_TOTAL}}</td>
+            <td class="num">{{NET_SALES_TOTAL}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="formula-box no-break">
+      <strong>Fórmula recomendada:</strong>
+      efectivo esperado = fondo de apertura + ventas en efectivo + ingresos extraordinarios
+      − retiros/egresos − devoluciones pagadas en efectivo. La diferencia corresponde a
+      total declarado equivalente en CLP − efectivo esperado.
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Totales declarados</div>
+      <div class="subsection-context">Valores físicos informados al cierre</div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card no-break">
+        <div class="kpi-label">Efectivo CLP contado</div>
+        <div class="kpi-value">{{COUNTED_CLP}}</div>
+        <div class="kpi-hint">Monedas y billetes nacionales</div>
+      </div>
+
+      <div class="kpi-card info no-break">
+        <div class="kpi-label">Divisas convertidas</div>
+        <div class="kpi-value">{{FOREIGN_CURRENCY_CLP}}</div>
+        <div class="kpi-hint">Equivalente en pesos chilenos</div>
+      </div>
+
+      <div class="kpi-card {{DIFFERENCE_CLASS}} no-break">
+        <div class="kpi-label">Total declarado</div>
+        <div class="kpi-value">{{TOTAL_DECLARED_CASH}}</div>
+        <div class="kpi-hint">Diferencia: {{CASH_DIFFERENCE}}</div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div>{{COMPANY_NAME}}</div>
+      <div>Uso interno</div>
+      <div>Página <span class="page-number"></span></div>
+    </footer>
+  </section>
+
+  <!-- ============================================================
+       CONTEO DE EFECTIVO Y DIVISAS
+       ============================================================ -->
+  <section class="report-page">
+    <header class="page-header">
+      <div>
+        <div class="header-company">{{COMPANY_NAME}}</div>
+        <div class="header-report">
+          Cierre de caja · {{CASH_REGISTER_NAME}} · Sesión {{SESSION_ID}}
+        </div>
+      </div>
+
+      <div class="page-header-right">
+        {{BRANCH_NAME}}<br>
+        Cierre: {{CLOSED_AT}}
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div class="section-label">Valores físicos</div>
+      <h2 class="section-title">Conteo de efectivo y divisas</h2>
+      <p class="section-description">
+        Detalle de las denominaciones declaradas al cierre y su valorización
+        para efectos de cuadratura de la sesión.
+      </p>
+    </div>
+
+    <div class="two-column">
+      <div>
+        <div class="subsection-header" style="margin-top: 0;">
+          <div class="subsection-title">Monedas CLP</div>
+          <div class="subsection-context">Conteo físico</div>
+        </div>
+
+        <div class="table-wrapper no-break">
+          <table class="report-table compact-table">
+            <thead>
+              <tr>
+                <th>Denominación</th>
+                <th class="text-right">Cantidad</th>
+                <th class="text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{CLP_COIN_ROWS}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="subsection-header" style="margin-top: 0;">
+          <div class="subsection-title">Billetes CLP</div>
+          <div class="subsection-context">Conteo físico</div>
+        </div>
+
+        <div class="table-wrapper no-break">
+          <table class="report-table compact-table">
+            <thead>
+              <tr>
+                <th>Denominación</th>
+                <th class="text-right">Cantidad</th>
+                <th class="text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{CLP_BILL_ROWS}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-card no-break">
+      <div>
+        <div class="status-card-title">Total efectivo nacional contado</div>
+        <div class="status-card-text">
+          Suma de monedas y billetes CLP informados en el arqueo.
+        </div>
+      </div>
+      <div class="difference-value neutral">{{COUNTED_CLP}}</div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Divisas extranjeras</div>
+      <div class="subsection-context">Conversión a CLP según tipo de cambio registrado</div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="report-table compact-table">
+        <thead>
+          <tr>
+            <th style="width: 14%;">Etiqueta</th>
+            <th style="width: 9%;">Divisa</th>
+            <th style="width: 12%;" class="text-right">Valor</th>
+            <th style="width: 10%;" class="text-right">Cantidad</th>
+            <th style="width: 13%;" class="text-right">Subtotal divisa</th>
+            <th style="width: 12%;" class="text-right">Tipo cambio</th>
+            <th style="width: 9%;" class="text-right">Fee</th>
+            <th style="width: 21%;" class="text-right">Equivalente CLP</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{FOREIGN_CURRENCY_ROWS}}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="7">TOTAL DIVISAS CONVERTIDAS</td>
+            <td class="num">{{FOREIGN_CURRENCY_CLP}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="table-note">
+      El reporte debe conservar el tipo de cambio, fecha/hora de la cotización y
+      cualquier comisión aplicada. No se recomienda recalcular históricos con una
+      tasa distinta a la registrada al momento del cierre.
+    </div>
+
+    <footer class="page-footer">
+      <div>{{COMPANY_NAME}}</div>
+      <div>Uso interno</div>
+      <div>Página <span class="page-number"></span></div>
+    </footer>
+  </section>
+
+  <!-- ============================================================
+       MOVIMIENTOS Y OBSERVACIONES
+       ============================================================ -->
+  <section class="report-page">
+    <header class="page-header">
+      <div>
+        <div class="header-company">{{COMPANY_NAME}}</div>
+        <div class="header-report">
+          Cierre de caja · {{CASH_REGISTER_NAME}} · Sesión {{SESSION_ID}}
+        </div>
+      </div>
+
+      <div class="page-header-right">
+        {{BRANCH_NAME}}<br>
+        Cierre: {{CLOSED_AT}}
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div class="section-label">Trazabilidad</div>
+      <h2 class="section-title">Movimientos y observaciones</h2>
+      <p class="section-description">
+        Registro de ingresos, retiros, ajustes y antecedentes utilizados para
+        explicar la operación y cualquier diferencia detectada.
+      </p>
+    </div>
+
+    <div class="subsection-header" style="margin-top: 0;">
+      <div class="subsection-title">Movimientos de caja</div>
+      <div class="subsection-context">Operaciones distintas de una venta</div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="report-table compact-table">
+        <thead>
+          <tr>
+            <th style="width: 15%;">Fecha / hora</th>
+            <th style="width: 13%;">Tipo</th>
+            <th style="width: 15%;">Referencia</th>
+            <th style="width: 33%;">Descripción / motivo</th>
+            <th style="width: 12%;">Usuario</th>
+            <th style="width: 12%;" class="text-right">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{CASH_MOVEMENT_ROWS}}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">TOTALES DE MOVIMIENTOS</td>
+            <td class="num">Ingresos</td>
+            <td class="num">{{CASH_IN_TOTAL}}</td>
+          </tr>
+          <tr>
+            <td colspan="5" class="text-right">Retiros / egresos</td>
+            <td class="num">{{CASH_OUT_TOTAL}}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Observaciones del cierre</div>
+      <div class="subsection-context">Antecedentes administrativos</div>
+    </div>
+
+    <div class="observation-grid">
+      <div class="observation-card">
+        <div class="observation-label">Observaciones de la sesión</div>
+        <div class="observation-text">{{SESSION_OBSERVATIONS}}</div>
+      </div>
+
+      <div class="observation-card">
+        <div class="observation-label">Observación administrativa de cierre</div>
+        <div class="observation-text">{{CLOSING_OBSERVATION}}</div>
+      </div>
+
+      <div class="observation-card full">
+        <div class="observation-label">Justificación de diferencia</div>
+        <div class="observation-text">{{DIFFERENCE_REASON}}</div>
+      </div>
+    </div>
+
+    <div class="approval-card no-break">
+      <div>
+        <div class="signature-block">Cajero responsable · {{CASHIER_NAME}}</div>
+        <div class="approval-meta">
+          Sesión {{SESSION_ID}} · Cierre {{CLOSED_AT}}
+        </div>
+      </div>
+
+      <div>
+        <div class="signature-block">Supervisor / responsable · {{SUPERVISOR_NAME}}</div>
+        <div class="approval-meta">
+          Autorización / referencia: {{SUPERVISOR_AUTHORIZATION}}
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <div>{{COMPANY_NAME}}</div>
+      <div>Uso interno</div>
+      <div>Página <span class="page-number"></span></div>
+    </footer>
+  </section>
+
+  <!-- ============================================================
+       LISTADO DE VENTAS
+       Esta sección puede crecer a múltiples páginas. El encabezado de tabla
+       se repetirá automáticamente en motores de impresión compatibles.
+       ============================================================ -->
+  <section class="report-page flow-page">
+    <header class="page-header">
+      <div>
+        <div class="header-company">{{COMPANY_NAME}}</div>
+        <div class="header-report">
+          Cierre de caja · {{CASH_REGISTER_NAME}} · Sesión {{SESSION_ID}}
+        </div>
+      </div>
+
+      <div class="page-header-right">
+        {{BRANCH_NAME}}<br>
+        Cierre: {{CLOSED_AT}}
+      </div>
+    </header>
+
+    <div class="section-heading">
+      <div class="section-label">Detalle transaccional</div>
+      <h2 class="section-title">Ventas cursadas por la caja</h2>
+      <p class="section-description">
+        Relación de ventas asociadas a la sesión. Se incluyen operaciones válidas,
+        anuladas o con devolución para conservar trazabilidad y permitir la revisión
+        contra documentos tributarios y medios de pago.
+      </p>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="report-table">
+        <colgroup>
+          <col style="width: 11%;">
+          <col style="width: 15%;">
+          <col style="width: 14%;">
+          <col style="width: 12%;">
+          <col style="width: 19%;">
+          <col style="width: 12%;">
+          <col style="width: 17%;">
+        </colgroup>
+
+        <thead>
+          <tr>
+            <th>Venta / folio</th>
+            <th>Fecha y hora</th>
+            <th>Documento</th>
+            <th>Estado</th>
+            <th>Medio(s) de pago</th>
+            <th class="text-right">Monto</th>
+            <th>Referencia / observación</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {{SALES_ROWS}}
+        </tbody>
+
+        <tfoot>
+          <tr>
+            <td colspan="4">TOTAL DE LA SESIÓN</td>
+            <td class="num">{{VALID_SALES_COUNT}} ventas válidas</td>
+            <td class="num">{{NET_SALES_TOTAL}}</td>
+            <td>{{CANCELLED_SALES_COUNT}} anuladas</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="table-note">
+      Las filas anuladas pueden utilizar la clase <strong>alert-row</strong> y las
+      ventas con devolución parcial la clase <strong>warning-row</strong>. El monto
+      total del pie debe corresponder a la venta neta válida de la sesión.
+    </div>
+
+    <div style="margin-top: 0.28in; padding-top: 0.08in; border-top: 1px solid var(--slate-200); color: var(--slate-400); font-size: 7px; display: grid; grid-template-columns: 1fr 1fr 1fr;">
+      <div>{{COMPANY_NAME}}</div>
+      <div class="text-center">{{FOOTER_NOTE}}</div>
+      <div class="text-right">Fin del reporte</div>
+    </div>
+  </section>
+
+</body>
+</html>

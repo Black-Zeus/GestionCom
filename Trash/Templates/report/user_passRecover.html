@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+
+  <title>Código de recuperación de contraseña</title>
+
+  <!--
+    ==================================================================
+    TEMPLATE EMAIL: RECUPERACIÓN DE CONTRASEÑA MEDIANTE OTP
+    ==================================================================
+
+    OBJETIVO
+    ------------------------------------------------------------------
+    Enviar al usuario un código OTP numérico de 6 dígitos para validar
+    una solicitud de recuperación de contraseña.
+
+    VARIABLES GENERALES
+    ------------------------------------------------------------------
+    {{COMPANY_NAME}}             Nombre de la empresa
+    {{SYSTEM_NAME}}              Nombre del sistema
+    {{LOGO_URL}}                 URL HTTPS pública del logotipo
+    {{SUPPORT_EMAIL}}            Correo de soporte
+    {{SUPPORT_PHONE}}            Teléfono de soporte
+    {{FOOTER_NOTE}}              Nota institucional
+
+    USUARIO
+    ------------------------------------------------------------------
+    {{USER_FULL_NAME}}           Nombre completo del usuario
+    {{USERNAME}}                 Nombre de usuario
+    {{USER_EMAIL}}               Correo asociado a la cuenta
+
+    OTP
+    ------------------------------------------------------------------
+    {{OTP_CODE}}                 Código OTP de exactamente 6 dígitos
+    {{OTP_EXPIRES_AT}}           Fecha y hora exacta de expiración
+    {{OTP_VALIDITY_MINUTES}}     Vigencia del código en minutos
+    {{MAX_OTP_ATTEMPTS}}         Cantidad máxima de intentos permitidos
+
+    SOLICITUD
+    ------------------------------------------------------------------
+    {{REQUESTED_AT}}             Fecha y hora de solicitud
+    {{REQUEST_IP}}               Dirección IP de origen
+    {{REQUEST_DEVICE}}           Navegador o dispositivo
+    {{TRANSACTION_ID}}           Identificador de trazabilidad
+    {{GENERATED_AT}}             Fecha/hora de generación del mensaje
+
+    SEGURIDAD
+    ------------------------------------------------------------------
+    - El OTP debe ser numérico y contener exactamente 6 dígitos.
+    - Debe ser de un solo uso.
+    - Debe expirar después de pocos minutos.
+    - Debe invalidarse al utilizarse o al solicitar uno nuevo.
+    - No almacenar el OTP en texto plano.
+    - Limitar la cantidad de intentos fallidos.
+    - No incluir enlaces de restablecimiento en este correo.
+    - No utilizar JavaScript.
+    ==================================================================
+  -->
+
+  <style>
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    img {
+      display: block;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+
+    a {
+      text-decoration: none;
+    }
+
+    .email-container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .mobile-padding {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .otp-code {
+      letter-spacing: 12px;
+      white-space: nowrap;
+    }
+
+    @media only screen and (max-width: 640px) {
+      .email-container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .mobile-padding {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+      }
+
+      .otp-code {
+        font-size: 29px !important;
+        letter-spacing: 7px !important;
+      }
+
+      .detail-label,
+      .detail-value {
+        display: block !important;
+        width: 100% !important;
+        text-align: left !important;
+      }
+
+      .detail-value {
+        padding-top: 3px !important;
+      }
+    }
+  </style>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f1f5f9; color:#1e293b; font-family:Arial, Helvetica, sans-serif;">
+
+  <!-- Preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+    Utiliza el código de 6 dígitos para continuar con la recuperación de tu contraseña en {{SYSTEM_NAME}}.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="width:100%; background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <table role="presentation" class="email-container" width="640"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px; background-color:#ffffff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+
+          <!-- ENCABEZADO -->
+          <tr>
+            <td style="padding:26px 32px; background-color:#0f172a; border-bottom:4px solid #3b82f6;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <img src="{{LOGO_URL}}"
+                         width="150"
+                         alt="{{COMPANY_NAME}}"
+                         style="display:block; width:150px; max-width:150px; max-height:52px;">
+                  </td>
+
+                  <td align="right" valign="middle"
+                      style="color:#94a3b8; font-size:11px; line-height:1.4; text-transform:uppercase; letter-spacing:0.7px;">
+                    {{SYSTEM_NAME}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- INTRODUCCIÓN -->
+          <tr>
+            <td class="mobile-padding" style="padding:34px 32px 20px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+
+                    <div style="width:56px; height:56px; line-height:56px; border-radius:50%; background-color:#dbeafe; color:#1d4ed8; font-size:25px; font-weight:bold; text-align:center;">
+                      #
+                    </div>
+
+                    <h1 style="margin:18px 0 8px 0; color:#0f172a; font-size:26px; line-height:1.25; font-weight:700;">
+                      Código de recuperación
+                    </h1>
+
+                    <p style="margin:0; color:#64748b; font-size:15px; line-height:1.6;">
+                      Hola <strong style="color:#334155;">{{USER_FULL_NAME}}</strong>,
+                      utiliza el siguiente código para continuar con la recuperación
+                      de tu contraseña en
+                      <strong style="color:#334155;">{{SYSTEM_NAME}}</strong>.
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- OTP -->
+          <tr>
+            <td class="mobile-padding" align="center" style="padding:0 32px 16px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:22px 18px 20px 18px;">
+
+                    <div style="margin-bottom:10px; color:#1e40af; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.8px;">
+                      Código OTP
+                    </div>
+
+                    <div class="otp-code"
+                         style="color:#0f172a; font-family:'Courier New', Courier, monospace; font-size:36px; line-height:1.2; font-weight:bold; letter-spacing:12px; white-space:nowrap;">
+                      {{OTP_CODE}}
+                    </div>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- VIGENCIA -->
+          <tr>
+            <td class="mobile-padding" align="center"
+                style="padding:0 32px 22px 32px; color:#64748b; font-size:12px; line-height:1.55;">
+              Este código vence el
+              <strong style="color:#334155;">{{OTP_EXPIRES_AT}}</strong>
+              y tiene una vigencia de
+              <strong style="color:#334155;">{{OTP_VALIDITY_MINUTES}} minutos</strong>.
+            </td>
+          </tr>
+
+          <!-- INSTRUCCIONES -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e2e8f0; border-radius:9px; overflow:hidden;">
+
+                <tr>
+                  <td style="padding:15px 16px; background-color:#f8fafc;">
+
+                    <div style="margin-bottom:8px; color:#0f172a; font-size:13px; font-weight:bold;">
+                      Cómo utilizarlo
+                    </div>
+
+                    <div style="color:#475569; font-size:13px; line-height:1.6;">
+                      1. Regresa a la pantalla de recuperación de contraseña.<br>
+                      2. Ingresa los seis dígitos exactamente como aparecen.<br>
+                      3. Define una nueva contraseña cuando el código sea validado.
+                    </div>
+
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- CUENTA -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Información de la cuenta
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 22px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e2e8f0; border-radius:9px; overflow:hidden;">
+
+                <tr>
+                  <td class="detail-label" width="40%"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Usuario
+                  </td>
+
+                  <td class="detail-value" width="60%" align="right"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USERNAME}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label"
+                      style="padding:11px 14px; color:#64748b; font-size:13px;">
+                    Correo asociado
+                  </td>
+
+                  <td class="detail-value" align="right"
+                      style="padding:11px 14px; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USER_EMAIL}}
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- DATOS DE SOLICITUD -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Información de la solicitud
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e2e8f0; border-radius:9px; overflow:hidden;">
+
+                <tr>
+                  <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:12px;">
+                    Fecha y hora
+                  </td>
+
+                  <td align="right"
+                      style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#334155; font-size:12px; font-weight:bold;">
+                    {{REQUESTED_AT}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:12px;">
+                    Dirección IP
+                  </td>
+
+                  <td align="right"
+                      style="padding:10px 14px; border-bottom:1px solid #e2e8f0; color:#334155; font-size:12px; font-weight:bold;">
+                    {{REQUEST_IP}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:10px 14px; color:#64748b; font-size:12px;">
+                    Dispositivo
+                  </td>
+
+                  <td align="right"
+                      style="padding:10px 14px; color:#334155; font-size:12px; font-weight:bold;">
+                    {{REQUEST_DEVICE}}
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- SEGURIDAD -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:8px;">
+
+                <tr>
+                  <td style="padding:15px 16px;">
+
+                    <div style="margin-bottom:5px; color:#92400e; font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                      Información de seguridad
+                    </div>
+
+                    <div style="color:#78350f; font-size:13px; line-height:1.55;">
+                      No compartas este código con ninguna persona.
+                      El equipo de soporte nunca te solicitará el OTP por correo,
+                      teléfono, mensajería o acceso remoto. Dispones de un máximo de
+                      {{MAX_OTP_ATTEMPTS}} intentos para validarlo.
+                    </div>
+
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- NO SOLICITADO -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fef2f2; border:1px solid #fecaca; border-left:4px solid #ef4444; border-radius:8px;">
+
+                <tr>
+                  <td style="padding:15px 16px;">
+
+                    <div style="margin-bottom:5px; color:#b91c1c; font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                      ¿No solicitaste recuperar tu contraseña?
+                    </div>
+
+                    <div style="color:#991b1b; font-size:13px; line-height:1.55;">
+                      Ignora este mensaje y no compartas el código. Tu contraseña actual
+                      permanecerá sin cambios. Comunícate con soporte si detectas actividad
+                      no reconocida.
+                    </div>
+
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- SOPORTE -->
+          <tr>
+            <td class="mobile-padding"
+                style="padding:0 32px 26px 32px; color:#475569; font-size:12px; line-height:1.6;">
+              Soporte:
+              <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#2563eb; font-weight:bold;">
+                {{SUPPORT_EMAIL}}
+              </a>
+              · {{SUPPORT_PHONE}}
+            </td>
+          </tr>
+
+          <!-- TRAZABILIDAD -->
+          <tr>
+            <td class="mobile-padding" align="center"
+                style="padding:0 32px 28px 32px; color:#94a3b8; font-size:10px; line-height:1.55;">
+              ID de operación:
+              <strong style="color:#64748b;">{{TRANSACTION_ID}}</strong><br>
+              Mensaje generado el {{GENERATED_AT}}
+            </td>
+          </tr>
+
+          <!-- PIE -->
+          <tr>
+            <td style="padding:22px 32px; background-color:#0f172a;">
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+
+                <tr>
+                  <td align="center" style="color:#cbd5e1; font-size:12px; line-height:1.6;">
+                    <strong style="color:#ffffff;">{{COMPANY_NAME}}</strong><br>
+                    {{SYSTEM_NAME}}<br>
+                    <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#93c5fd;">
+                      {{SUPPORT_EMAIL}}
+                    </a>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center"
+                      style="padding-top:15px; color:#94a3b8; font-size:10px; line-height:1.5;">
+                    {{FOOTER_NOTE}}
+                  </td>
+                </tr>
+
+              </table>
+
+            </td>
+          </tr>
+
+        </table>
+
+        <table role="presentation" class="email-container" width="640"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px;">
+
+          <tr>
+            <td align="center"
+                style="padding:15px 20px 0 20px; color:#94a3b8; font-size:10px; line-height:1.5;">
+              Este mensaje fue generado automáticamente. No respondas directamente a este correo.
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

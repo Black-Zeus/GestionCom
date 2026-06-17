@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+
+  <title>Cuenta de usuario creada</title>
+
+  <!--
+    ==================================================================
+    TEMPLATE EMAIL: CUENTA DE USUARIO CREADA
+    ==================================================================
+
+    OBJETIVO
+    ------------------------------------------------------------------
+    Notificar a un usuario interno del sistema que su cuenta fue creada
+    y entregar la información necesaria para realizar el primer acceso.
+
+    VARIABLES GENERALES
+    ------------------------------------------------------------------
+    {{COMPANY_NAME}}             Nombre de la empresa o plataforma
+    {{SYSTEM_NAME}}              Nombre del sistema
+    {{LOGO_URL}}                 URL HTTPS pública del logotipo
+    {{SUPPORT_EMAIL}}            Correo de soporte
+    {{SUPPORT_PHONE}}            Teléfono de soporte
+    {{FOOTER_NOTE}}              Nota institucional del pie
+
+    DATOS DEL USUARIO
+    ------------------------------------------------------------------
+    {{USER_FULL_NAME}}           Nombre completo
+    {{USERNAME}}                 Nombre de usuario
+    {{USER_EMAIL}}               Correo registrado
+    {{USER_ROLE}}                Rol asignado
+    {{USER_SCOPE}}               Sucursal, área o alcance asignado
+    {{ACCOUNT_STATUS}}           Activa / Pendiente de activación
+    {{CREATED_AT}}               Fecha y hora de creación
+    {{CREATED_BY}}               Usuario o proceso que creó la cuenta
+
+    ACCESO
+    ------------------------------------------------------------------
+    {{LOGIN_URL}}                URL de acceso al sistema
+    {{ACTIVATION_URL}}           URL para definir contraseña o activar
+    {{ACTIVATION_EXPIRES_AT}}    Vencimiento del enlace
+    {{ACTIVATION_BLOCK}}         Bloque HTML opcional con botón
+    {{CREDENTIALS_BLOCK}}        Bloque HTML opcional para credencial temporal
+    {{ACCESS_ROWS}}              Filas HTML adicionales de permisos o accesos
+
+    SEGURIDAD
+    ------------------------------------------------------------------
+    {{SECURITY_NOTE}}            Instrucción o política de seguridad
+    {{TRANSACTION_ID}}           Identificador de trazabilidad
+    {{GENERATED_AT}}             Fecha y hora de generación del correo
+
+    RECOMENDACIONES
+    ------------------------------------------------------------------
+    - No enviar contraseñas permanentes por correo.
+    - Preferir un enlace de activación de un solo uso y con expiración.
+    - {{ACTIVATION_BLOCK}}, {{CREDENTIALS_BLOCK}} y {{ACCESS_ROWS}}
+      deben generarse desde el backend.
+    - Utilizar URLs públicas HTTPS para imágenes.
+    - No utilizar JavaScript.
+    - Estructura basada en tablas y estilos inline para compatibilidad
+      con Outlook, Gmail, Apple Mail y clientes móviles.
+    ==================================================================
+  -->
+
+  <style>
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    img {
+      display: block;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .email-container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .mobile-padding {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    @media only screen and (max-width: 640px) {
+      .email-container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .mobile-padding {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+      }
+
+      .detail-label,
+      .detail-value {
+        display: block !important;
+        width: 100% !important;
+        text-align: left !important;
+      }
+
+      .detail-value {
+        padding-top: 3px !important;
+      }
+    }
+  </style>
+</head>
+
+<body style="margin:0; padding:0; width:100%; background-color:#f1f5f9; color:#1e293b; font-family:Arial, Helvetica, sans-serif;">
+
+  <!-- Preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+    Tu cuenta de usuario para {{SYSTEM_NAME}} fue creada correctamente.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="width:100%; background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <table role="presentation" class="email-container" width="640"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px; background-color:#ffffff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+
+          <!-- HEADER -->
+          <tr>
+            <td style="padding:26px 32px; background-color:#0f172a; border-bottom:4px solid #10b981;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <img src="{{LOGO_URL}}"
+                         width="150"
+                         alt="{{COMPANY_NAME}}"
+                         style="display:block; width:150px; max-width:150px; max-height:52px;">
+                  </td>
+
+                  <td align="right" valign="middle">
+                    <div style="color:#94a3b8; font-size:11px; line-height:1.4; text-transform:uppercase; letter-spacing:0.7px;">
+                      {{SYSTEM_NAME}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CONFIRMACIÓN -->
+          <tr>
+            <td class="mobile-padding" style="padding:34px 32px 22px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+
+                    <div style="width:56px; height:56px; line-height:56px; border-radius:50%; background-color:#d1fae5; color:#047857; font-size:28px; font-weight:bold; text-align:center;">
+                      ✓
+                    </div>
+
+                    <h1 style="margin:18px 0 8px 0; color:#0f172a; font-size:26px; line-height:1.25; font-weight:700;">
+                      Tu cuenta ha sido creada
+                    </h1>
+
+                    <p style="margin:0; color:#64748b; font-size:15px; line-height:1.6;">
+                      Hola <strong style="color:#334155;">{{USER_FULL_NAME}}</strong>,
+                      se ha creado una cuenta de usuario para que puedas acceder a
+                      <strong style="color:#334155;">{{SYSTEM_NAME}}</strong>.
+                    </p>
+
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ESTADO -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#ecfdf5; border:1px solid #a7f3d0; border-left:4px solid #10b981; border-radius:8px;">
+                <tr>
+                  <td style="padding:15px 16px;">
+                    <div style="margin-bottom:4px; color:#047857; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.6px;">
+                      Estado de la cuenta
+                    </div>
+
+                    <div style="color:#065f46; font-size:15px; font-weight:bold;">
+                      {{ACCOUNT_STATUS}}
+                    </div>
+
+                    <div style="margin-top:4px; color:#047857; font-size:12px; line-height:1.5;">
+                      Creada el {{CREATED_AT}} por {{CREATED_BY}}.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- DATOS DE LA CUENTA -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Información de la cuenta
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="width:100%; border:1px solid #e2e8f0; border-radius:9px; overflow:hidden;">
+
+                <tr>
+                  <td class="detail-label" width="40%"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Nombre
+                  </td>
+
+                  <td class="detail-value" width="60%" align="right"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USER_FULL_NAME}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Usuario
+                  </td>
+
+                  <td class="detail-value" align="right"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USERNAME}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Correo registrado
+                  </td>
+
+                  <td class="detail-value" align="right"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USER_EMAIL}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Rol asignado
+                  </td>
+
+                  <td class="detail-value" align="right"
+                      style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USER_ROLE}}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="detail-label"
+                      style="padding:11px 14px; color:#64748b; font-size:13px;">
+                    Alcance
+                  </td>
+
+                  <td class="detail-value" align="right"
+                      style="padding:11px 14px; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{USER_SCOPE}}
+                  </td>
+                </tr>
+
+                {{ACCESS_ROWS}}
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- BLOQUE OPCIONAL DE ACTIVACIÓN -->
+          {{ACTIVATION_BLOCK}}
+
+          <!-- BLOQUE OPCIONAL DE CREDENCIALES TEMPORALES -->
+          {{CREDENTIALS_BLOCK}}
+
+          <!-- SEGURIDAD -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fffbeb; border:1px solid #fde68a; border-left:4px solid #f59e0b; border-radius:8px;">
+                <tr>
+                  <td style="padding:15px 16px;">
+                    <div style="margin-bottom:5px; color:#92400e; font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                      Recomendaciones de seguridad
+                    </div>
+
+                    <div style="color:#78350f; font-size:13px; line-height:1.55;">
+                      {{SECURITY_NOTE}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ACCESO DIRECTO -->
+          <tr>
+            <td class="mobile-padding" align="center" style="padding:0 32px 28px 32px;">
+              <a href="{{LOGIN_URL}}"
+                 style="display:inline-block; padding:13px 24px; background-color:#2563eb; border:1px solid #1d4ed8; border-radius:8px; color:#ffffff; font-size:14px; font-weight:bold; line-height:1.2; text-decoration:none;">
+                Ir al sistema
+              </a>
+
+              <div style="margin-top:12px; color:#94a3b8; font-size:11px; line-height:1.5; word-break:break-all;">
+                {{LOGIN_URL}}
+              </div>
+            </td>
+          </tr>
+
+          <!-- SOPORTE -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 28px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                <tr>
+                  <td style="padding:15px 16px; color:#475569; font-size:12px; line-height:1.6;">
+                    Si no reconoces esta solicitud, detectas información incorrecta
+                    o presentas problemas de acceso, comunícate con soporte:
+                    <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#2563eb; font-weight:bold; text-decoration:none;">
+                      {{SUPPORT_EMAIL}}
+                    </a>
+                    · {{SUPPORT_PHONE}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- TRAZABILIDAD -->
+          <tr>
+            <td class="mobile-padding" align="center" style="padding:0 32px 30px 32px; color:#94a3b8; font-size:10px; line-height:1.55;">
+              ID de operación:
+              <strong style="color:#64748b;">{{TRANSACTION_ID}}</strong><br>
+              Mensaje generado el {{GENERATED_AT}}
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="padding:22px 32px; background-color:#0f172a;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="color:#cbd5e1; font-size:12px; line-height:1.6;">
+                    <strong style="color:#ffffff;">{{COMPANY_NAME}}</strong><br>
+                    {{SYSTEM_NAME}}<br>
+                    <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#6ee7b7; text-decoration:none;">
+                      {{SUPPORT_EMAIL}}
+                    </a>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding-top:15px; color:#94a3b8; font-size:10px; line-height:1.5;">
+                    {{FOOTER_NOTE}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+        <table role="presentation" class="email-container" width="640"
+               cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px;">
+          <tr>
+            <td align="center" style="padding:15px 20px 0 20px; color:#94a3b8; font-size:10px; line-height:1.5;">
+              Este mensaje fue generado automáticamente. No respondas directamente a este correo.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

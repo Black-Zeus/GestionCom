@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Comprobante de venta {{SALE_NUMBER}}</title>
+
+  <!--
+    ================================================================
+    TEMPLATE EMAIL: VENTA PROCESADA / COMPROBANTE DE VENTA
+    ================================================================
+
+    VARIABLES GENERALES
+    ----------------------------------------------------------------
+    {{COMPANY_NAME}}          Nombre comercial de la empresa
+    {{COMPANY_LEGAL_NAME}}    Razón social
+    {{COMPANY_RUT}}           RUT de la empresa
+    {{COMPANY_ADDRESS}}       Dirección comercial
+    {{COMPANY_PHONE}}         Teléfono
+    {{COMPANY_EMAIL}}         Correo de contacto
+    {{COMPANY_WEBSITE}}       Sitio web
+    {{LOGO_URL}}              URL pública HTTPS del logotipo
+
+    DATOS DE LA VENTA
+    ----------------------------------------------------------------
+    {{SALE_NUMBER}}           Número interno de venta
+    {{SALE_DATE}}             Fecha de venta, por ejemplo 16/06/2026
+    {{SALE_TIME}}             Hora de venta, por ejemplo 18:42
+    {{SALE_STATUS}}           Estado: Procesada / Pagada / Completada
+    {{BRANCH_NAME}}           Sucursal
+    {{POS_NAME}}              Punto de venta
+    {{REGISTER_NAME}}         Caja
+    {{CASHIER_NAME}}          Cajero
+    {{CURRENCY}}              Moneda principal, por ejemplo CLP
+
+    CLIENTE
+    ----------------------------------------------------------------
+    {{CUSTOMER_NAME}}         Nombre del cliente
+    {{CUSTOMER_DOCUMENT}}     RUT u otro documento
+    {{CUSTOMER_EMAIL}}        Correo del cliente
+
+    DETALLE
+    ----------------------------------------------------------------
+    {{ITEM_ROWS}}             Filas HTML <tr>...</tr> con productos
+    {{SUBTOTAL}}              Subtotal
+    {{DISCOUNT_TOTAL}}        Descuentos
+    {{TAX_TOTAL}}             Impuestos
+    {{TOTAL_AMOUNT}}          Total final
+    {{PAYMENT_ROWS}}          Filas HTML de medios de pago
+    {{CHANGE_AMOUNT}}         Vuelto entregado
+    {{SALE_NOTES}}            Observación de la venta
+
+    DOCUMENTO TRIBUTARIO / COMPROBANTE
+    ----------------------------------------------------------------
+    {{DOCUMENT_TYPE}}         Boleta / Factura / Comprobante interno
+    {{DOCUMENT_NUMBER}}       Folio o número de documento
+    {{DOCUMENT_URL}}          URL para consultar o descargar documento
+    {{DOCUMENT_BLOCK}}        Bloque HTML opcional con datos tributarios
+    {{CTA_BLOCK}}             Botón HTML opcional para ver el comprobante
+
+    SOPORTE Y TRAZABILIDAD
+    ----------------------------------------------------------------
+    {{TRANSACTION_ID}}        Identificador único de transacción
+    {{GENERATED_AT}}          Fecha/hora de generación del correo
+    {{SUPPORT_EMAIL}}         Correo de soporte
+    {{FOOTER_NOTE}}           Nota adicional
+    {{LEGAL_NOTE}}            Nota legal o tributaria
+
+    NOTAS DE IMPLEMENTACIÓN
+    ----------------------------------------------------------------
+    - {{ITEM_ROWS}}, {{PAYMENT_ROWS}}, {{DOCUMENT_BLOCK}} y {{CTA_BLOCK}}
+      deben ser generados por el backend.
+    - Utilizar URLs públicas HTTPS para imágenes.
+    - Este correo no debe incorporar JavaScript.
+    - El HTML está construido con tablas para mejorar compatibilidad con
+      Gmail, Outlook, Apple Mail y clientes móviles.
+    ================================================================
+  -->
+
+  <style>
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      background-color: #f1f5f9;
+      color: #1e293b;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    img {
+      border: 0;
+      display: block;
+      line-height: 100%;
+      outline: none;
+      text-decoration: none;
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    .email-container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .mobile-padding {
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+
+    .summary-column {
+      width: 50%;
+    }
+
+    .item-table th,
+    .item-table td {
+      font-size: 13px;
+    }
+
+    @media only screen and (max-width: 640px) {
+      .email-container {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .mobile-padding {
+        padding-left: 18px !important;
+        padding-right: 18px !important;
+      }
+
+      .summary-column {
+        display: block !important;
+        width: 100% !important;
+      }
+
+      .summary-column-left {
+        padding-right: 0 !important;
+        padding-bottom: 12px !important;
+      }
+
+      .item-table th,
+      .item-table td {
+        font-size: 12px !important;
+      }
+
+      .hide-mobile {
+        display: none !important;
+      }
+
+      .total-label {
+        width: 52% !important;
+      }
+
+      .total-value {
+        width: 48% !important;
+      }
+    }
+  </style>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f1f5f9; color:#1e293b; font-family:Arial, Helvetica, sans-serif;">
+
+  <!-- Preheader oculto -->
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+    Tu venta {{SALE_NUMBER}} fue procesada correctamente por un total de {{TOTAL_AMOUNT}}.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <table role="presentation" class="email-container" width="640" cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px; background-color:#ffffff; border-radius:14px; overflow:hidden; box-shadow:0 8px 30px rgba(15,23,42,0.08);">
+
+          <!-- Encabezado -->
+          <tr>
+            <td style="background-color:#0f172a; padding:28px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <img src="{{LOGO_URL}}" width="150" alt="{{COMPANY_NAME}}"
+                         style="display:block; max-width:150px; max-height:54px; object-fit:contain;">
+                  </td>
+
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block; padding:7px 12px; border-radius:999px; background-color:#064e3b; color:#a7f3d0; font-size:11px; line-height:1; font-weight:bold; text-transform:uppercase; letter-spacing:0.7px;">
+                      {{SALE_STATUS}}
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Confirmación -->
+          <tr>
+            <td class="mobile-padding" style="padding:34px 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center">
+                    <div style="width:54px; height:54px; line-height:54px; border-radius:50%; background-color:#d1fae5; color:#047857; font-size:28px; font-weight:bold; text-align:center;">
+                      ✓
+                    </div>
+
+                    <h1 style="margin:18px 0 8px 0; color:#0f172a; font-size:26px; line-height:1.25; font-weight:700;">
+                      Venta procesada correctamente
+                    </h1>
+
+                    <p style="margin:0; color:#64748b; font-size:15px; line-height:1.6;">
+                      Hola <strong style="color:#334155;">{{CUSTOMER_NAME}}</strong>, gracias por tu compra.
+                      A continuación encontrarás el resumen y comprobante de la operación.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Resumen principal -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+                <tr>
+                  <td class="summary-column summary-column-left" width="50%" valign="top"
+                      style="padding:18px 16px 18px 18px; border-right:1px solid #e2e8f0;">
+                    <div style="margin-bottom:5px; color:#94a3b8; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.6px;">
+                      Número de venta
+                    </div>
+                    <div style="color:#0f172a; font-size:18px; font-weight:bold;">
+                      {{SALE_NUMBER}}
+                    </div>
+
+                    <div style="margin-top:14px; margin-bottom:5px; color:#94a3b8; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.6px;">
+                      Fecha y hora
+                    </div>
+                    <div style="color:#334155; font-size:14px;">
+                      {{SALE_DATE}} · {{SALE_TIME}}
+                    </div>
+                  </td>
+
+                  <td class="summary-column" width="50%" valign="top" style="padding:18px;">
+                    <div style="margin-bottom:5px; color:#94a3b8; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.6px;">
+                      Total pagado
+                    </div>
+                    <div style="color:#047857; font-size:26px; font-weight:bold;">
+                      {{TOTAL_AMOUNT}}
+                    </div>
+
+                    <div style="margin-top:14px; margin-bottom:5px; color:#94a3b8; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.6px;">
+                      Documento
+                    </div>
+                    <div style="color:#334155; font-size:14px;">
+                      {{DOCUMENT_TYPE}} {{DOCUMENT_NUMBER}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Información de la operación -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Información de la operación
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 26px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                <tr>
+                  <td style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Sucursal
+                  </td>
+                  <td align="right" style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{BRANCH_NAME}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Punto de venta
+                  </td>
+                  <td align="right" style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{POS_NAME}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Caja
+                  </td>
+                  <td align="right" style="padding:11px 14px; border-bottom:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{REGISTER_NAME}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:11px 14px; color:#64748b; font-size:13px;">
+                    Atendido por
+                  </td>
+                  <td align="right" style="padding:11px 14px; color:#0f172a; font-size:13px; font-weight:bold;">
+                    {{CASHIER_NAME}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Detalle de productos -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Detalle de la compra
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 22px 32px;">
+              <table role="presentation" class="item-table" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="width:100%; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                <thead>
+                  <tr style="background-color:#0f172a;">
+                    <th align="left" style="padding:11px 10px; color:#ffffff; font-size:12px; font-weight:bold;">
+                      Producto
+                    </th>
+                    <th align="center" style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold;">
+                      Cant.
+                    </th>
+                    <th class="hide-mobile" align="right" style="padding:11px 8px; color:#ffffff; font-size:12px; font-weight:bold;">
+                      Precio
+                    </th>
+                    <th align="right" style="padding:11px 10px; color:#ffffff; font-size:12px; font-weight:bold;">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {{ITEM_ROWS}}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Totales -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+                <tr>
+                  <td class="total-label" width="65%" style="padding:10px 14px; color:#64748b; font-size:13px;">
+                    Subtotal
+                  </td>
+                  <td class="total-value" width="35%" align="right" style="padding:10px 14px; color:#334155; font-size:13px;">
+                    {{SUBTOTAL}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 14px; border-top:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Descuentos
+                  </td>
+                  <td align="right" style="padding:10px 14px; border-top:1px solid #e2e8f0; color:#dc2626; font-size:13px;">
+                    {{DISCOUNT_TOTAL}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 14px; border-top:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                    Impuestos
+                  </td>
+                  <td align="right" style="padding:10px 14px; border-top:1px solid #e2e8f0; color:#334155; font-size:13px;">
+                    {{TAX_TOTAL}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:15px 14px; border-top:2px solid #cbd5e1; color:#0f172a; font-size:16px; font-weight:bold;">
+                    Total pagado
+                  </td>
+                  <td align="right" style="padding:15px 14px; border-top:2px solid #cbd5e1; color:#047857; font-size:20px; font-weight:bold;">
+                    {{TOTAL_AMOUNT}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Medios de pago -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 8px 32px;">
+              <h2 style="margin:0 0 12px 0; color:#0f172a; font-size:17px; line-height:1.3;">
+                Medios de pago
+              </h2>
+            </td>
+          </tr>
+
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+                <tbody>
+                  {{PAYMENT_ROWS}}
+                  <tr>
+                    <td style="padding:11px 14px; border-top:1px solid #e2e8f0; color:#64748b; font-size:13px;">
+                      Vuelto entregado
+                    </td>
+                    <td align="right" style="padding:11px 14px; border-top:1px solid #e2e8f0; color:#0f172a; font-size:13px; font-weight:bold;">
+                      {{CHANGE_AMOUNT}}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Bloque tributario opcional -->
+          {{DOCUMENT_BLOCK}}
+
+          <!-- Observación -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#fffbeb; border:1px solid #fde68a; border-radius:10px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <div style="margin-bottom:5px; color:#92400e; font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                      Observación
+                    </div>
+                    <div style="color:#78350f; font-size:13px; line-height:1.55;">
+                      {{SALE_NOTES}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA opcional -->
+          {{CTA_BLOCK}}
+
+          <!-- Identificador de transacción -->
+          <tr>
+            <td class="mobile-padding" style="padding:0 32px 30px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-top:4px; color:#94a3b8; font-size:11px; line-height:1.5;">
+                    ID de transacción: <strong style="color:#64748b;">{{TRANSACTION_ID}}</strong><br>
+                    Comprobante generado el {{GENERATED_AT}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Pie -->
+          <tr>
+            <td style="background-color:#0f172a; padding:24px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="color:#cbd5e1; font-size:12px; line-height:1.6;">
+                    <strong style="color:#ffffff;">{{COMPANY_NAME}}</strong><br>
+                    {{COMPANY_LEGAL_NAME}} · RUT {{COMPANY_RUT}}<br>
+                    {{COMPANY_ADDRESS}}<br>
+                    <a href="mailto:{{SUPPORT_EMAIL}}" style="color:#6ee7b7;">{{SUPPORT_EMAIL}}</a>
+                    &nbsp;·&nbsp;
+                    <a href="{{COMPANY_WEBSITE}}" style="color:#6ee7b7;">{{COMPANY_WEBSITE}}</a>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" style="padding-top:18px; color:#94a3b8; font-size:10px; line-height:1.55;">
+                    {{LEGAL_NOTE}}<br>
+                    {{FOOTER_NOTE}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+
+        <!-- Texto exterior -->
+        <table role="presentation" class="email-container" width="640" cellpadding="0" cellspacing="0" border="0"
+               style="width:100%; max-width:640px;">
+          <tr>
+            <td align="center" style="padding:16px 20px 0 20px; color:#94a3b8; font-size:10px; line-height:1.5;">
+              Este mensaje fue generado automáticamente. No respondas directamente a este correo.
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
