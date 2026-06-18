@@ -161,6 +161,7 @@ class SaleDocument(BaseModel):
     document_discount_type = Column(String(20), nullable=False, default="NONE")
     document_discount_value = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     document_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
+    agreement_discount_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     tax_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     total_amount = Column(DECIMAL(15, 2), nullable=False, default=Decimal("0.00"))
     notes = Column(Text, nullable=True)

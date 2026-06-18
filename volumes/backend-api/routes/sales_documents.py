@@ -1,6 +1,7 @@
 """
 Router para ventas pendientes, cierre en caja y devoluciones por unidad.
 """
+import json
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Literal
@@ -74,6 +75,7 @@ class CloseSalePayload(BaseModel):
     amount_tendered: Decimal | None = Field(default=None, ge=0)
     change_amount: Decimal | None = Field(default=None, ge=0)
     payment_details: dict | list[dict] | None = None
+    agreement_usage: dict | None = None
     receipt_email: EmailStr | None = None
 
     @model_validator(mode="after")
@@ -127,6 +129,125 @@ def _movement_description(sale: SaleDocument, payment_method_name: str | None) -
     doc_label = "Devolucion POS" if money(sale.total_amount) < 0 else "Venta POS"
     method_label = payment_method_name or sale.payment_method_name or sale.payment_method_code or "Sin metodo"
     return f"{doc_label} {_reference_for_sale(sale)} - {method_label}"
+
+
+def _agreement_from_payment_details(payment_details) -> dict | None:
+    if not isinstance(payment_details, dict):
+        return None
+    if str(payment_details.get("type") or "").upper() == "AGREEMENT":
+        agreement = payment_details.get("agreement")
+        return agreement if isinstance(agreement, dict) else None
+    if str(payment_details.get("type") or "").upper() == "MIXED":
+        for item in payment_details.get("payments") or []:
+            if isinstance(item, dict) and isinstance(item.get("agreement"), dict):
+                return item["agreement"]
+    return None
+
+
+async def register_agreement_usage_for_sale(session, sale: SaleDocument, payload: CloseSalePayload, user_id: int) -> None:
+    agreement = payload.agreement_usage if isinstance(payload.agreement_usage, dict) else None
+    if not agreement:
+        agreement = _agreement_from_payment_details(payload.payment_details)
+    if not agreement:
+        return
+
+    organization_name = str(agreement.get("organization_name") or "").strip()
+    associate_identifier = str(agreement.get("associate_identifier") or "").strip()
+    if not organization_name or not associate_identifier:
+        return
+
+    agreement_type = str(agreement.get("agreement_type") or "DISCOUNT").upper()
+    if agreement_type not in {"DISCOUNT", "CREDIT"}:
+        agreement_type = "DISCOUNT"
+
+    agreement_result = await session.execute(
+        text(
+            "SELECT id FROM agreements "
+            "WHERE is_active = 1 "
+            "AND company_name = :organization_name "
+            "AND agreement_type = :agreement_type "
+            "ORDER BY id DESC LIMIT 1"
+        ),
+        {"organization_name": organization_name, "agreement_type": agreement_type},
+    )
+    agreement_row = agreement_result.mappings().first()
+    agreement_id = agreement_row["id"] if agreement_row else agreement.get("agreement_id")
+
+    beneficiary_id = agreement.get("agreement_beneficiary_id")
+    if agreement_id:
+        beneficiary_result = await session.execute(
+            text(
+                "SELECT ab.id, ab.interactions_count, ab.consumed_amount, ab.benefit_amount, "
+                "a.single_purchase, a.benefit_amount AS agreement_benefit_amount "
+                "FROM agreement_beneficiaries ab "
+                "JOIN agreements a ON a.id = ab.agreement_id "
+                "WHERE ab.agreement_id = :agreement_id "
+                "AND ab.beneficiary_identifier = :associate_identifier "
+                "ORDER BY ab.id DESC LIMIT 1"
+            ),
+            {"agreement_id": agreement_id, "associate_identifier": associate_identifier},
+        )
+        beneficiary_row = beneficiary_result.mappings().first()
+        beneficiary_id = beneficiary_row["id"] if beneficiary_row else beneficiary_id
+
+        if beneficiary_row:
+            if beneficiary_row["single_purchase"] and beneficiary_row["interactions_count"] > 0:
+                raise ValueError("Este beneficiario ya utilizó este convenio de compra única y no puede volver a usarlo.")
+
+            if agreement_type == "CREDIT":
+                effective_credit = beneficiary_row["benefit_amount"] if beneficiary_row["benefit_amount"] is not None else beneficiary_row["agreement_benefit_amount"]
+                if effective_credit is not None and effective_credit > 0:
+                    remaining = money(effective_credit) - money(beneficiary_row["consumed_amount"] or 0)
+                    sale_total = money(sale.total_amount or 0)
+                    if remaining < sale_total:
+                        raise ValueError(
+                            f"El crédito disponible del beneficiario no es suficiente. "
+                            f"Disponible: ${int(remaining):,} — Total venta: ${int(sale_total):,}."
+                        )
+
+    await session.execute(
+        text(
+            "INSERT INTO agreement_usage_records (agreement_id, agreement_beneficiary_id, sale_document_id, sale_code, ticket_number, agreement_type, "
+            "organization_name, associate_identifier, associate_name, reference_number, discount_percent, "
+            "discount_amount, original_amount, final_amount, payment_method_code, raw_payload, created_by_user_id) "
+            "VALUES (:agreement_id, :agreement_beneficiary_id, :sale_document_id, :sale_code, :ticket_number, :agreement_type, :organization_name, "
+            ":associate_identifier, :associate_name, :reference_number, :discount_percent, :discount_amount, "
+            ":original_amount, :final_amount, :payment_method_code, :raw_payload, :created_by_user_id)"
+        ),
+        {
+            "agreement_id": agreement_id,
+            "agreement_beneficiary_id": beneficiary_id,
+            "sale_document_id": sale.id,
+            "sale_code": sale.sale_code,
+            "ticket_number": sale.ticket_number,
+            "agreement_type": agreement_type,
+            "organization_name": organization_name,
+            "associate_identifier": associate_identifier,
+            "associate_name": str(agreement.get("associate_name") or "").strip() or None,
+            "reference_number": str(agreement.get("reference_number") or "").strip() or None,
+            "discount_percent": money(agreement.get("discount_percent") or 0) if agreement_type == "DISCOUNT" else None,
+            "discount_amount": money(sale.agreement_discount_amount or 0) if agreement_type == "DISCOUNT" else Decimal("0.00"),
+            "original_amount": money(sale.subtotal_amount or 0) - money(sale.line_discount_amount or 0),
+            "final_amount": money(sale.total_amount or 0),
+            "payment_method_code": sale.payment_method_code,
+            "raw_payload": json.dumps(agreement, ensure_ascii=False),
+            "created_by_user_id": user_id,
+        },
+    )
+
+    if beneficiary_id:
+        await session.execute(
+            text(
+                "UPDATE agreement_beneficiaries "
+                "SET consumed_amount = consumed_amount + :amount, interactions_count = interactions_count + 1, "
+                "last_consumed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
+                "WHERE id = :beneficiary_id"
+            ),
+            {
+                "beneficiary_id": beneficiary_id,
+                "amount": money(sale.agreement_discount_amount or 0) if agreement_type == "DISCOUNT" else money(sale.total_amount or 0),
+            },
+        )
 
 
 async def register_cash_movements_for_sale(session, sale: SaleDocument, payload: CloseSalePayload, user_id: int) -> None:
@@ -248,6 +369,7 @@ def sale_to_dict(sale: SaleDocument, include_units: bool = False) -> dict:
         "document_discount_type": sale.document_discount_type,
         "document_discount_value": float(sale.document_discount_value or 0),
         "document_discount_amount": float(sale.document_discount_amount or 0),
+        "agreement_discount_amount": float(sale.agreement_discount_amount or 0),
         "tax_amount": float(sale.tax_amount or 0),
         "total_amount": float(sale.total_amount or 0),
         "notes": sale.notes,
@@ -320,7 +442,16 @@ def apply_close_amounts(sale: SaleDocument, payload: CloseSalePayload):
     else:
         document_discount = Decimal("0.00")
 
-    remaining_discount = document_discount
+    _agreement = payload.agreement_usage if isinstance(payload.agreement_usage, dict) else None
+    _agreement_pct = percent(_agreement.get("discount_percent") or 0) if _agreement else Decimal("0.0000")
+    if _agreement_pct > 0 and gross_before_document_discount > 0:
+        agreement_discount = money(gross_before_document_discount * _agreement_pct / Decimal("100"))
+        agreement_discount = min(agreement_discount, gross_before_document_discount - document_discount)
+    else:
+        agreement_discount = Decimal("0.00")
+
+    total_discount = document_discount + agreement_discount
+    remaining_discount = total_discount
     total_paid = Decimal("0.00")
     total_tax = Decimal("0.00")
 
@@ -330,7 +461,7 @@ def apply_close_amounts(sale: SaleDocument, payload: CloseSalePayload):
         elif index == len(line_bases) - 1:
             prorated_discount = remaining_discount
         else:
-            prorated_discount = money(document_discount * gross_after_line_discount / gross_before_document_discount)
+            prorated_discount = money(total_discount * gross_after_line_discount / gross_before_document_discount)
             remaining_discount -= prorated_discount
 
         paid_gross = money(gross_after_line_discount - prorated_discount)
@@ -368,6 +499,7 @@ def apply_close_amounts(sale: SaleDocument, payload: CloseSalePayload):
     sale.document_discount_type = payload.discount_type
     sale.document_discount_value = money(payload.discount_value)
     sale.document_discount_amount = document_discount
+    sale.agreement_discount_amount = agreement_discount
     sale.tax_amount = money(total_tax)
     sale.total_amount = money(total_paid)
     sale.status = SaleStatus.CLOSED
@@ -865,6 +997,55 @@ async def list_sales_by_customer(
         ], request=request)
 
 
+@router.get("/agreements/usage", response_class=JSONResponse)
+async def list_agreement_usage(
+    request: Request,
+    organization_name: str | None = None,
+    associate_identifier: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    limit: int = 200,
+    user: dict = Depends(get_current_user),
+):
+    clauses = ["deleted_at IS NULL"]
+    params: dict = {"limit": min(max(int(limit or 200), 1), 1000)}
+    if organization_name:
+        clauses.append("organization_name LIKE :organization_name")
+        params["organization_name"] = f"%{organization_name.strip()}%"
+    if associate_identifier:
+        clauses.append("associate_identifier = :associate_identifier")
+        params["associate_identifier"] = associate_identifier.strip()
+    if date_from:
+        clauses.append("DATE(created_at) >= :date_from")
+        params["date_from"] = date_from
+    if date_to:
+        clauses.append("DATE(created_at) <= :date_to")
+        params["date_to"] = date_to
+
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            text(
+                "SELECT id, sale_document_id, sale_code, ticket_number, agreement_type, organization_name, "
+                "associate_identifier, associate_name, reference_number, discount_percent, discount_amount, "
+                "original_amount, final_amount, payment_method_code, created_at "
+                "FROM agreement_usage_records "
+                f"WHERE {' AND '.join(clauses)} "
+                "ORDER BY created_at DESC, id DESC LIMIT :limit"
+            ),
+            params,
+        )
+        rows = []
+        for row in result.mappings().all():
+            item = dict(row)
+            item["discount_percent"] = float(item["discount_percent"] or 0) if item["discount_percent"] is not None else None
+            item["discount_amount"] = float(item["discount_amount"] or 0)
+            item["original_amount"] = float(item["original_amount"] or 0)
+            item["final_amount"] = float(item["final_amount"] or 0)
+            item["created_at"] = item["created_at"].isoformat() if item["created_at"] else None
+            rows.append(item)
+        return ResponseManager.success(data=rows, request=request)
+
+
 @router.delete("/{sale_id}/pending", response_class=JSONResponse)
 async def delete_pending_sale(request: Request, sale_id: int = Path(..., gt=0), user: dict = Depends(get_current_user)):
     async with db_manager.get_async_session() as session:
@@ -974,6 +1155,17 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
                 sale.cash_register_session_id = active_sess.id
 
         await register_cash_movements_for_sale(session, sale, payload, user_id)
+        try:
+            await register_agreement_usage_for_sale(session, sale, payload, user_id)
+        except ValueError as exc:
+            await session.rollback()
+            return ResponseManager.error(
+                message=str(exc),
+                status_code=HTTPStatus.CONFLICT,
+                error_code=ErrorCode.RESOURCE_CONFLICT,
+                error_type=ErrorType.RESOURCE_ERROR,
+                request=request,
+            )
         await session.flush()
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), message="Venta cerrada", request=request)
 

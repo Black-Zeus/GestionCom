@@ -1,17 +1,20 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Banknote, CheckCircle2, ClipboardList, CreditCard, Eye, Mail, Percent, Receipt, RefreshCcw, Repeat2, SplitSquareHorizontal, Trash2, Wallet, XCircle } from 'lucide-react';
+import { AlertTriangle, Banknote, Building2, CheckCircle2, ClipboardList, CreditCard, Eye, Mail, Percent, Receipt, RefreshCcw, Repeat2, ShoppingCart, SplitSquareHorizontal, Trash2, Users, Wallet, XCircle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import BottomActionBar from '@/components/common/actions/BottomActionBar';
 import DataTable from '@/components/common/data/DataTable';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import ModalManager from '@/components/ui/modal';
+import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import { salesDocumentsService } from '@/services/sales/salesDocumentsService';
+import { agreementsService } from '@/services/sales/agreementsService';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { paymentMethodsService } from '@/services/admin/paymentMethodsService';
 import { currencyRatesService } from '@/services/admin/currencyRatesService';
+import { cashSessionsService } from '@/services/cash/cashSessionsService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
 import { useSessionStore } from '@/store/useSessionStore';
 
@@ -33,6 +36,11 @@ const formatMoney = (value, currencyCode = 'CLP') => {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
+};
+
+const roundCurrencyAmount = (value, currencyCode = 'CLP') => {
+  const factor = 10 ** currencyDecimals(currencyCode);
+  return Math.round((Number(value) || 0) * factor) / factor;
 };
 
 const parseLocalizedAmount = (value) => {
@@ -91,6 +99,10 @@ const TICKET_CODE = 'TICKET';
 
 const AUTO_DOCUMENT_PREFIX = {
   TICKET: 'TKT',
+  BOLETA: 'BOL',
+  MANUAL_39: 'BOL',
+  MANUAL_33: 'FAC',
+  MANUAL_61: 'NC',
   RETURN_TICKET: 'DEV',
   EXCHANGE_DRAFT: 'CMB',
 };
@@ -136,6 +148,7 @@ const METHOD_ICON_NAMES = {
   'repeat-2': Repeat2,
   'split-square-horizontal': SplitSquareHorizontal,
   'clipboard-list': ClipboardList,
+  'building-2': Building2,
 };
 const DIRECT_METHOD_RANK = {
   CASH: 10,
@@ -146,7 +159,196 @@ const MAX_MIXED_PAYMENTS = 3;
 const inputCls = 'h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:focus:border-blue-500';
 const compactInputCls = inputCls.replace('h-11', 'h-10');
 
-const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', onConfirm, onClose }) => {
+const isCheckMethod = (method) => {
+  const code = String(method?.method_code || '').toUpperCase();
+  const name = String(method?.method_name || '').toLowerCase();
+  return code === 'CHECK' || code === 'POSTDATED_CHECK' || name.includes('cheque');
+};
+
+const isAgreementMethod = (method) => {
+  const code = String(method?.method_code || '').toUpperCase();
+  const name = String(method?.method_name || '').toLowerCase();
+  return code === 'CONVENIO' || name.includes('convenio');
+};
+
+const requiresPaymentReference = (method) => {
+  if (!method || ['CASH', 'FOREIGN_CURRENCY', 'MIXED'].includes(method.method_code)) return false;
+  if (isCheckMethod(method)) return false;
+  if (isAgreementMethod(method)) return false;
+  return true;
+};
+
+const paymentReferenceCopy = (method) => {
+  const code = String(method?.method_code || '').toUpperCase();
+  const type = String(method?.method_type || '').toUpperCase();
+  if (type === 'CARD') {
+    return {
+      label: 'Voucher / codigo autorizacion',
+      placeholder: 'Numero de voucher o codigo de autorizacion',
+      type: 'CARD_RECEIPT',
+    };
+  }
+  if (type === 'TRANSFER' || code === 'WIRE_TRANSFER' || code === 'TRANSFER') {
+    return {
+      label: 'Folio transferencia',
+      placeholder: 'Folio, operacion o comprobante bancario',
+      type: 'TRANSFER_RECEIPT',
+    };
+  }
+  if (code === 'VOUCHER') {
+    return {
+      label: 'Numero vale vista',
+      placeholder: 'Numero o folio del vale vista',
+      type: 'VOUCHER_RECEIPT',
+    };
+  }
+  if (code === 'GIFT_CARD') {
+    return {
+      label: 'Codigo tarjeta regalo',
+      placeholder: 'Codigo o folio de la tarjeta regalo',
+      type: 'GIFT_CARD_RECEIPT',
+    };
+  }
+  if (code === 'STORE_CREDIT' || code === 'CREDIT_TERMS') {
+    return {
+      label: 'Folio credito',
+      placeholder: 'Folio, autorizacion o cuenta asociada',
+      type: 'CREDIT_RECEIPT',
+    };
+  }
+  if (code === 'PROMISSORY_NOTE') {
+    return {
+      label: 'Numero pagare',
+      placeholder: 'Numero o folio del pagare',
+      type: 'PROMISSORY_NOTE_RECEIPT',
+    };
+  }
+  return {
+    label: 'Folio comprobante / transaccion',
+    placeholder: 'Voucher, autorizacion o folio',
+    type: 'PAYMENT_REFERENCE',
+  };
+};
+
+const emptyCheckDetails = {
+  bank_name: '',
+  check_number: '',
+  holder_name: '',
+  holder_tax_id: '',
+  due_date: '',
+};
+
+const emptyAgreementDetails = {
+  agreement_type: 'CREDIT',
+  agreement_id: '',
+  agreement_beneficiary_id: '',
+  organization_name: '',
+  associate_name: '',
+  associate_identifier: '',
+  reference_number: '',
+  agreement_benefit_amount: 0,
+  agreement_single_purchase: true,
+  beneficiary_benefit_amount: null,
+  beneficiary_interactions_count: 0,
+  beneficiary_consumed_amount: 0,
+};
+
+const emptyAgreementDiscount = {
+  enabled: false,
+  agreement_id: '',
+  agreement_beneficiary_id: '',
+  organization_name: '',
+  associate_name: '',
+  associate_identifier: '',
+  reference_number: '',
+  discount_percent: '',
+};
+
+const AgreementCreditSelector = ({ agreements = [], value = {}, onChange }) => {
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [loadingBeneficiaries, setLoadingBeneficiaries] = useState(false);
+
+  const creditAgreements = useMemo(
+    () => agreements.filter((item) => item.agreement_type === 'CREDIT' && item.is_active !== false),
+    [agreements],
+  );
+  const agreementOptions = useMemo(
+    () => creditAgreements.map((item) => ({ value: String(item.id), label: `${item.agreement_name} — ${item.company_name}` })),
+    [creditAgreements],
+  );
+
+  const agreementId = value.agreement_id || '';
+  const beneficiaryId = value.agreement_beneficiary_id || '';
+
+  useEffect(() => {
+    if (!agreementId) { setBeneficiaries([]); return; }
+    setLoadingBeneficiaries(true);
+    agreementsService.listBeneficiaries(agreementId)
+      .then(setBeneficiaries)
+      .catch(() => setBeneficiaries([]))
+      .finally(() => setLoadingBeneficiaries(false));
+  }, [agreementId]);
+
+  const beneficiaryOptions = useMemo(
+    () => beneficiaries
+      .filter((item) => item.is_active !== false)
+      .map((item) => ({ value: String(item.id), label: `${item.beneficiary_identifier} — ${item.beneficiary_name}` })),
+    [beneficiaries],
+  );
+
+  const handleAgreementChange = (newId) => {
+    const agreement = creditAgreements.find((item) => String(item.id) === newId);
+    onChange({
+      ...value,
+      agreement_id: newId || '',
+      agreement_beneficiary_id: '',
+      organization_name: agreement?.company_name || '',
+      associate_name: '',
+      associate_identifier: '',
+      agreement_benefit_amount: Number(agreement?.benefit_amount || 0),
+      agreement_single_purchase: agreement?.single_purchase !== false,
+      beneficiary_benefit_amount: null,
+    });
+  };
+
+  const handleBeneficiaryChange = (newId) => {
+    const beneficiary = beneficiaries.find((item) => String(item.id) === newId);
+    onChange({
+      ...value,
+      agreement_beneficiary_id: newId || '',
+      associate_name: beneficiary?.beneficiary_name || '',
+      associate_identifier: beneficiary?.beneficiary_identifier || '',
+      beneficiary_benefit_amount: beneficiary?.benefit_amount != null ? Number(beneficiary.benefit_amount) : null,
+      beneficiary_interactions_count: Number(beneficiary?.interactions_count || 0),
+      beneficiary_consumed_amount: Number(beneficiary?.consumed_amount || 0),
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Convenio</span>
+          <AutocompleteSelect value={agreementId} onChange={handleAgreementChange} options={agreementOptions} placeholder="Seleccionar convenio" searchPlaceholder="Buscar convenio..." clearable />
+        </label>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Beneficiario</span>
+          <AutocompleteSelect
+            value={beneficiaryId}
+            onChange={handleBeneficiaryChange}
+            options={beneficiaryOptions}
+            placeholder={loadingBeneficiaries ? 'Cargando...' : (agreementId ? 'Seleccionar beneficiario' : 'Primero selecciona un convenio')}
+            searchPlaceholder="Buscar por RUT o nombre..."
+            disabled={!agreementId || loadingBeneficiaries}
+            clearable
+          />
+        </label>
+      </div>
+    </div>
+  );
+};
+
+const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', agreements = [], onConfirm, onClose }) => {
   const [step, setStep] = useState(1);
   const [paymentMode, setPaymentMode] = useState('DIRECT');
   const [methods, setMethods] = useState([]);
@@ -154,6 +356,9 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   const [importe, setImporte] = useState('');
   const [foreignCurrencyCode, setForeignCurrencyCode] = useState(preferredCurrencyCode || '');
   const [foreignReceived, setForeignReceived] = useState('');
+  const [paymentReference, setPaymentReference] = useState('');
+  const [checkDetails, setCheckDetails] = useState(emptyCheckDetails);
+  const [agreementDetails, setAgreementDetails] = useState(emptyAgreementDetails);
   const [mixedPayments, setMixedPayments] = useState([{ method_code: 'CASH', amount: '' }]);
   const [email, setEmail] = useState(initialEmail || '');
   const [processing, setProcessing] = useState(false);
@@ -161,7 +366,14 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   useEffect(() => {
     paymentMethodsService.list({ active_only: true })
       .then((items) => {
-        const filtered = items.filter((item) => !String(item.method_code || '').startsWith('DEMO_') && !String(item.method_name || '').toLowerCase().includes('demo'));
+        const hasRegularCheck = items.some((item) => String(item.method_code || '').toUpperCase() === 'CHECK');
+        const filtered = items.filter((item) => {
+          const methodCode = String(item.method_code || '').toUpperCase();
+          const methodName = String(item.method_name || '').toLowerCase();
+          return !methodCode.startsWith('DEMO_')
+            && !methodName.includes('demo')
+            && !(hasRegularCheck && methodCode === 'POSTDATED_CHECK');
+        });
         const normalized = [...filtered];
         if (!normalized.some((item) => item.method_code === 'FOREIGN_CURRENCY')) {
           normalized.push({ id: 'FOREIGN_CURRENCY', method_code: 'FOREIGN_CURRENCY', method_name: 'Divisa Extranjera', method_type: 'OTHER' });
@@ -198,22 +410,30 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
     const selectedCodes = new Set(items.map((item) => item.method_code).filter(Boolean));
     return (paymentMethodOptions.find((method) => method.method_code === 'CASH' && !selectedCodes.has(method.method_code)) || paymentMethodOptions.find((method) => !selectedCodes.has(method.method_code)) || paymentMethodOptions[0])?.method_code || 'CASH';
   };
-  const newMixedPayment = (items = mixedPayments) => ({ method_code: defaultMixedMethodCode(items), amount: '' });
+  const newMixedPayment = (items = mixedPayments, amount = '') => ({ method_code: defaultMixedMethodCode(items), amount });
 
   const isCash = selected?.method_type === 'CASH';
   const isForeign = selected?.method_code === 'FOREIGN_CURRENCY';
   const isMixed = paymentMode === 'MIXED';
+  const selectedIsCheck = isCheckMethod(selected);
+  const selectedIsAgreement = isAgreementMethod(selected);
+  const selectedRequiresReference = requiresPaymentReference(selected);
   const isRefund = total < 0;
   const absoluteTotal = Math.abs(total);
   const availableRates = exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
   const selectedForeignRate = availableRates.find((rate) => rate.currency_code === foreignCurrencyCode) || availableRates[0];
   const expectedForeignAmount = selectedForeignRate ? convertFromBase(absoluteTotal, selectedForeignRate) : 0;
+  const expectedForeignAmountRounded = selectedForeignRate ? roundCurrencyAmount(expectedForeignAmount, selectedForeignRate.currency_code) : 0;
+  const expectedForeignInput = selectedForeignRate ? formatAmountForInput(expectedForeignAmountRounded, selectedForeignRate.currency_code) : '';
   const foreignReceivedNum = parseLocalizedAmount(foreignReceived);
   const importeNum = parseLocalizedAmount(importe);
   const vuelto = isCash && !isRefund ? Math.max(importeNum - total, 0) : 0;
-  const foreignChange = isForeign && !isRefund && selectedForeignRate ? Math.max((foreignReceivedNum - expectedForeignAmount) * rateValue(selectedForeignRate), 0) : 0;
+  const foreignReceivedSufficient = !isForeign || (foreignReceivedNum + 0.000001 >= expectedForeignAmountRounded);
+  const foreignChange = isForeign && !isRefund && selectedForeignRate ? Math.max((foreignReceivedNum - expectedForeignAmountRounded) * rateValue(selectedForeignRate), 0) : 0;
   const importeInsuficiente = isCash && !isRefund && importe !== '' && importeNum < total;
+  const checkAmountInsuficiente = selectedIsCheck && !isRefund && importe !== '' && importeNum < total;
   const mixedForeignRate = (item) => availableRates.find((rate) => rate.currency_code === item.currency_code) || availableRates[0] || null;
+  const methodByCode = (code) => methods.find((candidate) => candidate.method_code === code);
   const mixedPaymentAmount = (item) => {
     if (item.method_code === 'FOREIGN_CURRENCY') {
       const rate = mixedForeignRate(item);
@@ -223,28 +443,141 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   };
   const mixedTotal = mixedPayments.reduce((sum, item) => sum + mixedPaymentAmount(item), 0);
   const mixedRemaining = Math.max(absoluteTotal - mixedTotal, 0);
-  const mixedValid = isMixed && mixedPayments.length > 0 && mixedPayments.every((item) => item.method_code && mixedPaymentAmount(item) > 0) && mixedTotal >= absoluteTotal;
+  const referenceValid = !selectedRequiresReference || paymentReference.trim().length > 0;
+  const selectedReferenceCopy = paymentReferenceCopy(selected);
+  const checkDetailsValid = !selectedIsCheck || (
+    checkDetails.bank_name.trim()
+    && checkDetails.check_number.trim()
+    && checkDetails.holder_name.trim()
+    && checkDetails.holder_tax_id.trim()
+    && importeNum >= total
+  );
+  const agreementDetailsValid = !selectedIsAgreement || (
+    agreementDetails.organization_name.trim()
+    && agreementDetails.associate_identifier.trim()
+  );
+  const agreementCredit = selectedIsAgreement && agreementDetailsValid
+    ? (agreementDetails.beneficiary_benefit_amount != null ? agreementDetails.beneficiary_benefit_amount : agreementDetails.agreement_benefit_amount)
+    : null;
+  const agreementCreditStatus = (() => {
+    if (!selectedIsAgreement || !agreementDetailsValid) return null;
+    if (agreementDetails.agreement_single_purchase && agreementDetails.beneficiary_interactions_count > 0) {
+      return { type: 'error', msg: 'Este beneficiario ya utilizó este convenio de compra única y no puede volver a usarlo.' };
+    }
+    if (agreementCredit == null || agreementCredit <= 0) return null;
+    const remainingCredit = agreementCredit - (agreementDetails.beneficiary_consumed_amount || 0);
+    if (remainingCredit <= 0) {
+      return { type: 'error', msg: `Crédito agotado — el beneficiario consumió los ${money(agreementCredit)} disponibles.` };
+    }
+    const diff = remainingCredit - absoluteTotal;
+    if (diff < 0) return { type: 'error', msg: `El crédito disponible (${money(remainingCredit)} de ${money(agreementCredit)}) no cubre el total. Agrega otro medio de pago o usa pago mixto para completar.` };
+    if (diff === 0) return { type: 'success', msg: 'Saldado — el crédito disponible cubre exactamente el total.' };
+    return agreementDetails.agreement_single_purchase
+      ? { type: 'warn', msg: `El convenio cubre más de lo necesario. La diferencia de ${money(diff)} se pierde — compra única, sin crédito a favor.` }
+      : { type: 'info', msg: `Quedan ${money(diff)} de crédito disponible tras esta compra.` };
+  })();
+  const mixedMetadataValid = mixedPayments.every((item) => {
+    const method = methodByCode(item.method_code);
+    const requiresReference = requiresPaymentReference(method);
+    const isCheck = isCheckMethod(method);
+    const isAgreement = isAgreementMethod(method);
+    const details = item.check_details || {};
+    const agreement = item.agreement_details || {};
+    return (!requiresReference || String(item.reference_number || '').trim())
+      && (!isCheck || (
+        String(details.bank_name || '').trim()
+        && String(details.check_number || '').trim()
+        && String(details.holder_name || '').trim()
+        && String(details.holder_tax_id || '').trim()
+      ))
+      && (!isAgreement || (
+        String(agreement.organization_name || '').trim()
+        && String(agreement.associate_identifier || '').trim()
+      ));
+  });
+  const mixedValid = isMixed
+    && mixedPayments.length > 0
+    && mixedPayments.every((item) => item.method_code && mixedPaymentAmount(item) > 0)
+    && mixedTotal >= absoluteTotal
+    && mixedMetadataValid;
   const canContinue = isMixed
     ? (isRefund || mixedValid)
     : Boolean(selected) && (
       isRefund
-      || (isForeign ? Boolean(selectedForeignRate) && (foreignReceived === '' || foreignReceivedNum >= expectedForeignAmount) : !isCash || importeNum >= total)
+      || (
+        referenceValid
+        && checkDetailsValid
+        && agreementDetailsValid
+        && agreementCreditStatus?.type !== 'error'
+        && (isForeign ? Boolean(selectedForeignRate) && foreignReceivedSufficient : (!isCash && !selectedIsCheck) || importeNum >= total)
+      )
     );
+
+  useEffect(() => {
+    if (!isForeign || isRefund || !expectedForeignInput) return;
+    setForeignReceived(expectedForeignInput);
+  }, [expectedForeignInput, isForeign, isRefund]);
+
+  useEffect(() => {
+    if (!isCash || isRefund) return;
+    setImporte((current) => current || formatAmountForInput(total));
+  }, [isCash, isRefund, total]);
 
   const updateMixedPayment = (index, field, value) => {
     setMixedPayments((current) => current.map((item, itemIndex) => {
       if (itemIndex !== index) return item;
       const next = { ...item, [field]: value };
       if (field === 'method_code' && value === 'FOREIGN_CURRENCY') {
-        next.currency_code = next.currency_code || availableRates[0]?.currency_code || '';
+        const rate = availableRates[0] || null;
+        next.currency_code = next.currency_code || rate?.currency_code || '';
+        next.foreign_amount = rate ? formatAmountForInput(convertFromBase(mixedRemaining || absoluteTotal, rate), rate.currency_code) : '';
         next.amount = '';
+      }
+      if (field === 'currency_code' && item.method_code === 'FOREIGN_CURRENCY') {
+        const rate = availableRates.find((candidate) => candidate.currency_code === value) || null;
+        next.foreign_amount = rate ? formatAmountForInput(convertFromBase(mixedRemaining || absoluteTotal, rate), rate.currency_code) : '';
       }
       if (field === 'method_code' && value !== 'FOREIGN_CURRENCY') {
         next.currency_code = '';
         next.foreign_amount = '';
       }
+      if (field === 'method_code') {
+        next.reference_number = '';
+        next.check_details = isCheckMethod(methodByCode(value)) ? { ...emptyCheckDetails } : undefined;
+        next.agreement_details = isAgreementMethod(methodByCode(value)) ? { ...emptyAgreementDetails } : undefined;
+        if (isCheckMethod(methodByCode(value))) {
+          next.amount = next.amount || formatAmountForInput(mixedRemaining || absoluteTotal);
+        }
+        if (isAgreementMethod(methodByCode(value))) {
+          next.amount = next.amount || formatAmountForInput(mixedRemaining || absoluteTotal);
+        }
+      }
       return next;
     }));
+  };
+
+  const updateCheckDetail = (field, value) => {
+    setCheckDetails((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateAgreementDetail = (field, value) => {
+    setAgreementDetails((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateMixedCheckDetail = (index, field, value) => {
+    setMixedPayments((current) => current.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, check_details: { ...emptyCheckDetails, ...(item.check_details || {}), [field]: value } }
+        : item
+    )));
+  };
+
+  const updateMixedAgreementDetail = (index, field, value) => {
+    setMixedPayments((current) => current.map((item, itemIndex) => (
+      itemIndex === index
+        ? { ...item, agreement_details: { ...emptyAgreementDetails, ...(item.agreement_details || {}), [field]: value } }
+        : item
+    )));
   };
 
   const removeMixedPayment = async (index) => {
@@ -265,18 +598,87 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
       currency_code: selectedForeignRate.currency_code,
       currency_name: selectedForeignRate.currency_name,
       rate_value: rateValue(selectedForeignRate),
-      expected_amount: expectedForeignAmount,
-      received_amount: foreignReceived ? foreignReceivedNum : expectedForeignAmount,
+      expected_amount: expectedForeignAmountRounded,
+      received_amount: foreignReceived ? foreignReceivedNum : expectedForeignAmountRounded,
     } : null;
+    const directPaymentDetails = selectedIsCheck
+      ? {
+        type: 'CHECK',
+        reference_number: checkDetails.check_number.trim(),
+        check: {
+          bank_name: checkDetails.bank_name.trim(),
+          check_number: checkDetails.check_number.trim(),
+          holder_name: checkDetails.holder_name.trim(),
+          holder_tax_id: checkDetails.holder_tax_id.trim(),
+          due_date: checkDetails.due_date || null,
+          amount: importeNum,
+        },
+      }
+      : selectedIsAgreement
+        ? {
+          type: 'AGREEMENT',
+          reference_number: agreementDetails.reference_number.trim() || agreementDetails.associate_identifier.trim(),
+          agreement: {
+            agreement_type: agreementDetails.agreement_type,
+            agreement_id: agreementDetails.agreement_id ? Number(agreementDetails.agreement_id) : null,
+            agreement_beneficiary_id: agreementDetails.agreement_beneficiary_id ? Number(agreementDetails.agreement_beneficiary_id) : null,
+            organization_name: agreementDetails.organization_name.trim(),
+            associate_name: agreementDetails.associate_name.trim(),
+            associate_identifier: agreementDetails.associate_identifier.trim(),
+            reference_number: agreementDetails.reference_number.trim(),
+            discount_percent: null,
+            amount: total,
+          },
+        }
+      : selectedRequiresReference
+        ? {
+          type: selectedReferenceCopy.type,
+          reference_number: paymentReference.trim(),
+          reference_label: selectedReferenceCopy.label,
+        }
+        : null;
     const mixedDetails = mixedPayments
       .filter((item) => item.method_code && mixedPaymentAmount(item) > 0)
       .map((item) => {
         const method = methods.find((candidate) => candidate.method_code === item.method_code);
         const rate = item.method_code === 'FOREIGN_CURRENCY' ? mixedForeignRate(item) : null;
+        const isItemCheck = isCheckMethod(method);
+        const isItemAgreement = isAgreementMethod(method);
+        const itemCheckDetails = item.check_details || {};
+        const itemAgreementDetails = item.agreement_details || {};
+        const itemReferenceCopy = paymentReferenceCopy(method);
         return {
           payment_method_code: item.method_code,
           payment_method_name: method?.method_name || item.method_code,
           amount: mixedPaymentAmount(item),
+          ...(item.reference_number?.trim() ? {
+            reference_type: itemReferenceCopy.type,
+            reference_label: itemReferenceCopy.label,
+            reference_number: item.reference_number.trim(),
+          } : {}),
+          ...(isItemCheck ? {
+            check: {
+              bank_name: String(itemCheckDetails.bank_name || '').trim(),
+              check_number: String(itemCheckDetails.check_number || '').trim(),
+              holder_name: String(itemCheckDetails.holder_name || '').trim(),
+              holder_tax_id: String(itemCheckDetails.holder_tax_id || '').trim(),
+              due_date: itemCheckDetails.due_date || null,
+              amount: mixedPaymentAmount(item),
+            },
+          } : {}),
+          ...(isItemAgreement ? {
+            agreement: {
+              agreement_type: itemAgreementDetails.agreement_type || 'CREDIT',
+              agreement_id: itemAgreementDetails.agreement_id ? Number(itemAgreementDetails.agreement_id) : null,
+              agreement_beneficiary_id: itemAgreementDetails.agreement_beneficiary_id ? Number(itemAgreementDetails.agreement_beneficiary_id) : null,
+              organization_name: String(itemAgreementDetails.organization_name || '').trim(),
+              associate_name: String(itemAgreementDetails.associate_name || '').trim(),
+              associate_identifier: String(itemAgreementDetails.associate_identifier || '').trim(),
+              reference_number: String(itemAgreementDetails.reference_number || '').trim(),
+              discount_percent: null,
+              amount: mixedPaymentAmount(item),
+            },
+          } : {}),
           ...(rate ? {
             foreign_currency: {
               currency_code: rate.currency_code,
@@ -293,13 +695,13 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
       await onConfirm({
         payment_method_code: paymentMethod.method_code,
         payment_method_name: paymentMethod.method_name,
-        amount_tendered: isRefund ? 0 : isCash ? importeNum : isMixed ? mixedTotal : total,
+        amount_tendered: isRefund ? 0 : (isCash || selectedIsCheck) ? importeNum : isMixed ? mixedTotal : total,
         change_amount: isRefund ? absoluteTotal : isCash ? vuelto : isForeign ? foreignChange : isMixed ? Math.max(mixedTotal - absoluteTotal, 0) : 0,
         payment_details: isMixed
           ? { type: 'MIXED', payments: mixedDetails, total_paid: mixedTotal, remaining: mixedRemaining }
           : isForeign
             ? { type: 'FOREIGN_CURRENCY', foreign_currency: selectedForeignPayload }
-            : null,
+            : directPaymentDetails,
         receipt_email: email.trim() || null,
       });
       onClose?.();
@@ -337,6 +739,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                   setSelected(null);
                   setImporte('');
                   setForeignReceived('');
+                  setMixedPayments([{ method_code: defaultMixedMethodCode(), amount: formatAmountForInput(absoluteTotal) }]);
                 }}
                 className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
               >
@@ -350,7 +753,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Medio de pago</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {directMethods.map((m) => {
-                    const Icon = METHOD_ICON_NAMES[m.icon_name] || (m.method_code === 'FOREIGN_CURRENCY' ? Repeat2 : METHOD_ICONS[m.method_type] || CheckCircle2);
+                    const Icon = METHOD_ICON_NAMES[m.icon_name] || (isAgreementMethod(m) ? Building2 : m.method_code === 'FOREIGN_CURRENCY' ? Repeat2 : METHOD_ICONS[m.method_type] || CheckCircle2);
                     const active = selected?.id === m.id;
                     return (
                       <button
@@ -358,10 +761,16 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                         type="button"
                         onClick={() => {
                           setSelected(m);
-                          setImporte('');
+                          setImporte((m.method_type === 'CASH' || isCheckMethod(m)) ? formatAmountForInput(total) : '');
+                          setPaymentReference('');
+                          setCheckDetails(emptyCheckDetails);
+                          setAgreementDetails(emptyAgreementDetails);
                           setForeignReceived('');
                           if (m.method_code === 'FOREIGN_CURRENCY' && !foreignCurrencyCode && availableRates[0]) {
                             setForeignCurrencyCode(availableRates[0].currency_code);
+                          }
+                          if (m.method_code === 'FOREIGN_CURRENCY' && selectedForeignRate) {
+                            setForeignReceived(expectedForeignInput);
                           }
                         }}
                         className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition ${active ? 'border-blue-400 bg-blue-50 font-semibold text-blue-800 dark:border-blue-600 dark:bg-blue-950/40 dark:text-blue-200' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
@@ -421,7 +830,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 </select>
                 {selectedForeignRate && (
                   <p className="text-xs text-slate-400">
-                    Esperado: {formatMoney(expectedForeignAmount, selectedForeignRate.currency_code)} · Fee {feeValue(selectedForeignRate).toLocaleString('es-CL')}%
+                    Esperado: {formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code)} · Fee {feeValue(selectedForeignRate).toLocaleString('es-CL')}%
                   </p>
                 )}
               </label>
@@ -431,16 +840,78 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                   className={inputCls}
                   type="text"
                   inputMode="decimal"
-                  placeholder={selectedForeignRate ? formatMoney(expectedForeignAmount, selectedForeignRate.currency_code) : ''}
+                  placeholder={selectedForeignRate ? formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code) : ''}
                   value={foreignReceived}
                   onChange={(e) => setForeignReceived(e.target.value)}
                   onFocus={(e) => focusAmountInput(e, setForeignReceived)}
                   onBlur={(e) => setForeignReceived(formatAmountForInput(e.target.value, selectedForeignRate?.currency_code || 'CLP'))}
                 />
-                {foreignReceived !== '' && foreignReceivedNum < expectedForeignAmount && (
+                {foreignReceived !== '' && !foreignReceivedSufficient && (
                   <p className="text-xs text-red-600 dark:text-red-400">El importe es menor al esperado.</p>
                 )}
               </label>
+            </div>
+          )}
+
+          {paymentMode === 'DIRECT' && selectedRequiresReference && !selectedIsCheck && !isRefund && (
+            <label className="space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">{selectedReferenceCopy.label}</span>
+              <input
+                className={inputCls}
+                type="text"
+                placeholder={selectedReferenceCopy.placeholder}
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+              />
+              {!referenceValid && (
+                <p className="text-xs text-red-600 dark:text-red-400">Ingresa el folio o referencia del comprobante.</p>
+              )}
+            </label>
+          )}
+
+          {paymentMode === 'DIRECT' && selectedIsCheck && !isRefund && (
+            <div className="grid gap-3 rounded-md border border-slate-200 p-3 dark:border-slate-700 sm:grid-cols-2">
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Banco</span>
+                <input className={inputCls} type="text" value={checkDetails.bank_name} onChange={(e) => updateCheckDetail('bank_name', e.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Numero de cheque</span>
+                <input className={inputCls} type="text" value={checkDetails.check_number} onChange={(e) => updateCheckDetail('check_number', e.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Titular</span>
+                <input className={inputCls} type="text" value={checkDetails.holder_name} onChange={(e) => updateCheckDetail('holder_name', e.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">RUT titular</span>
+                <input className={inputCls} type="text" value={checkDetails.holder_tax_id} onChange={(e) => updateCheckDetail('holder_tax_id', e.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Fecha cheque</span>
+                <input className={inputCls} type="date" value={checkDetails.due_date} onChange={(e) => updateCheckDetail('due_date', e.target.value)} />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Monto cheque</span>
+                <input
+                  className={inputCls}
+                  type="text"
+                  inputMode="numeric"
+                  value={importe}
+                  onChange={(e) => setImporte(e.target.value)}
+                  onFocus={(e) => focusAmountInput(e, setImporte)}
+                  onBlur={(e) => setImporte(formatAmountForInput(e.target.value))}
+                />
+                {checkAmountInsuficiente && (
+                  <p className="text-xs text-red-600 dark:text-red-400">El monto del cheque es menor al total.</p>
+                )}
+              </label>
+            </div>
+          )}
+
+          {paymentMode === 'DIRECT' && selectedIsAgreement && !isRefund && (
+            <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+              <AgreementCreditSelector agreements={agreements} value={agreementDetails} onChange={setAgreementDetails} />
             </div>
           )}
 
@@ -452,7 +923,15 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                   Restante {money(mixedRemaining)}
                 </span>
               </div>
-              {mixedPayments.map((item, index) => (
+              {mixedPayments.map((item, index) => {
+                const method = methodByCode(item.method_code);
+                const itemRequiresReference = requiresPaymentReference(method);
+                const itemIsCheck = isCheckMethod(method);
+                const itemIsAgreement = isAgreementMethod(method);
+                const itemCheckDetails = item.check_details || {};
+                const itemAgreementDetails = item.agreement_details || {};
+                const itemReferenceCopy = paymentReferenceCopy(method);
+                return (
                 <div key={index} className="py-0.5">
                   {index === 0 && (
                     <div className="mb-1 hidden grid-cols-[minmax(0,1fr)_10rem_2.5rem] gap-2 px-1 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 sm:grid">
@@ -525,22 +1004,80 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                       </div>
                     </div>
                   )}
+                  {itemRequiresReference && !itemIsCheck && (
+                    <label className="mt-2 block space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                      <span>{itemReferenceCopy.label}</span>
+                      <input
+                        className={inputCls}
+                        type="text"
+                        placeholder={itemReferenceCopy.placeholder}
+                        value={item.reference_number || ''}
+                        onChange={(e) => updateMixedPayment(index, 'reference_number', e.target.value)}
+                      />
+                    </label>
+                  )}
+                  {itemIsAgreement && (
+                    <div className="mt-2">
+                      <AgreementCreditSelector
+                        agreements={agreements}
+                        value={itemAgreementDetails}
+                        onChange={(newDetails) => setMixedPayments((current) => current.map((p, i) => i === index ? { ...p, agreement_details: newDetails } : p))}
+                      />
+                    </div>
+                  )}
+                  {itemIsCheck && (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Banco</span>
+                        <input className={inputCls} type="text" value={itemCheckDetails.bank_name || ''} onChange={(e) => updateMixedCheckDetail(index, 'bank_name', e.target.value)} />
+                      </label>
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Numero de cheque</span>
+                        <input className={inputCls} type="text" value={itemCheckDetails.check_number || ''} onChange={(e) => updateMixedCheckDetail(index, 'check_number', e.target.value)} />
+                      </label>
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>Titular</span>
+                        <input className={inputCls} type="text" value={itemCheckDetails.holder_name || ''} onChange={(e) => updateMixedCheckDetail(index, 'holder_name', e.target.value)} />
+                      </label>
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+                        <span>RUT titular</span>
+                        <input className={inputCls} type="text" value={itemCheckDetails.holder_tax_id || ''} onChange={(e) => updateMixedCheckDetail(index, 'holder_tax_id', e.target.value)} />
+                      </label>
+                      <label className="space-y-1 text-xs text-slate-500 dark:text-slate-400 sm:col-span-2">
+                        <span>Fecha cheque</span>
+                        <input className={inputCls} type="date" value={itemCheckDetails.due_date || ''} onChange={(e) => updateMixedCheckDetail(index, 'due_date', e.target.value)} />
+                      </label>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
               <button
                 type="button"
                 className="h-10 rounded-md border border-slate-200 px-3 text-sm font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 disabled={mixedPayments.length >= MAX_MIXED_PAYMENTS || mixedPayments.length >= paymentMethodOptions.length}
-                onClick={() => setMixedPayments((current) => (current.length >= MAX_MIXED_PAYMENTS || current.length >= paymentMethodOptions.length ? current : [...current, newMixedPayment(current)]))}
+                onClick={() => setMixedPayments((current) => (current.length >= MAX_MIXED_PAYMENTS || current.length >= paymentMethodOptions.length ? current : [...current, newMixedPayment(current, formatAmountForInput(mixedRemaining || absoluteTotal))]))}
               >
                 Agregar medio
               </button>
             </div>
           )}
 
-          <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-            <ActionButton label="Cancelar" icon={XCircle} variant="neutral" onClick={onClose} />
-            <ActionButton label="Continuar" icon={CheckCircle2} onClick={() => setStep(2)} disabled={!canContinue} />
+          <div className="flex items-center gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <div className="flex-1 min-w-0">
+              {agreementCreditStatus && (
+                <p className={`text-xs leading-snug ${
+                  agreementCreditStatus.type === 'error'   ? 'text-red-600 dark:text-red-400'
+                  : agreementCreditStatus.type === 'warn'  ? 'text-amber-600 dark:text-amber-400'
+                  : agreementCreditStatus.type === 'success' ? 'text-green-600 dark:text-green-400'
+                  : 'text-blue-600 dark:text-blue-400'
+                }`}>{agreementCreditStatus.msg}</p>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <ActionButton label="Cancelar" icon={XCircle} variant="neutral" onClick={onClose} />
+              <ActionButton label="Continuar" icon={CheckCircle2} onClick={() => setStep(2)} disabled={!canContinue} />
+            </div>
           </div>
         </>
       ) : (
@@ -554,11 +1091,13 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 {mixedPayments.filter((item) => item.method_code && mixedPaymentAmount(item) > 0).map((item, index) => {
                   const method = methods.find((candidate) => candidate.method_code === item.method_code);
                   const rate = item.method_code === 'FOREIGN_CURRENCY' ? mixedForeignRate(item) : null;
+                  const reference = item.reference_number || item.check_details?.check_number || item.agreement_details?.reference_number || item.agreement_details?.associate_identifier;
                   return (
                     <div key={`${item.method_code}-${index}`} className="flex justify-between gap-3 mt-1">
                       <span className="text-slate-500">
                         {method?.method_name || item.method_code}
                         {rate && <span className="ml-1 text-xs">({formatMoney(parseLocalizedAmount(item.foreign_amount), rate.currency_code)})</span>}
+                        {reference && <span className="ml-1 text-xs">#{reference}</span>}
                       </span>
                       <span className="font-semibold tabular-nums">{money(mixedPaymentAmount(item))}</span>
                     </div>
@@ -570,9 +1109,25 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
             ) : isForeign && selectedForeignRate ? (
               <>
                 <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Divisa</span><span className="font-semibold">{selectedForeignRate.currency_code}</span></div>
-                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Importe esperado</span><span className="font-semibold tabular-nums">{formatMoney(expectedForeignAmount, selectedForeignRate.currency_code)}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Importe esperado</span><span className="font-semibold tabular-nums">{formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code)}</span></div>
                 <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Vuelto referencia</span><span className="font-semibold tabular-nums text-green-700 dark:text-green-400">{money(foreignChange)}</span></div>
               </>
+            ) : selectedIsCheck ? (
+              <>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Banco</span><span className="font-semibold">{checkDetails.bank_name}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Cheque</span><span className="font-semibold">{checkDetails.check_number}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Monto</span><span className="font-semibold tabular-nums">{money(importeNum)}</span></div>
+              </>
+            ) : selectedIsAgreement ? (
+              <>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Tipo convenio</span><span className="font-semibold">Credito convenio</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Organizacion</span><span className="font-semibold">{agreementDetails.organization_name}</span></div>
+                <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Codigo asociado</span><span className="font-semibold">{agreementDetails.associate_identifier}</span></div>
+                {agreementDetails.associate_name && <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Asociado</span><span className="font-semibold">{agreementDetails.associate_name}</span></div>}
+                {agreementDetails.reference_number && <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Autorizacion</span><span className="font-semibold">{agreementDetails.reference_number}</span></div>}
+              </>
+            ) : selectedRequiresReference ? (
+              <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Referencia</span><span className="font-semibold">{paymentReference}</span></div>
             ) : isCash && (
               <>
                 <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Importe</span><span className="font-semibold tabular-nums">{money(importeNum)}</span></div>
@@ -628,6 +1183,128 @@ const NoCashRegisterAccess = () => (
   </section>
 );
 
+const AgreementDiscountModal = ({ agreements = [], initialValues = {}, saleBase = 0, onConfirm, onClose }) => {
+  const [agreementId, setAgreementId] = useState(initialValues.agreement_id || '');
+  const [beneficiaryId, setBeneficiaryId] = useState(initialValues.agreement_beneficiary_id || '');
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [loadingBeneficiaries, setLoadingBeneficiaries] = useState(false);
+
+  const discountAgreements = useMemo(
+    () => agreements.filter((item) => item.agreement_type === 'DISCOUNT' && item.is_active !== false),
+    [agreements],
+  );
+
+  const agreementOptions = useMemo(
+    () => discountAgreements.map((item) => ({ value: String(item.id), label: `${item.agreement_name} — ${item.company_name}` })),
+    [discountAgreements],
+  );
+
+  useEffect(() => {
+    if (!agreementId) { setBeneficiaries([]); setBeneficiaryId(''); return; }
+    setLoadingBeneficiaries(true);
+    agreementsService.listBeneficiaries(agreementId)
+      .then(setBeneficiaries)
+      .catch(() => setBeneficiaries([]))
+      .finally(() => setLoadingBeneficiaries(false));
+  }, [agreementId]);
+
+  const beneficiaryOptions = useMemo(
+    () => beneficiaries
+      .filter((item) => item.is_active !== false)
+      .map((item) => ({ value: String(item.id), label: `${item.beneficiary_identifier} — ${item.beneficiary_name}` })),
+    [beneficiaries],
+  );
+
+  const handleAgreementChange = (value) => {
+    setAgreementId(value || '');
+    setBeneficiaryId('');
+  };
+
+  const selectedAgreement = discountAgreements.find((item) => String(item.id) === agreementId);
+  const selectedBeneficiary = beneficiaries.find((item) => String(item.id) === beneficiaryId);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedAgreement || !selectedBeneficiary) return;
+    onConfirm({
+      agreement_id: agreementId,
+      agreement_beneficiary_id: beneficiaryId,
+      organization_name: selectedAgreement.company_name || '',
+      associate_name: selectedBeneficiary.beneficiary_name || '',
+      associate_identifier: selectedBeneficiary.beneficiary_identifier || '',
+      reference_number: '',
+      discount_percent: String(selectedAgreement.discount_percent || ''),
+    });
+    onClose?.();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-3">
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Convenio</span>
+          <AutocompleteSelect
+            value={agreementId}
+            onChange={handleAgreementChange}
+            options={agreementOptions}
+            placeholder="Seleccionar convenio"
+            searchPlaceholder="Buscar convenio..."
+            clearable
+          />
+        </label>
+
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Beneficiario</span>
+          <AutocompleteSelect
+            value={beneficiaryId}
+            onChange={(value) => setBeneficiaryId(value || '')}
+            options={beneficiaryOptions}
+            placeholder={loadingBeneficiaries ? 'Cargando...' : (agreementId ? 'Seleccionar beneficiario' : 'Primero selecciona un convenio')}
+            searchPlaceholder="Buscar por RUT o nombre..."
+            disabled={!agreementId || loadingBeneficiaries}
+            clearable
+          />
+        </label>
+
+        {selectedBeneficiary && selectedAgreement && (() => {
+          const pct = Number(selectedAgreement.discount_percent || 0);
+          const discountAmount = saleBase > 0 ? Math.round(saleBase * pct / 100) : null;
+          return (
+            <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-3 dark:border-blue-800 dark:bg-blue-950/40">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                    {selectedAgreement.agreement_name}
+                    {pct > 0 && <span className="ml-1.5 font-normal normal-case">({pct}%)</span>}
+                  </div>
+                  <div className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{selectedBeneficiary.beneficiary_name}</div>
+                  <div className="font-mono text-xs text-blue-700 dark:text-blue-300">{selectedBeneficiary.beneficiary_identifier}</div>
+                  {Number(selectedBeneficiary.interactions_count || 0) > 0 && (
+                    <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {selectedBeneficiary.interactions_count} uso{selectedBeneficiary.interactions_count !== 1 ? 's' : ''} · consumido {money(selectedBeneficiary.consumed_amount)}
+                    </div>
+                  )}
+                </div>
+                {discountAmount !== null && (
+                  <div className="shrink-0 text-right">
+                    <div className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">-{pct}%</div>
+                    <div className="mt-1 text-sm font-semibold tabular-nums text-blue-800 dark:text-blue-200">{money(discountAmount)}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-3 dark:border-slate-800">
+        <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Cancelar</button>
+        <button type="submit" disabled={!selectedAgreement || !selectedBeneficiary} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">Aplicar convenio</button>
+      </div>
+    </form>
+  );
+};
+
 const CashPos = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -642,15 +1319,37 @@ const CashPos = () => {
   const [documentTypeCode, setDocumentTypeCode] = useState(TICKET_CODE);
   const [discountType, setDiscountType] = useState('NONE');
   const [discountValue, setDiscountValue] = useState(0);
+  const [agreementDiscount, setAgreementDiscount] = useState(emptyAgreementDiscount);
+  const [agreements, setAgreements] = useState([]);
   const [exchangeRates, setExchangeRates] = useState([]);
   const [currencyCode, setCurrencyCode] = useState('');
+  const [activeCashSession, setActiveCashSession] = useState(undefined);
 
   const isReturnDocument = selectedSale?.document_type_code === 'RETURN_TICKET' || selectedSale?.is_return_document;
   const isExchangeDocument = selectedSale?.document_type_code === 'EXCHANGE_DRAFT' || selectedSale?.is_exchange_document;
+  const agreementDiscountPercent = Number(agreementDiscount.discount_percent || 0);
+  const agreementDiscountValid = agreementDiscount.enabled
+    && agreementDiscount.organization_name.trim()
+    && agreementDiscount.associate_identifier.trim()
+    && agreementDiscountPercent > 0;
 
   useEffect(() => {
     setTicketNumber(generateTicketNumber(documentTypeCode));
   }, [documentTypeCode]);
+
+  useEffect(() => {
+    if (!activeCashRegisterRecord?.id) {
+      setActiveCashSession(null);
+      return;
+    }
+    setActiveCashSession(undefined);
+    cashSessionsService.listActive()
+      .then((sessions) => {
+        const found = sessions.find((s) => String(s.cash_register_id) === String(activeCashRegisterRecord.id)) || null;
+        setActiveCashSession(found);
+      })
+      .catch(() => setActiveCashSession(null));
+  }, [activeCashRegisterRecord]);
 
   // Solo actualiza la lista de pendientes — no toca el formulario ni selectedSale
   const refreshPendingList = useCallback(async () => {
@@ -669,13 +1368,15 @@ const CashPos = () => {
   const loadAll = useCallback(async () => {
     setLoadingList(true);
     try {
-      const [data, allTypes, rates] = await Promise.all([
+      const [data, allTypes, rates, activeAgreements] = await Promise.all([
         salesDocumentsService.listPending(),
         documentConfigService.listTypes({ active_only: true }).catch(() => []),
         currencyRatesService.list().catch(() => []),
+        agreementsService.list({ active_only: true }).catch(() => []),
       ]);
       setPendingSales(data);
       setExchangeRates(rates);
+      setAgreements(activeAgreements);
       const firstForeignRate = rates.find((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
       if (firstForeignRate) {
         setCurrencyCode((current) => current || firstForeignRate.currency_code);
@@ -707,6 +1408,23 @@ const CashPos = () => {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  const openAgreementDiscountModal = useCallback(() => {
+    ModalManager.show({
+      type: 'custom',
+      title: 'Convenio de descuento',
+      size: 'medium',
+      showFooter: false,
+      contentComponent: AgreementDiscountModal,
+      contentProps: {
+        agreements,
+        initialValues: agreementDiscount,
+        saleBase: Number(selectedSale?.total_amount || 0),
+        onConfirm: (form) => setAgreementDiscount((current) => ({ ...current, ...form, enabled: true })),
+      },
+    });
+  }, [agreements, agreementDiscount, selectedSale]);
+
+
   const selectedDocumentType = useMemo(
     () => documentTypes.find((item) => item.code === documentTypeCode) || {
       code: documentTypeCode,
@@ -721,16 +1439,20 @@ const CashPos = () => {
 
   const closingTotals = useMemo(() => {
     const base = Number(selectedSale?.total_amount || 0);
-    if (base < 0) return { base, discount: 0, total: base };
+    if (base < 0) return { base, manualDiscount: 0, agreementDiscountAmount: 0, discount: 0, total: base };
     const value = Number(discountValue || 0);
-    const discount = discountType === 'PERCENT'
+    const manual = discountType === 'PERCENT'
       ? base * value / 100
       : discountType === 'AMOUNT'
         ? value
         : 0;
-    const boundedDiscount = Math.min(Math.max(discount, 0), base);
-    return { base, discount: boundedDiscount, total: Math.max(base - boundedDiscount, 0) };
-  }, [discountType, discountValue, selectedSale]);
+    const boundedManual = Math.min(Math.max(manual, 0), base);
+    const agreementPct = agreementDiscountValid ? Number(agreementDiscount.discount_percent || 0) : 0;
+    const agreementAmt = Math.round(base * agreementPct / 100);
+    const boundedAgreement = Math.min(Math.max(agreementAmt, 0), base - boundedManual);
+    const totalDiscount = boundedManual + boundedAgreement;
+    return { base, manualDiscount: boundedManual, agreementDiscountAmount: boundedAgreement, discount: totalDiscount, total: Math.max(base - totalDiscount, 0) };
+  }, [discountType, discountValue, selectedSale, agreementDiscount, agreementDiscountValid]);
 
   const availableExchangeRates = useMemo(
     () => exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code),
@@ -758,6 +1480,7 @@ const CashPos = () => {
     setDocumentTypeCode(sale.document_type_code || TICKET_CODE);
     setDiscountType('NONE');
     setDiscountValue(0);
+    setAgreementDiscount(emptyAgreementDiscount);
     if (!currencyCode && availableExchangeRates[0]) setCurrencyCode(availableExchangeRates[0].currency_code);
     navigate(`/cash/pos?saleId=${sale.sale_code}`, { replace: true });
   };
@@ -782,7 +1505,10 @@ const CashPos = () => {
     try {
       await salesDocumentsService.deletePending(sale.id);
       toast.success('Venta eliminada.');
-      if (selectedSale?.id === sale.id) setSelectedSale(null);
+      if (selectedSale?.id === sale.id) {
+        setSelectedSale(null);
+        setAgreementDiscount(emptyAgreementDiscount);
+      }
       await refreshPendingList();
     } catch (err) {
       toast.error(getBackendMessage(err, 'No fue posible eliminar la venta.'));
@@ -792,6 +1518,16 @@ const CashPos = () => {
   const closeSale = () => {
     if (!selectedSale) return;
     const folio = selectedSale.ticket_number || ticketNumber || generateTicketNumber(documentTypeCode);
+    const agreementUsage = agreementDiscountValid ? {
+      agreement_type: 'DISCOUNT',
+      agreement_id: agreementDiscount.agreement_id ? Number(agreementDiscount.agreement_id) : null,
+      agreement_beneficiary_id: agreementDiscount.agreement_beneficiary_id ? Number(agreementDiscount.agreement_beneficiary_id) : null,
+      organization_name: agreementDiscount.organization_name.trim(),
+      associate_name: agreementDiscount.associate_name.trim(),
+      associate_identifier: agreementDiscount.associate_identifier.trim(),
+      reference_number: agreementDiscount.reference_number.trim() || null,
+      discount_percent: agreementDiscountPercent,
+    } : null;
 
     const doClose = async ({ payment_method_code = null, payment_method_name = null, amount_tendered = 0, change_amount = 0, payment_details = null, receipt_email = null } = {}) => {
       setClosing(true);
@@ -808,6 +1544,7 @@ const CashPos = () => {
           amount_tendered,
           change_amount,
           payment_details,
+          agreement_usage: agreementUsage,
           receipt_email,
         });
         const successTitle = isExchangeDocument ? 'Cambio procesado' : isReturnDocument ? 'Devolucion procesada' : 'Venta cerrada';
@@ -817,6 +1554,7 @@ const CashPos = () => {
         setDocumentTypeCode(TICKET_CODE);
         setDiscountType('NONE');
         setDiscountValue(0);
+        setAgreementDiscount(emptyAgreementDiscount);
         await refreshPendingList();
         ModalManager.success({ title: successTitle, message: successMsg });
       } catch (err) {
@@ -833,6 +1571,13 @@ const CashPos = () => {
       return;
     }
 
+    if (!isExchangeDocument && !isReturnDocument && closingTotals.total === 0) {
+      doClose({
+        payment_details: agreementUsage ? { type: 'AGREEMENT_DISCOUNT', agreement: agreementUsage } : null,
+      });
+      return;
+    }
+
     ModalManager.show({
       type: 'custom',
       title: 'Procesar pago',
@@ -844,6 +1589,7 @@ const CashPos = () => {
         exchangeRates,
         preferredCurrencyCode: selectedExchangeRate?.currency_code || currencyCode,
         initialEmail: selectedSale.customer?.email || '',
+        agreements,
         onConfirm: async ({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email }) => {
           await doClose({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email });
         },
@@ -852,7 +1598,8 @@ const CashPos = () => {
   };
 
   const isClosed = selectedSale?.status === 'CLOSED';
-  const canClose = Boolean(selectedSale && !isClosed && !closing);
+  const noOpenSession = activeCashSession === null;
+  const canClose = Boolean(selectedSale && !isClosed && !closing && activeCashSession && (!agreementDiscount.enabled || agreementDiscountValid));
 
   if (!sessionContextReady) return null;
   if (!activeCashRegisterRecord) {
@@ -907,6 +1654,7 @@ const CashPos = () => {
                 align: 'center',
                 render: (item) => (
                   <div className="flex justify-center gap-1">
+                    <RowActionButton label="Cargar venta" icon={ShoppingCart} onClick={() => selectSale(item)} />
                     <RowActionButton label="Ver detalle" icon={Eye} onClick={() => openDetail(item)} />
                     <RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => deleteSale(item)} />
                   </div>
@@ -974,6 +1722,73 @@ const CashPos = () => {
                     <input className={fieldClassName} type="number" min="0" max={discountType === 'PERCENT' ? 100 : undefined} step="0.01" value={discountValue} onFocus={(event) => event.target.select()} onChange={(e) => setDiscountValue(Number(e.target.value || 0))} disabled={discountType === 'NONE' || isClosed || isReturnDocument || isExchangeDocument} />
                   </label>
                 </div>
+                <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <label className="flex flex-1 items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={agreementDiscount.enabled}
+                        onChange={(e) => {
+                          const enabled = e.target.checked;
+                          setAgreementDiscount((current) => ({ ...current, enabled }));
+                          if (!enabled) {
+                            setDiscountType('NONE');
+                            setDiscountValue(0);
+                          }
+                        }}
+                        disabled={isClosed || isReturnDocument || isExchangeDocument}
+                      />
+                      Aplicar descuento Convenio
+                    </label>
+                    {agreementDiscount.enabled && (
+                      <button
+                        type="button"
+                        onClick={openAgreementDiscountModal}
+                        disabled={isClosed || isReturnDocument || isExchangeDocument}
+                        className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        {agreementDiscount.organization_name ? 'Cambiar' : 'Seleccionar'}
+                      </button>
+                    )}
+                  </div>
+                  {agreementDiscount.enabled && agreementDiscount.organization_name && (() => {
+                    const agreementName = agreements.find((item) => String(item.id) === agreementDiscount.agreement_id)?.agreement_name || agreementDiscount.organization_name;
+                    const discountAmount = closingTotals.base > 0 && agreementDiscountPercent > 0
+                      ? Math.round(closingTotals.base * agreementDiscountPercent / 100)
+                      : null;
+                    return (
+                      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/40">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                              {agreementName}
+                              {agreementDiscountPercent > 0 && <span className="ml-1.5 font-normal normal-case">({agreementDiscountPercent}%)</span>}
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                              <span className="font-mono text-xs text-blue-700 dark:text-blue-300">{agreementDiscount.associate_identifier}</span>
+                              {agreementDiscount.associate_name && (
+                                <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">— {agreementDiscount.associate_name}</span>
+                              )}
+                            </div>
+                          </div>
+                          {discountAmount !== null && (
+                            <div className="shrink-0 text-right">
+                              <div className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">-{agreementDiscountPercent}%</div>
+                              <div className="mt-1 text-sm font-semibold tabular-nums text-blue-800 dark:text-blue-200">{money(discountAmount)}</div>
+                            </div>
+                          )}
+                        </div>
+                        {!agreementDiscountValid && (
+                          <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">Completa empresa, RUT/codigo y porcentaje para aplicar el convenio.</p>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  {agreementDiscount.enabled && !agreementDiscount.organization_name && (
+                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Selecciona un beneficiario para aplicar el descuento de convenio.</p>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -1018,8 +1833,26 @@ const CashPos = () => {
                   <h2 className="text-sm font-semibold">Resumen caja</h2>
                 </div>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">{isReturnDocument ? 'Credito devolucion' : isExchangeDocument ? 'Total cambio' : 'Total venta'}</span><span className="font-medium">{money(Math.abs(closingTotals.base))}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Descuento final</span><span className="font-medium">{money(selectedSale.document_discount_amount || closingTotals.discount)}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500">{isReturnDocument ? 'Credito devolucion' : isExchangeDocument ? 'Total cambio' : 'Total venta'}</span><span className="font-medium tabular-nums">{money(Math.abs(closingTotals.base))}</span></div>
+                  {isClosed ? (
+                    <>
+                      {Number(selectedSale.document_discount_amount || 0) > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Descuento manual</span><span className="font-medium tabular-nums text-amber-600 dark:text-amber-400">-{money(selectedSale.document_discount_amount)}</span></div>
+                      )}
+                      {Number(selectedSale.agreement_discount_amount || 0) > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Descuento convenio</span><span className="font-medium tabular-nums text-blue-600 dark:text-blue-400">-{money(selectedSale.agreement_discount_amount)}</span></div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {closingTotals.manualDiscount > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Descuento manual</span><span className="font-medium tabular-nums text-amber-600 dark:text-amber-400">-{money(closingTotals.manualDiscount)}</span></div>
+                      )}
+                      {closingTotals.agreementDiscountAmount > 0 && (
+                        <div className="flex justify-between"><span className="text-slate-500">Descuento convenio</span><span className="font-medium tabular-nums text-blue-600 dark:text-blue-400">-{money(closingTotals.agreementDiscountAmount)}</span></div>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div className="mt-auto flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800">
                   <span>{closingTotals.total < 0 ? (isExchangeDocument ? 'Credito no utilizado' : 'Monto a devolver') : 'Total a pagar'}</span>
@@ -1032,11 +1865,13 @@ const CashPos = () => {
           <div className="mt-auto">
             <BottomActionBar
               leftContent={
-                selectedSale && !isClosed
-                  ? `${isExchangeDocument && closingTotals.total < 0 ? 'Credito no utilizado' : closingTotals.total < 0 ? 'Monto a devolver' : 'Total a pagar'}: ${money(Math.abs(closingTotals.total))}`
-                  : isClosed
-                    ? 'Venta cerrada correctamente.'
-                    : 'Selecciona una venta para continuar.'
+                noOpenSession
+                  ? 'No hay caja abierta. Abre una sesión de caja para poder cobrar.'
+                  : selectedSale && !isClosed
+                    ? `${isExchangeDocument && closingTotals.total < 0 ? 'Credito no utilizado' : closingTotals.total < 0 ? 'Monto a devolver' : 'Total a pagar'}: ${money(Math.abs(closingTotals.total))}`
+                    : isClosed
+                      ? 'Venta cerrada correctamente.'
+                      : 'Selecciona una venta para continuar.'
               }
               actions={[
                 { id: 'close-sale', label: closing ? 'Cerrando...' : isExchangeDocument ? 'Cerrar cambio' : closingTotals.total < 0 ? 'Cerrar devolucion' : 'Cerrar venta', icon: CheckCircle2, variant: 'primary', onClick: closeSale, disabled: !canClose },
