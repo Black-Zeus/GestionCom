@@ -47,10 +47,10 @@ const formatDateTime = (value) => (
 );
 
 const OBSERVATION_META = {
-  CASH_COUNT: { label: 'Arqueo', role: 'cajero', variant: 'info' },
-  CLOSING: { label: 'Cierre', role: 'cajero', variant: 'neutral' },
-  APPROVAL: { label: 'Aprobacion', role: 'supervisor', variant: 'active' },
-  REJECTION: { label: 'Rechazo', role: 'supervisor', variant: 'danger' },
+  CASH_COUNT: { label: 'Arqueo',    role: 'cajero',     variant: 'info',    pending: 'El cajero aun no ha registrado las observaciones del arqueo.' },
+  CLOSING:    { label: 'Cierre',    role: 'cajero',     variant: 'neutral', pending: 'El cajero aun no ha registrado las observaciones de cierre.' },
+  APPROVAL:   { label: 'Aprobacion', role: 'supervisor', variant: 'active',  pending: 'La diferencia de caja supero el limite permitido. La sesion requiere que el supervisor la revise y apruebe o rechace para poder finalizar el cierre.' },
+  REJECTION:  { label: 'Rechazo',   role: 'supervisor', variant: 'danger',  pending: 'En espera de respuesta del supervisor.' },
 };
 
 const parseAmount = (value) => Number(String(value ?? '').replace(',', '.')) || 0;
@@ -410,6 +410,20 @@ const CashCount = () => {
     [totalPhysicalWithForeign, theoreticalCash],
   );
 
+  const methodGroups = useMemo(() => {
+    if (!summary?.by_payment_method) return {};
+    return summary.by_payment_method.reduce((acc, row) => {
+      const type = row.method_type || 'OTHER';
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(row);
+      return acc;
+    }, {});
+  }, [summary]);
+
+  const totalSalesAmount = useMemo(() => (
+    (summary?.by_payment_method || []).reduce((sum, row) => sum + Number(row.total_amount || 0), 0)
+  ), [summary]);
+
   const handleClose = async () => {
     if (!sessionId) return;
     if (!cashCountNotes.trim()) {
@@ -545,20 +559,124 @@ const CashCount = () => {
                 </div>
               ))}
             </div>
-            <div className="mt-3 space-y-0 border-t border-slate-200 pt-3 dark:border-slate-700">
-              {Number(summary.petty_cash_expenses_total || 0) > 0 && (
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-slate-500">Gastos caja chica</span>
-                  <span className="text-sm font-semibold tabular-nums text-red-600">
-                    -{money(summary.petty_cash_expenses_total)}
-                  </span>
+            {Number(summary.petty_cash_fund_initial_amount || 0) > 0 && (
+              <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">Caja chica</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>Fondo asignado</span>
+                    <span className="tabular-nums">{money(summary.petty_cash_fund_initial_amount)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-red-500">
+                    <span>Gastos de la sesion</span>
+                    <span className="tabular-nums">-{money(summary.petty_cash_expenses_total)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span>Saldo del fondo</span>
+                    <span className="tabular-nums">{money(summary.petty_cash_fund_current_balance)}</span>
+                  </div>
                 </div>
-              )}
-              <InfoRow label="Efectivo esperado" value={money(theoreticalCash)} highlight />
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 dark:border-slate-700">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total ventas</span>
+              <span className="text-sm font-bold tabular-nums">{money(totalSalesAmount)}</span>
             </div>
           </div>
         )}
       </div>
+
+      {summary && (
+        <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h3 className="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Cuadratura por medio de pago</h3>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            {/* Columna izquierda: Efectivo */}
+            <div className="rounded-md border border-green-200 p-3 dark:border-green-800">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-green-700 dark:text-green-400">Efectivo</p>
+              <div className="space-y-1">
+                {(methodGroups['CASH'] || []).map((row) => (
+                  <div key={row.payment_method_code} className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-600 dark:text-slate-300">{row.payment_method_name || row.payment_method_code}</span>
+                      <span className="ml-1 text-[10px] text-slate-400">({row.transaction_count})</span>
+                    </div>
+                    <span className="text-xs font-semibold tabular-nums">{money(row.total_amount)}</span>
+                  </div>
+                ))}
+                {(methodGroups['CASH'] || []).length === 0 && (
+                  <p className="text-xs text-slate-400">Sin ventas en efectivo</p>
+                )}
+              </div>
+              <div className="mt-3 space-y-1 border-t border-slate-200 pt-2 dark:border-slate-700">
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>Asignacion (apertura)</span>
+                  <span className="tabular-nums">{money(summary.opening_amount)}</span>
+                </div>
+                {Number(summary.petty_cash_expenses_total || 0) > 0 && (
+                  <div className="flex justify-between text-xs text-red-500">
+                    <span>Gastos caja chica</span>
+                    <span className="tabular-nums">-{money(summary.petty_cash_expenses_total)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  <span>Saldo esperado</span>
+                  <span className="tabular-nums">{money(theoreticalCash)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>Contado fisico</span>
+                  <span className="tabular-nums">{money(totalPhysicalWithForeign)}</span>
+                </div>
+                <div className={`flex justify-between text-xs font-semibold ${difference < 0 ? 'text-red-600' : difference > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                  <span>Diferencia</span>
+                  <span className="tabular-nums">{difference >= 0 ? '+' : ''}{money(difference)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Columna derecha: todos los demás medios de pago */}
+            <div className="rounded-md border border-slate-200 p-3 dark:border-slate-700">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300">Otros medios de pago</p>
+              <div className="space-y-1">
+                {['CARD', 'TRANSFER', 'OTHER'].flatMap((type) => methodGroups[type] || []).map((row) => (
+                  <div key={row.payment_method_code} className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-slate-600 dark:text-slate-300">{row.payment_method_name || row.payment_method_code}</span>
+                      <span className="ml-1 text-[10px] text-slate-400">({row.transaction_count})</span>
+                    </div>
+                    <span className="text-xs font-semibold tabular-nums">{money(row.total_amount)}</span>
+                  </div>
+                ))}
+                {['CARD', 'TRANSFER', 'OTHER'].every((type) => (methodGroups[type] || []).length === 0) && (
+                  <p className="text-xs text-slate-400">Sin otros medios de pago</p>
+                )}
+              </div>
+              {Number(summary.petty_cash_fund_initial_amount || 0) > 0 && (
+                <div className="mt-3 space-y-1 border-t border-amber-200 pt-2 dark:border-amber-800">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">Caja chica</p>
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>Fondo asignado</span>
+                    <span className="tabular-nums">{money(summary.petty_cash_fund_initial_amount)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-red-500">
+                    <span>Gastos de la sesion</span>
+                    <span className="tabular-nums">-{money(summary.petty_cash_expenses_total)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    <span>Saldo del fondo</span>
+                    <span className="tabular-nums">{money(summary.petty_cash_fund_current_balance)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between rounded-md bg-slate-100 px-4 py-2.5 dark:bg-slate-800">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Total recaudado</span>
+            <span className="text-base font-bold tabular-nums">{money(totalSalesAmount)}</span>
+          </div>
+        </div>
+      )}
 
       {denominations.length > 0 && (
         <div className="mb-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -775,8 +893,7 @@ const CashCount = () => {
               <div key={obs.id} className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <StatusBadge variant={meta.variant}>{meta.label}</StatusBadge>
-                  <span className="font-mono text-xs text-slate-500">observacion={obs.observation_type}</span>
-                  <span className="text-xs text-slate-400">{name} ({meta.role})</span>
+                  <span className="text-xs text-slate-400">{name} · {meta.role}</span>
                   {obs.source === 'fallback' && <span className="text-xs font-medium text-amber-600 dark:text-amber-400">recuperada desde notas antiguas</span>}
                 </div>
                 <p className="whitespace-pre-wrap">{obs.observation_text || 'Sin texto registrado.'}</p>
@@ -789,55 +906,54 @@ const CashCount = () => {
             const meta = OBSERVATION_META[type];
             return (
               <div key={`missing-${type}`} className="rounded-md border border-dashed border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                <span className="font-semibold">{meta.label}</span>
-                <span className="ml-2 font-mono text-xs">observacion={type}</span>
-                <span className="ml-2">no cargada o pendiente.</span>
+                <span className="font-semibold">{meta.label}:</span>
+                <span className="ml-2">{meta.pending}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {isOpen && (
-        <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Confirmar cierre</h3>
-          <div className="space-y-3">
-            <div className="space-y-1 text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-200">Observacion de arqueo <span className="text-red-500">*</span></span>
-              <textarea
-                className="min-h-[80px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950"
-                value={cashCountNotes}
-                onChange={(e) => setCashCountNotes(e.target.value)}
-                placeholder="Observaciones del arqueo (obligatorio)"
-              />
-            </div>
-            <div className="space-y-1 text-sm">
-              <span className="font-medium text-slate-700 dark:text-slate-200">Observacion de cierre <span className="text-slate-400">(opcional)</span></span>
-              <textarea
-                className="min-h-[70px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950"
-                value={closingNotes}
-                onChange={(e) => setClosingNotes(e.target.value)}
-                placeholder="Observaciones administrativas del cierre"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <ActionButton
-                label="Cancelar"
-                icon={XCircle}
-                variant="neutral"
-                onClick={() => navigate('/cash/opening')}
-                disabled={saving}
-              />
-              <ActionButton
-                label={saving ? 'Cerrando...' : 'Confirmar cierre de caja'}
-                icon={CheckCircle2}
-                onClick={handleClose}
-                disabled={saving}
-              />
-            </div>
+      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Confirmar cierre</h3>
+        <div className="space-y-3">
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Observacion de arqueo <span className="text-red-500">*</span></span>
+            <textarea
+              className="min-h-[80px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
+              value={cashCountNotes}
+              onChange={(e) => setCashCountNotes(e.target.value)}
+              placeholder="Observaciones del arqueo (obligatorio)"
+              disabled={!isOpen || saving}
+            />
+          </div>
+          <div className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Observacion de cierre <span className="text-slate-400">(opcional)</span></span>
+            <textarea
+              className="min-h-[70px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950"
+              value={closingNotes}
+              onChange={(e) => setClosingNotes(e.target.value)}
+              placeholder="Observaciones administrativas del cierre"
+              disabled={!isOpen || saving}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <ActionButton
+              label="Volver"
+              icon={XCircle}
+              variant="neutral"
+              onClick={() => navigate('/cash/opening')}
+              disabled={saving}
+            />
+            <ActionButton
+              label={saving ? 'Cerrando...' : 'Confirmar cierre de caja'}
+              icon={CheckCircle2}
+              onClick={handleClose}
+              disabled={!isOpen || saving}
+            />
           </div>
         </div>
-      )}
+      </div>
     </section>
   );
 };

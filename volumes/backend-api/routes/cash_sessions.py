@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, Path, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel as PydanticBaseModel, Field
-from sqlalchemy import and_, select, text
+from sqlalchemy import and_, bindparam, select, text
 from sqlalchemy.orm import selectinload
 
 from core.constants import ErrorCode, ErrorType, HTTPStatus
@@ -124,6 +124,38 @@ def _add_cash_session_observation(
     )
     db_session.add(observation)
     return observation
+
+
+async def _validate_and_declare_petty_cash_funds(db_session, warehouse_id: int | None, responsible_user_id: int | None, request: Request):
+    if not warehouse_id:
+        return None
+
+    open_funds_result = await db_session.execute(
+        text(
+            "SELECT id, fund_code "
+            "FROM petty_cash_funds "
+            "WHERE warehouse_id = :warehouse_id "
+            "AND fund_status = 'UNDECLARED' "
+            "AND deleted_at IS NULL"
+        ),
+        {"warehouse_id": warehouse_id},
+    )
+    open_funds = [dict(row) for row in open_funds_result.mappings().all()]
+    if not open_funds:
+        return None
+
+    fund_codes = ", ".join(f["fund_code"] for f in open_funds)
+    return ResponseManager.error(
+        message=(
+            "No se puede cerrar la caja porque hay cajas chicas sin declarar. "
+            "Declare la caja chica antes de cerrar la sesion de caja."
+        ),
+        status_code=HTTPStatus.BAD_REQUEST,
+        error_code=ErrorCode.VALIDATION_FIELD_REQUIRED,
+        error_type=ErrorType.VALIDATION_ERROR,
+        details=fund_codes,
+        request=request,
+    )
 
 
 async def _load_session_for_response(db_session, session_id: int) -> CashRegisterSession | None:
@@ -429,12 +461,35 @@ async def get_session_summary(
                 SELECT COALESCE(SUM(expense_amount), 0) AS total
                 FROM petty_cash_expenses
                 WHERE cash_register_session_id = :session_id
-                  AND status_id != 35
+                  AND COALESCE(expense_status, 'PENDING') != 'REJECTED'
+                  AND (status_id IS NULL OR status_id != 35)
             """),
             {"session_id": session_id},
         )
         petty_cash_total = money(petty_cash_result.scalar_one() or 0)
-        theoretical_cash = money(money(sess.opening_amount) + cash_total - petty_cash_total)
+
+        petty_cash_fund_result = await session.execute(
+            text("""
+                SELECT
+                    COALESCE(SUM(f.initial_amount), 0) AS fund_initial_amount,
+                    COALESCE(SUM(f.current_balance), 0) AS fund_current_balance
+                FROM petty_cash_funds f
+                JOIN cash_registers cr ON cr.warehouse_id = f.warehouse_id
+                WHERE cr.id = :cash_register_id
+                  AND f.deleted_at IS NULL
+            """),
+            {"cash_register_id": sess.cash_register_id},
+        )
+        fund_row = petty_cash_fund_result.mappings().first()
+        petty_cash_fund_initial = money(fund_row["fund_initial_amount"] or 0) if fund_row else Decimal("0.00")
+        petty_cash_fund_balance = money(fund_row["fund_current_balance"] or 0) if fund_row else Decimal("0.00")
+
+        # Efectivo esperado = apertura + ventas efectivo + saldo caja chica
+        # El fondo de caja chica está físicamente en la caja; su saldo actual ya
+        # descuenta los gastos acumulados, por lo que no se restan por separado.
+        theoretical_cash = money(money(sess.opening_amount) + cash_total + petty_cash_fund_balance)
+
+        total_sales = sum(Decimal(str(row["total_amount"] or 0)) for row in by_method)
 
         return ResponseManager.success(
             data={
@@ -450,7 +505,10 @@ async def get_session_summary(
                     }
                     for row in by_method
                 ],
+                "total_sales_amount": str(money(total_sales)),
                 "petty_cash_expenses_total": str(petty_cash_total),
+                "petty_cash_fund_initial_amount": str(petty_cash_fund_initial),
+                "petty_cash_fund_current_balance": str(petty_cash_fund_balance),
                 "theoretical_cash": str(theoretical_cash),
             },
             request=request,
@@ -593,6 +651,38 @@ async def close_session(
                 request=request,
             )
 
+        open_sales_result = await session.execute(
+            text(
+                "SELECT COUNT(*) FROM sale_documents "
+                "WHERE cash_register_id = :register_id "
+                "AND status != 'CLOSED' "
+                "AND deleted_at IS NULL"
+            ),
+            {"register_id": sess.cash_register_id},
+        )
+        open_sales_count = open_sales_result.scalar_one() or 0
+        if open_sales_count > 0:
+            return ResponseManager.error(
+                message=(
+                    f"No se puede cerrar la sesion porque hay {open_sales_count} "
+                    f"venta{'s' if open_sales_count != 1 else ''} pendiente{'s' if open_sales_count != 1 else ''} "
+                    "de cobro en esta caja. Cierra o elimina las ventas pendientes antes de cerrar la sesion."
+                ),
+                status_code=HTTPStatus.BAD_REQUEST,
+                error_code=ErrorCode.VALIDATION_FIELD_REQUIRED,
+                error_type=ErrorType.VALIDATION_ERROR,
+                request=request,
+            )
+
+        petty_cash_validation = await _validate_and_declare_petty_cash_funds(
+            session,
+            sess.cash_register.warehouse_id if sess.cash_register else None,
+            int(user.get("user_id") or user.get("id") or 0),
+            request,
+        )
+        if petty_cash_validation:
+            return petty_cash_validation
+
         by_method_result = await session.execute(
             text("""
                 SELECT
@@ -619,12 +709,27 @@ async def close_session(
                 SELECT COALESCE(SUM(expense_amount), 0) AS total
                 FROM petty_cash_expenses
                 WHERE cash_register_session_id = :session_id
-                  AND status_id != 35
+                  AND COALESCE(expense_status, 'PENDING') != 'REJECTED'
+                  AND (status_id IS NULL OR status_id != 35)
             """),
             {"session_id": session_id},
         )
         petty_cash_total = money(petty_cash_result.scalar_one() or 0)
-        theoretical = money(money(sess.opening_amount) + cash_sales - petty_cash_total)
+
+        petty_cash_fund_close_result = await session.execute(
+            text("""
+                SELECT COALESCE(SUM(f.current_balance), 0) AS fund_current_balance
+                FROM petty_cash_funds f
+                JOIN cash_registers cr ON cr.warehouse_id = f.warehouse_id
+                WHERE cr.id = :cash_register_id
+                  AND f.deleted_at IS NULL
+            """),
+            {"cash_register_id": sess.cash_register_id},
+        )
+        fund_close_row = petty_cash_fund_close_result.mappings().first()
+        petty_cash_fund_close_balance = money(fund_close_row["fund_current_balance"] or 0) if fund_close_row else Decimal("0.00")
+
+        theoretical = money(money(sess.opening_amount) + cash_sales + petty_cash_fund_close_balance)
         physical = money(payload.physical_amount)
         difference = money(physical - theoretical)
         now = datetime.now(timezone.utc)
