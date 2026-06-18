@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class DocumentTypeUpdate(BaseModel):
     document_type_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    document_category: Optional[str] = Field(None, pattern="^(PURCHASE|SALE|INVENTORY|TRANSFER)$")
+    document_category: Optional[str] = Field(None, pattern="^SALE$")
     requires_approval: Optional[bool] = None
     generates_movement: Optional[bool] = None
     movement_type: Optional[str] = Field(None, pattern="^(IN|OUT|TRANSFER|ADJUSTMENT)$")

@@ -579,7 +579,44 @@ const notificationSettingsTabs = [
   },
 ];
 
-const systemTabs = [];
+const systemTabs = [
+  {
+    id: 'statuses',
+    resource: 'system-statuses',
+    label: 'Estados',
+    singular: 'estado',
+    icon: ShieldCheck,
+    activeField: 'is_active',
+    empty: {
+      status_group: '',
+      status_code: '',
+      status_name: '',
+      status_display_es: '',
+      status_color: '#6c757d',
+      status_icon: 'fa-circle',
+      sort_order: 0,
+      is_active: true,
+    },
+    fields: [
+      { id: 'status_group', label: 'Grupo', required: true },
+      { id: 'status_code', label: 'Codigo', required: true },
+      { id: 'status_name', label: 'Nombre interno', required: true },
+      { id: 'status_display_es', label: 'Nombre visible', required: true },
+      { id: 'status_color', label: 'Color' },
+      { id: 'status_icon', label: 'Icono' },
+      { id: 'sort_order', label: 'Orden', type: 'number', min: 0 },
+      { id: 'is_active', label: 'Estado', type: 'checkbox', checkLabel: 'Activo' },
+    ],
+    tableFields: [
+      { id: 'status_display_es', label: 'Estado', primary: true },
+      { id: 'status_group', label: 'Grupo', sortable: true },
+      { id: 'status_code', label: 'Codigo', sortable: true },
+      { id: 'status_color', label: 'Color' },
+      { id: 'sort_order', label: 'Orden', sortable: true },
+    ],
+    searchFields: ['status_group', 'status_code', 'status_name', 'status_display_es'],
+  },
+];
 
 export const CustomersMaintainers = ({ initialTab, visibleTabs }) => {
   const scopedTabs = visibleTabs?.length ? customersTabs.filter((tab) => visibleTabs.includes(tab.id)) : customersTabs;
@@ -648,4 +685,4 @@ const cashDenominationsTabs = [
 export const CashMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Denominaciones de efectivo" description="Billetes y monedas utilizados en arqueo y apertura de caja." tabs={cashDenominationsTabs} initialTab={initialTab} />;
 export const DocumentTemplateMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Plantillas de documentos" description="Plantillas de salida para documentos comerciales." tabs={documentTemplateTabs} initialTab={initialTab} />;
 export const NotificationSettingsMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Configuracion de notificaciones" description="Tipos, reglas de emision y preferencias de recepcion." tabs={notificationSettingsTabs} initialTab={initialTab} />;
-export const SystemParameterMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Parametros del sistema" description="Monedas y estados del sistema." tabs={systemTabs} initialTab={initialTab} />;
+export const SystemParameterMaintainers = ({ initialTab }) => <AdminGenericMaintainers title="Parametros del sistema" description="Estados base utilizados por los modulos del sistema." tabs={systemTabs} initialTab={initialTab} />;

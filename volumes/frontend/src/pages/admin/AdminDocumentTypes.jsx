@@ -14,7 +14,7 @@ import { getBackendMessage, notifyPromise } from '@/services/ui/notify';
 import { tableFooter, filterActions } from '@/pages/admin/businessFoundationShared';
 
 const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text-sm dark:border-slate-700 dark:bg-slate-950';
-const categoryLabels = { PURCHASE: 'Compra', SALE: 'Venta', INVENTORY: 'Inventario', TRANSFER: 'Transferencia' };
+const categoryLabels = { SALE: 'Venta' };
 const movementLabels = { IN: 'Entrada', OUT: 'Salida', TRANSFER: 'Transferencia', ADJUSTMENT: 'Ajuste' };
 
 const TypeModal = ({ initialValues, onSubmit, onClose }) => {
@@ -212,6 +212,8 @@ const AdminDocumentTypes = () => {
           {
             id: 'type',
             label: 'Tipo',
+            sortable: true,
+            sortValue: (item) => `${item.document_type_name || ''} ${item.document_type_code || ''}`,
             render: (item) => (
               <div>
                 <div className="font-medium">{item.document_type_name}</div>
@@ -219,15 +221,25 @@ const AdminDocumentTypes = () => {
               </div>
             ),
           },
-          { id: 'category', label: 'Categoria', render: (item) => categoryLabels[item.document_category] || item.document_category },
+          {
+            id: 'category',
+            label: 'Categoria',
+            sortable: true,
+            sortValue: (item) => categoryLabels[item.document_category] || item.document_category || '',
+            render: (item) => categoryLabels[item.document_category] || item.document_category,
+          },
           {
             id: 'movement',
             label: 'Movimiento',
+            sortable: true,
+            sortValue: (item) => (item.generates_movement ? movementLabels[item.movement_type] || item.movement_type || '' : 'No genera'),
             render: (item) => (item.generates_movement ? movementLabels[item.movement_type] || item.movement_type : 'No genera'),
           },
           {
             id: 'status',
             label: 'Estado',
+            sortable: true,
+            sortValue: (item) => item.is_active,
             render: (item) => <StatusBadge variant={item.is_active ? 'active' : 'inactive'}>{item.is_active ? 'Activo' : 'Inactivo'}</StatusBadge>,
           },
           {

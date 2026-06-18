@@ -14,7 +14,11 @@ const fieldClassName = 'h-10 w-full rounded-md border border-slate-300 bg-white 
 
 const TYPE_PREFIX = {
   TICKET:       'TKT-',
+  BOLETA:       'BOL-',
   SALE_INVOICE: 'FAC-',
+  MANUAL_39:    'BOL-',
+  MANUAL_33:    'FAC-',
+  MANUAL_61:    'NC-',
   DTE_33:       'F-',
   DTE_34:       'FE-',
   DTE_39:       'B-',
