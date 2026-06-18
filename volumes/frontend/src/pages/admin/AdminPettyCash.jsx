@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, EyeOff, Lock, Pencil, ReceiptText, RefreshCw, RotateCcw, ShieldCheck, Tags, Trash2, WalletCards, XCircle } from 'lucide-react';
+import { CheckCircle2, EyeOff, Lock, Pencil, ReceiptText, RefreshCw, ShieldCheck, Tags, Trash2, WalletCards, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -108,6 +108,14 @@ const getFundStatusVariant = (status) => {
   if (status === 'SUSPENDED') return 'warning';
   return 'inactive';
 };
+const isFundProcessed = (fund) => (
+  fund?.fund_status === 'DECLARED'
+  || fund?.fund_status === 'CLOSED'
+  || Boolean(fund?.has_registered_movements)
+  || Number(fund?.registered_movements_count || 0) > 0
+  || Number(fund?.total_expenses || 0) > 0
+  || Number(fund?.total_replenishments || 0) > 0
+);
 
 const fundToForm = (fund) => ({
   fund_code: fund.fund_code || '',
@@ -341,6 +349,14 @@ const AdminPettyCash = ({ scope = 'all', readOnlyFunds = false }) => {
   }, [search]);
 
   const openFundModal = (fund = null) => {
+    if (fund && isFundProcessed(fund)) {
+      ModalManager.warning({
+        title: 'Fondo procesado',
+        message: 'No se puede modificar un fondo de caja chica ya procesado.',
+      });
+      return;
+    }
+
     ModalManager.show({
       type: 'custom',
       title: fund ? 'Editar fondo' : 'Nuevo fondo',
@@ -393,6 +409,14 @@ const AdminPettyCash = ({ scope = 'all', readOnlyFunds = false }) => {
   };
 
   const changeFundStatus = async (fund, status) => {
+    if (isFundProcessed(fund)) {
+      ModalManager.warning({
+        title: 'Fondo procesado',
+        message: 'No se puede modificar un fondo de caja chica ya procesado.',
+      });
+      return;
+    }
+
     const actionByStatus = {
       UNDECLARED: { title: 'Volver a no declarado', confirm: 'No declarado', detail: 'volver a no declarado' },
       DECLARED: { title: 'Marcar declarado', confirm: 'Marcar declarado', detail: 'marcar como declarado' },
@@ -423,6 +447,14 @@ const AdminPettyCash = ({ scope = 'all', readOnlyFunds = false }) => {
   };
 
   const deleteFund = async (fund) => {
+    if (isFundProcessed(fund)) {
+      ModalManager.warning({
+        title: 'Fondo procesado',
+        message: 'No se puede eliminar un fondo de caja chica ya procesado.',
+      });
+      return;
+    }
+
     const confirmed = await ModalManager.confirm({
       title: 'Eliminar fondo',
       message: <FundConfirmMessage actionDetail="cerrar y eliminar" fund={fund} warehousesById={warehousesById} usersById={usersById} />,
@@ -592,16 +624,18 @@ const AdminPettyCash = ({ scope = 'all', readOnlyFunds = false }) => {
     { id: 'activity', label: 'Movimientos', sortable: true, sortValue: (fund) => fund.total_expenses, render: (fund) => <><div>Gastos {formatCurrency(fund.total_expenses)}</div><div className="text-xs text-slate-500">Reposiciones {formatCurrency(fund.total_replenishments)}</div></> },
     { id: 'status', label: 'Subestado', sortable: true, sortValue: (fund) => fund.fund_status, render: (fund) => <StatusBadge variant={getFundStatusVariant(fund.fund_status)}>{getFundStatusLabel(fund.fund_status)}</StatusBadge> },
     { id: 'updated', label: 'Actualizado', sortable: true, sortValue: (fund) => fund.updated_at || '', render: (fund) => formatDateTime(fund.updated_at, timezone, { hourFormat }) },
-    !readOnlyFunds && { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => (
-      <div className="flex justify-end gap-2">
-        <RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}` || fund.fund_status === 'CLOSED'} onClick={() => openFundModal(fund)} />
-        {fund.fund_status === 'UNDECLARED' && <RowActionButton label="Marcar declarado" icon={CheckCircle2} disabled={busyId === `fund-${fund.id}`} onClick={() => changeFundStatus(fund, 'DECLARED')} />}
-        {fund.fund_status === 'DECLARED' && <RowActionButton label="Volver a no declarado" icon={RotateCcw} disabled={busyId === `fund-${fund.id}`} onClick={() => changeFundStatus(fund, 'UNDECLARED')} />}
-        {fund.fund_status !== 'CLOSED' && <RowActionButton label={fund.fund_status === 'SUSPENDED' ? 'Reactivar fondo' : 'Suspender fondo'} icon={fund.fund_status === 'SUSPENDED' ? ShieldCheck : EyeOff} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'SUSPENDED' ? 'neutral' : 'danger'} onClick={() => changeFundStatus(fund, fund.fund_status === 'SUSPENDED' ? 'UNDECLARED' : 'SUSPENDED')} />}
-        {fund.fund_status !== 'CLOSED' && <RowActionButton label="Cerrar fondo" icon={Lock} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => changeFundStatus(fund, 'CLOSED')} />}
-        <RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => deleteFund(fund)} />
-      </div>
-    ) },
+    !readOnlyFunds && { id: 'actions', label: 'Acciones', align: 'right', render: (fund) => {
+      const processed = isFundProcessed(fund);
+      return (
+        <div className="flex justify-end gap-2">
+          <RowActionButton label="Editar fondo" icon={Pencil} disabled={busyId === `fund-${fund.id}` || processed} onClick={() => openFundModal(fund)} />
+          {!processed && fund.fund_status === 'UNDECLARED' && <RowActionButton label="Marcar declarado" icon={CheckCircle2} disabled={busyId === `fund-${fund.id}`} onClick={() => changeFundStatus(fund, 'DECLARED')} />}
+          {!processed && fund.fund_status !== 'CLOSED' && <RowActionButton label={fund.fund_status === 'SUSPENDED' ? 'Reactivar fondo' : 'Suspender fondo'} icon={fund.fund_status === 'SUSPENDED' ? ShieldCheck : EyeOff} disabled={busyId === `fund-${fund.id}`} variant={fund.fund_status === 'SUSPENDED' ? 'neutral' : 'danger'} onClick={() => changeFundStatus(fund, fund.fund_status === 'SUSPENDED' ? 'UNDECLARED' : 'SUSPENDED')} />}
+          {!processed && fund.fund_status !== 'CLOSED' && <RowActionButton label="Cerrar fondo" icon={Lock} disabled={busyId === `fund-${fund.id}`} variant="danger" onClick={() => changeFundStatus(fund, 'CLOSED')} />}
+          <RowActionButton label="Eliminar fondo" icon={Trash2} disabled={busyId === `fund-${fund.id}` || processed} variant="danger" onClick={() => deleteFund(fund)} />
+        </div>
+      );
+    } },
   ].filter(Boolean);
 
   const categoryColumns = [

@@ -615,6 +615,7 @@ const PettyCashExpenses = () => {
         footer={tableFooter({ page, pageSize, total: filtered.length, loading, setPage, setPageSize })}
         columns={[
           { id: 'expense', label: 'Gasto', render: (item) => <><div className="font-medium">{item.category_name}</div><div className="text-xs text-slate-500">{item.expense_description}</div></> },
+          { id: 'register', label: 'Caja', render: (item) => item.register_name ? <><div className="font-medium">{item.register_name}</div><div className="text-xs text-slate-500">{item.register_code}</div></> : <span className="text-slate-400">—</span> },
           { id: 'responsible', label: 'Responsable', render: (item) => personName(item, 'responsible') },
           { id: 'warehouse', label: 'Local / Bodega', render: (item) => item.warehouse_name || '-' },
           { id: 'amount', label: 'Monto', align: 'right', render: (item) => money(item.expense_amount) },

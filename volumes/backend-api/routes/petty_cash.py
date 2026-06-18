@@ -249,12 +249,95 @@ async def _fund_for_expense(session, fund_id: int) -> dict | None:
     return _row(result.mappings().first())
 
 
+async def _resolve_cash_register_session_id(session, requested_session_id: int | None, fund: dict, user_id: int | None) -> int | None:
+    if requested_session_id:
+        result = await session.execute(
+            text(
+                "SELECT crs.id "
+                "FROM cash_register_sessions crs "
+                "JOIN cash_registers cr ON cr.id = crs.cash_register_id "
+                "WHERE crs.id = :session_id "
+                "AND crs.status_id = 14 "
+                "AND crs.deleted_at IS NULL "
+                "AND cr.deleted_at IS NULL "
+                "AND cr.warehouse_id = :warehouse_id"
+            ),
+            {"session_id": requested_session_id, "warehouse_id": fund["warehouse_id"]},
+        )
+        session_id = result.scalar_one_or_none()
+        if not session_id:
+            raise ValueError("La sesion de caja indicada no esta abierta para la bodega del fondo")
+        return int(session_id)
+
+    result = await session.execute(
+        text(
+            "SELECT crs.id "
+            "FROM cash_register_sessions crs "
+            "JOIN cash_registers cr ON cr.id = crs.cash_register_id "
+            "WHERE crs.status_id = 14 "
+            "AND crs.deleted_at IS NULL "
+            "AND cr.deleted_at IS NULL "
+            "AND cr.warehouse_id = :warehouse_id "
+            "ORDER BY CASE WHEN crs.cashier_user_id = :user_id THEN 0 ELSE 1 END, crs.opening_datetime DESC "
+            "LIMIT 1"
+        ),
+        {"warehouse_id": fund["warehouse_id"], "user_id": user_id or 0},
+    )
+    session_id = result.scalar_one_or_none()
+    return int(session_id) if session_id else None
+
+
 async def _category_for_expense(session, category_id: int) -> dict | None:
     result = await session.execute(
         text("SELECT * FROM petty_cash_categories WHERE id = :id AND deleted_at IS NULL AND is_active = TRUE"),
         {"id": category_id},
     )
     return _row(result.mappings().first())
+
+
+async def _cash_payment_method_id(session) -> int | None:
+    result = await session.execute(
+        text(
+            "SELECT id FROM payment_methods "
+            "WHERE deleted_at IS NULL AND is_active = TRUE AND method_code = 'CASH' "
+            "LIMIT 1"
+        )
+    )
+    method_id = result.scalar_one_or_none()
+    return int(method_id) if method_id else None
+
+
+async def _sync_petty_cash_movement(session, *, expense_id: int, expense_code: str, cash_register_session_id: int | None, amount: Decimal, description: str, user_id: int | None) -> None:
+    await session.execute(
+        text(
+            "DELETE FROM cash_movements "
+            "WHERE movement_type = 'PETTY_CASH' "
+            "AND reference_number = :reference_number"
+        ),
+        {"reference_number": expense_code},
+    )
+    if not cash_register_session_id:
+        return
+
+    payment_method_id = await _cash_payment_method_id(session)
+    if not payment_method_id:
+        return
+
+    await session.execute(
+        text(
+            "INSERT INTO cash_movements (cash_register_session_id, movement_type, document_id, payment_method_id, "
+            "amount, change_amount, received_amount, reference_number, description, created_by_user_id) "
+            "VALUES (:session_id, 'PETTY_CASH', NULL, :payment_method_id, :amount, 0, 0, :reference_number, :description, :user_id)"
+        ),
+        {
+            "session_id": cash_register_session_id,
+            "payment_method_id": payment_method_id,
+            "amount": -abs(amount),
+            "reference_number": expense_code,
+            "description": description,
+            "user_id": user_id,
+        },
+    )
 
 
 async def _record_vendor_suggestion(session, vendor_name: str | None, user_id: int | None) -> None:
@@ -295,7 +378,7 @@ async def list_available_funds(
                     "JOIN users responsible ON responsible.id = f.responsible_user_id "
                     "WHERE f.deleted_at IS NULL "
                     "AND f.responsible_user_id = :user_id "
-                    "AND f.fund_status IN ('UNDECLARED', 'DECLARED') "
+                    "AND f.fund_status = 'UNDECLARED' "
                     "ORDER BY w.warehouse_name, f.id "
                     "LIMIT :limit"
                 ),
@@ -369,7 +452,8 @@ async def list_expenses(request: Request, user: dict = Depends(require_petty_cas
                     "w.warehouse_name, c.category_name, c.requires_evidence, "
                     "creator.username AS created_by_username, creator.first_name AS created_by_first_name, creator.last_name AS created_by_last_name, "
                     "approver.username AS approved_by_username, approver.first_name AS approved_by_first_name, approver.last_name AS approved_by_last_name, "
-                    "responsible.username AS responsible_username, responsible.first_name AS responsible_first_name, responsible.last_name AS responsible_last_name "
+                    "responsible.username AS responsible_username, responsible.first_name AS responsible_first_name, responsible.last_name AS responsible_last_name, "
+                    "cr.register_code, cr.register_name "
                     "FROM petty_cash_expenses e "
                     "JOIN petty_cash_funds f ON f.id = e.petty_cash_fund_id "
                     "JOIN warehouses w ON w.id = f.warehouse_id "
@@ -377,6 +461,8 @@ async def list_expenses(request: Request, user: dict = Depends(require_petty_cas
                     "JOIN users creator ON creator.id = e.created_by_user_id "
                     "LEFT JOIN users approver ON approver.id = e.approved_by_user_id "
                     "LEFT JOIN users responsible ON responsible.id = f.responsible_user_id "
+                    "LEFT JOIN cash_register_sessions crs ON crs.id = e.cash_register_session_id "
+                    "LEFT JOIN cash_registers cr ON cr.id = crs.cash_register_id "
                     "ORDER BY e.created_at DESC, e.id DESC LIMIT 1000"
                 )
             )
@@ -430,8 +516,8 @@ async def create_expense(
                 fund = await _fund_for_expense(session, data.petty_cash_fund_id)
                 if not fund:
                     raise ValueError("Fondo de caja chica no encontrado")
-                if fund["fund_status"] not in ("UNDECLARED", "DECLARED"):
-                    raise ValueError("El fondo no esta disponible para registrar gastos")
+                if fund["fund_status"] != "UNDECLARED":
+                    raise ValueError("El fondo debe estar abierto/no declarado para registrar gastos")
                 current_balance = Decimal(str(fund["current_balance"] or 0))
                 amount = _parse_localized_decimal(data.expense_amount)
 
@@ -446,6 +532,7 @@ async def create_expense(
                 if data.has_receipt and evidence_file is None:
                     raise ValueError("Debes adjuntar el comprobante")
 
+                cash_register_session_id = await _resolve_cash_register_session_id(session, data.cash_register_session_id, fund, user_id)
                 expense_code = await _next_expense_code(session)
                 evidence = await _store_receipt_file(evidence_file, expense_code=expense_code) if data.has_receipt and evidence_file else {
                     "evidence_file_hash": None,
@@ -470,7 +557,7 @@ async def create_expense(
                         "expense_code": expense_code,
                         "fund_id": data.petty_cash_fund_id,
                         "category_id": data.category_id,
-                        "session_id": data.cash_register_session_id,
+                        "session_id": cash_register_session_id,
                         "amount": amount,
                         "description": data.expense_description,
                         "vendor_name": vendor_name,
@@ -483,6 +570,15 @@ async def create_expense(
                 result = await session.execute(text("SELECT LAST_INSERT_ID()"))
                 expense_id = int(result.scalar_one())
                 await _record_vendor_suggestion(session, vendor_name, user_id)
+                await _sync_petty_cash_movement(
+                    session,
+                    expense_id=expense_id,
+                    expense_code=expense_code,
+                    cash_register_session_id=cash_register_session_id,
+                    amount=amount,
+                    description=f"Caja chica {expense_code} - {data.expense_description}",
+                    user_id=user_id,
+                )
                 await session.execute(
                     text(
                         "UPDATE petty_cash_funds SET current_balance = :new_balance, total_expenses = total_expenses + :amount, updated_at = CURRENT_TIMESTAMP "
@@ -526,8 +622,8 @@ async def update_expense(
                 fund = await _fund_for_expense(session, new_fund_id)
                 if not fund:
                     raise ValueError("Fondo de caja chica no encontrado")
-                if fund["fund_status"] not in ("UNDECLARED", "DECLARED"):
-                    raise ValueError("El fondo no esta disponible para registrar gastos")
+                if fund["fund_status"] != "UNDECLARED":
+                    raise ValueError("El fondo debe estar abierto/no declarado para registrar gastos")
 
                 current_balance = Decimal(str(fund["current_balance"] or 0))
                 available_balance = current_balance + old_amount if old_fund_id == new_fund_id else current_balance
@@ -543,6 +639,7 @@ async def update_expense(
                 if data.has_receipt and evidence_file is None and not expense.get("evidence_file_hash"):
                     raise ValueError("Debes adjuntar el comprobante")
 
+                cash_register_session_id = await _resolve_cash_register_session_id(session, data.cash_register_session_id, fund, user_id)
                 if data.has_receipt and evidence_file is not None:
                     evidence = await _store_receipt_file(evidence_file, expense_code=expense["expense_code"])
                 elif data.has_receipt:
@@ -580,7 +677,7 @@ async def update_expense(
                         "id": expense_id,
                         "fund_id": new_fund_id,
                         "category_id": data.category_id,
-                        "session_id": data.cash_register_session_id,
+                        "session_id": cash_register_session_id,
                         "amount": amount,
                         "description": data.expense_description,
                         "vendor_name": vendor_name,
@@ -618,6 +715,15 @@ async def update_expense(
                     )
 
                 await _record_vendor_suggestion(session, vendor_name, user_id)
+                await _sync_petty_cash_movement(
+                    session,
+                    expense_id=expense_id,
+                    expense_code=expense["expense_code"],
+                    cash_register_session_id=cash_register_session_id,
+                    amount=amount,
+                    description=f"Caja chica {expense['expense_code']} - {data.expense_description}",
+                    user_id=user_id,
+                )
                 await session.commit()
                 return ResponseManager.success(data=await _get_expense(session, expense_id), message="Gasto actualizado", request=request)
             except ValueError as exc:
@@ -665,6 +771,13 @@ async def reject_expense(data: PettyCashExpenseReject, request: Request, expense
                     "approved_datetime = CURRENT_TIMESTAMP, rejection_reason = :reason WHERE id = :id"
                 ),
                 {"id": expense_id, "user_id": user.get("user_id") or user.get("id"), "reason": data.rejection_reason},
+            )
+            await session.execute(
+                text(
+                    "DELETE FROM cash_movements "
+                    "WHERE movement_type = 'PETTY_CASH' AND reference_number = :reference_number"
+                ),
+                {"reference_number": expense["expense_code"]},
             )
             await session.execute(
                 text(

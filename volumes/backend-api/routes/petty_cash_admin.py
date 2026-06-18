@@ -6,7 +6,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import and_, select
+from sqlalchemy import and_, bindparam, select, text
 from sqlalchemy.orm import selectinload
 
 from core.constants import ErrorCode, ErrorType, HTTPStatus
@@ -100,6 +100,7 @@ def category_to_dict(category: PettyCashCategory) -> dict:
 def fund_to_dict(fund: PettyCashFund) -> dict:
     warehouse = fund.warehouse
     responsible = fund.responsible_user
+    movement_count = getattr(fund, "registered_movements_count", None)
     return {
         "id": fund.id,
         "fund_code": fund.fund_code,
@@ -113,6 +114,8 @@ def fund_to_dict(fund: PettyCashFund) -> dict:
         "current_balance": float(fund.current_balance or 0),
         "total_expenses": float(fund.total_expenses or 0),
         "total_replenishments": float(fund.total_replenishments or 0),
+        "registered_movements_count": int(movement_count or 0),
+        "has_registered_movements": int(movement_count or 0) > 0,
         "fund_status": fund.fund_status.value if fund.fund_status else None,
         "last_replenishment_date": fund.last_replenishment_date.isoformat() if fund.last_replenishment_date else None,
         "created_at": fund.created_at.isoformat() if fund.created_at else None,
@@ -132,6 +135,42 @@ async def get_active_user(session, user_id: int):
         select(User).where(and_(User.id == user_id, User.deleted_at.is_(None)))
     )
     return result.scalar_one_or_none()
+
+
+async def count_pending_expenses(session, fund_id: int) -> int:
+    result = await session.execute(
+        text(
+            "SELECT COUNT(*) "
+            "FROM petty_cash_expenses "
+            "WHERE petty_cash_fund_id = :fund_id "
+            "AND COALESCE(expense_status, 'PENDING') = 'PENDING' "
+            "AND (status_id IS NULL OR status_id NOT IN (34, 35))"
+        ),
+        {"fund_id": fund_id},
+    )
+    return int(result.scalar_one() or 0)
+
+
+async def count_registered_expenses(session, fund_id: int) -> int:
+    result = await session.execute(
+        text(
+            "SELECT COUNT(*) "
+            "FROM petty_cash_expenses "
+            "WHERE petty_cash_fund_id = :fund_id"
+        ),
+        {"fund_id": fund_id},
+    )
+    return int(result.scalar_one() or 0)
+
+
+def fund_processed_error(request: Request):
+    return ResponseManager.error(
+        message="No se puede modificar ni eliminar un fondo de caja chica ya procesado",
+        status_code=HTTPStatus.BAD_REQUEST,
+        error_code=ErrorCode.VALIDATION_FIELD_REQUIRED,
+        error_type=ErrorType.VALIDATION_ERROR,
+        request=request,
+    )
 
 
 @router.get("/categories", response_class=JSONResponse)
@@ -282,7 +321,25 @@ async def list_funds(
                 stmt = stmt.where(PettyCashFund.responsible_user_id == (user.get("user_id") or user.get("id")))
             stmt = stmt.order_by(PettyCashFund.fund_code).offset(skip).limit(limit)
             result = await session.execute(stmt)
-            data = [fund_to_dict(fund) for fund in result.scalars().all()]
+            funds = result.scalars().all()
+            if funds:
+                fund_ids = [fund.id for fund in funds]
+                movement_result = await session.execute(
+                    text(
+                        "SELECT petty_cash_fund_id, COUNT(*) AS movement_count "
+                        "FROM petty_cash_expenses "
+                        "WHERE petty_cash_fund_id IN :fund_ids "
+                        "GROUP BY petty_cash_fund_id"
+                    ).bindparams(bindparam("fund_ids", expanding=True)),
+                    {"fund_ids": fund_ids},
+                )
+                movement_counts = {
+                    int(row["petty_cash_fund_id"]): int(row["movement_count"])
+                    for row in movement_result.mappings().all()
+                }
+                for fund in funds:
+                    fund.registered_movements_count = movement_counts.get(int(fund.id), 0)
+            data = [fund_to_dict(fund) for fund in funds]
             logger.info("Usuario %s listo %s fondos de caja chica", user.get("username"), len(data))
             return ResponseManager.success(data=data, message=f"Se encontraron {len(data)} fondos", request=request)
     except Exception as exc:
@@ -368,6 +425,13 @@ async def update_fund(
                 )
 
             payload = fund_data.model_dump(exclude_unset=True)
+            if fund.fund_status in (PettyCashFundStatus.DECLARED, PettyCashFundStatus.CLOSED):
+                return fund_processed_error(request)
+
+            registered_expenses = await count_registered_expenses(session, fund_id)
+            if registered_expenses > 0:
+                return fund_processed_error(request)
+
             if "warehouse_id" in payload and not await get_active_warehouse(session, payload["warehouse_id"]):
                 return ResponseManager.error(message="Bodega no encontrada", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_REQUIRED, error_type=ErrorType.VALIDATION_ERROR, request=request)
             if "responsible_user_id" in payload and not await get_active_user(session, payload["responsible_user_id"]):
@@ -376,6 +440,17 @@ async def update_fund(
             for field, value in payload.items():
                 if field == "fund_status":
                     value = PettyCashFundStatus(value)
+                    if value == PettyCashFundStatus.DECLARED:
+                        pending_count = await count_pending_expenses(session, fund_id)
+                        if pending_count > 0:
+                            return ResponseManager.error(
+                                message="No se puede declarar el fondo porque tiene gastos pendientes de aprobacion o rechazo",
+                                status_code=HTTPStatus.BAD_REQUEST,
+                                error_code=ErrorCode.VALIDATION_FIELD_REQUIRED,
+                                error_type=ErrorType.VALIDATION_ERROR,
+                                details=f"Gastos pendientes: {pending_count}",
+                                request=request,
+                            )
                 setattr(fund, field, value)
 
             fund.updated_at = datetime.now(timezone.utc)
@@ -404,6 +479,9 @@ async def delete_fund(
             fund = result.scalar_one_or_none()
             if not fund:
                 return ResponseManager.error(message=f"Fondo no encontrado: {fund_id}", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+            registered_expenses = await count_registered_expenses(session, fund_id)
+            if fund.fund_status != PettyCashFundStatus.UNDECLARED or registered_expenses > 0:
+                return fund_processed_error(request)
             fund.deleted_at = datetime.now(timezone.utc)
             fund.fund_status = PettyCashFundStatus.CLOSED
             await session.commit()
