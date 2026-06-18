@@ -36,6 +36,7 @@ import ProductInfoModalContent from '@/components/product/ProductInfoModalConten
 import UserAvatar from '@/components/common/media/UserAvatar';
 import { authService } from '@/services/auth/authService';
 import { adminMaintainersService } from '@/services/admin/adminMaintainersService';
+import { agreementsService } from '@/services/sales/agreementsService';
 import { salesOperationsService } from '@/services/admin/salesOperationsService';
 import { globalSearchService } from '@/services/search/globalSearchService';
 import { notificationService } from '@/services/notifications/notificationService';
@@ -299,6 +300,20 @@ const detailNavigationRoutes = [
     fallbackLabel: 'Arqueo de caja',
     getLabelFromCode: () => 'Arqueo de caja',
     getTooltipFromCode: () => 'Arqueo y cierre de sesion de caja',
+  },
+  {
+    id: 'agreement-beneficiaries-detail',
+    pathname: '/finance/agreements',
+    queryParam: 'agreement_id',
+    basePath: '/finance/agreements',
+    group: 'Convenios',
+    fallbackLabel: 'Beneficiarios',
+    customFetch: async (code) => {
+      const rows = await agreementsService.list();
+      return rows.find((item) => String(item.id) === code) || null;
+    },
+    getLabel: (record) => `Convenio: ${record.agreement_name}`,
+    getTooltip: (record) => `Beneficiarios del convenio: ${record.agreement_name}`,
   },
 ];
 
@@ -655,6 +670,117 @@ const AppLayout = () => {
   const toggleFooterDropdown = useCallback((name) => {
     setFooterDropdown((prev) => (prev === name ? null : name));
   }, []);
+  const itemLabel = useCallback((item, fallback = 'Sin seleccionar') => (
+    item?.warehouse_name
+    || item?.register_name
+    || item?.sales_point_name
+    || item?.label
+    || item?.name
+    || fallback
+  ), []);
+  const confirmContextChange = useCallback(async ({
+    title,
+    fromLabel,
+    toLabel,
+    confirmLabel = 'Cambiar',
+    detail,
+    onConfirm,
+  }) => {
+    setFooterDropdown(null);
+    const confirmed = await ModalManager.confirm({
+      title,
+      message: (
+        <div className="space-y-3 text-left">
+          <p>Confirma el cambio de contexto operativo.</p>
+          <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-center">
+            <div className="min-w-0">
+              <div className="text-slate-500 dark:text-slate-400">Actual</div>
+              <div className="truncate font-semibold text-slate-900 dark:text-slate-100">{fromLabel}</div>
+            </div>
+            <div className="hidden px-1 text-slate-400 sm:block">→</div>
+            <div className="min-w-0">
+              <div className="text-slate-500 dark:text-slate-400">Nuevo</div>
+              <div className="truncate font-semibold text-slate-900 dark:text-slate-100">{toLabel}</div>
+            </div>
+          </div>
+          {detail && <p className="text-xs text-amber-700 dark:text-amber-300">{detail}</p>}
+        </div>
+      ),
+      buttons: { cancel: 'Cancelar', confirm: confirmLabel },
+    });
+    if (!confirmed) return;
+    onConfirm();
+  }, []);
+  const requestLocationChange = useCallback((loc) => {
+    if (String(loc.id) === String(activeLocation)) {
+      setFooterDropdown(null);
+      return;
+    }
+
+    const nextSalesPoints = salesPoints.filter((salesPoint) => (
+      !salesPoint.warehouse_id
+      || String(salesPoint.warehouse_id) === String(loc.warehouse_id || loc.id)
+    ));
+    const nextCashRegisters = cashRegisters.filter((cashRegister) => (
+      !cashRegister.warehouse_id
+      || String(cashRegister.warehouse_id) === String(loc.warehouse_id || loc.id)
+    ));
+    const salesPointChanges = !nextSalesPoints.some((item) => String(item.id) === String(activeSalesPoint));
+    const cashRegisterChanges = !nextCashRegisters.some((item) => String(item.id) === String(activeCashRegister));
+    const detailParts = [
+      salesPointChanges ? 'punto de venta' : null,
+      cashRegisterChanges ? 'caja' : null,
+    ].filter(Boolean);
+
+    confirmContextChange({
+      title: 'Cambiar bodega',
+      fromLabel: itemLabel(activeLocationRecord, 'Sin bodega'),
+      toLabel: itemLabel(loc, 'Sin bodega'),
+      confirmLabel: 'Cambiar bodega',
+      detail: detailParts.length
+        ? `Este cambio tambien ajustara ${detailParts.join(' y ')} segun la nueva bodega.`
+        : null,
+      onConfirm: () => setActiveLocation(loc.id),
+    });
+  }, [
+    activeCashRegister,
+    activeLocation,
+    activeLocationRecord,
+    activeSalesPoint,
+    cashRegisters,
+    confirmContextChange,
+    itemLabel,
+    salesPoints,
+    setActiveLocation,
+  ]);
+  const requestSalesPointChange = useCallback((salesPoint) => {
+    if (String(salesPoint.id) === String(activeSalesPoint)) {
+      setFooterDropdown(null);
+      return;
+    }
+
+    confirmContextChange({
+      title: 'Cambiar punto de venta',
+      fromLabel: itemLabel(activeSalesPointRecord, 'Sin punto de venta'),
+      toLabel: itemLabel(salesPoint, 'Sin punto de venta'),
+      confirmLabel: 'Cambiar punto',
+      onConfirm: () => setActiveSalesPoint(salesPoint.id),
+    });
+  }, [activeSalesPoint, activeSalesPointRecord, confirmContextChange, itemLabel, setActiveSalesPoint]);
+  const requestCashRegisterChange = useCallback((cashRegister) => {
+    if (String(cashRegister.id) === String(activeCashRegister)) {
+      setFooterDropdown(null);
+      return;
+    }
+
+    confirmContextChange({
+      title: 'Cambiar caja',
+      fromLabel: itemLabel(activeCashRegisterRecord, 'Sin caja'),
+      toLabel: itemLabel(cashRegister, 'Sin caja'),
+      confirmLabel: 'Cambiar caja',
+      onConfirm: () => setActiveCashRegister(cashRegister.id),
+    });
+  }, [activeCashRegister, activeCashRegisterRecord, confirmContextChange, itemLabel, setActiveCashRegister]);
   const moduleGroups = dbMenuGroups;
   const navigablePages = useMemo(() => (
     [...dbMenuPages, ...systemPages].filter((page) => !isHiddenSidebarMenuItem(page))
@@ -789,7 +915,7 @@ const AppLayout = () => {
 
     setDetailNavigationModule(null);
 
-    if (!config.resource) {
+    if (!config.resource && !config.customFetch) {
       const label = config.getLabelFromCode?.(code) || code || config.fallbackLabel;
       setDetailNavigationModule({
         ...(parentModule || {}),
@@ -805,11 +931,13 @@ const AppLayout = () => {
       return undefined;
     }
 
-    adminMaintainersService.list(config.resource)
-      .then((rows) => {
-        if (cancelled) return;
-        const record = rows.find((row) => String(row[config.codeField]) === code);
-        if (!record) return;
+    const fetchPromise = config.customFetch
+      ? config.customFetch(code)
+      : adminMaintainersService.list(config.resource).then((rows) => rows.find((row) => String(row[config.codeField]) === code) || null);
+
+    fetchPromise
+      .then((record) => {
+        if (cancelled || !record) return;
         const label = config.getLabel(record) || code;
         setDetailNavigationModule({
           ...(parentModule || {}),
@@ -1476,7 +1604,7 @@ const AppLayout = () => {
                   <button
                     key={loc.id}
                     type="button"
-                    onClick={() => { setActiveLocation(loc.id); setFooterDropdown(null); }}
+                    onClick={() => requestLocationChange(loc)}
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
                       String(loc.id) === String(activeLocation)
@@ -1525,7 +1653,7 @@ const AppLayout = () => {
                   <button
                     key={sp.id}
                     type="button"
-                    onClick={() => { setActiveSalesPoint(sp.id); setFooterDropdown(null); }}
+                    onClick={() => requestSalesPointChange(sp)}
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
                       String(sp.id) === String(activeSalesPoint)
@@ -1574,7 +1702,7 @@ const AppLayout = () => {
                   <button
                     key={cr.id}
                     type="button"
-                    onClick={() => { setActiveCashRegister(cr.id); setFooterDropdown(null); }}
+                    onClick={() => requestCashRegisterChange(cr)}
                     className={cn(
                       'flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm transition',
                       String(cr.id) === String(activeCashRegister)

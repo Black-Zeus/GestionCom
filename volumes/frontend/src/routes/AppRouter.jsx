@@ -79,6 +79,9 @@ const AdminCurrencyRates = lazy(() => import('@/pages/admin/AdminCurrencyRates')
 const AdminBankReconciliationSettings = lazy(() => import('@/pages/admin/AdminBankReconciliationSettings'));
 const AdminDocumentTemplates = lazy(() => import('@/pages/admin/AdminDocumentTemplates'));
 const AdminNotificationSettings = lazy(() => import('@/pages/admin/AdminNotificationSettings'));
+const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
+const AdminElectronicBilling = lazy(() => import('@/pages/admin/AdminElectronicBilling'));
+const AdminAgreements = lazy(() => import('@/pages/admin/AdminAgreements'));
 const NotificationInbox = lazy(() => import('@/pages/notifications/NotificationInbox'));
 const Profile = lazy(() => import('@/pages/profile/Profile'));
 const GlobalSearchResults = lazy(() => import('@/pages/search/GlobalSearchResults'));
@@ -154,6 +157,10 @@ const moduleComponents = {
   'bank-reconciliation-settings': AdminBankReconciliationSettings,
   'document-templates': AdminDocumentTemplates,
   'notification-settings': AdminNotificationSettings,
+  'system-parameters': AdminSystemParameterMaintainers,
+  'electronic-billing': AdminElectronicBilling,
+  agreements: AdminAgreements,
+  system_parameters: AdminSystemParameterMaintainers,
   notifications: NotificationInbox,
   profile: Profile,
 };
@@ -183,6 +190,8 @@ const routeAliases = [
   { from: 'admin/cash-pos', to: '/admin/cash/pos' },
   { from: 'admin/cash-petty', to: '/admin/cash/petty-cash-categories' },
   { from: 'admin/petty-cash-categories', to: '/admin/cash/petty-cash-categories' },
+  { from: 'config/electronic-billing', to: '/integrations/electronic-billing' },
+  { from: 'sales/agreements', to: '/finance/agreements' },
 ];
 
 const RedirectTo = ({ to, param }) => {

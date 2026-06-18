@@ -16,6 +16,7 @@ import {
   LineChart,
   Package,
   Percent,
+  PlugZap,
   Receipt,
   RotateCcw,
   Ruler,
@@ -117,6 +118,7 @@ export const moduleGroups = [
       { id: 'finance-banking', label: 'Bancos y cuentas bancarias', path: '/finance/banking', icon: Building2, weight: 10, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'finance-currencies', label: 'Monedas', path: '/finance/currencies', icon: CircleDollarSign, weight: 20, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
       { id: 'finance-exchange-rates', label: 'Conversion monetaria', path: '/finance/exchange-rates', icon: ArrowRightLeft, weight: 25, permissions: ['FINANCE_MAINTAINERS_ACCESS', 'FINANCE_MAINTAINERS_MANAGE'] },
+      { id: 'agreements', label: 'Convenios', path: '/finance/agreements', icon: Building2, weight: 30, permissions: ['AGREEMENTS_ACCESS', 'AGREEMENTS_MANAGE'] },
     ],
   },
   {
@@ -172,12 +174,22 @@ export const moduleGroups = [
     ],
   },
   {
+    id: 'integrations',
+    label: 'Integraciones',
+    icon: PlugZap,
+    permissions: ['DTE_ACCESS', 'DTE_VIEW', 'DTE_CONFIG_MANAGE'],
+    items: [
+      { id: 'electronic-billing', label: 'Facturacion electronica', path: '/integrations/electronic-billing', icon: FileText, weight: 10, permissions: ['DTE_ACCESS', 'DTE_VIEW', 'DTE_CONFIG_MANAGE'] },
+    ],
+  },
+  {
     id: 'settings',
     label: 'Configuracion',
     icon: Settings,
     permissions: ['SETTINGS_VISIBLE'],
     items: [
       { id: 'company-config', label: 'Configuracion de empresa', path: '/config/company', icon: Building2, weight: 10, permissions: ['COMPANY_CONFIG_ACCESS', 'COMPANY_CONFIG_MANAGE'] },
+      { id: 'system-parameters', label: 'Parametros del sistema', path: '/config/system-parameters', icon: Settings, weight: 20, permissions: ['SYSTEM_PARAMETERS_ACCESS'] },
       { id: 'tax-config', label: 'Configuracion de impuestos', path: '/config/taxes', icon: Receipt, weight: 30, permissions: ['TAX_CONFIG_ACCESS', 'TAX_CONFIG_MANAGE'] },
       { id: 'payment-methods', label: 'Configuracion de metodos de pago', path: '/config/payment-methods', icon: CreditCard, weight: 40 },
       { id: 'measurement-units', label: 'Configuracion de unidades de medida', path: '/config/measurement-units', icon: Ruler, weight: 50, permissions: ['MEASUREMENT_UNITS_ACCESS', 'MEASUREMENT_UNITS_MANAGE'] },

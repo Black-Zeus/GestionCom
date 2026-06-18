@@ -165,6 +165,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Sales Documents"]
     },
     {
+        "name": "agreements",
+        "prefix": "/agreements",
+        "tags": ["Agreements"]
+    },
+    {
         "name": "petty_cash_admin",
         "prefix": "/petty-cash-admin",
         "tags": ["Petty Cash Admin"]
@@ -213,6 +218,11 @@ ROUTERS_TO_LOAD = [
         "name": "business_foundation",
         "prefix": "/business-foundation",
         "tags": ["Business Foundation"]
+    },
+    {
+        "name": "electronic_billing",
+        "prefix": "/electronic-billing",
+        "tags": ["Electronic Billing"]
     },
     {
         "name": "admin_maintainers",
@@ -354,10 +364,51 @@ async def global_exception_handler(request: Request, exc: Exception):
 # ==========================================
 # EVENTOS DE STARTUP/SHUTDOWN
 # ==========================================
+async def _run_schema_migrations():
+    """Agrega columnas nuevas si no existen (idempotente)."""
+    from sqlalchemy import text as _text
+    from database.database import db_manager
+    migrations = [
+        ("sale_documents", "agreement_discount_amount",
+         "ALTER TABLE sale_documents ADD COLUMN agreement_discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00"),
+    ]
+    drop_columns = [
+        ("agreements", "deleted_at", "ALTER TABLE agreements DROP COLUMN deleted_at"),
+        ("agreement_beneficiaries", "deleted_at", "ALTER TABLE agreement_beneficiaries DROP COLUMN deleted_at"),
+    ]
+    try:
+        async with db_manager.get_async_session() as session:
+            for table, column, ddl in migrations:
+                result = await session.execute(
+                    _text(
+                        "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
+                    ),
+                    {"t": table, "c": column},
+                )
+                if result.scalar() == 0:
+                    await session.execute(_text(ddl))
+                    print(f"✅ Migration applied: {table}.{column}")
+            for table, column, ddl in drop_columns:
+                result = await session.execute(
+                    _text(
+                        "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
+                    ),
+                    {"t": table, "c": column},
+                )
+                if result.scalar() > 0:
+                    await session.execute(_text(ddl))
+                    print(f"✅ Column dropped: {table}.{column}")
+    except Exception as exc:
+        print(f"⚠️  Migration check failed: {exc}")
+
+
 @app.on_event("startup")
 async def startup_event():
     """Eventos de inicio"""
     print("🚀 API iniciando...")
+    await _run_schema_migrations()
     
     # Verificar ResponseManager
     if RESPONSE_MANAGER_AVAILABLE:
