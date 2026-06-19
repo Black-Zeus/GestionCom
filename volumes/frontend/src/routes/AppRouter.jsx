@@ -12,9 +12,13 @@ const SalesMetrics = lazy(() => import('@/pages/metrics/SalesMetrics'));
 const InventoryMetrics = lazy(() => import('@/pages/metrics/InventoryMetrics'));
 const CashMetrics = lazy(() => import('@/pages/metrics/CashMetrics'));
 const CustomerMetrics = lazy(() => import('@/pages/metrics/CustomerMetrics'));
-const ReportsHub      = lazy(() => import('@/pages/reports/ReportsHub'));
-const DailySales      = lazy(() => import('@/pages/reports/DailySales'));
-const ReportAreaPage  = lazy(() => import('@/pages/reports/ReportAreaPage'));
+const ReportsHub              = lazy(() => import('@/pages/reports/ReportsHub'));
+const DailySales              = lazy(() => import('@/pages/reports/DailySales'));
+const ReportAreaPage          = lazy(() => import('@/pages/reports/ReportAreaPage'));
+const AgreementSummary        = lazy(() => import('@/pages/reports/AgreementSummary'));
+const AgreementUsage          = lazy(() => import('@/pages/reports/AgreementUsage'));
+const AgreementBeneficiaries  = lazy(() => import('@/pages/reports/AgreementBeneficiaries'));
+const AgreementValidity       = lazy(() => import('@/pages/reports/AgreementValidity'));
 const Login = lazy(() => import('@/pages/auth/Login'));
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'));
@@ -100,8 +104,13 @@ const moduleComponents = {
   'reports-inventory':      ReportAreaPage,
   'reports-transfers':      ReportAreaPage,
   'reports-cash':           ReportAreaPage,
-  'reports-customers':      ReportAreaPage,
-  'daily-sales':            DailySales,
+  'reports-customers':          ReportAreaPage,
+  'reports-agreements':         ReportAreaPage,
+  'daily-sales':                DailySales,
+  'agreement-summary':          AgreementSummary,
+  'agreement-usage':            AgreementUsage,
+  'agreement-beneficiaries':    AgreementBeneficiaries,
+  'agreement-validity':         AgreementValidity,
   users: AdminUsers,
   roles: AdminRoles,
   warehouses: AdminWarehouses,

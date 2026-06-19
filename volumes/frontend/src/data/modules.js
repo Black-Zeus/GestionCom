@@ -32,6 +32,7 @@ import {
   WalletCards,
   AlertTriangle,
   ArrowRightLeft,
+  Handshake,
 } from 'lucide-react';
 
 // IMPORTANTE: El menú lateral (sidebar) es dinámico y viene de la base de datos via useMenuStore → menuService.getUserHierarchy().
@@ -158,8 +159,13 @@ export const moduleGroups = [
       { id: 'reports-inventory',     label: 'Reportes de inventario',      path: '/reports/inventory',        icon: FileText,      weight: 20, permissions: ['REPORTS_VISIBLE'] },
       { id: 'reports-transfers',     label: 'Reportes de transferencias',  path: '/reports/transfers',        icon: ArrowRightLeft,weight: 30, permissions: ['REPORTS_VISIBLE'] },
       { id: 'reports-cash',          label: 'Reportes de caja',            path: '/reports/cash',             icon: FileText,      weight: 40, permissions: ['REPORTS_VISIBLE'] },
-      { id: 'reports-customers',     label: 'Reportes de clientes',        path: '/reports/customers',        icon: FileText,      weight: 50, permissions: ['REPORTS_VISIBLE'] },
-      { id: 'daily-sales',           label: 'Ventas diarias',              path: '/reports/sales?report=daily-sales',  icon: BarChart3, weight: 60, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-customers',         label: 'Reportes de clientes',           path: '/reports/customers',                                    icon: FileText,   weight: 50, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'reports-agreements',        label: 'Reportes de convenios',          path: '/reports/agreements',                                   icon: Handshake,  weight: 55, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'daily-sales',               label: 'Ventas diarias',                 path: '/reports/sales?report=daily-sales',                     icon: BarChart3,  weight: 60, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'agreement-summary',         label: 'Resumen de convenios',           path: '/reports/agreements?report=agreement-summary',          icon: Handshake,  weight: 61, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'agreement-usage',           label: 'Uso de convenios',               path: '/reports/agreements?report=agreement-usage',            icon: Handshake,  weight: 62, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'agreement-beneficiaries',   label: 'Beneficiarios por convenio',     path: '/reports/agreements?report=agreement-beneficiaries',    icon: Handshake,  weight: 63, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'agreement-validity',        label: 'Vigencia de convenios',          path: '/reports/agreements?report=agreement-validity',         icon: Handshake,  weight: 64, permissions: ['REPORTS_VISIBLE'] },
     ],
   },
   {

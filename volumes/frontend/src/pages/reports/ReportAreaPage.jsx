@@ -5,7 +5,11 @@ import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import { REPORT_GROUPS } from './reportGroups';
 
 const REPORT_COMPONENTS = {
-  'daily-sales': lazy(() => import('./DailySales')),
+  'daily-sales':              lazy(() => import('./DailySales')),
+  'agreement-summary':        lazy(() => import('./AgreementSummary')),
+  'agreement-usage':          lazy(() => import('./AgreementUsage')),
+  'agreement-beneficiaries':  lazy(() => import('./AgreementBeneficiaries')),
+  'agreement-validity':       lazy(() => import('./AgreementValidity')),
 };
 
 // ─── Card ──────────────────────────────────────────────────────────────────

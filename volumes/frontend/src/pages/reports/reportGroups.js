@@ -1,4 +1,4 @@
-import { ArrowRightLeft, TrendingUp, Box, Users, Wallet } from 'lucide-react';
+import { ArrowRightLeft, TrendingUp, Box, Handshake, Users, Wallet } from 'lucide-react';
 
 export const REPORT_GROUPS = [
   {
@@ -193,6 +193,55 @@ export const REPORT_GROUPS = [
         type: 'Reporte operativo',
         available: false,
         tags: ['Sucursal', 'Reporte PDF'],
+      },
+    ],
+  },
+  {
+    id: 'agreements',
+    path: '/reports/agreements',
+    label: 'Reportes de convenios',
+    moduleLabel: 'Módulo de Convenios',
+    description:
+      'Analiza el estado, uso y beneficiarios de los convenios comerciales registrados.',
+    Icon: Handshake,
+    iconCls: 'text-teal-600 dark:text-teal-400',
+    iconBg: 'bg-teal-50 dark:bg-teal-950/40',
+    reports: [
+      {
+        id: 'agreement-summary',
+        label: 'Resumen de convenios',
+        description: 'Vista consolidada de todos los convenios con monto comprometido, consumido y porcentaje de uso.',
+        type: 'Reporte operativo',
+        path: '/reports/agreements?report=agreement-summary',
+        available: true,
+        tags: ['Filtro por tipo', 'Filtro por estado', 'Exportación CSV'],
+      },
+      {
+        id: 'agreement-usage',
+        label: 'Uso de convenios',
+        description: 'Historial de transacciones que aplicaron un convenio, con detalle de beneficiario y monto utilizado.',
+        type: 'Reporte operativo',
+        path: '/reports/agreements?report=agreement-usage',
+        available: true,
+        tags: ['Filtro por convenio', 'Exportación CSV'],
+      },
+      {
+        id: 'agreement-beneficiaries',
+        label: 'Beneficiarios por convenio',
+        description: 'Lista de beneficiarios de un convenio con su estado y cantidad de usos registrados.',
+        type: 'Reporte operativo',
+        path: '/reports/agreements?report=agreement-beneficiaries',
+        available: true,
+        tags: ['Selector de convenio', 'Filtro por estado', 'Exportación CSV'],
+      },
+      {
+        id: 'agreement-validity',
+        label: 'Vigencia de convenios',
+        description: 'Estado de vigencia de todos los convenios: activos, próximos a vencer (≤30 días) y vencidos.',
+        type: 'Reporte gerencial',
+        path: '/reports/agreements?report=agreement-validity',
+        available: true,
+        tags: ['Agrupado por vigencia', 'Exportación CSV'],
       },
     ],
   },
