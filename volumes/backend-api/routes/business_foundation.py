@@ -210,14 +210,22 @@ def product_to_dict(product: Product) -> dict:
         "has_expiry_date": product.has_expiry_date,
         "has_serial_numbers": product.has_serial_numbers,
         "has_location_tracking": product.has_location_tracking,
+        "variant_image_mode": getattr(product, "variant_image_mode", "inherit") or "inherit",
         "created_at": product.created_at.isoformat() if product.created_at else None,
         "updated_at": product.updated_at.isoformat() if product.updated_at else None,
     }
 
 
-def variant_to_dict(variant: ProductVariant) -> dict:
+def variant_to_dict(variant: ProductVariant, media_map: dict | None = None) -> dict:
     product = _rel(variant, "product")
     attributes = getattr(variant, "_attributes", [])
+    media_map = media_map or {}
+    image_mode = (getattr(product, "variant_image_mode", None) or "inherit") if product else "inherit"
+    primary_image = None
+    if image_mode == "own" and variant.primary_image_media_asset_id:
+        primary_image = media_map.get(variant.primary_image_media_asset_id)
+    elif image_mode == "inherit" and product and product.primary_image_media_asset_id:
+        primary_image = media_map.get(product.primary_image_media_asset_id)
     return {
         "id": variant.id,
         "product_id": variant.product_id,
@@ -228,6 +236,8 @@ def variant_to_dict(variant: ProductVariant) -> dict:
         "variant_description": variant.variant_description,
         "is_default_variant": variant.is_default_variant,
         "is_active": variant.is_active,
+        "image_mode": image_mode,
+        "primary_image": primary_image,
         "attributes": attributes,
         "attribute_summary": " / ".join(
             f"{item.get('attribute_name')}: {item.get('value_name')}" for item in attributes if item.get("value_name")
@@ -1523,6 +1533,7 @@ async def list_products(request: Request, user: dict = Depends(require_products_
                   p.base_price, p.cost_price,
                   p.has_variants, p.is_active,
                   p.has_batch_control, p.has_expiry_date, p.has_serial_numbers, p.has_location_tracking,
+                  COALESCE(p.variant_image_mode, 'inherit') AS variant_image_mode,
                   p.created_at, p.updated_at,
                   cat.category_code, cat.category_name,
                   mu.unit_code AS base_unit_code, mu.unit_name AS base_unit_name,
@@ -1570,6 +1581,7 @@ async def list_products(request: Request, user: dict = Depends(require_products_
                 "has_expiry_date": bool(r["has_expiry_date"]),
                 "has_serial_numbers": bool(r["has_serial_numbers"]),
                 "has_location_tracking": bool(r["has_location_tracking"]),
+                "variant_image_mode": r["variant_image_mode"] or "inherit",
                 "created_at": r["created_at"].isoformat() if r["created_at"] else None,
                 "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
                 "primary_image": media_storage.safe_asset({"id": r["primary_image_media_asset_id"], "media_code": r["image_media_code"]}) if r["primary_image_media_asset_id"] else None,
@@ -1640,10 +1652,17 @@ async def list_product_variants(request: Request, user: dict = Depends(require_p
         result = await session.execute(stmt.order_by(ProductVariant.variant_sku))
         variants = result.scalars().all()
         attributes = await _variant_attribute_map(session, [item.id for item in variants])
+        asset_ids = set()
+        for item in variants:
+            if item.primary_image_media_asset_id:
+                asset_ids.add(item.primary_image_media_asset_id)
+            if item.product and item.product.primary_image_media_asset_id:
+                asset_ids.add(item.product.primary_image_media_asset_id)
+        media_map = await _media_map(session, list(asset_ids))
         rows = []
         for item in variants:
             item._attributes = attributes.get(item.id, [])
-            rows.append(variant_to_dict(item))
+            rows.append(variant_to_dict(item, media_map))
         return ResponseManager.success(data=rows, request=request)
 
 
@@ -1850,6 +1869,8 @@ async def update_product_variant(data: ProductVariantUpdate, request: Request, v
         target_product_id = values.get("product_id", variant.product_id)
         if values.get("is_default_variant") is True:
             await session.execute(ProductVariant.__table__.update().where(ProductVariant.product_id == target_product_id).values(is_default_variant=False))
+        if values.get("image_mode") in ("inherit", "default"):
+            values["primary_image_media_asset_id"] = None
         for field, value in values.items():
             setattr(variant, field, value)
         await session.commit()

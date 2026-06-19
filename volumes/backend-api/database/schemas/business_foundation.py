@@ -110,6 +110,7 @@ class ProductCreate(BaseModel):
     has_expiry_date: bool = False
     has_serial_numbers: bool = False
     has_location_tracking: bool = False
+    variant_image_mode: Optional[str] = 'inherit'
 
 
 class ProductUpdate(BaseModel):
@@ -129,6 +130,7 @@ class ProductUpdate(BaseModel):
     has_expiry_date: Optional[bool] = None
     has_serial_numbers: Optional[bool] = None
     has_location_tracking: Optional[bool] = None
+    variant_image_mode: Optional[str] = None
 
 
 class ProductVariantCreate(BaseModel):
@@ -137,6 +139,7 @@ class ProductVariantCreate(BaseModel):
     variant_description: Optional[str] = None
     is_default_variant: bool = False
     is_active: bool = True
+    image_mode: Optional[str] = 'inherit'
 
 
 class ProductVariantUpdate(BaseModel):
@@ -145,6 +148,7 @@ class ProductVariantUpdate(BaseModel):
     variant_description: Optional[str] = None
     is_default_variant: Optional[bool] = None
     is_active: Optional[bool] = None
+    image_mode: Optional[str] = None
 
 
 class ProductVariantAttributeSelection(BaseModel):

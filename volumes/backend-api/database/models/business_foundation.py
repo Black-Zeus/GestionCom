@@ -137,6 +137,7 @@ class Product(BaseModel):
     has_expiry_date = Column(Boolean, nullable=False, default=False)
     has_serial_numbers = Column(Boolean, nullable=False, default=False)
     has_location_tracking = Column(Boolean, nullable=False, default=True)
+    variant_image_mode = Column(Enum('inherit', 'own', 'default'), nullable=False, server_default='inherit')
 
     category = relationship("Category")
     base_unit = relationship("MeasurementUnit")
@@ -158,6 +159,8 @@ class ProductVariant(BaseModel):
     variant_description = Column(Text, nullable=True)
     is_default_variant = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    image_mode = Column(Enum('inherit', 'own', 'default'), nullable=False, server_default='inherit')
+    primary_image_media_asset_id = Column(BigInteger, nullable=True)
 
     product = relationship("Product", back_populates="variants")
 

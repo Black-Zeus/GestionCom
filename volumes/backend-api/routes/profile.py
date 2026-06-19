@@ -412,6 +412,55 @@ async def delete_product_image(request: Request, product_id: int = Path(..., gt=
         return ResponseManager.success(data={"product_id": product_id, "primary_image": None}, message="Imagen de producto removida", request=request)
 
 
+@router.post("/product-variants/{variant_id}/image", response_class=JSONResponse)
+async def upload_variant_image(request: Request, variant_id: int = Path(..., gt=0), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    if not _has_any_permission(user, ["PRODUCTS_MANAGE"]):
+        return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    try:
+        async with db_manager.get_async_session() as session:
+            row = (await session.execute(text("SELECT id FROM product_variants WHERE id = :variant_id AND deleted_at IS NULL"), {"variant_id": variant_id})).mappings().first()
+            if not row:
+                return ResponseManager.error(message="Variante no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+            try:
+                asset = await _create_media_asset(session, owner_type="PRODUCT_VARIANT", owner_id=variant_id, media_role="VARIANT_IMAGE", profile="product", file=file, uploaded_by=_user_id(user))
+            except ValueError as exc:
+                return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            except Exception:
+                logger.exception("No fue posible procesar imagen de variante %s", variant_id)
+                return ResponseManager.error(message="No fue posible procesar la imagen de variante.", status_code=HTTPStatus.INTERNAL_SERVER_ERROR, error_code=ErrorCode.SYSTEM_INTERNAL_ERROR, error_type=ErrorType.SYSTEM_ERROR, request=request)
+            await session.execute(
+                text("UPDATE product_variants SET primary_image_media_asset_id = :asset_id, image_mode = 'own' WHERE id = :variant_id"),
+                {"asset_id": asset["id"], "variant_id": variant_id},
+            )
+            await session.commit()
+            return ResponseManager.success(data=_asset_urls(asset), message="Imagen de variante actualizada", request=request)
+    except ValueError as exc:
+        return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+
+@router.delete("/product-variants/{variant_id}/image", response_class=JSONResponse)
+async def delete_variant_image(request: Request, variant_id: int = Path(..., gt=0), user: dict = Depends(get_current_user)):
+    if not _has_any_permission(user, ["PRODUCTS_MANAGE"]):
+        return ResponseManager.error(message="Acceso denegado", status_code=HTTPStatus.FORBIDDEN, error_code=ErrorCode.PERMISSION_DENIED, error_type=ErrorType.PERMISSION_ERROR, request=request)
+    async with db_manager.get_async_session() as session:
+        row = (await session.execute(
+            text("SELECT id, primary_image_media_asset_id FROM product_variants WHERE id = :variant_id AND deleted_at IS NULL"),
+            {"variant_id": variant_id},
+        )).mappings().first()
+        if not row:
+            return ResponseManager.error(message="Variante no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        await session.execute(
+            text("UPDATE product_variants SET primary_image_media_asset_id = NULL WHERE id = :variant_id"),
+            {"variant_id": variant_id},
+        )
+        await session.execute(
+            text("UPDATE media_assets SET deleted_at = CURRENT_TIMESTAMP WHERE owner_type = 'PRODUCT_VARIANT' AND owner_id = :variant_id AND media_role = 'VARIANT_IMAGE' AND deleted_at IS NULL"),
+            {"variant_id": variant_id},
+        )
+        await session.commit()
+        return ResponseManager.success(data={"variant_id": variant_id, "primary_image": None}, message="Imagen de variante removida", request=request)
+
+
 @router.post("/customers/{customer_id}/{media_role}", response_class=JSONResponse)
 async def upload_customer_media(request: Request, customer_id: int = Path(..., gt=0), media_role: str = Path(...), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     if not _has_any_permission(user, ["FOUNDATION_MAINTAINERS_MANAGE"]):

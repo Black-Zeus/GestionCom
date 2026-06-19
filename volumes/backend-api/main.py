@@ -371,10 +371,23 @@ async def _run_schema_migrations():
     migrations = [
         ("sale_documents", "agreement_discount_amount",
          "ALTER TABLE sale_documents ADD COLUMN agreement_discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0.00"),
+        ("product_variants", "image_mode",
+         "ALTER TABLE product_variants ADD COLUMN image_mode ENUM('inherit','own','default') NOT NULL DEFAULT 'inherit'"),
+        ("product_variants", "primary_image_media_asset_id",
+         "ALTER TABLE product_variants ADD COLUMN primary_image_media_asset_id BIGINT NULL"),
+        ("products", "variant_image_mode",
+         "ALTER TABLE products ADD COLUMN variant_image_mode ENUM('inherit','own','default') NOT NULL DEFAULT 'inherit'"),
     ]
     drop_columns = [
         ("agreements", "deleted_at", "ALTER TABLE agreements DROP COLUMN deleted_at"),
         ("agreement_beneficiaries", "deleted_at", "ALTER TABLE agreement_beneficiaries DROP COLUMN deleted_at"),
+    ]
+    # (table, column, new_enum_value, full_alter_ddl)
+    enum_extensions = [
+        ("media_assets", "owner_type", "PRODUCT_VARIANT",
+         "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT') NOT NULL"),
+        ("media_assets", "media_role", "VARIANT_IMAGE",
+         "ALTER TABLE media_assets MODIFY COLUMN media_role ENUM('AVATAR','LOGO','BANNER','PRODUCT_IMAGE','VARIANT_IMAGE') NOT NULL"),
     ]
     try:
         async with db_manager.get_async_session() as session:
@@ -400,6 +413,18 @@ async def _run_schema_migrations():
                 if result.scalar() > 0:
                     await session.execute(_text(ddl))
                     print(f"✅ Column dropped: {table}.{column}")
+            for table, column, new_value, ddl in enum_extensions:
+                result = await session.execute(
+                    _text(
+                        "SELECT COLUMN_TYPE FROM information_schema.COLUMNS "
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
+                    ),
+                    {"t": table, "c": column},
+                )
+                col_type = result.scalar() or ""
+                if f"'{new_value}'" not in col_type:
+                    await session.execute(_text(ddl))
+                    print(f"✅ ENUM extended: {table}.{column} += '{new_value}'")
     except Exception as exc:
         print(f"⚠️  Migration check failed: {exc}")
 
