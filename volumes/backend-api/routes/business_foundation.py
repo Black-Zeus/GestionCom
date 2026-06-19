@@ -1260,7 +1260,10 @@ async def price_query(
             text(
                 "SELECT p.id AS product_id, p.product_code, p.product_name, p.has_variants, p.category_id, "
                 "cat.category_name, "
+                "p.primary_image_media_asset_id AS product_image_asset_id, "
+                "COALESCE(p.variant_image_mode, 'inherit') AS variant_image_mode, "
                 "pv.id AS variant_id, pv.variant_sku, pv.variant_name, "
+                "pv.primary_image_media_asset_id AS variant_image_asset_id, "
                 "pli.id AS price_item_id, pli.sale_price, pli.base_price, pli.cost_price, pli.margin_percentage, "
                 "mu.id AS unit_id, mu.unit_code, mu.unit_name, mu.unit_symbol "
                 "FROM products p "
@@ -1277,6 +1280,16 @@ async def price_query(
             {"price_list_id": price_list_id, "search": term},
         )
         rows = [dict(r) for r in result.mappings().all()]
+
+        # Batch-load media assets for product/variant images based on each row's image mode
+        image_asset_ids = []
+        for row in rows:
+            mode = row.get("variant_image_mode") or "inherit"
+            if mode == "inherit":
+                image_asset_ids.append(row.get("product_image_asset_id"))
+            elif mode == "own":
+                image_asset_ids.append(row.get("variant_image_asset_id"))
+        media_map = await _media_map(session, image_asset_ids)
 
         variant_ids = list({r["variant_id"] for r in rows if r.get("variant_id")})
         stock_map: dict[int, list[dict]] = {}
@@ -1425,6 +1438,15 @@ async def price_query(
         data = []
         for row in rows:
             vid = row.get("variant_id")
+            img_mode = row.get("variant_image_mode") or "inherit"
+            if img_mode == "inherit":
+                img_asset_id = row.get("product_image_asset_id")
+            elif img_mode == "own":
+                img_asset_id = row.get("variant_image_asset_id")
+            else:
+                img_asset_id = None
+            primary_image = media_map.get(img_asset_id) if img_asset_id else None
+
             warehouses = stock_map.get(vid, []) if vid else []
             if warehouse_id:
                 wh_entry = next((w for w in warehouses if w["warehouse_id"] == warehouse_id), None)
@@ -1464,6 +1486,7 @@ async def price_query(
                 "unit_symbol": row.get("unit_symbol"),
                 "stock_by_warehouse": display_warehouses,
                 "total_stock": context_stock,
+                "primary_image": primary_image,
             })
 
         return ResponseManager.success(data=data, request=request)

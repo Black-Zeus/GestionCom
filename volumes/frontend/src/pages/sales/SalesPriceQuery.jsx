@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCw, Tag, XCircle } from 'lucide-react';
+import { Eye, ImageIcon, Package, RefreshCw, Tag, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import FilterBar from '@/components/common/data/FilterBar';
@@ -11,6 +11,53 @@ import { adminMaintainersService } from '@/services/admin/adminMaintainersServic
 import { getBackendMessage } from '@/services/ui/notify';
 import { useSessionStore } from '@/store/useSessionStore';
 import { tableFooter } from '@/pages/admin/businessFoundationShared';
+
+const ProductImageCell = ({ src, alt }) => {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return (
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800">
+        <Package className="h-5 w-5" />
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} onError={() => setError(true)} className="h-10 w-10 shrink-0 rounded-md object-cover" />;
+};
+
+const ImagePreviewModal = ({ item, onClose }) => {
+  const [error, setError] = useState(false);
+  const src = item.primary_image?.full_url || item.primary_image?.thumb_url;
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex min-h-64 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900">
+        {src && !error ? (
+          <img
+            src={src}
+            alt={item.product_name}
+            onError={() => setError(true)}
+            className="max-h-[480px] w-full object-contain p-4"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-10 text-slate-400">
+            <Package className="h-14 w-14" />
+            <span className="text-sm">Sin imagen disponible</span>
+          </div>
+        )}
+      </div>
+      <div className="text-sm text-slate-600 dark:text-slate-300">
+        <div className="font-semibold text-slate-900 dark:text-slate-100">{item.product_name}</div>
+        {item.has_variants && item.variant_name !== item.product_name && (
+          <div className="mt-0.5 text-slate-500">{item.variant_sku} · {item.variant_name}</div>
+        )}
+      </div>
+      <div className="flex justify-end border-t border-slate-200 pt-4 dark:border-slate-800">
+        <button type="button" onClick={onClose} className="h-10 rounded-md bg-slate-950 px-5 text-sm font-medium text-white dark:bg-white dark:text-slate-950">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const money = (value) =>
   value == null ? '—' : Number(value).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
@@ -258,6 +305,15 @@ const SalesPriceQuery = () => {
     contentProps: { item },
   });
 
+  const openImagePreview = (item) => ModalManager.show({
+    type: 'custom',
+    title: 'Imagen del producto',
+    size: 'medium',
+    showFooter: false,
+    contentComponent: ImagePreviewModal,
+    contentProps: { item },
+  });
+
   const categoryOptions = useMemo(() => categories.map((cat) => ({
     value: String(cat.id),
     label: cat.group_name || cat.category_name,
@@ -338,12 +394,15 @@ const SalesPriceQuery = () => {
             id: 'product',
             label: 'Producto',
             render: (item) => (
-              <>
-                <div className="font-medium">{item.product_name}</div>
-                {item.has_variants && (
-                  <div className="text-xs text-slate-500">{item.variant_sku} · {item.variant_name}</div>
-                )}
-              </>
+              <div className="flex items-center gap-3">
+                <ProductImageCell src={item.primary_image?.thumb_url} alt={item.product_name} />
+                <div>
+                  <div className="font-medium">{item.product_name}</div>
+                  {item.has_variants && (
+                    <div className="text-xs text-slate-500">{item.variant_sku} · {item.variant_name}</div>
+                  )}
+                </div>
+              </div>
             ),
           },
           {
@@ -414,7 +473,15 @@ const SalesPriceQuery = () => {
             label: 'Acciones',
             align: 'right',
             render: (item) => (
-              <RowActionButton label="Ver detalle" icon={Eye} onClick={() => openDetail(item)} />
+              <div className="flex items-center justify-end gap-1">
+                <RowActionButton
+                  label="Ver imagen"
+                  icon={ImageIcon}
+                  onClick={() => openImagePreview(item)}
+                  disabled={!item.primary_image}
+                />
+                <RowActionButton label="Ver detalle" icon={Eye} onClick={() => openDetail(item)} />
+              </div>
             ),
           },
         ]}
