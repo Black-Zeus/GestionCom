@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Boxes, ImagePlus, Package, Pencil, Plus, Trash2, Wand2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Boxes, ImagePlus, Package, Pencil, Plus, Trash2, Wand2, X } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -20,6 +20,15 @@ const fieldClassName = 'h-11 w-full rounded-md border border-slate-300 px-3 text
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
 const textareaClassName = 'min-h-24 w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus:border-blue-500 dark:focus:ring-blue-950';
 const formatMoney = (value) => (value === null || value === undefined || value === '' ? '-' : Number(value).toLocaleString('es-CL'));
+
+const ProductImageCell = ({ src, alt }) => {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800"><Package className="h-5 w-5" /></div>;
+  }
+  return <img src={src} alt={alt} onError={() => setError(true)} className="h-10 w-10 rounded-md object-cover" />;
+};
+
 const defaultProductFlagVisibility = {
   is_active: true,
   has_variants: true,
@@ -53,6 +62,7 @@ const emptyProductForm = {
   has_expiry_date: false,
   has_serial_numbers: false,
   has_location_tracking: false,
+  variant_image_mode: 'inherit',
 };
 
 const productToForm = (product, defaultUnitId = '') => (product ? {
@@ -71,6 +81,7 @@ const productToForm = (product, defaultUnitId = '') => (product ? {
   has_expiry_date: product.has_expiry_date === true,
   has_serial_numbers: product.has_serial_numbers === true,
   has_location_tracking: product.has_location_tracking === true,
+  variant_image_mode: product.variant_image_mode || 'inherit',
 } : { ...emptyProductForm, base_measurement_unit_id: defaultUnitId });
 
 const ProductFormModal = ({ product = null, initialValues, flagVisibility = defaultProductFlagVisibility, categories = [], units = [], brands = [], models = [], onSubmit, onClose }) => {
@@ -80,6 +91,7 @@ const ProductFormModal = ({ product = null, initialValues, flagVisibility = defa
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [removeImage, setRemoveImage] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const imageInputRef = useRef(null);
   const currentImageUrl = product?.primary_image?.thumb_url || product?.primary_image?.full_url || '';
   const visibleImageUrl = imagePreview || (!removeImage ? currentImageUrl : '');
@@ -113,12 +125,14 @@ const ProductFormModal = ({ product = null, initialValues, flagVisibility = defa
     if (!file) return;
     setImageFile(file);
     setRemoveImage(false);
+    setImageLoadError(false);
   };
 
   const clearImage = () => {
     if (imageInputRef.current) imageInputRef.current.value = '';
     setImageFile(null);
     setRemoveImage(Boolean(currentImageUrl));
+    setImageLoadError(false);
   };
 
   const handleSubmit = async (event) => {
@@ -158,6 +172,7 @@ const ProductFormModal = ({ product = null, initialValues, flagVisibility = defa
       has_expiry_date: visibleValue('has_expiry_date'),
       has_serial_numbers: visibleValue('has_serial_numbers'),
       has_location_tracking: visibleValue('has_location_tracking'),
+      variant_image_mode: visibleValue('has_variants') ? (form.variant_image_mode || 'inherit') : 'inherit',
     };
 
     setSaving(true);
@@ -180,7 +195,15 @@ const ProductFormModal = ({ product = null, initialValues, flagVisibility = defa
           <div className="relative">
             <button type="button" onClick={() => imageInputRef.current?.click()} className="group relative h-52 w-full overflow-hidden rounded-md bg-slate-100 text-left outline-none ring-offset-2 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-400 dark:bg-slate-800 dark:ring-offset-slate-950 dark:hover:bg-slate-700">
               {visibleImageUrl ? (
-                <img src={visibleImageUrl} alt={form.product_name || 'Producto'} className="h-full w-full object-contain p-3" />
+                imageLoadError && !imageFile ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+                    <AlertTriangle className="h-10 w-10 text-amber-500" />
+                    <span className="text-sm font-medium text-amber-700 dark:text-amber-300">La imagen no pudo cargarse</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Debe ser removida o reemplazada</span>
+                  </div>
+                ) : (
+                  <img src={visibleImageUrl} alt={form.product_name || 'Producto'} onError={() => setImageLoadError(true)} onLoad={() => setImageLoadError(false)} className="h-full w-full object-contain p-3" />
+                )
               ) : (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-slate-500">
                   <ImagePlus className="h-10 w-10" />
@@ -265,6 +288,17 @@ const ProductFormModal = ({ product = null, initialValues, flagVisibility = defa
           </label>
         ))}
       </div>
+
+      {flagVisibility.has_variants && form.has_variants && (
+        <label className="flex items-center gap-3 text-sm">
+          <span className="min-w-fit font-medium text-slate-700 dark:text-slate-200">Imagen de variantes</span>
+          <select className={selectClassName} value={form.variant_image_mode} onChange={(event) => updateField('variant_image_mode', event.target.value)}>
+            <option value="inherit">Heredar imagen del producto</option>
+            <option value="own">Cada variante con su propia imagen</option>
+            <option value="default">Sin imagen (usar icono por defecto)</option>
+          </select>
+        </label>
+      )}
 
       {formError && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{formError}</div>}
 
@@ -375,10 +409,15 @@ const VariantGeneratorModal = ({ product, attributes = [], onSubmit, onClose }) 
   );
 };
 
-const VariantFormModal = ({ variant = null, initialValues, productOptions = [], fixedProductId = '', onSubmit, onClose }) => {
+const VariantFormModal = ({ variant = null, initialValues, productOptions = [], fixedProductId = '', parentProductImage = null, variantImageMode = 'inherit', onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const imageInputRef = useRef(null);
   const isEdit = Boolean(variant);
   const isProductLocked = isEdit || Boolean(fixedProductId);
   const resolvedProductOptions = productOptions.some((product) => String(product.value) === String(form.product_id)) || !variant
@@ -386,29 +425,53 @@ const VariantFormModal = ({ variant = null, initialValues, productOptions = [], 
     : [{ value: String(form.product_id), label: variant.product_name || `Producto ${form.product_id}` }, ...productOptions];
   const selectedProductLabel = resolvedProductOptions.find((product) => String(product.value) === String(form.product_id))?.label || variant?.product_name || 'Producto seleccionado';
 
+  const currentOwnImageUrl = variant?.primary_image?.thumb_url || variant?.primary_image?.full_url || '';
+
+  const visibleImageForOwn = imagePreview || (!removeImage ? currentOwnImageUrl : '');
+  const hasPendingImageChange = variantImageMode === 'own' && Boolean(imageFile || removeImage);
+
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(''); return undefined; }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+
+  const selectImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setRemoveImage(false);
+    setImageLoadError(false);
+  };
+
+  const clearOwnImage = () => {
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    setImageFile(null);
+    setRemoveImage(Boolean(currentOwnImageUrl));
+    setImageLoadError(false);
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setFormError('');
-    if (!form.product_id) {
-      setFormError('Selecciona un producto.');
-      return;
-    }
-    if (!form.variant_name.trim()) {
-      setFormError('El nombre de la variacion es requerido.');
-      return;
-    }
+    if (!form.product_id) { setFormError('Selecciona un producto.'); return; }
+    if (!form.variant_name.trim()) { setFormError('El nombre de la variacion es requerido.'); return; }
 
     setSaving(true);
     try {
-      await onSubmit({
-        product_id: Number(form.product_id),
-        variant_name: form.variant_name.trim(),
-        variant_description: form.variant_description || null,
-        is_default_variant: Boolean(form.is_default_variant),
-        is_active: Boolean(form.is_active),
-      });
+      await onSubmit(
+        {
+          product_id: Number(form.product_id),
+          variant_name: form.variant_name.trim(),
+          variant_description: form.variant_description || null,
+          is_default_variant: Boolean(form.is_default_variant),
+          is_active: Boolean(form.is_active),
+        },
+        { imageFile: variantImageMode === 'own' ? imageFile : null, removeImage: variantImageMode === 'own' ? removeImage : false },
+      );
       onClose?.();
     } finally {
       setSaving(false);
@@ -417,36 +480,103 @@ const VariantFormModal = ({ variant = null, initialValues, productOptions = [], 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid gap-4 md:grid-cols-2">
-        {isProductLocked ? (
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60 md:col-span-2">
-            <div className="font-medium text-slate-700 dark:text-slate-200">Producto</div>
-            <div className="mt-1 text-slate-600 dark:text-slate-300">{selectedProductLabel}</div>
+      {variantImageMode === 'own' ? (
+        <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+          <div className="space-y-2">
+            <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={selectImage} className="hidden" />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="group relative h-44 w-full overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-100 text-left outline-none ring-offset-2 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-800 dark:ring-offset-slate-950 dark:hover:bg-slate-700"
+              >
+                {visibleImageForOwn ? (
+                  imageLoadError && !imageFile ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center">
+                      <AlertTriangle className="h-7 w-7 text-amber-500" />
+                      <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Imagen no disponible</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Reemplazar o remover</span>
+                    </div>
+                  ) : (
+                    <img src={visibleImageForOwn} alt={form.variant_name || 'Variante'} onError={() => setImageLoadError(true)} onLoad={() => setImageLoadError(false)} className="h-full w-full object-contain p-2" />
+                  )
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-slate-500">
+                    <ImagePlus className="h-9 w-9" />
+                    <span className="text-xs font-medium">Buscar imagen</span>
+                  </div>
+                )}
+                {visibleImageForOwn && !imageLoadError && (
+                  <span className="absolute inset-x-0 bottom-0 bg-slate-950/60 py-1 text-center text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">Cambiar</span>
+                )}
+              </button>
+              {(visibleImageForOwn || imageFile) && (
+                <button
+                  type="button"
+                  onClick={(event) => { event.stopPropagation(); clearOwnImage(); }}
+                  className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/50"
+                  aria-label="Remover imagen"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-200">Producto</span>
-            <select className={selectClassName} value={form.product_id} onChange={(event) => updateField('product_id', event.target.value)} required>
-              <option value="">Selecciona producto</option>
-              {resolvedProductOptions.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}
-            </select>
+          <div className="flex flex-col justify-center gap-4">
+            {isProductLocked ? (
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60">
+                <div className="font-medium text-slate-700 dark:text-slate-200">Producto</div>
+                <div className="mt-1 text-slate-600 dark:text-slate-300">{selectedProductLabel}</div>
+              </div>
+            ) : (
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium text-slate-700 dark:text-slate-200">Producto</span>
+                <select className={selectClassName} value={form.product_id} onChange={(event) => updateField('product_id', event.target.value)} required>
+                  <option value="">Selecciona producto</option>
+                  {resolvedProductOptions.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="block space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">Nombre de variacion</span>
+              <input className={fieldClassName} value={form.variant_name} onChange={(event) => updateField('variant_name', event.target.value)} minLength={2} required />
+            </label>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {isProductLocked ? (
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60 md:col-span-2">
+              <div className="font-medium text-slate-700 dark:text-slate-200">Producto</div>
+              <div className="mt-1 text-slate-600 dark:text-slate-300">{selectedProductLabel}</div>
+            </div>
+          ) : (
+            <label className="space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-200">Producto</span>
+              <select className={selectClassName} value={form.product_id} onChange={(event) => updateField('product_id', event.target.value)} required>
+                <option value="">Selecciona producto</option>
+                {resolvedProductOptions.map((product) => <option key={product.value} value={product.value}>{product.label}</option>)}
+              </select>
+            </label>
+          )}
+          <label className="space-y-1 text-sm md:col-span-2">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Nombre de variacion</span>
+            <input className={fieldClassName} value={form.variant_name} onChange={(event) => updateField('variant_name', event.target.value)} minLength={2} required />
           </label>
-        )}
-        <label className="space-y-1 text-sm md:col-span-2">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Nombre de variacion</span>
-          <input className={fieldClassName} value={form.variant_name} onChange={(event) => updateField('variant_name', event.target.value)} minLength={2} required />
-        </label>
-        <label className="space-y-1 text-sm md:col-span-2">
-          <span className="font-medium text-slate-700 dark:text-slate-200">Descripcion</span>
-          <textarea className={textareaClassName} value={form.variant_description} onChange={(event) => updateField('variant_description', event.target.value)} />
-        </label>
-        {variant?.attribute_summary && (
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60 md:col-span-2">
-            <div className="font-medium text-slate-700 dark:text-slate-200">Atributos SKU</div>
-            <div className="mt-1 text-slate-500">{variant.attribute_summary}</div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      <label className="block space-y-1 text-sm">
+        <span className="font-medium text-slate-700 dark:text-slate-200">Descripcion</span>
+        <textarea className={textareaClassName} value={form.variant_description} onChange={(event) => updateField('variant_description', event.target.value)} />
+      </label>
+
+      {variant?.attribute_summary && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="font-medium text-slate-700 dark:text-slate-200">Atributos SKU</div>
+          <div className="mt-1 text-slate-500">{variant.attribute_summary}</div>
+        </div>
+      )}
 
       <div className="grid gap-2 md:grid-cols-2">
         {[
@@ -463,7 +593,9 @@ const VariantFormModal = ({ variant = null, initialValues, productOptions = [], 
       {formError && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{formError}</div>}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
-        <div className="min-h-5" />
+        <div className="min-h-5">
+          {hasPendingImageChange && <p className="text-xs text-amber-600 dark:text-amber-300">Cambio pendiente de guardar.</p>}
+        </div>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Cancelar</button>
           <button type="submit" disabled={saving} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{saving ? 'Guardando...' : 'Guardar'}</button>
@@ -620,6 +752,8 @@ const AdminProducts = () => {
   const openVariant = (variant = null, fixedProductId = selectedProductId) => {
     const resolvedProductId = variant?.product_id ? String(variant.product_id) : fixedProductId || productOptions[0]?.value || '';
     const scopedId = resolvedProductId || null;
+    const parentProduct = products.find((p) => String(p.id) === String(resolvedProductId));
+    const parentProductImage = parentProduct?.primary_image || null;
     ModalManager.show({
       type: 'custom',
       title: variant ? 'Editar SKU / Variacion' : 'Nueva SKU / Variacion',
@@ -630,11 +764,21 @@ const AdminProducts = () => {
         variant,
         fixedProductId,
         productOptions,
+        parentProductImage,
+        variantImageMode: parentProduct?.variant_image_mode || 'inherit',
         initialValues: variant
           ? { product_id: resolvedProductId, variant_name: variant.variant_name, variant_description: variant.variant_description || '', is_default_variant: variant.is_default_variant, is_active: variant.is_active }
           : { product_id: resolvedProductId, variant_name: '', variant_description: '', is_default_variant: false, is_active: true },
-        onSubmit: async (payload) => {
-          await notifyPromise(variant ? businessFoundationService.variants.update(variant.id, payload) : businessFoundationService.variants.create(payload), { loading: 'Guardando SKU / Variacion...', success: 'SKU / Variacion guardada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
+        onSubmit: async (payload, mediaChanges = {}) => {
+          await notifyPromise((async () => {
+            const savedVariant = variant
+              ? await businessFoundationService.variants.update(variant.id, payload)
+              : await businessFoundationService.variants.create(payload);
+            const variantId = savedVariant?.id || variant?.id;
+            if (variantId && mediaChanges.removeImage) await mediaService.removeVariantImage(variantId);
+            if (variantId && mediaChanges.imageFile) await mediaService.uploadVariantImage(variantId, mediaChanges.imageFile);
+            return savedVariant;
+          })(), { loading: 'Guardando SKU / Variacion...', success: 'SKU / Variacion guardada.', error: (requestError) => getBackendMessage(requestError, 'No fue posible guardar.') });
           await loadVariants(String(payload.product_id) || scopedId);
         },
       },
@@ -751,8 +895,8 @@ const AdminProducts = () => {
       <KpiBar items={[{ label: 'Productos', value: products.length }, { label: 'SKU', value: variants.length }, { label: 'Marcas', value: brands.length }, { label: 'Modelos', value: models.length }]} className="mb-4" />
       {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       <FilterBar className="mb-4" searchValue={search} searchPlaceholder={activeTab === 'products' ? 'Buscar producto, codigo o marca' : 'Buscar SKU / Variacion'} onSearchChange={setSearch} fields={[{ id: 'status', value: status, onChange: setStatus, options: fieldOptions.status }]} actions={filterActions({ loading, onRefresh: loadProducts, onClear: () => { setSearch(''); setStatus('all'); } })} />
-      {activeTab === 'products' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <div className="flex items-center gap-3">{item.primary_image?.thumb_url ? <img src={item.primary_image.thumb_url} alt={item.product_name} className="h-10 w-10 rounded-md object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800"><Package className="h-5 w-5" /></div>}<div><div className="font-medium">{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></div></div> }, { id: 'category', label: 'Categoria', render: (item) => item.category_name || '-' }, { id: 'brand', label: 'Marca / modelo', render: (item) => [item.brand_name || item.brand, item.model_name || item.model].filter(Boolean).join(' / ') || '-' }, { id: 'unit', label: 'Unidad', render: (item) => item.base_unit_code }, { id: 'base_price', label: 'Precio base', align: 'right', render: (item) => formatMoney(item.base_price) }, { id: 'cost_price', label: 'Precio costo', align: 'right', render: (item) => formatMoney(item.cost_price) }, { id: 'controls', label: 'Control', render: (item) => <span className="text-xs text-slate-500">{productControlLabels(item)}</span> }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openProduct(item)} /><RowActionButton label="SKU / Variaciones" icon={Boxes} disabled={!productFlagVisibility.has_variants || !item.has_variants} onClick={() => openSkuView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('producto', () => businessFoundationService.products.remove(item.id))} /></div> }]} />}
-      {activeTab === 'variants' && <DataTable loading={loadingVariants} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading: loadingVariants, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variacion', render: (item) => <div className="font-medium">{item.variant_name}</div> }, { id: 'attributes', label: 'Atributos SKU', render: (item) => item.attribute_summary || '-' }, { id: 'product', label: 'Producto', render: (item) => item.product_name || '-' }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item, String(item.product_id))} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU / Variacion', () => businessFoundationService.variants.remove(item.id), () => loadVariants(selectedProductId || null))} /></div> }]} />}
+      {activeTab === 'products' && <DataTable loading={loading} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })} columns={[{ id: 'product', label: 'Producto', render: (item) => <div className="flex items-center gap-3"><ProductImageCell src={item.primary_image?.thumb_url} alt={item.product_name} /><div><div className="font-medium">{item.product_name}</div><div className="font-mono text-xs text-slate-500">{item.product_code}</div></div></div> }, { id: 'category', label: 'Categoria', render: (item) => item.category_name || '-' }, { id: 'brand', label: 'Marca / modelo', render: (item) => [item.brand_name || item.brand, item.model_name || item.model].filter(Boolean).join(' / ') || '-' }, { id: 'unit', label: 'Unidad', render: (item) => item.base_unit_code }, { id: 'base_price', label: 'Precio base', align: 'right', render: (item) => formatMoney(item.base_price) }, { id: 'cost_price', label: 'Precio costo', align: 'right', render: (item) => formatMoney(item.cost_price) }, { id: 'controls', label: 'Control', render: (item) => <span className="text-xs text-slate-500">{productControlLabels(item)}</span> }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openProduct(item)} /><RowActionButton label="SKU / Variaciones" icon={Boxes} disabled={!productFlagVisibility.has_variants || !item.has_variants} onClick={() => openSkuView(item)} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('producto', () => businessFoundationService.products.remove(item.id))} /></div> }]} />}
+      {activeTab === 'variants' && <DataTable loading={loadingVariants} data={visibleData} footer={tableFooter({ page, pageSize, total: activeData.length, loading: loadingVariants, setPage, setPageSize })} columns={[{ id: 'sku', label: 'SKU / Variacion', render: (item) => <div className="flex items-center gap-3"><ProductImageCell src={item.primary_image?.thumb_url} alt={item.variant_name} /><div><div className="font-medium">{item.variant_name}</div><div className="font-mono text-xs text-slate-500">{item.variant_sku}</div></div></div> }, { id: 'attributes', label: 'Atributos SKU', render: (item) => item.attribute_summary || '-' }, { id: 'product', label: 'Producto', render: (item) => item.product_name || '-' }, { id: 'default', label: 'Defecto', render: (item) => item.is_default_variant ? 'Si' : 'No' }, { id: 'status', label: 'Estado', render: (item) => statusCell(item.is_active) }, { id: 'actions', label: 'Acciones', align: 'center', render: (item) => <div className="flex justify-center gap-2"><RowActionButton label="Editar" icon={Pencil} onClick={() => openVariant(item, String(item.product_id))} /><RowActionButton label="Eliminar" icon={Trash2} variant="danger" onClick={() => remove('SKU / Variacion', () => businessFoundationService.variants.remove(item.id), () => loadVariants(selectedProductId || null))} /></div> }]} />}
     </section>
   );
 };

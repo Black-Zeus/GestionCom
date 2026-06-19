@@ -27,6 +27,12 @@ export const mediaService = {
   async removeProductImage(productId) {
     return unwrap(await apiClient.delete(`/profile/products/${productId}/image`));
   },
+  uploadVariantImage(variantId, file) {
+    return upload(`/profile/product-variants/${variantId}/image`, file);
+  },
+  async removeVariantImage(variantId) {
+    return unwrap(await apiClient.delete(`/profile/product-variants/${variantId}/image`));
+  },
 };
 
 export default mediaService;
