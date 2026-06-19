@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Plus, ToggleLeft, ToggleRight, Trash2, Users } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Handshake, Pencil, Plus, ToggleLeft, ToggleRight, Trash2, Users, X } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import DataTable from '@/components/common/data/DataTable';
 import FilterBar from '@/components/common/data/FilterBar';
@@ -11,6 +11,7 @@ import ModalManager from '@/components/ui/modal';
 import { agreementsService } from '@/services/sales/agreementsService';
 import DatePicker from '@/components/common/forms/DatePicker';
 import { getBackendMessage, notifyPromise, toast } from '@/services/ui/notify';
+import { mediaService } from '@/services/media/mediaService';
 import { formatRut, isValidRut, normalizeRutForStorage } from '@/utils/rut';
 import { activeFilter, fieldOptions, filterActions, includesTerm, statusCell, tableFooter } from './businessFoundationShared';
 
@@ -79,89 +80,18 @@ const toBeneficiaryForm = (item) => ({
   is_active: item?.is_active !== false,
 });
 
-const AgreementForm = ({ value, onChange, disabled = false }) => {
-  const [rutError, setRutError] = useState('');
-  const [benefitFocused, setBenefitFocused] = useState(false);
-  const update = (field, nextValue) => onChange((current) => ({ ...current, [field]: nextValue }));
-
-  const handleRutChange = (rawValue) => {
-    setRutError('');
-    update('company_tax_id', rawValue);
-  };
-
-  const handleRutBlur = () => {
-    if (!value.company_tax_id) return;
-    const formatted = formatRut(value.company_tax_id);
-    update('company_tax_id', formatted);
-    setRutError(isValidRut(formatted) ? '' : 'Ingresa un RUT valido.');
-  };
-
-  return (
-    <div className="space-y-3">
-    <div className="grid gap-3 md:grid-cols-2">
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Nombre convenio</span>
-        <input className={fieldClassName} value={value.agreement_name} onChange={(event) => update('agreement_name', event.target.value)} disabled={disabled} required />
-      </label>
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Tipo convenio</span>
-        <select className={selectClassName} value={value.agreement_type} onChange={(event) => update('agreement_type', event.target.value)} disabled={disabled}>
-          <option value="DISCOUNT">Descuento</option>
-          <option value="CREDIT">Credito</option>
-        </select>
-      </label>
-      <div className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">RUT empresa / agrupacion</span>
-        <input className={rutError ? `${fieldClassName} border-red-400 focus:border-red-400 focus:ring-red-100 dark:border-red-600` : fieldClassName} value={value.company_tax_id} onChange={(event) => handleRutChange(event.target.value)} onBlur={handleRutBlur} disabled={disabled} required />
-        {rutError && <p className="text-xs text-red-600 dark:text-red-400">{rutError}</p>}
+const AgreementLogoCell = ({ src, alt }) => {
+  const [error, setError] = useState(false);
+  if (!src || error) {
+    return (
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-400 dark:bg-slate-800">
+        <Handshake className="h-4 w-4" />
       </div>
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Nombre empresa / agrupacion</span>
-        <input className={fieldClassName} value={value.company_name} onChange={(event) => update('company_name', event.target.value)} disabled={disabled} required />
-      </label>
-      <div className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Vigencia desde</span>
-        <DatePicker value={value.valid_from} onChange={(date) => update('valid_from', date)} placeholder="Seleccionar fecha" minDate={today()} />
-      </div>
-      <div className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">Vigencia hasta</span>
-        <DatePicker value={value.valid_to || ''} onChange={(date) => update('valid_to', date)} placeholder="Sin fecha de termino" minDate={value.valid_from > today() ? value.valid_from : today()} />
-      </div>
-      {value.agreement_type === 'DISCOUNT' && (
-        <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700 dark:text-slate-200">% descuento</span>
-          <input className={fieldClassName} type="number" min="0" max="100" step="0.01" value={value.discount_percent} onChange={(event) => update('discount_percent', event.target.value)} disabled={disabled} required />
-        </label>
-      )}
-      <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-200">
-          {value.agreement_type === 'DISCOUNT' ? 'Tope máximo de descuento' : 'Monto crédito'}
-        </span>
-        <input
-          className={fieldClassName}
-          type="text"
-          inputMode="numeric"
-          value={benefitFocused ? value.benefit_amount : formatMoneyInput(value.benefit_amount)}
-          onChange={(event) => update('benefit_amount', event.target.value.replace(/[^\d]/g, ''))}
-          onFocus={(event) => { setBenefitFocused(true); requestAnimationFrame(() => event.target.select()); }}
-          onBlur={() => setBenefitFocused(false)}
-          disabled={disabled}
-        />
-      </label>
-    </div>
-    <div className="grid gap-2 md:grid-cols-2">
-      <label className="flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm dark:border-slate-700">
-        <input type="checkbox" checked={value.single_purchase} onChange={(event) => update('single_purchase', event.target.checked)} disabled={disabled} />
-        Compra unica por beneficiario
-      </label>
-      <label className="flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm dark:border-slate-700">
-        <input type="checkbox" checked={value.is_active} onChange={(event) => update('is_active', event.target.checked)} disabled={disabled} />
-        Convenio activo
-      </label>
-    </div>
-    </div>
-  );
+    );
+  }
+  return <img src={src} alt={alt} onError={() => setError(true)} className="h-9 w-9 shrink-0 rounded-md object-contain" />;
 };
+
 
 const BeneficiaryForm = ({ value, onChange, agreement = null, disabled = false }) => {
   const [rutError, setRutError] = useState('');
@@ -251,6 +181,48 @@ const AgreementFormModal = ({ agreement = null, onSubmit, onClose }) => {
   const [form, setForm] = useState(() => toAgreementForm(agreement));
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [rutError, setRutError] = useState('');
+  const [benefitFocused, setBenefitFocused] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [removeImage, setRemoveImage] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const imageInputRef = useRef(null);
+
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const currentLogoUrl = agreement?.logo?.thumb_url || agreement?.logo?.full_url || '';
+  const visibleLogo = imagePreview || (!removeImage ? currentLogoUrl : '');
+  const hasPendingLogoChange = Boolean(imageFile || removeImage);
+
+  useEffect(() => {
+    if (!imageFile) { setImagePreview(''); return undefined; }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  const selectImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setRemoveImage(false);
+    setImageLoadError(false);
+  };
+
+  const clearImage = () => {
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    setImageFile(null);
+    setRemoveImage(Boolean(currentLogoUrl));
+    setImageLoadError(false);
+  };
+
+  const handleRutChange = (rawValue) => { setRutError(''); update('company_tax_id', rawValue); };
+  const handleRutBlur = () => {
+    if (!form.company_tax_id) return;
+    const formatted = formatRut(form.company_tax_id);
+    update('company_tax_id', formatted);
+    setRutError(isValidRut(formatted) ? '' : 'Ingresa un RUT valido.');
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -261,13 +233,16 @@ const AgreementFormModal = ({ agreement = null, onSubmit, onClose }) => {
     }
     setSaving(true);
     try {
-      await onSubmit({
-        ...form,
-        company_tax_id: form.company_tax_id ? normalizeRutForStorage(form.company_tax_id) : form.company_tax_id,
-        valid_to: form.valid_to || null,
-        discount_percent: form.agreement_type === 'DISCOUNT' ? Number(form.discount_percent || 0) : null,
-        benefit_amount: Number(form.benefit_amount || 0),
-      });
+      await onSubmit(
+        {
+          ...form,
+          company_tax_id: form.company_tax_id ? normalizeRutForStorage(form.company_tax_id) : form.company_tax_id,
+          valid_to: form.valid_to || null,
+          discount_percent: form.agreement_type === 'DISCOUNT' ? Number(form.discount_percent || 0) : null,
+          benefit_amount: Number(form.benefit_amount || 0),
+        },
+        { imageFile, removeImage },
+      );
       onClose?.();
     } finally {
       setSaving(false);
@@ -276,10 +251,129 @@ const AgreementFormModal = ({ agreement = null, onSubmit, onClose }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <AgreementForm value={form} onChange={setForm} disabled={saving} />
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-        <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Cancelar</button>
-        <button type="submit" disabled={saving} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{saving ? 'Guardando...' : 'Guardar convenio'}</button>
+      {/* Fila superior: imagen (col 1) + campos identidad (col 2) */}
+      <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+        <div className="space-y-2">
+          <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={selectImage} className="hidden" />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="group relative h-44 w-full overflow-hidden rounded-md border border-dashed border-slate-300 bg-slate-100 text-left outline-none ring-offset-2 transition hover:bg-slate-200 focus-visible:ring-2 focus-visible:ring-blue-400 dark:border-slate-700 dark:bg-slate-800 dark:ring-offset-slate-950 dark:hover:bg-slate-700"
+            >
+              {visibleLogo ? (
+                imageLoadError && !imageFile ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 px-2 text-center">
+                    <AlertTriangle className="h-7 w-7 text-amber-500" />
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-300">Imagen no disponible</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Reemplazar o remover</span>
+                  </div>
+                ) : (
+                  <img src={visibleLogo} alt="Logo convenio" onError={() => setImageLoadError(true)} onLoad={() => setImageLoadError(false)} className="h-full w-full object-contain p-2" />
+                )
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-slate-500">
+                  <Handshake className="h-9 w-9" />
+                  <span className="text-xs font-medium">Buscar logo</span>
+                </div>
+              )}
+              {visibleLogo && !imageLoadError && (
+                <span className="absolute inset-x-0 bottom-0 bg-slate-950/60 py-1 text-center text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">Cambiar</span>
+              )}
+            </button>
+            {(visibleLogo || imageFile) && (
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); clearImage(); }}
+                className="absolute right-1 top-1 inline-flex h-7 w-7 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/50"
+                aria-label="Remover logo"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-center gap-3">
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Nombre convenio</span>
+            <input className={fieldClassName} value={form.agreement_name} onChange={(event) => update('agreement_name', event.target.value)} disabled={saving} required />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">Tipo convenio</span>
+            <select className={selectClassName} value={form.agreement_type} onChange={(event) => update('agreement_type', event.target.value)} disabled={saving}>
+              <option value="DISCOUNT">Descuento</option>
+              <option value="CREDIT">Credito</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {/* Fila inferior: resto de campos */}
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">RUT empresa / agrupacion</span>
+          <input
+            className={rutError ? `${fieldClassName} border-red-400 focus:border-red-400 focus:ring-red-100 dark:border-red-600` : fieldClassName}
+            value={form.company_tax_id}
+            onChange={(event) => handleRutChange(event.target.value)}
+            onBlur={handleRutBlur}
+            disabled={saving}
+            required
+          />
+          {rutError && <p className="text-xs text-red-600 dark:text-red-400">{rutError}</p>}
+        </div>
+        <label className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Nombre empresa / agrupacion</span>
+          <input className={fieldClassName} value={form.company_name} onChange={(event) => update('company_name', event.target.value)} disabled={saving} required />
+        </label>
+        {form.agreement_type === 'DISCOUNT' && (
+          <label className="space-y-1 text-sm">
+            <span className="font-medium text-slate-700 dark:text-slate-200">% descuento</span>
+            <input className={fieldClassName} type="number" min="0" max="100" step="0.01" value={form.discount_percent} onChange={(event) => update('discount_percent', event.target.value)} disabled={saving} required />
+          </label>
+        )}
+        <label className={`space-y-1 text-sm${form.agreement_type === 'CREDIT' ? ' md:col-span-2' : ''}`}>
+          <span className="font-medium text-slate-700 dark:text-slate-200">{form.agreement_type === 'DISCOUNT' ? 'Tope máximo de descuento' : 'Monto crédito'}</span>
+          <input
+            className={fieldClassName}
+            type="text"
+            inputMode="numeric"
+            value={benefitFocused ? form.benefit_amount : formatMoneyInput(form.benefit_amount)}
+            onChange={(event) => update('benefit_amount', event.target.value.replace(/[^\d]/g, ''))}
+            onFocus={(event) => { setBenefitFocused(true); requestAnimationFrame(() => event.target.select()); }}
+            onBlur={() => setBenefitFocused(false)}
+            disabled={saving}
+          />
+        </label>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Vigencia desde</span>
+          <DatePicker value={form.valid_from} onChange={(date) => update('valid_from', date)} placeholder="Seleccionar fecha" minDate={today()} />
+        </div>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-slate-700 dark:text-slate-200">Vigencia hasta</span>
+          <DatePicker value={form.valid_to || ''} onChange={(date) => update('valid_to', date)} placeholder="Sin fecha de termino" minDate={form.valid_from > today() ? form.valid_from : today()} />
+        </div>
+        <label className="flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm dark:border-slate-700">
+          <input type="checkbox" checked={form.single_purchase} onChange={(event) => update('single_purchase', event.target.checked)} disabled={saving} />
+          Compra unica por beneficiario
+        </label>
+        <label className="flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm dark:border-slate-700">
+          <input type="checkbox" checked={form.is_active} onChange={(event) => update('is_active', event.target.checked)} disabled={saving} />
+          Convenio activo
+        </label>
+      </div>
+
+      {formError && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{formError}</div>}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+        <div className="min-h-5">
+          {hasPendingLogoChange && <p className="text-xs text-amber-600 dark:text-amber-300">Cambio pendiente de guardar.</p>}
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="h-10 rounded-md border border-slate-200 px-4 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Cancelar</button>
+          <button type="submit" disabled={saving} className="h-10 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{saving ? 'Guardando...' : 'Guardar convenio'}</button>
+        </div>
       </div>
     </form>
   );
@@ -409,11 +503,19 @@ const AdminAgreements = () => {
       contentComponent: AgreementFormModal,
       contentProps: {
         agreement,
-        onSubmit: async (payload) => {
-          await notifyPromise(
-            agreement ? agreementsService.update(agreement.id, payload) : agreementsService.create(payload),
-            { loading: 'Guardando convenio...', success: 'Convenio guardado.', error: (err) => getBackendMessage(err, 'No fue posible guardar el convenio.') },
-          );
+        onSubmit: async (payload, mediaChanges) => {
+          const savePromise = agreement
+            ? agreementsService.update(agreement.id, payload)
+            : agreementsService.create(payload);
+          notifyPromise(savePromise, {
+            loading: 'Guardando convenio...',
+            success: 'Convenio guardado.',
+            error: (err) => getBackendMessage(err, 'No fue posible guardar el convenio.'),
+          });
+          const saved = await savePromise;
+          const agId = saved?.id || agreement?.id;
+          if (agId && mediaChanges?.removeImage) await mediaService.removeAgreementLogo(agId);
+          if (agId && mediaChanges?.imageFile) await mediaService.uploadAgreementLogo(agId, mediaChanges.imageFile);
           await loadAgreements();
         },
       },
@@ -601,9 +703,12 @@ const AdminAgreements = () => {
           footer={tableFooter({ page, pageSize, total: activeData.length, loading, setPage, setPageSize })}
           columns={[
             { id: 'company_name', label: 'Empresa', sortable: true, render: (item) => (
-              <div className="grid grid-cols-[4rem_1fr] gap-x-1 text-sm uppercase leading-snug">
-                <span className="text-slate-400 dark:text-slate-500">rut:</span><span>{formatRut(item.company_tax_id)}</span>
-                <span className="text-slate-400 dark:text-slate-500">nombre:</span><span>{item.company_name}</span>
+              <div className="flex items-center gap-3">
+                <AgreementLogoCell src={item.logo?.thumb_url} alt={item.company_name} />
+                <div className="grid grid-cols-[4rem_1fr] gap-x-1 text-sm uppercase leading-snug">
+                  <span className="text-slate-400 dark:text-slate-500">rut:</span><span>{formatRut(item.company_tax_id)}</span>
+                  <span className="text-slate-400 dark:text-slate-500">nombre:</span><span>{item.company_name}</span>
+                </div>
               </div>
             ) },
             { id: 'agreement_name', label: 'Convenio', sortable: true, render: (item) => <span className="font-medium">{item.agreement_name}</span> },
