@@ -13,6 +13,7 @@ from sqlalchemy import text
 from core.constants import ErrorCode, ErrorType, HTTPStatus
 from core.response import ResponseManager
 from database.database import db_manager
+from services.media_storage import media_storage
 from utils.permissions_utils import get_current_user
 
 router = APIRouter(tags=["Agreements"])
@@ -125,7 +126,21 @@ async def list_agreements(request: Request, active_only: bool = Query(False), us
                 "ORDER BY a.is_active DESC, a.valid_from DESC, a.agreement_name"
             )
         )
-        return ResponseManager.success(data=[row_to_dict(row) for row in result.mappings().all()], request=request)
+        rows = [row_to_dict(row) for row in result.mappings().all()]
+
+        logo_ids = [r["logo_media_asset_id"] for r in rows if r.get("logo_media_asset_id")]
+        logo_map: dict = {}
+        if logo_ids:
+            logo_result = await session.execute(
+                text(f"SELECT * FROM media_assets WHERE id IN ({', '.join(str(i) for i in logo_ids)}) AND deleted_at IS NULL")
+            )
+            for asset in logo_result.mappings().all():
+                asset_dict = {key: (val.isoformat() if hasattr(val, "isoformat") else val) for key, val in asset.items()}
+                logo_map[int(asset["id"])] = media_storage.safe_asset(asset_dict)
+        for row in rows:
+            row["logo"] = logo_map.get(row.get("logo_media_asset_id"))
+
+        return ResponseManager.success(data=rows, request=request)
 
 
 @router.post("/", response_class=JSONResponse)

@@ -377,6 +377,8 @@ async def _run_schema_migrations():
          "ALTER TABLE product_variants ADD COLUMN primary_image_media_asset_id BIGINT NULL"),
         ("products", "variant_image_mode",
          "ALTER TABLE products ADD COLUMN variant_image_mode ENUM('inherit','own','default') NOT NULL DEFAULT 'inherit'"),
+        ("agreements", "logo_media_asset_id",
+         "ALTER TABLE agreements ADD COLUMN logo_media_asset_id BIGINT NULL"),
     ]
     drop_columns = [
         ("agreements", "deleted_at", "ALTER TABLE agreements DROP COLUMN deleted_at"),
@@ -385,9 +387,11 @@ async def _run_schema_migrations():
     # (table, column, new_enum_value, full_alter_ddl)
     enum_extensions = [
         ("media_assets", "owner_type", "PRODUCT_VARIANT",
-         "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT') NOT NULL"),
+         "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT','AGREEMENT') NOT NULL"),
         ("media_assets", "media_role", "VARIANT_IMAGE",
          "ALTER TABLE media_assets MODIFY COLUMN media_role ENUM('AVATAR','LOGO','BANNER','PRODUCT_IMAGE','VARIANT_IMAGE') NOT NULL"),
+        ("media_assets", "owner_type", "AGREEMENT",
+         "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT','AGREEMENT') NOT NULL"),
     ]
     try:
         async with db_manager.get_async_session() as session:

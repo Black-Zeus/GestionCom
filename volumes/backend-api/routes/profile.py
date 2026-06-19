@@ -461,6 +461,51 @@ async def delete_variant_image(request: Request, variant_id: int = Path(..., gt=
         return ResponseManager.success(data={"variant_id": variant_id, "primary_image": None}, message="Imagen de variante removida", request=request)
 
 
+@router.post("/agreements/{agreement_id}/logo", response_class=JSONResponse)
+async def upload_agreement_logo(request: Request, agreement_id: int = Path(..., gt=0), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    try:
+        async with db_manager.get_async_session() as session:
+            row = (await session.execute(text("SELECT id FROM agreements WHERE id = :id"), {"id": agreement_id})).mappings().first()
+            if not row:
+                return ResponseManager.error(message="Convenio no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+            try:
+                asset = await _create_media_asset(session, owner_type="AGREEMENT", owner_id=agreement_id, media_role="LOGO", profile="logo", file=file, uploaded_by=_user_id(user))
+            except ValueError as exc:
+                return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+            except Exception:
+                logger.exception("No fue posible procesar logo del convenio %s", agreement_id)
+                return ResponseManager.error(message="No fue posible procesar el logo del convenio.", status_code=HTTPStatus.INTERNAL_SERVER_ERROR, error_code=ErrorCode.SYSTEM_INTERNAL_ERROR, error_type=ErrorType.SYSTEM_ERROR, request=request)
+            await session.execute(
+                text("UPDATE agreements SET logo_media_asset_id = :asset_id WHERE id = :id"),
+                {"asset_id": asset["id"], "id": agreement_id},
+            )
+            await session.commit()
+            return ResponseManager.success(data=_asset_urls(asset), message="Logo del convenio actualizado", request=request)
+    except ValueError as exc:
+        return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+
+
+@router.delete("/agreements/{agreement_id}/logo", response_class=JSONResponse)
+async def delete_agreement_logo(request: Request, agreement_id: int = Path(..., gt=0), user: dict = Depends(get_current_user)):
+    async with db_manager.get_async_session() as session:
+        row = (await session.execute(
+            text("SELECT id, logo_media_asset_id FROM agreements WHERE id = :id"),
+            {"id": agreement_id},
+        )).mappings().first()
+        if not row:
+            return ResponseManager.error(message="Convenio no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_ERROR, request=request)
+        await session.execute(
+            text("UPDATE agreements SET logo_media_asset_id = NULL WHERE id = :id"),
+            {"id": agreement_id},
+        )
+        await session.execute(
+            text("UPDATE media_assets SET deleted_at = CURRENT_TIMESTAMP WHERE owner_type = 'AGREEMENT' AND owner_id = :agreement_id AND media_role = 'LOGO' AND deleted_at IS NULL"),
+            {"agreement_id": agreement_id},
+        )
+        await session.commit()
+        return ResponseManager.success(data={"agreement_id": agreement_id, "logo": None}, message="Logo del convenio removido", request=request)
+
+
 @router.post("/customers/{customer_id}/{media_role}", response_class=JSONResponse)
 async def upload_customer_media(request: Request, customer_id: int = Path(..., gt=0), media_role: str = Path(...), file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     if not _has_any_permission(user, ["FOUNDATION_MAINTAINERS_MANAGE"]):

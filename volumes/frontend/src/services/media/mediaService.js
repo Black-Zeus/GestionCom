@@ -33,6 +33,12 @@ export const mediaService = {
   async removeVariantImage(variantId) {
     return unwrap(await apiClient.delete(`/profile/product-variants/${variantId}/image`));
   },
+  uploadAgreementLogo(agreementId, file) {
+    return upload(`/profile/agreements/${agreementId}/logo`, file);
+  },
+  async removeAgreementLogo(agreementId) {
+    return unwrap(await apiClient.delete(`/profile/agreements/${agreementId}/logo`));
+  },
 };
 
 export default mediaService;
