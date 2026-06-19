@@ -10,11 +10,11 @@ Módulo de gestión documental comercial. Centraliza la configuración de tipos 
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Tipos y series de documentos | `/documents/series` | ✅ | [→](tipos-series.md) |
-| Plantillas de documentos | `/documents/templates` | ✅ | [→](plantillas.md) |
-| Documentos comerciales | `/documents/commercial` | 🚧 | [→](documentos-comerciales.md) |
-| Motivos de devolución | `/documents/returns/reasons` | ✅ | [→](motivos-devolucion.md) |
-| Cambio y devoluciones | `/documents/returns` | ✅ | [→](cambios-devoluciones.md) |
-| Notas de crédito | `/documents/returns/credit-notes` | 🚧 | [→](notas-credito.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Tipos y series de documentos](tipos-series.md) | `/documents/series` | ✅ |
+| [Plantillas de documentos](plantillas.md) | `/documents/templates` | ✅ |
+| [Documentos comerciales](documentos-comerciales.md) | `/documents/commercial` | 🚧 |
+| [Motivos de devolución](motivos-devolucion.md) | `/documents/returns/reasons` | ✅ |
+| [Cambio y devoluciones](cambios-devoluciones.md) | `/documents/returns` | ✅ |
+| [Notas de crédito](notas-credito.md) | `/documents/returns/credit-notes` | 🚧 |

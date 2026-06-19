@@ -19,8 +19,8 @@ Configuración de umbrales de stock crítico y parámetros de reposición autom�
 
 ## Sub-navegación (tabs)
 
-| Tab | Descripción | Detalle |
-|-----|-------------|---------|
-| Zonas | Zonas dentro de las bodegas | [→](stock-critico_tab_zonas.md) |
-| Ubicaciones | Locaciones físicas dentro de cada zona | [→](stock-critico_tab_ubicaciones.md) |
-| Stock crítico | Configuración de umbrales por producto | — (tab principal) |
+| Tab | Descripción |
+|-----|-------------|
+| [Zonas](stock-critico_tab_zonas.md) | Zonas dentro de las bodegas |
+| [Ubicaciones](stock-critico_tab_ubicaciones.md) | Locaciones físicas dentro de cada zona |
+| Stock crítico | Configuración de umbrales por producto |

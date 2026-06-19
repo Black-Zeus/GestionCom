@@ -23,9 +23,9 @@ Mantenedor de la cartera de proveedores. Centraliza los datos maestros del prove
 
 ## Sub-navegación (tabs)
 
-| Tab | Descripción | Detalle |
-|-----|-------------|---------|
-| Proveedores | CRUD principal | — |
-| Contactos | Personas de contacto del proveedor | [→](proveedores_tab_contactos.md) |
-| Direcciones | Direcciones comerciales y de despacho | [→](proveedores_tab_direcciones.md) |
-| Productos | Catálogo de productos que suministra | [→](proveedores_tab_productos.md) |
+| Tab | Descripción |
+|-----|-------------|
+| Proveedores | CRUD principal |
+| [Contactos](proveedores_tab_contactos.md) | Personas de contacto del proveedor |
+| [Direcciones](proveedores_tab_direcciones.md) | Direcciones comerciales y de despacho |
+| [Productos](proveedores_tab_productos.md) | Catálogo de productos que suministra |

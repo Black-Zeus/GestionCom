@@ -10,9 +10,9 @@ Módulo de administración financiera. Gestiona el catálogo de bancos y cuentas
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Bancos y cuentas bancarias | `/finance/banking` | ✅ | [→](bancos-cuentas.md) |
-| Monedas | `/finance/currencies` | ✅ | [→](monedas.md) |
-| Conversión monetaria | `/finance/exchange-rates` | ✅ | [→](conversion-monetaria.md) |
-| Convenios | `/finance/agreements` | ✅ | [→](convenios.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Bancos y cuentas bancarias](bancos-cuentas.md) | `/finance/banking` | ✅ |
+| [Monedas](monedas.md) | `/finance/currencies` | ✅ |
+| [Conversión monetaria](conversion-monetaria.md) | `/finance/exchange-rates` | ✅ |
+| [Convenios](convenios.md) | `/finance/agreements` | ✅ |

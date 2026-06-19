@@ -8,21 +8,21 @@ Cada entrada corresponde a un `moduleGroup` definido en `modules.js` y se visual
 
 ---
 
-| # | Nombre | Ruta raíz | Permiso requerido | Estado | Detalle |
-|---|--------|-----------|-------------------|--------|---------|
-| 1 | **Inicio** | `/dashboard` | `HOME_VISIBLE` | ✅ Implementado | [→](ventas/index.md) |
-| 2 | **Ventas** | `/sales/*` | `SALES_VISIBLE` | ✅ Implementado | [→](ventas/index.md) |
-| 3 | **Clientes y proveedores** | `/customers`, `/suppliers` | `CUSTOMERS_VISIBLE` | ✅ Implementado | [→](clientes-proveedores/index.md) |
-| 4 | **Caja** | `/cash/*` | `CASH_VISIBLE` | ✅ Implementado | [→](caja/index.md) |
-| 5 | **Inventario** | `/inventory/*` | `INVENTORY_VISIBLE` | ✅ Implementado | [→](inventario/index.md) |
-| 6 | **Finanzas** | `/finance/*` | `FINANCE_VISIBLE` | ✅ Implementado | [→](finanzas/index.md) |
-| 7 | **Documentos** | `/documents/*` | `DOCUMENTS_VISIBLE` | ⚠️ Parcial | [→](documentos/index.md) |
-| 8 | **Métricas e indicadores** | `/metrics/*` | `METRICS_VISIBLE` | ✅ Implementado | [→](metricas/index.md) |
-| 9 | **Reportes de gestión** | `/reports/*` | `REPORTS_VISIBLE` | ⚠️ Parcial | [→](reportes-gestion/index.md) |
-| 10 | **Reportes de auditoría** | `/reports/audit/*`, `/reports/financial/*` | `AUDIT_VISIBLE` | 🚧 En desarrollo | [→](reportes-auditoria/index.md) |
-| 11 | **Integraciones** | `/integrations/*` | `DTE_ACCESS` | ⚠️ Parcial | [→](integraciones/index.md) |
-| 12 | **Configuración** | `/config/*` | `SETTINGS_VISIBLE` | ⚠️ Parcial | [→](configuracion/index.md) |
-| 13 | **Administración** | `/admin/*` | `ADMIN_VISIBLE` | ⚠️ Parcial | [→](administracion/index.md) |
+| # | Nombre | Ruta raíz | Permiso requerido | Estado |
+|---|--------|-----------|-------------------|--------|
+| 1 | [**Inicio**](inicio/index.md) | `/dashboard` | `HOME_VISIBLE` | ✅ Implementado |
+| 2 | [**Ventas**](ventas/index.md) | `/sales/*` | `SALES_VISIBLE` | ✅ Implementado |
+| 3 | [**Clientes y proveedores**](clientes-proveedores/index.md) | `/customers`, `/suppliers` | `CUSTOMERS_VISIBLE` | ✅ Implementado |
+| 4 | [**Caja**](caja/index.md) | `/cash/*` | `CASH_VISIBLE` | ✅ Implementado |
+| 5 | [**Inventario**](inventario/index.md) | `/inventory/*` | `INVENTORY_VISIBLE` | ✅ Implementado |
+| 6 | [**Finanzas**](finanzas/index.md) | `/finance/*` | `FINANCE_VISIBLE` | ✅ Implementado |
+| 7 | [**Documentos**](documentos/index.md) | `/documents/*` | `DOCUMENTS_VISIBLE` | ⚠️ Parcial |
+| 8 | [**Métricas e indicadores**](metricas/index.md) | `/metrics/*` | `METRICS_VISIBLE` | ✅ Implementado |
+| 9 | [**Reportes de gestión**](reportes-gestion/index.md) | `/reports/*` | `REPORTS_VISIBLE` | ⚠️ Parcial |
+| 10 | [**Reportes de auditoría**](reportes-auditoria/index.md) | `/reports/audit/*`, `/reports/financial/*` | `AUDIT_VISIBLE` | 🚧 En desarrollo |
+| 11 | [**Integraciones**](integraciones/index.md) | `/integrations/*` | `DTE_ACCESS` | ⚠️ Parcial |
+| 12 | [**Configuración**](configuracion/index.md) | `/config/*` | `SETTINGS_VISIBLE` | ⚠️ Parcial |
+| 13 | [**Administración**](administracion/index.md) | `/admin/*` | `ADMIN_VISIBLE` | ⚠️ Parcial |
 
 ---
 

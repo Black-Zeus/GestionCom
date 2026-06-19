@@ -10,7 +10,7 @@ Módulo de gestión de la cartera comercial. Centraliza el mantenimiento de clie
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Listado de clientes | `/customers` | ✅ | [→](clientes.md) |
-| Listado de proveedores | `/suppliers` | ✅ | [→](proveedores.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Listado de clientes](clientes.md) | `/customers` | ✅ |
+| [Listado de proveedores](proveedores.md) | `/suppliers` | ✅ |

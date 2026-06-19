@@ -10,9 +10,9 @@ Módulo de visualización de métricas e indicadores de negocio. Presenta dashbo
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Métricas de ventas | `/metrics/sales` | ✅ | [→](metricas-ventas.md) |
-| Métricas de inventario | `/metrics/inventory` | ✅ | [→](metricas-inventario.md) |
-| Métricas de caja | `/metrics/cash` | ✅ | [→](metricas-caja.md) |
-| Métricas de clientes | `/metrics/customers` | ✅ | [→](metricas-clientes.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Métricas de ventas](metricas-ventas.md) | `/metrics/sales` | ✅ |
+| [Métricas de inventario](metricas-inventario.md) | `/metrics/inventory` | ✅ |
+| [Métricas de caja](metricas-caja.md) | `/metrics/cash` | ✅ |
+| [Métricas de clientes](metricas-clientes.md) | `/metrics/customers` | ✅ |

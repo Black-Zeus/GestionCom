@@ -10,6 +10,6 @@ Módulo de integración con servicios externos. Actualmente contiene la configur
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Facturación electrónica | `/integrations/electronic-billing` | ✅ | [→](facturacion-electronica.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Facturación electrónica](facturacion-electronica.md) | `/integrations/electronic-billing` | ✅ |

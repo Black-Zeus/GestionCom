@@ -10,12 +10,12 @@ Módulo de administración del sistema. Gestiona los usuarios, roles y permisos,
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Administración de usuarios | `/admin/users` | ✅ | [→](usuarios.md) |
-| Roles y permisos | `/admin/roles` | ✅ | [→](roles-permisos.md) |
-| Checks de producto | `/admin/product-flags` | ✅ | [→](checks-producto.md) |
-| Configuración de caja POS | `/admin/cash/pos` | ✅ | [→](config-caja-pos.md) |
-| Denominaciones de efectivo | `/admin/cash/denominations` | ✅ | [→](denominaciones-efectivo.md) |
-| Categorías de caja chica | `/admin/cash/petty-cash-categories` | ✅ | [→](categorias-caja-chica.md) |
-| Backup y restauración | `/admin/backup` | 🚧 | [→](backup.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Administración de usuarios](usuarios.md) | `/admin/users` | ✅ |
+| [Roles y permisos](roles-permisos.md) | `/admin/roles` | ✅ |
+| [Checks de producto](checks-producto.md) | `/admin/product-flags` | ✅ |
+| [Configuración de caja POS](config-caja-pos.md) | `/admin/cash/pos` | ✅ |
+| [Denominaciones de efectivo](denominaciones-efectivo.md) | `/admin/cash/denominations` | ✅ |
+| [Categorías de caja chica](categorias-caja-chica.md) | `/admin/cash/petty-cash-categories` | ✅ |
+| [Backup y restauración](backup.md) | `/admin/backup` | 🚧 |

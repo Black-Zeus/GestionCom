@@ -26,8 +26,8 @@ Mantenedor central de la cartera de clientes. Administra los datos maestros de c
 
 ## Sub-navegación (tabs)
 
-| Tab | Ruta funcional | Detalle |
-|-----|---------------|---------|
-| Clientes | `/customers` (principal) | — |
-| Personas autorizadas | `/customers` (tab: authorized) | [→](clientes_tab_personas-autorizadas.md) |
-| Crédito | `/customers` (tab: credit) | [→](clientes_tab_credito.md) |
+| Tab | Ruta funcional |
+|-----|---------------|
+| Clientes | `/customers` (principal) |
+| [Personas autorizadas](clientes_tab_personas-autorizadas.md) | `/customers` (tab: authorized) |
+| [Crédito](clientes_tab_credito.md) | `/customers` (tab: credit) |

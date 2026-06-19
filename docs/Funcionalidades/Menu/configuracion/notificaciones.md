@@ -11,8 +11,8 @@ Gestión del sistema de notificaciones interno. Configura los tipos de notificac
 
 ## Sub-navegación (tabs)
 
-| Tab | Descripción | Detalle |
-|-----|-------------|---------|
-| Tipos | Catálogo de tipos de notificación | [→](notificaciones_tab_tipos.md) |
-| Reglas | Reglas de emisión automática | [→](notificaciones_tab_reglas.md) |
-| Preferencias | Preferencias de recepción por usuario | [→](notificaciones_tab_preferencias.md) |
+| Tab | Descripción |
+|-----|-------------|
+| [Tipos](notificaciones_tab_tipos.md) | Catálogo de tipos de notificación |
+| [Reglas](notificaciones_tab_reglas.md) | Reglas de emisión automática |
+| [Preferencias](notificaciones_tab_preferencias.md) | Preferencias de recepción por usuario |

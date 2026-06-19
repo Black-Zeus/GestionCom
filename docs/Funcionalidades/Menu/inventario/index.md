@@ -10,20 +10,20 @@ Módulo de gestión de inventario y stock. Centraliza el catálogo de productos 
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Catálogo de productos | `/inventory/products` | ✅ | [→](catalogo-productos.md) |
-| Categorías de productos | `/inventory/products/categories` | ✅ | [→](categorias.md) |
-| Atributos de productos | `/inventory/products/attributes` | ✅ | [→](atributos.md) |
-| Marcas y modelos | `/inventory/products/brands-models` | ✅ | [→](marcas-modelos.md) |
-| Unidades por producto | `/inventory/products/units` | ✅ | [→](unidades-producto.md) |
-| Códigos de barra | `/inventory/products/barcodes` | ✅ | [→](codigos-barra.md) |
-| Administración de bodegas | `/inventory/warehouses` | ✅ | [→](bodegas.md) |
-| Stock crítico y reposición | `/inventory/stock/critical` | ✅ | [→](stock-critico.md) |
-| Movimientos de stock | `/inventory/stock/movements` | ✅ | [→](movimientos-stock.md) |
-| Conversión de stock | `/inventory/stock/conversions` | ✅ | [→](conversion-stock.md) |
-| Inventario físico | `/inventory/stock/physical` | ✅ | [→](inventario-fisico.md) |
-| Ajustes de inventario | `/inventory/stock/adjustments` | 🚧 | [→](ajustes-inventario.md) |
-| Transferencias de stock | `/inventory/stock/transfers` | ✅ | [→](transferencias.md) |
-| Control de tracking | `/inventory/stock/tracking-reports` | ✅ | [→](tracking.md) |
-| Listas de precios | `/inventory/pricing/price-lists` | ✅ | [→](listas-precio.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Catálogo de productos](catalogo-productos.md) | `/inventory/products` | ✅ |
+| [Categorías de productos](categorias.md) | `/inventory/products/categories` | ✅ |
+| [Atributos de productos](atributos.md) | `/inventory/products/attributes` | ✅ |
+| [Marcas y modelos](marcas-modelos.md) | `/inventory/products/brands-models` | ✅ |
+| [Unidades por producto](unidades-producto.md) | `/inventory/products/units` | ✅ |
+| [Códigos de barra](codigos-barra.md) | `/inventory/products/barcodes` | ✅ |
+| [Administración de bodegas](bodegas.md) | `/inventory/warehouses` | ✅ |
+| [Stock crítico y reposición](stock-critico.md) | `/inventory/stock/critical` | ✅ |
+| [Movimientos de stock](movimientos-stock.md) | `/inventory/stock/movements` | ✅ |
+| [Conversión de stock](conversion-stock.md) | `/inventory/stock/conversions` | ✅ |
+| [Inventario físico](inventario-fisico.md) | `/inventory/stock/physical` | ✅ |
+| [Ajustes de inventario](ajustes-inventario.md) | `/inventory/stock/adjustments` | 🚧 |
+| [Transferencias de stock](transferencias.md) | `/inventory/stock/transfers` | ✅ |
+| [Control de tracking](tracking.md) | `/inventory/stock/tracking-reports` | ✅ |
+| [Listas de precios](listas-precio.md) | `/inventory/pricing/price-lists` | ✅ |

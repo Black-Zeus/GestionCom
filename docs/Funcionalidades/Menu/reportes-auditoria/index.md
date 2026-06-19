@@ -10,8 +10,8 @@ Módulo de reportería de auditoría y control interno. Provee acceso a informes
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Auditoría financiera | `/reports/financial/financial-audit` | 🚧 | [→](auditoria-financiera.md) |
-| Auditoría del sistema | `/reports/audit/system` | 🚧 | [→](auditoria-sistema.md) |
-| Actividad de usuarios | `/reports/audit/user-activity` | 🚧 | [→](actividad-usuarios.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Auditoría financiera](auditoria-financiera.md) | `/reports/financial/financial-audit` | 🚧 |
+| [Auditoría del sistema](auditoria-sistema.md) | `/reports/audit/system` | 🚧 |
+| [Actividad de usuarios](actividad-usuarios.md) | `/reports/audit/user-activity` | 🚧 |

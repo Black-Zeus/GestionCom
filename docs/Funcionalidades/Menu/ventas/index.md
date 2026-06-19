@@ -10,10 +10,10 @@ Módulo central de operación comercial. Centraliza el flujo de venta desde la e
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Nueva venta | `/sales/new` | ✅ | [→](nueva-venta.md) |
-| Consulta de precio | `/sales/price-query` | ✅ | [→](consulta-precio.md) |
-| Mantenedor de Promociones | `/sales/promotions` | ✅ | [→](promociones.md) |
-| Pre-ventas pendientes | `/sales/history` | ✅ | [→](pre-ventas.md) |
-| Cambio y devoluciones | `/sales/returns` | ✅ | [→](cambios-devoluciones.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Nueva venta](nueva-venta.md) | `/sales/new` | ✅ |
+| [Consulta de precio](consulta-precio.md) | `/sales/price-query` | ✅ |
+| [Mantenedor de Promociones](promociones.md) | `/sales/promotions` | ✅ |
+| [Pre-ventas pendientes](pre-ventas.md) | `/sales/history` | ✅ |
+| [Cambio y devoluciones](cambios-devoluciones.md) | `/sales/returns` | ✅ |

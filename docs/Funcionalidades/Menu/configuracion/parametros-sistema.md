@@ -16,6 +16,6 @@ Gestión de los estados base que usan los distintos módulos del sistema (estado
 
 ## Sub-navegación (tabs)
 
-| Tab | Descripción | Detalle |
-|-----|-------------|---------|
-| Estados | Gestión de todos los estados del sistema | [→](parametros-sistema_tab_estados.md) |
+| Tab | Descripción |
+|-----|-------------|
+| [Estados](parametros-sistema_tab_estados.md) | Gestión de todos los estados del sistema |

@@ -17,8 +17,8 @@ Mantenedor del catálogo de bancos y de las cuentas bancarias de la empresa. Inc
 
 ## Sub-navegación (tabs)
 
-| Tab | Descripción | Detalle |
-|-----|-------------|---------|
-| Bancos | Catálogo de entidades bancarias | [→](bancos-cuentas_tab_bancos.md) |
-| Cuentas | Cuentas bancarias de la empresa | [→](bancos-cuentas_tab_cuentas.md) |
-| Conciliación | Parámetros de conciliación automática | [→](bancos-cuentas_tab_conciliacion.md) |
+| Tab | Descripción |
+|-----|-------------|
+| [Bancos](bancos-cuentas_tab_bancos.md) | Catálogo de entidades bancarias |
+| [Cuentas](bancos-cuentas_tab_cuentas.md) | Cuentas bancarias de la empresa |
+| [Conciliación](bancos-cuentas_tab_conciliacion.md) | Parámetros de conciliación automática |

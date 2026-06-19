@@ -26,8 +26,5 @@ Esta pantalla opera mediante el componente genérico de mantenedores con pestañ
 | Tab | Descripción | Estado |
 |-----|-------------|--------|
 | Promociones | CRUD principal de promociones | ✅ |
-| Items | Productos o categorías asociados a cada promoción | ✅ |
-| Devoluciones | Motivos y reglas de devolución asociados a ventas | ✅ |
-
-> Los tabs **Items** y **Devoluciones** comparten la misma pantalla bajo `/sales/promotions`.  
-> Ver detalle en [promociones_tab_items.md](promociones_tab_items.md) y [promociones_tab_devoluciones.md](promociones_tab_devoluciones.md).
+| [Items](promociones_tab_items.md) | Productos o categorías asociados a cada promoción | ✅ |
+| [Devoluciones](promociones_tab_devoluciones.md) | Motivos y reglas de devolución asociados a ventas | ✅ |

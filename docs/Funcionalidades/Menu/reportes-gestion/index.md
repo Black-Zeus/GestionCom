@@ -10,12 +10,12 @@ Módulo de reportería gerencial y operativa. Organiza los reportes por área de
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Hub de reportes | `/reports` | ✅ | [→](hub.md) |
-| Reportes de ventas | `/reports/sales` | ⚠️ | [→](ventas.md) |
-| Reportes de inventario | `/reports/inventory` | 🚧 | [→](inventario.md) |
-| Reportes de transferencias | `/reports/transfers` | 🚧 | [→](transferencias.md) |
-| Reportes de caja | `/reports/cash` | 🚧 | [→](caja.md) |
-| Reportes de clientes | `/reports/customers` | 🚧 | [→](clientes.md) |
-| Ventas diarias (reporte) | `/reports/sales?report=daily-sales` | ✅ | [→](ventas-diarias.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Hub de reportes](hub.md) | `/reports` | ✅ |
+| [Reportes de ventas](ventas.md) | `/reports/sales` | ⚠️ |
+| [Reportes de inventario](inventario.md) | `/reports/inventory` | 🚧 |
+| [Reportes de transferencias](transferencias.md) | `/reports/transfers` | 🚧 |
+| [Reportes de caja](caja.md) | `/reports/cash` | 🚧 |
+| [Reportes de clientes](clientes.md) | `/reports/customers` | 🚧 |
+| [Ventas diarias (reporte)](ventas-diarias.md) | `/reports/sales?report=daily-sales` | ✅ |

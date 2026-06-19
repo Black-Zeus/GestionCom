@@ -10,13 +10,13 @@ Módulo de configuración del sistema. Centraliza todos los parámetros operativ
 
 ## Ítems del módulo
 
-| Nombre | Ruta | Estado | Detalle |
-|--------|------|--------|---------|
-| Configuración de empresa | `/config/company` | ✅ | [→](empresa.md) |
-| Parámetros del sistema | `/config/system-parameters` | ✅ | [→](parametros-sistema.md) |
-| Configuración de impuestos | `/config/taxes` | ✅ | [→](impuestos.md) |
-| Métodos de pago | `/config/payment-methods` | ✅ | [→](metodos-pago.md) |
-| Unidades de medida | `/config/measurement-units` | ✅ | [→](unidades-medida.md) |
-| Configuración de notificaciones | `/config/notifications` | ✅ | [→](notificaciones.md) |
-| Logs del sistema | `/config/system-logs` | 🚧 | [→](logs-sistema.md) |
-| Auditoría del sistema | `/config/system-audit` | 🚧 | [→](auditoria-sistema.md) |
+| Nombre | Ruta | Estado |
+|--------|------|--------|
+| [Configuración de empresa](empresa.md) | `/config/company` | ✅ |
+| [Parámetros del sistema](parametros-sistema.md) | `/config/system-parameters` | ✅ |
+| [Configuración de impuestos](impuestos.md) | `/config/taxes` | ✅ |
+| [Métodos de pago](metodos-pago.md) | `/config/payment-methods` | ✅ |
+| [Unidades de medida](unidades-medida.md) | `/config/measurement-units` | ✅ |
+| [Configuración de notificaciones](notificaciones.md) | `/config/notifications` | ✅ |
+| [Logs del sistema](logs-sistema.md) | `/config/system-logs` | 🚧 |
+| [Auditoría del sistema](auditoria-sistema.md) | `/config/system-audit` | 🚧 |
