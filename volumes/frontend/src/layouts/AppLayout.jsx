@@ -68,6 +68,10 @@ const getCustomerNavigationName = (record) => (
     .trim()
 );
 
+const getCustomerFullNavigationName = (record) => (
+  String(record?.commercial_name || record?.legal_name || record?.customer_code || '').trim()
+);
+
 const hiddenSidebarMenuPaths = new Set(['/notifications']);
 const hiddenSidebarMenuIds = new Set(['notifications']);
 const isHiddenSidebarMenuItem = (item) => (
@@ -128,7 +132,7 @@ const detailNavigationRoutes = [
     basePath: '/customers',
     group: 'Listado de clientes',
     fallbackLabel: 'Cliente',
-    getLabel: (record) => getCustomerNavigationName(record) || record?.customer_code,
+    getLabel: (record) => `Cliente: ${getCustomerFullNavigationName(record) || record?.customer_code}`,
     getTooltip: (record) => `Cliente: ${record?.legal_name || record?.customer_code || 'registro'}`,
   },
   {
