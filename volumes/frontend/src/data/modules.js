@@ -59,7 +59,8 @@ export const moduleGroups = [
       { id: 'price-query', label: 'Consulta de precio', path: '/sales/price-query', icon: Tags, weight: 20, permissions: ['PRICE_LISTS_ACCESS', 'PRICE_LISTS_MANAGE'] },
       { id: 'promotions', label: 'Mantenedor de Promociones', path: '/sales/promotions', icon: BadgeDollarSign, weight: 30, permissions: ['SALES_MAINTAINERS_ACCESS', 'SALES_MAINTAINERS_MANAGE'] },
       { id: 'sales-history', label: 'Pre-ventas pendientes', path: '/sales/history', icon: ClipboardList, weight: 40 },
-      { id: 'sales-returns', label: 'Cambio y devoluciones', path: '/sales/returns', icon: RotateCcw, weight: 50, permissions: ['RETURNS_ACCESS'] },
+      { id: 'sales-completed', label: 'Ventas realizadas', path: '/sales/completed', icon: Receipt, weight: 50, permissions: ['SALES_HISTORY_ACCESS', 'DOCUMENTS_VIEW'] },
+      { id: 'sales-returns', label: 'Cambio y devoluciones', path: '/sales/returns', icon: RotateCcw, weight: 60, permissions: ['RETURNS_ACCESS'] },
     ],
   },
   {

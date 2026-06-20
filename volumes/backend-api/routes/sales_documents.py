@@ -903,20 +903,13 @@ async def list_closed_sales(request: Request, user: dict = Depends(get_current_u
     async with db_manager.get_async_session() as session:
         result = await session.execute(
             select(SaleDocument)
+            .options(selectinload(SaleDocument.lines))
             .where(and_(SaleDocument.status == SaleStatus.CLOSED, SaleDocument.deleted_at.is_(None)))
-            .order_by(SaleDocument.created_at.desc())
+            .order_by(SaleDocument.updated_at.desc())
             .limit(200)
         )
         rows = result.scalars().all()
-        return ResponseManager.success(data=[
-            {
-                "ticket_number": s.ticket_number,
-                "document_type_name": s.document_type_name,
-                "total_amount": float(s.total_amount),
-                "created_at": s.created_at.isoformat() if s.created_at else None,
-            }
-            for s in rows
-        ], request=request)
+        return ResponseManager.success(data=[sale_to_dict(s) for s in rows], request=request)
 
 
 @router.get("/by-code/{sale_code}", response_class=JSONResponse)

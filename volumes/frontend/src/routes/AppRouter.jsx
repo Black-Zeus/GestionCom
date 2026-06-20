@@ -39,6 +39,7 @@ const CashMovements = lazy(() => import('@/pages/cash/CashMovements'));
 const AdminCashMaintainers = lazy(() => import('@/pages/admin/AdminCashMaintainers'));
 const NewSale = lazy(() => import('@/pages/sales/NewSale'));
 const SalesHistory = lazy(() => import('@/pages/sales/SalesHistory'));
+const SalesCompleted = lazy(() => import('@/pages/sales/SalesCompleted'));
 const SalesReturns = lazy(() => import('@/pages/sales/SalesReturns'));
 const SalesPriceQuery = lazy(() => import('@/pages/sales/SalesPriceQuery'));
 const AdminPaymentMethods = lazy(() => import('@/pages/admin/AdminPaymentMethods'));
@@ -126,6 +127,7 @@ const moduleComponents = {
   'cash-denominations': AdminCashMaintainers,
   'new-sale': NewSale,
   'sales-history': SalesHistory,
+  'sales-completed': SalesCompleted,
   'sales-returns': SalesReturns,
   returns: SalesReturns,
   'price-query': SalesPriceQuery,
