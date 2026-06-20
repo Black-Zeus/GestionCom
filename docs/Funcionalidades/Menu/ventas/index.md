@@ -16,4 +16,5 @@ Módulo central de operación comercial. Centraliza el flujo de venta desde la e
 | [Consulta de precio](consulta-precio.md) | `/sales/price-query` | ✅ |
 | [Mantenedor de Promociones](promociones.md) | `/sales/promotions` | ✅ |
 | [Pre-ventas pendientes](pre-ventas.md) | `/sales/history` | ✅ |
+| [Ventas realizadas](ventas-realizadas.md) | `/sales/completed` | ✅ |
 | [Cambio y devoluciones](cambios-devoluciones.md) | `/sales/returns` | ✅ |
