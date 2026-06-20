@@ -573,7 +573,16 @@ const PaymentMethodsCard = ({ rows, total, isDark }) => {
               dropShadow: { enabled: false },
             },
             tooltip: {
-              y: { formatter: (value) => money(value) },
+              custom: ({ seriesIndex }) => {
+                const method = visibleRows[seriesIndex];
+                if (!method) return '';
+                const pct = total > 0 ? (method.total / total) * 100 : 0;
+                return `
+                  <div class="rounded-md bg-white px-3 py-2 text-xs text-slate-700 shadow-lg dark:bg-slate-800 dark:text-slate-100">
+                    <span>${method.name} · ${pct.toFixed(1)}% (${money(method.total)})</span>
+                  </div>
+                `;
+              },
             },
             stroke: { colors: [isDark ? '#0f172a' : '#ffffff'], width: 2 },
             theme: { mode: isDark ? 'dark' : 'light' },
