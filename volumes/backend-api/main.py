@@ -220,6 +220,11 @@ ROUTERS_TO_LOAD = [
         "tags": ["Business Foundation"]
     },
     {
+        "name": "dashboard",
+        "prefix": "/dashboard",
+        "tags": ["Dashboard"]
+    },
+    {
         "name": "electronic_billing",
         "prefix": "/electronic-billing",
         "tags": ["Electronic Billing"]
