@@ -78,7 +78,30 @@
 
 
   <!-- ══════════════════════════════════════════
-       PÁGINA 2 — ANÁLISIS COMPARATIVO
+       PÁGINA 2 — GRÁFICOS DE VENTAS (UI)
+       ══════════════════════════════════════════ -->
+  <section class="report-page">
+
+    {{> _page_header}}
+
+    <div class="section-heading">
+      <div class="section-label">Gráficos</div>
+      <h2 class="section-title">Evolución de las ventas</h2>
+      <p class="section-description">
+        Tendencia diaria y desglose por método de pago en el período seleccionado.
+      </p>
+    </div>
+
+    {{CHART_AREA_CARD}}
+    {{CHART_BAR_CARD}}
+
+    {{> _page_footer}}
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINA 3 — ANÁLISIS COMPARATIVO
        ══════════════════════════════════════════ -->
   <section class="report-page">
 
@@ -86,7 +109,7 @@
 
     <div class="section-heading">
       <div class="section-label">Análisis comparativo</div>
-      <h2 class="section-title">Evolución de las ventas</h2>
+      <h2 class="section-title">Comparación con período anterior</h2>
       <p class="section-description">
         Comparación entre el período actualmente seleccionado y el período
         anterior equivalente en duración.
