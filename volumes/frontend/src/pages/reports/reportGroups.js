@@ -44,10 +44,11 @@ export const REPORT_GROUPS = [
       {
         id: 'customer-sales',
         label: 'Ventas por cliente',
-        description: 'Historial anual de ventas por cliente con desglose mensual y totales acumulados.',
+        description: 'Ranking de clientes por monto de ventas en un período determinado. Muestra transacciones, ticket promedio y participación porcentual por cliente.',
         type: 'Reporte gerencial',
-        available: false,
-        tags: ['Cliente', 'Período', 'Reporte PDF'],
+        path: '/reports/sales?report=customer-sales',
+        available: true,
+        tags: ['Cliente', 'RUT', 'Período', 'Sucursal', 'Reporte PDF'],
       },
       {
         id: 'seller-ranking',

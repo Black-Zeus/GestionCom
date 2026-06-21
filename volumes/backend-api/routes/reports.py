@@ -253,6 +253,17 @@ def _customer_name(snapshot) -> str:
     )
 
 
+def _customer_rut(snapshot) -> str:
+    if isinstance(snapshot, str):
+        try:
+            snapshot = json.loads(snapshot)
+        except json.JSONDecodeError:
+            snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+    return snapshot.get("tax_id") or ""
+
+
 def _source_document(notes: str | None) -> str | None:
     if not notes:
         return None
@@ -2584,6 +2595,426 @@ async def category_sales_pdf(
         )
     except Exception as exc:
         logger.error("Gotenberg error category_sales: %s", exc)
+        return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+# ─── Customer sales data ──────────────────────────────────────────────────────
+
+_CLI_ROWS_FIRST = 22
+_CLI_ROWS_REST  = 26
+
+
+@router.get("/sales/customer-sales/data", response_class=JSONResponse)
+async def customer_sales_data(
+    date_from:     date       = Query(...),
+    date_to:       date       = Query(...),
+    warehouse_id:  int | None = Query(None),
+    warehouse_ids: str | None = Query(None),
+    user:          dict       = Depends(get_current_user),
+):
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    params: dict = {"date_from": date_from, "date_to": date_to}
+    warehouse_filters: list[str] = []
+    _append_in_filter(warehouse_filters, params, "sd.warehouse_id", selected_warehouse_ids, "warehouse_id")
+    warehouse_clause = f"AND {' AND '.join(warehouse_filters)}" if warehouse_filters else ""
+
+    async with db_manager.get_async_session() as session:
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+                sd.customer_id,
+                ANY_VALUE(sd.customer_snapshot)       AS customer_snapshot,
+                COUNT(DISTINCT sd.id)                 AS txn_count,
+                ROUND(SUM(sd.total_amount), 0)        AS total
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            GROUP BY sd.customer_id
+            ORDER BY total DESC
+            LIMIT 500
+        """), params))
+
+        total_row = _row(await session.execute(text(f"""
+            SELECT
+                COUNT(DISTINCT sd.id)          AS txn_count,
+                ROUND(SUM(sd.total_amount), 0) AS total,
+                COUNT(DISTINCT sd.customer_id) AS client_count
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+        """), params))
+
+        detail_db = _rows(await session.execute(text(f"""
+            SELECT
+                sd.sale_code,
+                COALESCE(sd.ticket_number, sd.sale_code)             AS folio,
+                sd.customer_id,
+                sd.customer_snapshot,
+                DATE(COALESCE(sd.updated_at, sd.created_at))         AS sale_date,
+                COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+                sd.payment_method_name,
+                ROUND(sd.total_amount, 0)                            AS total
+            FROM sale_documents sd
+            LEFT JOIN warehouses w ON w.id = sd.warehouse_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            ORDER BY sale_date ASC, sd.id ASC
+            LIMIT 2000
+        """), params))
+
+    grand_total = _money(total_row.get("total", 0))
+    rows_out: list[dict] = []
+    for r in group_rows:
+        total_v = _money(r["total"])
+        txn_v   = int(r.get("txn_count") or 0)
+        rows_out.append({
+            "customer_id":   r.get("customer_id"),
+            "customer_name": _customer_name(r.get("customer_snapshot")),
+            "customer_rut":  _customer_rut(r.get("customer_snapshot")),
+            "txn_count":     txn_v,
+            "total":         total_v,
+            "avg_ticket":    round(total_v / txn_v) if txn_v > 0 else 0,
+            "pct":           round(total_v / grand_total * 100, 1) if grand_total > 0 else 0.0,
+        })
+
+    detail_rows_out = [
+        {
+            "sale_code":           r.get("sale_code"),
+            "folio":               r.get("folio") or "",
+            "customer_id":         r.get("customer_id"),
+            "customer_name":       _customer_name(r.get("customer_snapshot")),
+            "customer_rut":        _customer_rut(r.get("customer_snapshot")),
+            "sale_date":           r["sale_date"].isoformat() if r.get("sale_date") and not isinstance(r["sale_date"], str) else (r.get("sale_date") or ""),
+            "warehouse_name":      r.get("warehouse_name") or "",
+            "payment_method_name": r.get("payment_method_name") or "",
+            "total":               _money(r.get("total")),
+        }
+        for r in detail_db
+    ]
+
+    return JSONResponse({
+        "rows":        rows_out,
+        "detail_rows": detail_rows_out,
+        "totals": {
+            "total":        grand_total,
+            "txn_count":    int(total_row.get("txn_count") or 0),
+            "client_count": int(total_row.get("client_count") or 0),
+        },
+    })
+
+
+# ─── Customer sales PDF ───────────────────────────────────────────────────────
+
+async def _build_customer_context(
+    date_from: str, date_to: str,
+    warehouse_id_str: str,
+) -> dict:
+    warehouse_ids = [] if warehouse_id_str in ("all", "", "todas", None) else _parse_id_list(warehouse_id_str)
+    start         = date.fromisoformat(date_from)
+    end           = date.fromisoformat(date_to)
+    duration      = (end - start).days + 1
+    today_str     = date.today().strftime("%d/%m/%Y")
+    period_label  = f"{_fmt(date_from)} — {_fmt(date_to)}"
+
+    params: dict = {"date_from": start, "date_to": end}
+    warehouse_filters: list[str] = []
+    _append_in_filter(warehouse_filters, params, "sd.warehouse_id", warehouse_ids, "warehouse_id")
+    warehouse_clause = f"AND {' AND '.join(warehouse_filters)}" if warehouse_filters else ""
+
+    async with db_manager.get_async_session() as session:
+        if warehouse_ids:
+            lp: dict = {}
+            lf: list[str] = []
+            _append_in_filter(lf, lp, "id", warehouse_ids, "wid")
+            wh_rows = _rows(await session.execute(
+                text(f"SELECT warehouse_name FROM warehouses WHERE {' AND '.join(lf)} ORDER BY warehouse_name"),
+                lp,
+            ))
+            branch_label = ", ".join(f"Sucursal {w['warehouse_name']}" for w in wh_rows) or "Locaciones seleccionadas"
+        else:
+            branch_label = "Todas las locaciones"
+
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+                sd.customer_id,
+                ANY_VALUE(sd.customer_snapshot) AS customer_snapshot,
+                COUNT(DISTINCT sd.id)           AS txn_count,
+                ROUND(SUM(sd.total_amount), 0)  AS total
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            GROUP BY sd.customer_id
+            ORDER BY total DESC
+            LIMIT 500
+        """), params))
+
+        total_row = _row(await session.execute(text(f"""
+            SELECT
+                COUNT(DISTINCT sd.id)          AS txn_count,
+                ROUND(SUM(sd.total_amount), 0) AS total
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+        """), params))
+
+    grand_total = _money(total_row.get("total", 0))
+    total_txn   = int(total_row.get("txn_count") or 0)
+    avg_ticket  = round(grand_total / total_txn) if total_txn > 0 else 0
+
+    rows: list[dict] = []
+    for r in group_rows:
+        tv  = _money(r["total"])
+        txn = int(r.get("txn_count") or 0)
+        rows.append({
+            "customer_name": _customer_name(r.get("customer_snapshot")),
+            "customer_rut":  _customer_rut(r.get("customer_snapshot")),
+            "txn_count":     txn,
+            "total":         tv,
+            "avg_ticket":    round(tv / txn) if txn > 0 else 0,
+            "pct":           round(tv / grand_total * 100, 1) if grand_total > 0 else 0.0,
+        })
+
+    top_name = rows[0]["customer_name"] if rows else "—"
+
+    meta_rows = (
+        f'<tr><td>Período</td><td>{period_label}</td></tr>'
+        f'<tr><td>Locación</td><td>{branch_label}</td></tr>'
+        f'<tr><td>Total de días</td><td>{duration} días</td></tr>'
+        f'<tr><td>Moneda</td><td>{CURRENCY_LABEL}</td></tr>'
+        f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
+    )
+
+    kpi_specs = [
+        ("primary", "Total período",        _clp(round(grand_total)), f"en {duration} días"),
+        ("info",    "Clientes activos",     str(len(rows)),           "con compras en el período"),
+        ("info",    "Transacciones",        str(total_txn),           "documentos de venta"),
+        ("primary", "Ticket promedio",      _clp(avg_ticket),         "por transacción"),
+        ("warning", "Cliente líder",        top_name,                 _clp(round(_money(group_rows[0]["total"]))) if group_rows else "—"),
+        ("info",    "Compra prom./cliente", _clp(round(grand_total / len(rows))) if rows else "—", "promedio por cliente activo"),
+    ]
+    kpi_cards = "".join(
+        f'<div class="kpi-card {v}"><div class="kpi-label">{lbl}</div>'
+        f'<div class="kpi-value">{val}</div><div class="kpi-hint">{hint}</div></div>'
+        for v, lbl, val, hint in kpi_specs
+    )
+
+    executive_note = (
+        f"Durante el período {period_label} se registraron {total_txn} transacciones "
+        f"de ventas para {branch_label}, con un total de {_clp(round(grand_total))}. "
+        f"Se identificaron {len(rows)} clientes con compras en el período. "
+        f"El cliente con mayor facturación fue <strong>{top_name}</strong>."
+    )
+
+    ctx: dict = {
+        "COMPANY_NAME":   "CeciChic",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "REPORT_STATUS":  "INFORME",
+        "REPORT_TITLE":   "Ventas por cliente",
+        "COVER_TITLE":    "Ventas por<br>Cliente",
+        "COVER_SUBTITLE": (
+            "Desglose de ventas agrupado por cliente. "
+            "Identifica los clientes m&aacute;s rentables por monto total, "
+            "transacciones y ticket promedio."
+        ),
+        "CURRENCY_LABEL": CURRENCY_LABEL,
+        "FOOTER_NOTE":    "Uso interno",
+        "PERIOD_LABEL":   period_label,
+        "BRANCH_LABEL":   branch_label,
+        "TODAY":          today_str,
+        "TOTAL_DAYS":     str(duration),
+        "META_ROWS":      meta_rows,
+        "KPI_CARDS":      kpi_cards,
+        "EXECUTIVE_NOTE": executive_note,
+        "CHART_PAGE":     "",
+        "DETAIL_PAGES":   _build_client_table_pages(rows, grand_total, {
+            "COMPANY_NAME":   "CeciChic",
+            "REPORT_TITLE":   "Ventas por cliente",
+            "PERIOD_LABEL":   period_label,
+            "BRANCH_LABEL":   branch_label,
+            "TODAY":          today_str,
+            "FOOTER_NOTE":    "Uso interno",
+            "CURRENCY_LABEL": CURRENCY_LABEL,
+        }),
+    }
+    return ctx
+
+
+def _build_client_table_pages(rows: list[dict], grand_total: float, ctx: dict) -> str:
+    def _partial(name: str) -> str:
+        path    = os.path.join(_PARTIALS_DIR, f"{name}.html")
+        content = _load_file(path)
+        for k, v in ctx.items():
+            content = content.replace(f"{{{{{k}}}}}", str(v))
+        return content
+
+    page_hdr = _partial("_page_header")
+    page_ftr = _partial("_page_footer")
+
+    chunks: list[list[dict]] = []
+    if not rows:
+        chunks = [[]]
+    elif len(rows) <= _CLI_ROWS_FIRST:
+        chunks = [rows]
+    else:
+        chunks.append(rows[:_CLI_ROWS_FIRST])
+        rest = rows[_CLI_ROWS_FIRST:]
+        while rest:
+            chunks.append(rest[:_CLI_ROWS_REST])
+            rest = rest[_CLI_ROWS_REST:]
+
+    pages = []
+    for page_idx, chunk in enumerate(chunks):
+        section_html = ""
+        if page_idx == 0:
+            section_html = (
+                '<div class="section-heading">'
+                '<div class="section-label">Desglose</div>'
+                '<h2 class="section-title">Ventas por cliente</h2>'
+                '</div>'
+            )
+
+        if chunk:
+            tbody = "".join(
+                '<tr>'
+                f'<td style="font-weight:{"600" if i == 0 else "normal"}">{r["customer_name"]}</td>'
+                f'<td style="font-size:8px;font-family:monospace">{r["customer_rut"]}</td>'
+                f'<td style="text-align:right">{r["txn_count"]:,}</td>'
+                f'<td style="text-align:right;font-weight:600">{_clp(round(r["total"]))}</td>'
+                f'<td style="text-align:right">{r["pct"]:.1f}%</td>'
+                f'<td style="text-align:right">{_clp(round(r["avg_ticket"]))}</td>'
+                '</tr>'
+                for i, r in enumerate(chunk)
+            )
+        else:
+            tbody = (
+                '<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8">'
+                'Sin ventas para los filtros seleccionados'
+                '</td></tr>'
+            )
+
+        tfoot = ""
+        if page_idx == len(chunks) - 1 and rows:
+            tfoot = (
+                '<tfoot><tr style="background:#0f172a;color:white;font-weight:700">'
+                '<td style="padding:6px 8px;font-size:9px" colspan="2">TOTAL PERÍODO</td>'
+                f'<td style="text-align:right;padding:6px 8px">{sum(r["txn_count"] for r in rows):,}</td>'
+                f'<td style="text-align:right;padding:6px 8px">{_clp(round(grand_total))}</td>'
+                '<td style="text-align:right;padding:6px 8px">100%</td>'
+                '<td style="padding:6px 8px"></td>'
+                '</tr></tfoot>'
+            )
+
+        pages.append(
+            '<section class="report-page">'
+            f'{page_hdr}'
+            f'{section_html}'
+            '<table class="detail-table">'
+            '<colgroup>'
+            '<col style="width:28%"><col style="width:12%"><col style="width:10%">'
+            '<col style="width:18%"><col style="width:12%"><col style="width:20%">'
+            '</colgroup>'
+            '<thead><tr>'
+            '<th>Cliente</th>'
+            '<th>RUT</th>'
+            '<th style="text-align:right">Transacciones</th>'
+            '<th style="text-align:right">Total</th>'
+            '<th style="text-align:right">% total</th>'
+            '<th style="text-align:right">Ticket prom.</th>'
+            '</tr></thead>'
+            f'<tbody>{tbody}</tbody>{tfoot}'
+            '</table>'
+            f'{page_ftr}'
+            '</section>'
+        )
+
+    return "\n".join(pages)
+
+
+@router.post("/sales/customer-sales/pdf", response_class=Response)
+async def customer_sales_pdf(
+    date_from:    str                  = Form(...),
+    date_to:      str                  = Form(...),
+    warehouse_id: str                  = Form("all"),
+    chart_bar:    Optional[UploadFile] = File(None),
+    user:         dict                 = Depends(get_current_user),
+):
+    async def _chart_card(file, title) -> str:
+        if not file:
+            return ""
+        raw = await file.read()
+        if not raw:
+            return ""
+        b64 = base64.b64encode(raw).decode()
+        return (
+            '<div class="chart-card no-break">'
+            f'<div class="chart-header"><div class="chart-header-title">{title}</div></div>'
+            '<div class="chart-section" style="min-height:0">'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
+            '</div></div>'
+        )
+
+    chart_bar_card = await _chart_card(chart_bar, "Top clientes por monto de ventas")
+
+    try:
+        ctx = await _build_customer_context(date_from, date_to, warehouse_id)
+        if chart_bar_card:
+            chart_page = (
+                '<section class="report-page">'
+                '{{> _page_header}}'
+                '<div class="section-heading">'
+                '<div class="section-label">Gráfico</div>'
+                '<h2 class="section-title">Top 10 clientes</h2>'
+                '</div>'
+                f'{chart_bar_card}'
+                '{{> _page_footer}}'
+                '</section>'
+            )
+            chart_page = _resolve_partials(chart_page)
+            for key, value in ctx.items():
+                chart_page = chart_page.replace(f"{{{{{key}}}}}", str(value))
+            ctx["CHART_PAGE"] = chart_page
+        html = _render("client_sales.html", ctx)
+    except Exception as exc:
+        logger.error("Error preparando template client_sales: %s", exc)
+        return JSONResponse({"error": "Error preparando reporte", "detail": str(exc)}, status_code=500)
+
+    filename = f"ventas-cliente_{date_from}_{date_to}.pdf"
+
+    try:
+        loop      = asyncio.get_event_loop()
+        pdf_bytes = await loop.run_in_executor(
+            None, _call_gotenberg_sync, html.encode("utf-8"), settings.GOTENBERG_URL
+        )
+    except Exception as exc:
+        logger.error("Gotenberg error client_sales: %s", exc)
         return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
 
     return Response(

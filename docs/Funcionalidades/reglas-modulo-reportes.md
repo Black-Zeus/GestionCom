@@ -7,6 +7,7 @@ Los reportes canónicos actuales son:
 - `DailySales.jsx`: ventas diarias.
 - `ReturnsExchangesReport.jsx`: cambios y devoluciones.
 - `CategorySales.jsx`: ventas por categoría o marca.
+- `CustomerSales.jsx`: ventas por cliente.
 - `ReportLayout.jsx`: layout común para reportes.
 
 ---
