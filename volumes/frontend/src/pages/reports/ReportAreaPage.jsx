@@ -8,6 +8,7 @@ import { REPORT_GROUPS } from './reportGroups';
 const REPORT_COMPONENTS = {
   'daily-sales':              lazy(() => import('./DailySales')),
   'returns-exchanges':        lazy(() => import('./ReturnsExchangesReport')),
+  'category-sales':           lazy(() => import('./CategorySales')),
   'agreement-summary':        lazy(() => import('./AgreementSummary')),
   'agreement-usage':          lazy(() => import('./AgreementUsage')),
   'agreement-beneficiaries':  lazy(() => import('./AgreementBeneficiaries')),

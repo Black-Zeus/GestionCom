@@ -33,12 +33,13 @@ export const REPORT_GROUPS = [
         tags: ['Rango de fechas', 'Locación', 'Estado', 'Exportación CSV'],
       },
       {
-        id: 'monthly-summary',
-        label: 'Resumen mensual',
-        description: 'Consolidado de ventas del mes con resumen diario y comparativa respecto al mes anterior.',
+        id: 'category-sales',
+        label: 'Ventas por categoría',
+        description: 'Desglose de ventas por categoría de producto, marca o familia en un período determinado. Identifica las categorías más rentables por sucursal.',
         type: 'Reporte gerencial',
-        available: false,
-        tags: ['Mes', 'Sucursal', 'Reporte PDF'],
+        path: '/reports/sales?report=category-sales',
+        available: true,
+        tags: ['Categoría', 'Marca', 'Período', 'Sucursal', 'Reporte PDF'],
       },
       {
         id: 'customer-sales',
