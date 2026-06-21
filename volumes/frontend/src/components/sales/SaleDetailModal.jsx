@@ -55,6 +55,32 @@ const paymentRows = (sale) => {
 
 const itemTotal = (item) => Number(item.paid_total_amount ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)));
 
+const groupedSaleItems = (items = []) => {
+  const grouped = new Map();
+  items.forEach((item) => {
+    const unitPrice = Number(item.unit_price || 0);
+    const key = [
+      item.product_id || '',
+      item.product_variant_id || '',
+      item.code || '',
+      item.name || '',
+      unitPrice,
+      Number(item.discount_percent || 0),
+      unitPrice < 0 ? 'credit' : 'regular',
+    ].join('|');
+    const current = grouped.get(key) || {
+      ...item,
+      id: key,
+      quantity: 0,
+      paid_total_amount: 0,
+    };
+    current.quantity += Number(item.quantity || 0);
+    current.paid_total_amount += itemTotal(item);
+    grouped.set(key, current);
+  });
+  return Array.from(grouped.values());
+};
+
 const totalDiscount = (sale) => (
   Number(sale?.line_discount_amount || 0)
   + Number(sale?.document_discount_amount || 0)
@@ -108,7 +134,7 @@ const ModalFrame = ({ title, onClose, children, footer }) => (
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-5 pb-5 sm:px-8">
+      <main className="min-h-0 flex-1 overflow-hidden px-5 pb-5 sm:px-8">
         {children}
       </main>
 
@@ -124,9 +150,10 @@ const SaleDetailBody = ({ sale }) => {
   const paidTotal = payments.reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const subtotal = Number(sale.subtotal_amount || 0);
   const discount = totalDiscount(sale);
+  const items = useMemo(() => groupedSaleItems(sale.items || []), [sale.items]);
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[0.9fr_1.7fr]">
+    <div className="grid min-h-0 gap-5 lg:grid-cols-[0.9fr_1.7fr]">
       <div className="space-y-5">
         <section className="rounded-lg border border-slate-200 bg-white/70 p-5 text-sm dark:border-slate-700/80 dark:bg-slate-900/45">
           <InfoRow label="Documento" value={sale.document_type_name || sale.document_type_code || 'Ticket de Venta'} strong />
@@ -154,9 +181,15 @@ const SaleDetailBody = ({ sale }) => {
         </section>
       </div>
 
-      <section className="flex min-h-[390px] flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/70 dark:border-slate-700/80 dark:bg-slate-900/45">
-        <div className="flex-1 overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+      <section className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white/70 dark:border-slate-700/80 dark:bg-slate-900/45">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] table-fixed">
+            <colgroup>
+              <col className="w-[56%]" />
+              <col className="w-[12%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-200 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 <th className="px-5 py-4 text-left font-semibold">Producto</th>
@@ -165,8 +198,19 @@ const SaleDetailBody = ({ sale }) => {
                 <th className="px-5 py-4 text-right font-semibold">Total</th>
               </tr>
             </thead>
+          </table>
+        </div>
+
+        <div className="min-h-0 max-h-[25rem] overflow-auto">
+          <table className="w-full min-w-[720px] table-fixed">
+            <colgroup>
+              <col className="w-[56%]" />
+              <col className="w-[12%]" />
+              <col className="w-[16%]" />
+              <col className="w-[16%]" />
+            </colgroup>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-              {(sale.items || []).map((item) => (
+              {items.map((item) => (
                 <tr key={item.id || `${item.code}-${item.name}`}>
                   <td className="px-5 py-4">
                     <p className="font-semibold text-slate-950 dark:text-white">{item.name || 'Producto sin nombre'}</p>
