@@ -18,13 +18,20 @@ const fmtDay  = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL',
 
 // --- Constants -----------------------------------------------------------
 
+const getMondayISO = () => {
+  const today = new Date();
+  const diff  = today.getDay() === 0 ? 6 : today.getDay() - 1; // días desde el lunes
+  return toISO(addDays(today, -diff));
+};
+
 const PERIODS = [
-  { id: 'today', label: 'Hoy',     days:  1 },
-  { id: '7d',    label: '7 días',  days:  7 },
-  { id: '15d',   label: '15 días', days: 15 },
-  { id: '30d',   label: '30 días', days: 30 },
-  { id: '60d',   label: '60 días', days: 60 },
-  { id: '90d',   label: '90 días', days: 90 },
+  { id: 'today', label: 'Hoy',          days: 1 },
+  { id: 'week',  label: 'Esta semana',  getFrom: getMondayISO },
+  { id: '7d',    label: '7 días',       days:  7 },
+  { id: '15d',   label: '15 días',      days: 15 },
+  { id: '30d',   label: '30 días',      days: 30 },
+  { id: '60d',   label: '60 días',      days: 60 },
+  { id: '90d',   label: '90 días',      days: 90 },
 ];
 
 const BRANCH_PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -64,7 +71,7 @@ const DailySales = () => {
 
   const applyPeriod = (id) => {
     const p = PERIODS.find((x) => x.id === id);
-    if (p) setFilters((f) => ({ ...f, period: id, dateFrom: periodFrom(p.days), dateTo: toISO(new Date()) }));
+    if (p) setFilters((f) => ({ ...f, period: id, dateFrom: p.getFrom ? p.getFrom() : periodFrom(p.days), dateTo: toISO(new Date()) }));
   };
 
   const clearFilters = () => setFilters(defaultFilters());

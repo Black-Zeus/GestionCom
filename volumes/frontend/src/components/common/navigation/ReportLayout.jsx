@@ -14,7 +14,9 @@ import ExportModal from '@/components/reports/ExportModal';
  *                      + botón PDF automático si se provee onExportPdf
  *   2. Barra filtros — filterBar (JSX libre)
  *   3. KPI bar       — kpiItems[]
- *   4. Gráfico       — chart + chartTitle / chartSubtitle / chartIcon
+ *   4. Gráficos      — charts = [{ title, subtitle, icon, content }]
+ *                      1 gráfico → ancho completo
+ *                      2+ gráficos → grilla de 2 columnas (responsiva)
  *   5. Tabla detalle — children + tableTitle / tableSubtitle / tableIcon
  *                      + botones CSV / Excel con modal si se proveen onExportCsv / onExportExcel
  *                      + tableActions para acciones adicionales
@@ -48,13 +50,7 @@ const ReportLayout = ({
   kpiItems,
 
   // ── Gráficos ────────────────────────────────────────────
-  // Opción A (múltiples): charts = [{ title, subtitle, icon, content }]
-  // Opción B (compat):    chart + chartTitle + chartSubtitle + chartIcon
-  charts,
-  chartTitle,
-  chartSubtitle,
-  chartIcon,
-  chart,
+  charts = [],
 
   // ── Tabla ───────────────────────────────────────────────
   tableTitle,
@@ -153,8 +149,8 @@ const ReportLayout = ({
         <KpiBar items={kpiItems} className="mb-5" />
       )}
 
-      {/* Gráficos: array o prop simple (compat) */}
-      {(charts || (chart ? [{ title: chartTitle, subtitle: chartSubtitle, icon: chartIcon, content: chart }] : [])).map((c, i) => (
+      {/* Gráficos: cada uno ocupa el ancho completo, apilados */}
+      {charts.map((c, i) => (
         <ReportCard key={i} title={c.title} subtitle={c.subtitle} icon={c.icon} className="mb-5">
           {c.content}
         </ReportCard>
