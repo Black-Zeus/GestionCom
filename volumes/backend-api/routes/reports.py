@@ -4,17 +4,22 @@ Generación de reportes PDF usando Gotenberg (HTML → PDF).
 Template: templates/reports/daily_sales.html
 """
 import asyncio
+import json
 import math
 import os
+import re
 import urllib.error
 import urllib.request
 import uuid
 from datetime import date, timedelta
+from decimal import Decimal
 
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse, Response
+from sqlalchemy import text
 
 from core.config import settings
+from database.database import db_manager
 from utils.log_helper import setup_logger
 
 logger = setup_logger(__name__)
@@ -139,6 +144,199 @@ def _pct_diff(current: int, previous: int) -> str:
 
 def _pct_color(current: int, previous: int) -> str:
     return "#10b981" if current >= previous else "#ef4444"
+
+
+def _decimal(value) -> Decimal:
+    return Decimal(str(value or 0))
+
+
+def _float(value) -> float:
+    return float(_decimal(value))
+
+
+def _customer_name(snapshot) -> str:
+    if isinstance(snapshot, str):
+        try:
+            snapshot = json.loads(snapshot)
+        except json.JSONDecodeError:
+            snapshot = {}
+    if not isinstance(snapshot, dict):
+        snapshot = {}
+    return (
+        snapshot.get("commercial_name")
+        or snapshot.get("legal_name")
+        or snapshot.get("customer_name")
+        or snapshot.get("name")
+        or snapshot.get("customer_code")
+        or "Cliente Generico"
+    )
+
+
+def _source_document(notes: str | None) -> str | None:
+    if not notes:
+        return None
+    match = re.search(r"Documento origen:\s*([^|]+)", notes)
+    return match.group(1).strip() if match else None
+
+
+def _document_label(code: str | None, name: str | None) -> str:
+    if code == "RETURN_TICKET":
+        return "Devolucion"
+    if code == "EXCHANGE_DRAFT":
+        return "Cambio"
+    return name or code or "Documento"
+
+
+@router.get("/sales/returns-exchanges", response_class=JSONResponse)
+async def list_returns_exchanges_report(
+    date_from: date = Query(..., description="Fecha inicial en formato YYYY-MM-DD"),
+    date_to: date = Query(..., description="Fecha final en formato YYYY-MM-DD"),
+    warehouse_id: int | None = Query(None, description="Bodega/local a filtrar"),
+    document_type: str = Query("all", description="all | RETURN_TICKET | EXCHANGE_DRAFT"),
+    status: str = Query("CLOSED", description="all | PENDING_CASHIER | CLOSED | CANCELLED"),
+):
+    if date_from > date_to:
+        return JSONResponse(status_code=400, content={"message": "La fecha inicial no puede ser posterior a la fecha final."})
+
+    allowed_types = {"all", "RETURN_TICKET", "EXCHANGE_DRAFT"}
+    allowed_statuses = {"all", "PENDING_CASHIER", "CLOSED", "CANCELLED"}
+    document_type = (document_type or "all").upper()
+    if document_type == "ALL":
+        document_type = "all"
+    status = (status or "CLOSED").upper()
+    if status == "ALL":
+        status = "all"
+    if document_type not in allowed_types:
+        return JSONResponse(status_code=400, content={"message": "Tipo de documento invalido."})
+    if status not in allowed_statuses:
+        return JSONResponse(status_code=400, content={"message": "Estado invalido."})
+
+    filters = [
+        "sd.deleted_at IS NULL",
+        "sd.document_type_code IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')",
+        "DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to",
+    ]
+    params = {"date_from": date_from, "date_to": date_to}
+    if warehouse_id:
+        filters.append("sd.warehouse_id = :warehouse_id")
+        params["warehouse_id"] = warehouse_id
+    if document_type != "all":
+        filters.append("sd.document_type_code = :document_type")
+        params["document_type"] = document_type
+    if status != "all":
+        filters.append("sd.status = :status")
+        params["status"] = status
+
+    where_sql = " AND ".join(filters)
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            text(
+                f"""
+                SELECT
+                    sd.id,
+                    sd.sale_code,
+                    sd.ticket_number,
+                    sd.document_type_code,
+                    sd.document_type_name,
+                    sd.status,
+                    sd.warehouse_id,
+                    w.warehouse_code,
+                    w.warehouse_name,
+                    sd.customer_snapshot,
+                    sd.total_amount,
+                    sd.exchange_credit_total,
+                    sd.exchange_forfeited_credit,
+                    sd.notes,
+                    sd.created_at,
+                    sd.updated_at,
+                    COALESCE(sdl_agg.origin_item_count, 0) AS origin_item_count,
+                    COALESCE(sdl_agg.new_item_count, 0) AS new_item_count,
+                    COALESCE(sdl_agg.origin_credit_amount, 0) AS origin_credit_amount,
+                    COALESCE(sdl_agg.new_products_amount, 0) AS new_products_amount
+                FROM sale_documents sd
+                LEFT JOIN warehouses w ON w.id = sd.warehouse_id
+                LEFT JOIN (
+                    SELECT
+                        sale_document_id,
+                        SUM(CASE WHEN paid_total_amount < 0 OR unit_price < 0 OR product_name LIKE 'Credito por cambio:%' OR product_name LIKE 'Devolucion:%'
+                            THEN ABS(quantity) ELSE 0 END) AS origin_item_count,
+                        SUM(CASE WHEN paid_total_amount >= 0 AND unit_price >= 0 AND product_name NOT LIKE 'Credito por cambio:%' AND product_name NOT LIKE 'Devolucion:%'
+                            THEN ABS(quantity) ELSE 0 END) AS new_item_count,
+                        SUM(CASE WHEN paid_total_amount < 0 OR unit_price < 0 OR product_name LIKE 'Credito por cambio:%' OR product_name LIKE 'Devolucion:%'
+                            THEN ABS(paid_total_amount) ELSE 0 END) AS origin_credit_amount,
+                        SUM(CASE WHEN paid_total_amount >= 0 AND unit_price >= 0 AND product_name NOT LIKE 'Credito por cambio:%' AND product_name NOT LIKE 'Devolucion:%'
+                            THEN paid_total_amount ELSE 0 END) AS new_products_amount
+                    FROM sale_document_lines
+                    WHERE deleted_at IS NULL
+                    GROUP BY sale_document_id
+                ) sdl_agg ON sdl_agg.sale_document_id = sd.id
+                WHERE {where_sql}
+                ORDER BY COALESCE(sd.updated_at, sd.created_at) DESC, sd.id DESC
+                LIMIT 1000
+                """
+            ),
+            params,
+        )
+        rows = result.mappings().all()
+
+    data = []
+    totals = {
+        "documents": 0,
+        "returns": 0,
+        "exchanges": 0,
+        "origin_items": 0,
+        "new_items": 0,
+        "origin_credit_amount": Decimal("0"),
+        "new_products_amount": Decimal("0"),
+        "forfeited_credit": Decimal("0"),
+        "net_total": Decimal("0"),
+    }
+
+    for row in rows:
+        doc_type = row["document_type_code"]
+        origin_credit = _decimal(row["exchange_credit_total"]) if doc_type == "EXCHANGE_DRAFT" and row["exchange_credit_total"] is not None else _decimal(row["origin_credit_amount"])
+        forfeited = _decimal(row["exchange_forfeited_credit"])
+        net_total = _decimal(row["total_amount"])
+        origin_items = int(row["origin_item_count"] or 0)
+        new_items = int(row["new_item_count"] or 0)
+
+        totals["documents"] += 1
+        totals["returns"] += 1 if doc_type == "RETURN_TICKET" else 0
+        totals["exchanges"] += 1 if doc_type == "EXCHANGE_DRAFT" else 0
+        totals["origin_items"] += origin_items
+        totals["new_items"] += new_items
+        totals["origin_credit_amount"] += origin_credit
+        totals["new_products_amount"] += _decimal(row["new_products_amount"])
+        totals["forfeited_credit"] += forfeited
+        totals["net_total"] += net_total
+
+        data.append({
+            "id": row["id"],
+            "sale_code": row["sale_code"],
+            "folio": row["ticket_number"] or f"{_document_label(doc_type, row['document_type_name'])} sin folio",
+            "document_type_code": doc_type,
+            "document_type_name": row["document_type_name"],
+            "document_label": _document_label(doc_type, row["document_type_name"]),
+            "status": row["status"],
+            "warehouse_id": row["warehouse_id"],
+            "warehouse_name": row["warehouse_name"] or row["warehouse_code"] or "Sin locacion",
+            "customer_name": _customer_name(row["customer_snapshot"]),
+            "source_document": _source_document(row["notes"]),
+            "origin_item_count": origin_items,
+            "new_item_count": new_items,
+            "origin_credit_amount": _float(origin_credit),
+            "new_products_amount": _float(row["new_products_amount"]),
+            "forfeited_credit": _float(forfeited),
+            "total_amount": _float(net_total),
+            "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+            "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+        })
+
+    totals_payload = {
+        key: (_float(value) if isinstance(value, Decimal) else value)
+        for key, value in totals.items()
+    }
+    return JSONResponse(content={"data": data, "totals": totals_payload})
 
 
 # ─── Table pagination ─────────────────────────────────────────────────────

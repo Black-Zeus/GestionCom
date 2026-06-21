@@ -163,6 +163,7 @@ export const moduleGroups = [
       { id: 'reports-customers',         label: 'Reportes de clientes',           path: '/reports/customers',                                    icon: FileText,   weight: 50, permissions: ['REPORTS_VISIBLE'] },
       { id: 'reports-agreements',        label: 'Reportes de convenios',          path: '/reports/agreements',                                   icon: Handshake,  weight: 55, permissions: ['REPORTS_VISIBLE'] },
       { id: 'daily-sales',               label: 'Ventas diarias',                 path: '/reports/sales?report=daily-sales',                     icon: BarChart3,  weight: 60, permissions: ['REPORTS_VISIBLE'] },
+      { id: 'returns-exchanges-report',  label: 'Cambios y devoluciones',         path: '/reports/sales?report=returns-exchanges',               icon: RotateCcw,  weight: 65, permissions: ['REPORTS_VISIBLE'] },
       { id: 'agreement-summary',         label: 'Resumen de convenios',           path: '/reports/agreements?report=agreement-summary',          icon: Handshake,  weight: 61, permissions: ['REPORTS_VISIBLE'] },
       { id: 'agreement-usage',           label: 'Uso de convenios',               path: '/reports/agreements?report=agreement-usage',            icon: Handshake,  weight: 62, permissions: ['REPORTS_VISIBLE'] },
       { id: 'agreement-beneficiaries',   label: 'Beneficiarios por convenio',     path: '/reports/agreements?report=agreement-beneficiaries',    icon: Handshake,  weight: 63, permissions: ['REPORTS_VISIBLE'] },

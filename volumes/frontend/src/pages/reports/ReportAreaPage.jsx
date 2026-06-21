@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { Suspense, lazy } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Clock } from 'lucide-react';
@@ -6,6 +7,7 @@ import { REPORT_GROUPS } from './reportGroups';
 
 const REPORT_COMPONENTS = {
   'daily-sales':              lazy(() => import('./DailySales')),
+  'returns-exchanges':        lazy(() => import('./ReturnsExchangesReport')),
   'agreement-summary':        lazy(() => import('./AgreementSummary')),
   'agreement-usage':          lazy(() => import('./AgreementUsage')),
   'agreement-beneficiaries':  lazy(() => import('./AgreementBeneficiaries')),

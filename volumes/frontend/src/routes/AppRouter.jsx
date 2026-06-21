@@ -14,6 +14,7 @@ const CashMetrics = lazy(() => import('@/pages/metrics/CashMetrics'));
 const CustomerMetrics = lazy(() => import('@/pages/metrics/CustomerMetrics'));
 const ReportsHub              = lazy(() => import('@/pages/reports/ReportsHub'));
 const DailySales              = lazy(() => import('@/pages/reports/DailySales'));
+const ReturnsExchangesReport  = lazy(() => import('@/pages/reports/ReturnsExchangesReport'));
 const ReportAreaPage          = lazy(() => import('@/pages/reports/ReportAreaPage'));
 const AgreementSummary        = lazy(() => import('@/pages/reports/AgreementSummary'));
 const AgreementUsage          = lazy(() => import('@/pages/reports/AgreementUsage'));
@@ -108,6 +109,7 @@ const moduleComponents = {
   'reports-customers':          ReportAreaPage,
   'reports-agreements':         ReportAreaPage,
   'daily-sales':                DailySales,
+  'returns-exchanges-report':   ReturnsExchangesReport,
   'agreement-summary':          AgreementSummary,
   'agreement-usage':            AgreementUsage,
   'agreement-beneficiaries':    AgreementBeneficiaries,

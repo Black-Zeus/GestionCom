@@ -23,6 +23,16 @@ export const REPORT_GROUPS = [
         tags: ['Rango de fechas', 'Filtro por sucursal', 'Exportación CSV', 'Exportación Excel', 'Reporte PDF'],
       },
       {
+        id: 'returns-exchanges',
+        label: 'Cambios y devoluciones',
+        description:
+          'Listado de documentos de cambio y devolución por rango de fechas, estado y locación, con crédito generado, artículos afectados y exportación CSV.',
+        type: 'Reporte operativo',
+        path: '/reports/sales?report=returns-exchanges',
+        available: true,
+        tags: ['Rango de fechas', 'Locación', 'Estado', 'Exportación CSV'],
+      },
+      {
         id: 'monthly-summary',
         label: 'Resumen mensual',
         description: 'Consolidado de ventas del mes con resumen diario y comparativa respecto al mes anterior.',
