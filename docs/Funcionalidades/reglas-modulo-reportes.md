@@ -1,6 +1,13 @@
 # Reglas para construir módulos de reporte
 
-Documento de referencia para el equipo. Define las convenciones técnicas y de diseño que deben seguirse al crear o extender cualquier reporte en el módulo de gestión, tomando como ejemplo canónico el reporte **Ventas Diarias** (`DailySales`).
+Documento de referencia para el equipo. Define las convenciones técnicas y de diseño que deben seguirse al crear o extender cualquier reporte del módulo de gestión.
+
+Los reportes canónicos actuales son:
+
+- `DailySales.jsx`: ventas diarias.
+- `ReturnsExchangesReport.jsx`: cambios y devoluciones.
+- `CategorySales.jsx`: ventas por categoría o marca.
+- `ReportLayout.jsx`: layout común para reportes.
 
 ---
 
@@ -8,213 +15,320 @@ Documento de referencia para el equipo. Define las convenciones técnicas y de d
 
 | Capa | Ubicación | Ejemplo |
 |---|---|---|
-| Página (React) | `frontend/src/pages/reports/<NombreReporte>.jsx` | `DailySales.jsx` |
+| Página React | `frontend/src/pages/reports/<NombreReporte>.jsx` | `DailySales.jsx` |
+| Layout común | `frontend/src/components/common/navigation/ReportLayout.jsx` | `ReportLayout.jsx` |
 | Endpoint datos | `backend-api/routes/reports.py` | `GET /reports/daily-sales/data` |
 | Endpoint PDF | `backend-api/routes/reports.py` | `POST /reports/daily-sales/pdf` |
-| Template HTML | `backend-api/templates/reports/<nombre>.html` | `daily_sales.html` |
-| Partials HTML | `backend-api/templates/reports/partials/` | `_page_header.html`, `_styles.html` |
+| Template HTML PDF | `backend-api/templates/reports/<nombre>.html` | `daily_sales.html` |
+| Partials PDF | `backend-api/templates/reports/partials/` | `_cover.html`, `_page_header.html`, `_styles.html` |
 | Doc funcional | `docs/Funcionalidades/Menu/reportes-gestion/<nombre>.md` | `ventas-diarias.md` |
 
 ---
 
-## 2. Frontend — Página del reporte
+## 2. Frontend
 
-### 2.1 Componente base obligatorio
+### 2.1 Uso obligatorio de `ReportLayout`
 
-Toda página de reporte debe usar `ReportLayout` como componente raíz:
+Toda página de reporte debe usar `ReportLayout` como componente raíz.
 
 ```jsx
-import ReportLayout from '@/components/common/navigation/ReportLayout';
-
 <ReportLayout
   title="Ventas diarias"
-  description="..."
-  charts={[...]}        // mínimo 1, máximo ilimitado
-  kpiItems={[...]}
-  onExportPdf={...}
-  onExportCsv={...}
-  onExportExcel={...}
-  ...
+  description="15-06-2026 - 21-06-2026 · 7 días"
+  actions={[
+    { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
+  ]}
+  filterBar={...}
+  filterBarActions={...}
+  filterBarTrailing={...}
+  onRunReport={() => fetchData(filters)}
+  runReportLoading={loading}
+  kpiItems={...}
+  charts={...}
+  viewMode={viewMode}
+  onViewModeChange={handleViewModeChange}
+  onExportPdf={handlePdfExport}
+  onExportCsv={handleCsvExport}
+  onExportExcel={handleXlsxExport}
 >
-  {/* tabla de detalle */}
+  {/* tabla de datos */}
 </ReportLayout>
 ```
 
-### 2.2 Prop `charts`
+### 2.2 Barra de filtros
 
-- Es un array de objetos `{ title, subtitle?, icon?, content }`.
-- **Mínimo siempre 1** gráfico.
-- Cada gráfico ocupa el **100 % del ancho** (apilados verticalmente).
-- El número de gráficos es libre: un reporte puede tener 1, otro puede tener 5.
+La barra de filtros se divide en dos filas con responsabilidades fijas.
 
-```jsx
-charts={[
-  {
-    title:   'Evolución de ventas por día',
-    icon:    BarChart3,
-    content: <ReactApexChart ... />,
-  },
-  {
-    title:    'Desglose por método de pago',
-    subtitle: 'Efectivo · Débito · Crédito',
-    icon:     BarChart2,
-    content:  <ReactApexChart ... />,
-  },
-]}
+Fila default:
+
+```text
+Locación | shortcuts Fechas | Date Picker | Limpiar | Ejecutar reporte
 ```
 
-### 2.3 Llamadas a la API
+Reglas de la fila default:
 
-- **Nunca** usar `fetch` nativo para endpoints autenticados.
-- Usar siempre `apiClient` (axios con interceptor JWT):
+- `Locación`, shortcuts de fecha y `DatePicker` van en `filterBar`.
+- `Limpiar` va en `filterBarActions`.
+- `Ejecutar reporte` se declara con `onRunReport` y debe quedar alineado a la derecha.
+- Esta fila existe en todos los reportes.
 
-```js
-import apiClient from '@/services/api/apiClient';
+Fila 2:
 
-const { data } = await apiClient.get('/reports/daily-sales/data', { params });
+```text
+Controles/filtros propios del reporte
 ```
 
-### 2.4 Filtros de fecha — rangos rápidos
+Reglas de la fila 2:
 
-La barra de filtros incluye botones de período rápido definidos en un array `PERIODS`. Cada entrada puede calcular la fecha de inicio de dos formas:
+- Los filtros específicos de cada reporte van en `filterBarTrailing`.
+- Ejemplos: tipo de documento, estado, familia, vendedor, categoría, canal, etc.
+- `Limpiar` no va en esta fila.
+- Si el reporte no tiene filtros propios, esta fila no se renderiza.
+
+### 2.3 Ejecución manual
+
+Los controles de filtro no deben autoejecutar el reporte.
+
+Reglas:
+
+- Cambiar locación, rango de fecha o filtros propios solo actualiza `filters`.
+- El reporte se ejecuta únicamente al pulsar `Ejecutar reporte`.
+- Mantener dos estados:
+  - `filters`: valores visibles/editables en la barra.
+  - `executedFilters`: últimos filtros realmente ejecutados.
+- KPIs, gráficos, tabla y exportaciones deben describir y exportar `executedFilters`, no filtros pendientes.
+- El botón debe mostrar estado de carga con `runReportLoading`.
+
+Ejemplo:
 
 ```js
-// Forma A: N días hacia atrás desde hoy
-{ id: '7d', label: '7 días', days: 7 }
+const [filters, setFilters] = useState(() => defaultFilters(activeWarehouse));
+const [executedFilters, setExecutedFilters] = useState(() => defaultFilters(activeWarehouse));
 
-// Forma B: función que calcula la fecha exacta de inicio
-{ id: 'week', label: 'Esta semana', getFrom: getMondayISO }
-```
-
-`applyPeriod` resuelve cuál usar:
-
-```js
-const applyPeriod = (id) => {
-  const p = PERIODS.find((x) => x.id === id);
-  if (p) setFilters((f) => ({
-    ...f,
-    period:   id,
-    dateFrom: p.getFrom ? p.getFrom() : periodFrom(p.days),
-    dateTo:   toISO(new Date()),
-  }));
+const fetchData = async (nextFilters = filters) => {
+  const { data } = await apiClient.get('/reports/daily-sales/data', { params });
+  setRows(data.rows || []);
+  setExecutedFilters(resolvedFilters);
 };
 ```
 
-Rangos estándar definidos (en este orden en la barra):
+### 2.4 Defaults de fecha y locación
+
+Al acceder a un reporte:
+
+- El rango por defecto debe ser `Esta semana`.
+- `dateFrom` debe ser el lunes de la semana actual.
+- `dateTo` debe ser hoy.
+- La lista de locaciones debe incluir todas las locaciones a las que el usuario tiene acceso.
+- La locación seleccionada por defecto debe ser solo la locación activa del usuario conectado.
+
+La fuente de locaciones autorizadas en frontend es `useSessionStore`.
+
+```js
+const activeLocationRecord = useSessionStore((state) => state.getActiveLocation());
+const locations = useSessionStore((state) => state.locations);
+```
+
+La opción `Todas las sucursales` o `Todas las locaciones` debe seleccionar todas las locaciones autorizadas del usuario, no todas las locaciones globales del sistema.
+
+### 2.5 Locación multiselect
+
+El control de locación debe ser `AutocompleteSelect` en modo `multiple`.
+
+Reglas:
+
+- Debe permitir seleccionar más de una locación.
+- Debe incluir una opción `Todas...`.
+- Al seleccionar `Todas...`, se deben marcar todas las opciones autorizadas del usuario.
+- Si un usuario tiene 2 locaciones, `Todas...` significa esas 2.
+- Si tiene 5 locaciones, `Todas...` significa esas 5.
+- No debe depender de una lista parcial devuelta por el endpoint del reporte si esa lista excluye locaciones válidas del usuario.
+
+### 2.6 Rangos rápidos
+
+Orden estándar:
 
 | id | Label | Lógica |
 |---|---|---|
-| `today` | Hoy | 1 día |
-| `week` | Esta semana | Desde el lunes de la semana actual |
-| `7d` | 7 días | Últimos 7 días |
-| `15d` | 15 días | Últimos 15 días |
-| `30d` | 30 días | Últimos 30 días |
-| `60d` | 60 días | Últimos 60 días |
-| `90d` | 90 días | Últimos 90 días |
+| `today` | Hoy | Solo hoy |
+| `week` | Esta semana | Desde lunes hasta hoy |
+| `7d` | 7 días | Últimos 7 días incluyendo hoy |
+| `15d` | 15 días | Últimos 15 días incluyendo hoy |
+| `30d` | 30 días | Últimos 30 días incluyendo hoy |
+| `60d` | 60 días | Últimos 60 días incluyendo hoy |
+| `90d` | 90 días | Últimos 90 días incluyendo hoy |
 
-### 2.5 Gráficos con ApexCharts
+`Por día` nunca debe mostrar un mes completo si el rango seleccionado no es mensual. Debe listar solo los días del rango ejecutado.
 
-- El gráfico de área usa `id: 'daily-sales-area'` y el de barras `id: 'daily-sales-bar'`.
-- El **menú de exportación** (PNG / CSV) debe habilitarse en **todos** los gráficos:
+### 2.7 Toggle de vista (obligatorio)
 
-```js
-toolbar: {
-  show: true,
-  tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
-  export: {
-    png: { filename: `nombre-grafico_${filters.dateFrom}_${filters.dateTo}` },
-    csv: { filename: `nombre-grafico_${filters.dateFrom}_${filters.dateTo}` },
-  },
-},
+**Todo reporte debe incluir el toggle de vista.** No existe reporte sin él.
+
+El toggle se declara con `viewMode`, `onViewModeChange` y `viewModeOptions` en `ReportLayout`.
+
+Reglas de posicionamiento:
+
+- Se renderiza en la cabecera de la tabla de datos, junto a los botones de exportación.
+- No pertenece a la barra de filtros.
+
+#### Opciones según el tipo de reporte
+
+| Tipo de reporte | opción 1 (id) | opción 2 (id) |
+|---|---|---|
+| Serie temporal (ventas por período) | `detail` → Detalle | `grouped` → Por día |
+| Agrupado por dimensión (categoría, marca, cliente…) | `detail` → Detalle | `grouped` → Por [dimensión] |
+
+El label de la opción agrupada debe reflejar la dimensión real del reporte (`Por día`, `Por categoría`, `Por marca`, etc.), no siempre `Por día`.
+
+#### Vista `Detalle`
+
+- Lista registros individuales sin agrupar (una fila por documento o por línea de venta, según el reporte).
+- Debe incluir columna `Acciones` cuando exista navegación o modal de detalle.
+- La acción de ver debe reutilizar modales existentes del sistema, por ejemplo `SaleDetailModal`.
+
+#### Vista agrupada (`Por día` / `Por categoría` / etc.)
+
+- Agrupa los registros según la dimensión principal del reporte.
+- Cuando la dimensión es temporal:
+  - Debe incluir todos los días del rango, aunque no existan movimientos.
+  - Los días sin movimiento deben mostrar cero según el tipo de columna.
+  - El orden debe ser ascendente: fecha más antigua a fecha más nueva.
+- Cuando la dimensión no es temporal (categoría, marca…):
+  - El orden debe ser por monto total descendente.
+  - Puede omitir filas sin movimiento (no tiene sentido mostrar categorías con cero ventas).
+
+### 2.8 Header y acciones
+
+En el header del módulo:
+
+- Debe existir `Volver`.
+- No debe existir botón `Actualizar`.
+- No debe ubicarse PDF en el header.
+
+Exportaciones:
+
+- PDF, CSV y Excel deben estar agrupados en la cabecera de la tabla de datos.
+- `ReportLayout` gestiona los botones y el modal de exportación.
+
+### 2.9 Exportaciones CSV, Excel y PDF
+
+Las exportaciones deben respetar la vista seleccionada:
+
+- Si `viewMode === 'detail'`, exportar el detalle individual (sin agrupación).
+- Si `viewMode === 'grouped'`, exportar datos agrupados según la dimensión principal del reporte (día, categoría, marca, etc.).
+
+CSV y Excel:
+
+- Deben incluir una sección superior de parámetros de filtrado antes de la tabla.
+- Parámetros mínimos:
+  - Reporte.
+  - Periodo.
+  - Locación o sucursal.
+  - Moneda.
+  - Vista.
+  - Generado el.
+- Si el reporte tiene filtros propios, agregarlos también.
+
+PDF:
+
+- Debe recibir `view_mode`.
+- Debe respetar la agrupación seleccionada.
+- Debe incluir la moneda en portada en una línea separada.
+- No debe mostrar un ID visual de reporte si no es trazable en backend.
+- Si se generan páginas dinámicas con partials, resolver `{{> _page_header}}` y `{{> _page_footer}}` antes de inyectarlas al template principal.
+
+### 2.10 Moneda
+
+Toda exportación debe mostrar nombre y código de moneda.
+
+Formato estándar:
+
+```text
+Peso chileno (CLP)
 ```
 
-- Las series son **dinámicas**, derivadas de los datos recibidos de la API. No hardcodear métodos de pago, sucursales ni categorías.
+Ejemplos:
 
-### 2.6 Exportación PDF desde el frontend
+- `Total Peso chileno (CLP)`
+- `Ticket prom. Peso chileno (CLP)`
+- Portada PDF: label `Moneda` y valor `Peso chileno (CLP)` en línea separada.
 
-El PDF se genera enviando las imágenes de los gráficos al backend vía `multipart/form-data`:
+### 2.11 API desde frontend
+
+- Nunca usar `fetch` nativo para endpoints autenticados, salvo conversión local de `dataURI` a `Blob`.
+- Usar siempre `apiClient`.
 
 ```js
-const [areaImg, barImg] = await Promise.all([
-  ApexCharts.exec('daily-sales-area', 'dataURI'),
-  ApexCharts.exec('daily-sales-bar',  'dataURI'),
-]);
-const toBlob = async (dataURI) => (await fetch(dataURI)).blob();
-
-const formData = new FormData();
-formData.append('date_from', filters.dateFrom);
-formData.append('date_to',   filters.dateTo);
-formData.append('branch',    filters.sucursal);
-formData.append('chart_area', await toBlob(areaImg.imgURI), 'chart_area.png');
-formData.append('chart_bar',  await toBlob(barImg.imgURI),  'chart_bar.png');
-
-const { data: blob } = await apiClient.post('/reports/daily-sales/pdf', formData, {
-  headers: { 'Content-Type': 'multipart/form-data' },
-  responseType: 'blob',
-});
-return URL.createObjectURL(blob);
+const { data } = await apiClient.get('/reports/daily-sales/data', { params });
 ```
 
 ---
 
-## 3. Backend — Endpoints
+## 3. Backend
 
-### 3.1 Endpoint de datos (`GET`)
+### 3.1 Endpoint de datos
+
+Los endpoints de datos deben:
+
+- Recibir `date_from` y `date_to`.
+- Aceptar una locación (`warehouse_id`) o múltiples locaciones (`warehouse_ids` separado por coma).
+- Validar y normalizar fechas.
+- Retornar datos reales desde BD, nunca mock.
+- Retornar filas suficientes para:
+  - KPIs.
+  - Gráficos.
+  - Tabla agrupada.
+  - Tabla detalle, si aplica.
+
+Ejemplo:
 
 ```python
 @router.get("/daily-sales/data", response_class=JSONResponse)
 async def daily_sales_data(
-    date_from:    date       = Query(...),
-    date_to:      date       = Query(...),
+    date_from: date = Query(...),
+    date_to: date = Query(...),
     warehouse_id: int | None = Query(None),
-    request:      Request    = None,
-    user:         dict       = Depends(get_current_user),
+    warehouse_ids: str | None = Query(None),
+    user: dict = Depends(get_current_user),
 ):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
 ```
 
-- Retorna JSON con forma `{ rows: [...], warehouses: [...] }`.
-- Los datos de medios de pago en cada fila son dinámicos (`by_method: [{ code, name, amount }]`).
-- Nunca retornar datos mock. Siempre consultar la BD.
+### 3.2 Filtros de locación
 
-### 3.2 Endpoint PDF (`POST`)
+Usar helpers estructurados para listas de IDs, no interpolar strings manualmente.
 
 ```python
-@router.post("/daily-sales/pdf", response_class=Response)
-async def daily_sales_pdf(
-    date_from:  str                  = Form(...),
-    date_to:    str                  = Form(...),
-    branch:     str                  = Form("all"),
-    chart_area: Optional[UploadFile] = File(None),
-    chart_bar:  Optional[UploadFile] = File(None),
-):
+selected_warehouse_ids = _parse_id_list(warehouse_ids)
+params = {"date_from": date_from, "date_to": date_to}
+warehouse_filters = []
+_append_in_filter(warehouse_filters, params, "sd.warehouse_id", selected_warehouse_ids, "warehouse_id")
+warehouse_clause = f"AND {' AND '.join(warehouse_filters)}" if warehouse_filters else ""
 ```
 
-- Debe ser `POST` (recibe imágenes de gráficos como `UploadFile`).
-- Llama a `await _build_context(date_from, date_to, branch)` — función `async` que consulta la BD real.
-- Incrusta las imágenes como `data:image/png;base64,...` dentro del HTML.
-- Envía el HTML a Gotenberg vía `_call_gotenberg_sync`.
+### 3.3 Endpoint PDF
 
-### 3.3 Builder de contexto PDF (`async`)
+Los endpoints PDF deben:
 
-`_build_context` es **siempre async** y consulta la BD directamente:
+- Ser `POST`.
+- Recibir gráficos como `UploadFile` cuando aplique.
+- Recibir `view_mode`.
+- Recibir locaciones como `all` o lista separada por coma.
+- Construir contexto desde BD real.
+- Enviar HTML final a Gotenberg.
 
-```python
-async def _build_context(date_from: str, date_to: str, branch: str) -> dict:
-    # 1. Resuelve warehouse_id desde branch ("all" → None)
-    # 2. Calcula período anterior (misma duración, inmediatamente anterior)
-    # 3. Queries: totales diarios, anulaciones, medios de pago (período actual)
-    # 4. Queries: totales y anulaciones agregadas (período anterior)
-    # 5. Queries: totales diarios (período anterior, para gráfico SVG comparativo)
-    # 6. Construye curr_rows con by_method dinámico
-    # 7. Deriva all_methods ordenados por total descendente
-    # 8. Arma el dict ctx con todos los keys del template
-    # 9. Genera DETAIL_PAGES con tabla dinámica de métodos de pago
-    return ctx
-```
+### 3.4 Detalle y agrupación
 
-### 3.4 Manejo de pagos MIXED
+Si un reporte soporta detalle y agrupación:
 
-El campo `payment_details` puede contener un JSON con tipo `MIXED` (pago dividido). El backend debe descomponerlo:
+- El endpoint debe proveer datos para ambas vistas o el builder PDF debe poder construir ambas.
+- El detalle debe ordenarse por fecha ascendente.
+- La agrupación por día debe crear todos los días del rango, aunque no existan movimientos.
+- Los totales de agrupación deben usar cero cuando no haya datos.
+
+### 3.5 Pagos mixtos
+
+Cuando `payment_details` contenga pagos mixtos (`MIXED`), el backend debe descomponer cada medio de pago y acumular montos por método.
 
 ```python
 details = _payment_details(r.get("payment_details"))
@@ -230,46 +344,57 @@ else:
 
 ## 4. Template PDF
 
-### 4.1 Estructura de páginas
+### 4.1 Estructura
 
-Cada `<section class="report-page">` es una página A4. El template base tiene:
+Cada `<section class="report-page">` representa una página A4.
+
+Estructura recomendada:
 
 | Página | Contenido |
 |---|---|
 | Portada | `{{> _cover}}` |
-| 1 | Resumen ejecutivo: KPIs, metadata, nota ejecutiva |
-| 2 | Gráficos exportados desde la UI (`{{CHART_AREA_CARD}}`, `{{CHART_BAR_CARD}}`) |
-| 3 | Análisis comparativo con período anterior |
-| 4…N | Detalle diario (generado dinámicamente por `_build_detail_pages`) |
+| 1 | Resumen ejecutivo, metadata, KPIs |
+| 2 | Gráficos exportados desde UI, si aplica |
+| 3...N | Detalle o agrupación según `view_mode` |
 
-### 4.2 Gráficos en el PDF
+### 4.2 Partials
 
-Las imágenes enviadas por el frontend se incrustan con `min-height:0` para evitar desbordamiento de página:
+Los templates usan:
 
-```python
-f'<div class="chart-section" style="min-height:0">'
-f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
-```
+- `{{> _styles}}`
+- `{{> _cover}}`
+- `{{> _page_header}}`
+- `{{> _page_footer}}`
 
-### 4.3 Tabla de detalle dinámica
+Regla importante:
 
-Las columnas de la tabla de detalle se generan en función de los métodos de pago presentes en el período, no de una lista fija. Las funciones clave son:
+- Si una página se genera como string dinámico en Python y luego se inserta en `{{CHART_PAGE}}` o `{{DETAIL_PAGES}}`, sus partials deben resolverse antes de inyectarla.
 
-- `_table_colgroup(methods)` — anchos de columna proporcionales
-- `_table_thead(methods)` — encabezados dinámicos
-- `_table_row(r, methods, best_row)` — filas con celdas por método
-- `_build_detail_pages(rows, methods, best_row, ctx)` — página(s) completa(s)
+### 4.3 Portada
 
-### 4.4 Variables del template
+La portada debe mostrar:
 
-Todas las variables se sustituyen con `{{VAR}}`. Los partials con `{{> _partial}}`. No usar lógica condicional en el template; toda la lógica va en el builder Python.
+- Título.
+- Subtítulo.
+- Periodo.
+- Locación o sucursal.
+- Moneda en línea separada: `Peso chileno (CLP)`.
+
+No mostrar IDs visuales de reporte si no existe trazabilidad real en backend.
+
+### 4.4 Variables
+
+Todas las variables se sustituyen con `{{VAR}}`. No agregar lógica condicional compleja al HTML; la lógica vive en Python.
 
 ---
 
 ## 5. Convenciones generales
 
-- **Sin datos mock en producción.** `_build_context` y los endpoints siempre usan la BD.
-- **`REPORT_STATUS`** debe ser `"INFORME"`, nunca `"INFORME MOCKUP"`.
-- **Columnas dinámicas** tanto en la UI (gráfico de barras, CSV, XLSX) como en el PDF (tabla de detalle).
-- **Período anterior** se calcula automáticamente: misma cantidad de días, inmediatamente anterior al período seleccionado.
-- Los helpers `_money`, `_clp`, `_fmt`, `_pct_diff`, `_pct_color`, `_WEEKDAYS` son compartidos en `reports.py` y no deben duplicarse por reporte.
+- Sin datos mock en producción.
+- `REPORT_STATUS` debe ser `"INFORME"`.
+- Los gráficos deben derivarse de datos reales de API.
+- No hardcodear métodos de pago, sucursales ni categorías si pueden venir de datos.
+- CSV, Excel y PDF deben usar los últimos filtros ejecutados.
+- `Limpiar` debe restaurar defaults: `Esta semana` y locación activa.
+- La tabla y las exportaciones deben mantener orden por fecha ascendente cuando la vista sea temporal.
+- Los helpers compartidos de `reports.py` no deben duplicarse por reporte.
