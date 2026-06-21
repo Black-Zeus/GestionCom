@@ -1,75 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import ApexCharts from 'apexcharts';
 import ReactApexChart from 'react-apexcharts';
-import { ArrowLeft, BarChart3, Download, FileText, Loader2, X } from 'lucide-react';
-import KpiBar from '@/components/common/data/KpiBar';
-import ModuleHeader from '@/components/common/navigation/ModuleHeader';
+import { ArrowLeft, BarChart2, BarChart3, X } from 'lucide-react';
+import ReportLayout from '@/components/common/navigation/ReportLayout';
 import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import DateRangePicker from '@/components/common/forms/DateRangePicker';
 import { toast } from '@/services/ui/notify';
+import apiClient from '@/services/api/apiClient';
+import { buildCsvBlobUrl, buildXlsxBlobUrl } from '@/utils/exportFile';
 
 const money   = (v) => Number(v).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const toISO   = (d) => d.toISOString().slice(0, 10);
-const addDays = (date, n) => { const d = new Date(date); d.setDate(d.getDate() + n); return d; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmt     = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtDay  = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: '2-digit' });
-const fmtLong = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
-
-const downloadCSV = (filename, headers, rows) => {
-  const esc   = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))];
-  const blob  = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url   = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
-  URL.revokeObjectURL(url);
-};
 
 // --- Constants -----------------------------------------------------------
 
-const BRANCH_LIST   = ['Centro', 'Mall', 'Norte'];
-const BRANCH_COLORS = { Centro: '#3b82f6', Mall: '#10b981', Norte: '#f59e0b' };
-
 const PERIODS = [
-  { id: '7d',  label: '7 días',  days:  7 },
-  { id: '15d', label: '15 días', days: 15 },
-  { id: '30d', label: '30 días', days: 30 },
-  { id: '60d', label: '60 días', days: 60 },
-  { id: '90d', label: '90 días', days: 90 },
+  { id: 'today', label: 'Hoy',     days:  1 },
+  { id: '7d',    label: '7 días',  days:  7 },
+  { id: '15d',   label: '15 días', days: 15 },
+  { id: '30d',   label: '30 días', days: 30 },
+  { id: '60d',   label: '60 días', days: 60 },
+  { id: '90d',   label: '90 días', days: 90 },
 ];
 
-const BRANCH_OPTIONS = [
-  { value: 'all',    label: 'Todas las sucursales' },
-  { value: 'Centro', label: 'Sucursal Centro'       },
-  { value: 'Mall',   label: 'Sucursal Mall'          },
-  { value: 'Norte',  label: 'Sucursal Norte'         },
-];
-
-// Method weights per branch (seeded but stable ratios)
-const METHOD_WEIGHT = { Efectivo: 0.25, Débito: 0.40, Crédito: 0.20, Transferencia: 0.15 };
-
-const seeded = (base, seed) => {
-  const r = Math.abs(Math.sin(seed * 9301 + 49297) * 233280);
-  return Math.round(base + (r % (base * 0.6)) - base * 0.3);
-};
+const BRANCH_PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const METHOD_PALETTE  = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 const periodFrom = (days) => toISO(addDays(new Date(), -(days - 1)));
 
-// --- Sub-components ------------------------------------------------------
-
-const Card = ({ title, subtitle, icon: Icon, children, footer, actions, className = '' }) => (
-  <div className={`flex flex-col rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${className}`}>
-    <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3 dark:border-slate-800">
-      {Icon && <Icon className="h-4 w-4 shrink-0 text-slate-400" />}
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{title}</span>
-        {subtitle && <span className="ml-2 text-xs text-slate-400">{subtitle}</span>}
-      </div>
-      {actions && <div className="ml-2 flex shrink-0 items-center gap-1">{actions}</div>}
-    </div>
-    <div className="flex-1 p-5">{children}</div>
-    {footer && <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-800">{footer}</div>}
-  </div>
-);
+// --- Table helpers -------------------------------------------------------
 
 const Th = ({ children, right, center }) => (
   <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : center ? 'text-center' : 'text-left'}`}>{children}</th>
@@ -90,246 +53,344 @@ const defaultFilters = () => ({
 const DailySales = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [filters, setFilters] = useState(defaultFilters);
-  const [pdfLoading, setPdfLoading] = useState(false);
   const isDark = document.documentElement.classList.contains('dark');
 
+  const [filters, setFilters]           = useState(defaultFilters);
+  const [rows, setRows]                 = useState([]);
+  const [branchOptions, setBranchOptions] = useState([{ value: 'all', label: 'Todas las sucursales' }]);
+  const [loading, setLoading]           = useState(false);
+
   const set = (key, val) => setFilters((f) => ({ ...f, [key]: val }));
+
   const applyPeriod = (id) => {
     const p = PERIODS.find((x) => x.id === id);
     if (p) setFilters((f) => ({ ...f, period: id, dateFrom: periodFrom(p.days), dateTo: toISO(new Date()) }));
   };
+
   const clearFilters = () => setFilters(defaultFilters());
   const isFiltered   = filters.sucursal !== 'all' || filters.period !== '30d';
 
-  // Days in range
-  const days = useMemo(() => {
-    if (!filters.dateFrom || !filters.dateTo) return [];
-    const from = new Date(`${filters.dateFrom}T00:00:00`);
-    const to   = new Date(`${filters.dateTo}T00:00:00`);
-    const list = []; const cur = new Date(from);
-    while (cur <= to) { list.push(toISO(cur)); cur.setDate(cur.getDate() + 1); }
-    return list;
-  }, [filters.dateFrom, filters.dateTo]);
+  // Fetch data from API whenever filters change
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = { date_from: filters.dateFrom, date_to: filters.dateTo };
+      if (filters.sucursal !== 'all') params.warehouse_id = filters.sucursal;
 
-  const activeBranches = filters.sucursal === 'all' ? BRANCH_LIST : [filters.sucursal];
+      const { data } = await apiClient.get('/reports/daily-sales/data', { params });
 
-  // Generate daily rows
-  const rows = useMemo(() => days.map((iso, di) => {
-    // Aggregate across active branches
-    let total = 0; let txn = 0;
-    const byBranch = activeBranches.map((branch) => {
-      const bi   = BRANCH_LIST.indexOf(branch);
-      const t    = seeded(400000 + bi * 120000, di * 7 + bi * 13);
-      const n    = seeded(40 + bi * 10, di * 5 + bi * 3);
-      total += t; txn += n;
-      return { branch, total: t, txn: n };
-    });
+      setRows(data.rows || []);
+      setBranchOptions([
+        { value: 'all', label: 'Todas las sucursales' },
+        ...(data.warehouses || []),
+      ]);
+    } catch {
+      toast.error('Error cargando datos del reporte');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters.dateFrom, filters.dateTo, filters.sucursal]);
 
-    const cancelled = Math.max(0, Math.round(txn * (0.03 + Math.abs(Math.sin(di * 2.1)) * 0.03)));
-    const avgTicket = txn > 0 ? Math.round(total / txn) : 0;
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-    return {
-      iso,
-      total,
-      txn,
-      cancelled,
-      avgTicket,
-      efectivo:      Math.round(total * METHOD_WEIGHT.Efectivo),
-      debito:        Math.round(total * METHOD_WEIGHT.Débito),
-      credito:       Math.round(total * METHOD_WEIGHT.Crédito),
-      transferencia: Math.round(total * METHOD_WEIGHT.Transferencia),
-      byBranch,
-    };
-  }), [days, activeBranches]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Totals
+  // Derived data
+  const nonEmptyRows  = rows.filter((r) => r.total > 0);
   const totals = useMemo(() => ({
-    total:         rows.reduce((a, r) => a + r.total,         0),
-    txn:           rows.reduce((a, r) => a + r.txn,           0),
-    cancelled:     rows.reduce((a, r) => a + r.cancelled,     0),
-    efectivo:      rows.reduce((a, r) => a + r.efectivo,      0),
-    debito:        rows.reduce((a, r) => a + r.debito,        0),
-    credito:       rows.reduce((a, r) => a + r.credito,       0),
-    transferencia: rows.reduce((a, r) => a + r.transferencia, 0),
+    total:     rows.reduce((a, r) => a + (r.total     || 0), 0),
+    txn:       rows.reduce((a, r) => a + (r.txn       || 0), 0),
+    cancelled: rows.reduce((a, r) => a + (r.cancelled || 0), 0),
   }), [rows]);
 
   const avgTicketTotal = totals.txn > 0 ? Math.round(totals.total / totals.txn) : 0;
-  const bestDay  = rows.reduce((best, r) => (!best || r.total > best.total ? r : best), null);
-  const worstDay = rows.reduce((worst, r) => (!worst || r.total < worst.total ? r : worst), null);
+  const bestDay  = nonEmptyRows.reduce((b, r) => (!b || r.total > b.total ? r : b), null);
+  const worstDay = nonEmptyRows.reduce((b, r) => (!b || r.total < b.total ? r : b), null);
 
-  // Chart series (one per branch, or single aggregate)
-  const chartSeries = useMemo(() => {
-    if (activeBranches.length === 1) {
-      return [{ name: `Suc. ${activeBranches[0]}`, data: rows.map((r) => r.total), color: BRANCH_COLORS[activeBranches[0]] }];
-    }
-    return activeBranches.map((branch) => ({
-      name: `Suc. ${branch}`,
-      data: rows.map((r) => r.byBranch.find((b) => b.branch === branch)?.total ?? 0),
-      color: BRANCH_COLORS[branch],
+  // Unique branch names in data (preserves order)
+  const uniqueBranches = useMemo(() => {
+    const seen = new Map();
+    rows.forEach((r) => (r.by_branch || []).forEach((b) => seen.set(b.warehouse_name, true)));
+    return Array.from(seen.keys());
+  }, [rows]);
+
+  // Unique payment methods in data (preserves order by first seen)
+  const allMethods = useMemo(() => {
+    const seen = new Map();
+    rows.forEach((r) => (r.by_method || []).forEach((m) => {
+      if (!seen.has(m.code)) seen.set(m.code, m.name);
     }));
-  }, [rows, activeBranches]); // eslint-disable-line react-hooks/exhaustive-deps
+    return Array.from(seen.entries()).map(([code, name]) => ({ code, name }));
+  }, [rows]);
 
-  const chartLabels = days.map((iso) => { const [, m, d] = iso.split('-'); return `${d}/${m}`; });
+  // Chart labels
+  const chartLabels = rows.map((r) => { const [, m, d] = r.iso.split('-'); return `${d}/${m}`; });
+
+  // Area chart series (by branch or single)
+  const chartSeries = useMemo(() => {
+    if (filters.sucursal !== 'all' || uniqueBranches.length <= 1) {
+      return [{
+        name: filters.sucursal !== 'all'
+          ? (branchOptions.find((o) => o.value === filters.sucursal)?.label ?? 'Sucursal')
+          : (uniqueBranches[0] ? `Suc. ${uniqueBranches[0]}` : 'Ventas'),
+        data:  rows.map((r) => r.total),
+        color: BRANCH_PALETTE[0],
+      }];
+    }
+    return uniqueBranches.map((name, i) => ({
+      name:  `Suc. ${name}`,
+      data:  rows.map((r) => (r.by_branch || []).find((b) => b.warehouse_name === name)?.total ?? 0),
+      color: BRANCH_PALETTE[i % BRANCH_PALETTE.length],
+    }));
+  }, [rows, uniqueBranches, filters.sucursal, branchOptions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Bar chart series (dynamic payment methods)
+  const barSeries = useMemo(() =>
+    allMethods.map((m) => ({
+      name: m.name,
+      data: rows.map((r) => Math.round((r.by_method || []).find((x) => x.code === m.code)?.amount ?? 0)),
+    }))
+  , [rows, allMethods]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const areaOptions = useMemo(() => ({
     chart: {
+      id: 'daily-sales-area',
       type: 'area', stacked: false, background: 'transparent', fontFamily: 'inherit',
-      toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
-        export: { png: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` }, csv: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` } },
+      toolbar: {
+        show: true,
+        tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
+        export: {
+          png: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` },
+          csv: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` },
+        },
       },
     },
-    stroke: { curve: 'smooth', width: 2 },
-    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.03, stops: [0, 90, 100] } },
+    stroke:     { curve: 'smooth', width: 2 },
+    fill:       { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.03, stops: [0, 90, 100] } },
     dataLabels: { enabled: false },
     xaxis: {
       categories: chartLabels,
-      labels: { rotate: days.length > 20 ? -45 : 0, style: { fontSize: '10px', colors: isDark ? '#94a3b8' : '#64748b' }, show: days.length <= 90 },
+      labels:     { rotate: rows.length > 20 ? -45 : 0, style: { fontSize: '10px', colors: isDark ? '#94a3b8' : '#64748b' }, show: rows.length <= 90 },
       axisBorder: { show: false }, axisTicks: { show: false },
     },
-    yaxis: { labels: { formatter: (v) => `$${(v / 1000).toFixed(0)}K`, style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } } },
-    grid: { borderColor: isDark ? '#1e293b' : '#f1f5f9', strokeDashArray: 4 },
-    legend: { show: activeBranches.length > 1, position: 'top', horizontalAlign: 'left', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
+    yaxis:   { labels: { formatter: (v) => `$${(v / 1000).toFixed(0)}K`, style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } } },
+    grid:    { borderColor: isDark ? '#1e293b' : '#f1f5f9', strokeDashArray: 4 },
+    legend:  { show: uniqueBranches.length > 1, position: 'top', horizontalAlign: 'left', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
     tooltip: { shared: true, y: { formatter: (v) => money(v) } },
-    theme: { mode: isDark ? 'dark' : 'light' },
-  }), [chartLabels, days.length, isDark, activeBranches.length, filters.dateFrom, filters.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+    theme:   { mode: isDark ? 'dark' : 'light' },
+  }), [chartLabels, rows.length, isDark, uniqueBranches.length, filters.dateFrom, filters.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const barOptions = useMemo(() => ({
+    chart: {
+      id: 'daily-sales-bar',
+      type: 'bar', stacked: true, background: 'transparent', fontFamily: 'inherit',
+      toolbar: {
+        show: true,
+        tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
+        export: {
+          png: { filename: `metodos-pago_${filters.dateFrom}_${filters.dateTo}` },
+          csv: { filename: `metodos-pago_${filters.dateFrom}_${filters.dateTo}` },
+        },
+      },
+    },
+    colors:      METHOD_PALETTE,
+    plotOptions: { bar: { columnWidth: rows.length > 30 ? '90%' : '65%', borderRadius: 2 } },
+    dataLabels:  { enabled: false },
+    xaxis: {
+      categories: chartLabels,
+      labels:     { rotate: rows.length > 20 ? -45 : 0, style: { fontSize: '10px', colors: isDark ? '#94a3b8' : '#64748b' }, show: rows.length <= 90 },
+      axisBorder: { show: false }, axisTicks: { show: false },
+    },
+    yaxis:   { labels: { formatter: (v) => `$${(v / 1000).toFixed(0)}K`, style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } } },
+    grid:    { borderColor: isDark ? '#1e293b' : '#f1f5f9', strokeDashArray: 4 },
+    legend:  { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
+    tooltip: { shared: true, intersect: false, y: { formatter: (v) => money(v) } },
+    theme:   { mode: isDark ? 'dark' : 'light' },
+  }), [chartLabels, rows.length, isDark, filters.dateFrom, filters.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // KPIs
   const KPI_ITEMS = [
-    { id: 'total',    label: 'Total período',       value: money(totals.total),        hint: `en ${days.length} días`           },
-    { id: 'txn',      label: 'Transacciones',        value: totals.txn.toString(),      hint: 'documentos emitidos'              },
-    { id: 'avg',      label: 'Ticket promedio',      value: money(avgTicketTotal),      hint: 'por transacción'                  },
-    { id: 'best',     label: 'Mejor día',            value: bestDay  ? money(bestDay.total)  : '—', hint: bestDay  ? fmtDay(bestDay.iso)  : '' },
-    { id: 'worst',    label: 'Peor día',             value: worstDay ? money(worstDay.total) : '—', hint: worstDay ? fmtDay(worstDay.iso) : '' },
-    { id: 'cancel',   label: 'Anulaciones',          value: totals.cancelled.toString(), hint: `${((totals.cancelled / Math.max(totals.txn, 1)) * 100).toFixed(1)}% del total` },
+    { id: 'total',  label: 'Total período',  value: money(totals.total),         hint: `en ${rows.length} días`            },
+    { id: 'txn',    label: 'Transacciones',   value: totals.txn.toString(),       hint: 'documentos emitidos'               },
+    { id: 'avg',    label: 'Ticket promedio', value: money(avgTicketTotal),       hint: 'por transacción'                   },
+    { id: 'best',   label: 'Mejor día',       value: bestDay  ? money(bestDay.total)  : '—', hint: bestDay  ? fmtDay(bestDay.iso)  : '' },
+    { id: 'worst',  label: 'Peor día',        value: worstDay ? money(worstDay.total) : '—', hint: worstDay ? fmtDay(worstDay.iso) : '' },
+    { id: 'cancel', label: 'Anulaciones',     value: totals.cancelled.toString(), hint: `${((totals.cancelled / Math.max(totals.txn, 1)) * 100).toFixed(1)}% del total` },
   ];
 
-  const exportPDF = async () => {
-    setPdfLoading(true);
+  // --- Exports -------------------------------------------------------------
+
+  const handlePdfExport = async () => {
     try {
-      const params = new URLSearchParams({
-        date_from: filters.dateFrom,
-        date_to:   filters.dateTo,
-        branch:    filters.sucursal,
+      const [areaImg, barImg] = await Promise.all([
+        ApexCharts.exec('daily-sales-area', 'dataURI'),
+        ApexCharts.exec('daily-sales-bar',  'dataURI'),
+      ]);
+      const toBlob = async (dataURI) => (await fetch(dataURI)).blob();
+      const formData = new FormData();
+      formData.append('date_from', filters.dateFrom);
+      formData.append('date_to',   filters.dateTo);
+      formData.append('branch',    filters.sucursal);
+      if (areaImg?.imgURI) formData.append('chart_area', await toBlob(areaImg.imgURI), 'chart_area.png');
+      if (barImg?.imgURI)  formData.append('chart_bar',  await toBlob(barImg.imgURI),  'chart_bar.png');
+      const { data: blob } = await apiClient.post('/reports/daily-sales/pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        responseType: 'blob',
       });
-      const resp = await fetch(`/api/reports/daily-sales/pdf?${params}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const blob = await resp.blob();
-      const url  = URL.createObjectURL(blob);
-      Object.assign(document.createElement('a'), {
-        href:     url,
-        download: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}.pdf`,
-      }).click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
+      return URL.createObjectURL(blob);
+    } catch {
       toast.error('No se pudo generar el PDF. Verifique que el servicio Gotenberg esté activo.');
-    } finally {
-      setPdfLoading(false);
+      throw new Error('pdf_failed');
     }
   };
 
-  const exportReport = () => {
-    const headers = ['Fecha', 'Día', 'Transacciones', 'Total (CLP)', 'Ticket prom. (CLP)', 'Efectivo (CLP)', 'Débito (CLP)', 'Crédito (CLP)', 'Transferencia (CLP)', 'Anulaciones'];
-    const rows_ = rows.map((r) => [
+  const buildExportData = () => {
+    const methodCodes = allMethods.map((m) => m.code);
+    const methodNames = allMethods.map((m) => m.name);
+    const headers = ['Fecha', 'Día', 'Transacciones', 'Total (CLP)', 'Ticket prom. (CLP)', ...methodNames, 'Anulaciones'];
+    const data = rows.map((r) => [
       fmt(r.iso),
       new Date(`${r.iso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'long' }),
-      r.txn, r.total, r.avgTicket,
-      r.efectivo, r.debito, r.credito, r.transferencia,
+      r.txn, r.total, r.avg_ticket,
+      ...methodCodes.map((code) => Math.round((r.by_method || []).find((m) => m.code === code)?.amount ?? 0)),
       r.cancelled,
     ]);
-    // Totals row
-    rows_.push([
-      'TOTAL', '',
-      totals.txn, totals.total, avgTicketTotal,
-      totals.efectivo, totals.debito, totals.credito, totals.transferencia,
-      totals.cancelled,
-    ]);
-    downloadCSV(`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.csv`, headers, rows_);
+    const methodTotals = methodCodes.map((code) =>
+      rows.reduce((sum, r) => sum + Math.round((r.by_method || []).find((m) => m.code === code)?.amount ?? 0), 0)
+    );
+    data.push(['TOTAL', '', totals.txn, totals.total, avgTicketTotal, ...methodTotals, totals.cancelled]);
+    return { headers, data };
   };
 
-  // Highlight: best day iso
+  const handleCsvExport  = async () => { const { headers, data } = buildExportData(); return buildCsvBlobUrl(headers, data); };
+  const handleXlsxExport = async () => { const { headers, data } = buildExportData(); return buildXlsxBlobUrl(headers, data, 'Ventas diarias'); };
+
   const bestIso = bestDay?.iso;
 
+  // -------------------------------------------------------------------------
+
   return (
-    <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
+    <ReportLayout
+      // Header
+      title="Ventas diarias"
+      description={`${fmt(filters.dateFrom)} — ${fmt(filters.dateTo)} · ${rows.length} días`}
+      actions={[
+        { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
+      ]}
 
-      <ModuleHeader
-        title="Ventas diarias"
-        description={`${fmt(filters.dateFrom)} — ${fmt(filters.dateTo)} · ${days.length} días`}
-        actions={[
-          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
-          {
-            id: 'mockup',
-            node: (
-              <span className="inline-flex h-10 items-center rounded-md border border-amber-300 bg-amber-50 px-3 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                Mockup — datos estáticos
-              </span>
-            ),
-          },
-          {
-            id: 'pdf',
-            label: pdfLoading ? 'Generando…' : 'PDF',
-            icon: pdfLoading ? Loader2 : FileText,
-            disabled: pdfLoading,
-            onClick: exportPDF,
-          },
-        ]}
-      />
-
-      {/* Filter bar */}
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="w-48 shrink-0">
-          <AutocompleteSelect value={filters.sucursal} onChange={(v) => set('sucursal', v || 'all')}
-            options={BRANCH_OPTIONS} placeholder="Todas las sucursales" clearable={false} buttonClassName="h-10 shadow-none" />
-        </div>
-        <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
-          {PERIODS.map((p) => (
-            <button key={p.id} type="button" onClick={() => applyPeriod(p.id)}
-              className={`h-10 px-3 text-sm whitespace-nowrap transition-colors ${
-                filters.period === p.id ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800'
-              }`}>{p.label}</button>
-          ))}
-        </div>
-        <DateRangePicker dateFrom={filters.dateFrom} dateTo={filters.dateTo} maxDays={365}
-          onChange={({ from, to }) => setFilters((f) => ({ ...f, period: 'custom', dateFrom: from, dateTo: to }))} />
-        {isFiltered && (
-          <button type="button" onClick={clearFilters}
-            className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <X className="h-3.5 w-3.5" /> Limpiar
-          </button>
-        )}
-      </div>
-
-      {/* KPIs */}
-      <KpiBar items={KPI_ITEMS} className="mb-5" />
-
-      {/* Trend chart */}
-      <Card title="Evolución de ventas por día" icon={BarChart3} className="mb-5">
-        <ReactApexChart options={areaOptions} series={chartSeries} type="area" height={240}
-          key={`daily-area-${filters.sucursal}-${filters.dateFrom}-${filters.dateTo}`} />
-      </Card>
-
-      {/* Main report table */}
-      <Card
-        title="Detalle por día"
-        subtitle={`${rows.length} días`}
-        icon={BarChart3}
-        actions={
-          <button type="button" onClick={exportReport} title="Exportar CSV"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
-            <Download className="h-4 w-4" />
-          </button>
-        }
-        footer={
-          <div className="grid grid-cols-6 gap-4 text-right text-sm">
-            <span className="col-span-2 text-left font-semibold text-slate-700 dark:text-slate-200">Total período</span>
-            <span className="font-bold tabular-nums">{totals.txn}</span>
-            <span className="font-bold tabular-nums">{money(totals.total)}</span>
-            <span className="font-bold tabular-nums">{money(avgTicketTotal)}</span>
-            <span className="font-bold tabular-nums text-red-500 dark:text-red-400">{totals.cancelled}</span>
+      // Filtros
+      filterBar={
+        <>
+          <div className="w-52 shrink-0">
+            <AutocompleteSelect
+              value={filters.sucursal}
+              onChange={(v) => set('sucursal', v || 'all')}
+              options={branchOptions}
+              placeholder="Todas las sucursales"
+              clearable={false}
+              buttonClassName="h-10 shadow-none"
+            />
           </div>
-        }
-      >
-        <div className="overflow-x-auto">
+          <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+            {PERIODS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPeriod(p.id)}
+                className={`h-10 px-3 text-sm whitespace-nowrap transition-colors ${
+                  filters.period === p.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <DateRangePicker
+            dateFrom={filters.dateFrom}
+            dateTo={filters.dateTo}
+            maxDays={365}
+            onChange={({ from, to }) => setFilters((f) => ({ ...f, period: 'custom', dateFrom: from, dateTo: to }))}
+          />
+          {isFiltered && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <X className="h-3.5 w-3.5" /> Limpiar
+            </button>
+          )}
+        </>
+      }
+
+      // KPIs
+      kpiItems={KPI_ITEMS}
+
+      // Gráficos
+      charts={[
+        {
+          title:   'Evolución de ventas por día',
+          icon:    BarChart3,
+          content: (
+            <ReactApexChart
+              options={areaOptions}
+              series={chartSeries}
+              type="area"
+              height={240}
+              key={`daily-area-${filters.sucursal}-${filters.dateFrom}-${filters.dateTo}`}
+            />
+          ),
+        },
+        {
+          title:    'Desglose por método de pago',
+          subtitle: allMethods.map((m) => m.name).join(' · ') || 'Sin datos',
+          icon:     BarChart2,
+          content:  (
+            <ReactApexChart
+              options={barOptions}
+              series={barSeries}
+              type="bar"
+              height={240}
+              key={`daily-bar-${filters.sucursal}-${filters.dateFrom}-${filters.dateTo}`}
+            />
+          ),
+        },
+      ]}
+
+      // Tabla
+      tableTitle="Detalle por día"
+      tableSubtitle={loading ? 'Cargando…' : `${rows.length} días`}
+      tableIcon={BarChart3}
+      onExportCsv={handleCsvExport}
+      csvFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.csv`}
+      onExportExcel={handleXlsxExport}
+      excelFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.xlsx`}
+      tableFooter={
+        <div className="grid grid-cols-5 gap-4 text-right text-sm">
+          <span className="col-span-2 text-left font-semibold text-slate-700 dark:text-slate-200">Total período</span>
+          <span className="font-bold tabular-nums">{totals.txn}</span>
+          <span className="font-bold tabular-nums">{money(totals.total)}</span>
+          <span className="font-bold tabular-nums text-red-500 dark:text-red-400">{totals.cancelled}</span>
+        </div>
+      }
+
+      // PDF
+      onExportPdf={handlePdfExport}
+      pdfDescription={`${fmt(filters.dateFrom)} — ${fmt(filters.dateTo)} · ${rows.length} días`}
+      pdfFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.pdf`}
+    >
+
+      {/* Tabla detalle */}
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">
+            Cargando datos…
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">
+            Sin ventas en el período seleccionado
+          </div>
+        ) : (
           <table className="w-full min-w-max">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800">
@@ -337,10 +398,6 @@ const DailySales = () => {
                 <Th right>Txn</Th>
                 <Th right>Total</Th>
                 <Th right>Ticket prom.</Th>
-                <Th right>Efectivo</Th>
-                <Th right>Débito</Th>
-                <Th right>Crédito</Th>
-                <Th right>Transferencia</Th>
                 <Th right>Anuladas</Th>
               </tr>
             </thead>
@@ -359,12 +416,8 @@ const DailySales = () => {
                       </div>
                     </Td>
                     <Td right muted>{r.txn}</Td>
-                    <Td right bold>{money(r.total)}</Td>
-                    <Td right muted>{money(r.avgTicket)}</Td>
-                    <Td right muted>{money(r.efectivo)}</Td>
-                    <Td right muted>{money(r.debito)}</Td>
-                    <Td right muted>{money(r.credito)}</Td>
-                    <Td right muted>{money(r.transferencia)}</Td>
+                    <Td right bold>{r.total > 0 ? money(r.total) : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>
+                    <Td right muted>{r.avg_ticket > 0 ? money(r.avg_ticket) : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>
                     <Td right>
                       {r.cancelled > 0
                         ? <span className="text-red-500 dark:text-red-400">{r.cancelled}</span>
@@ -375,10 +428,10 @@ const DailySales = () => {
               })}
             </tbody>
           </table>
-        </div>
-      </Card>
+        )}
+      </div>
 
-    </section>
+    </ReportLayout>
   );
 };
 

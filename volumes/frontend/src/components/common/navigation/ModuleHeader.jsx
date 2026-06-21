@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { Fragment } from 'react';
 import { CircleAlert } from 'lucide-react';
 import ActionButton from '@/components/common/actions/ActionButton';
 
@@ -28,17 +29,18 @@ const ModuleHeader = ({
     {(actions.length > 0 || children) && (
       <div className="flex flex-wrap gap-2">
         {actions.filter(Boolean).map((action) => (
-          action.node || (
-            <ActionButton
-              key={action.id || action.label}
-              label={action.label}
-              icon={action.icon}
-              variant={action.variant}
-              disabled={action.disabled}
-              onClick={action.onClick}
-              className={action.className}
-            />
-          )
+          <Fragment key={action.id || action.label}>
+            {action.node || (
+              <ActionButton
+                label={action.label}
+                icon={action.icon}
+                variant={action.variant}
+                disabled={action.disabled}
+                onClick={action.onClick}
+                className={action.className}
+              />
+            )}
+          </Fragment>
         ))}
         {children}
       </div>
