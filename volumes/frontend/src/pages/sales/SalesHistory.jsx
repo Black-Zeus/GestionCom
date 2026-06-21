@@ -28,6 +28,23 @@ const customerName = (customer) => (
 
 const normalize = (value) => String(value || '').toLowerCase().normalize('NFD').replace(/\p{Mn}/gu, '');
 
+const sourceDocumentLabel = (item) => {
+  const match = String(item?.notes || '').match(/Documento origen:\s*([^|]+)/i);
+  return match?.[1]?.trim() || '';
+};
+
+const pendingDocumentLabel = (item) => {
+  if (item.ticket_number) return item.ticket_number;
+  const sourceDocument = sourceDocumentLabel(item);
+  if (item.is_exchange_document || item.document_type_code === 'EXCHANGE_DRAFT') {
+    return sourceDocument ? `Cambio de productos (${sourceDocument})` : 'Cambio de productos';
+  }
+  if (item.is_return_document || item.document_type_code === 'RETURN_TICKET') {
+    return sourceDocument ? `Devolución pendiente (${sourceDocument})` : 'Devolución pendiente';
+  }
+  return item.document_type_name || 'Pre-venta pendiente';
+};
+
 const SalesHistory = () => {
   const navigate = useNavigate();
   const [pendingSales, setPendingSales] = useState([]);
@@ -54,7 +71,9 @@ const SalesHistory = () => {
     const term = normalize(search);
     if (!term) return pendingSales;
     return pendingSales.filter((item) => [
-      item.sale_code,
+      pendingDocumentLabel(item),
+      item.ticket_number,
+      item.document_type_name,
       customerName(item.customer),
       item.prepared_by,
     ].some((v) => normalize(v).includes(term)));
@@ -75,7 +94,7 @@ const SalesHistory = () => {
   const deleteSale = async (item) => {
     if (!await ModalManager.confirm({
       title: 'Eliminar venta pendiente',
-      message: `Eliminar la venta ${item.sale_code} de ${customerName(item.customer)}. Esta accion no se puede deshacer.`,
+      message: `Eliminar ${pendingDocumentLabel(item)} de ${customerName(item.customer)}. Esta accion no se puede deshacer.`,
       buttons: { cancel: 'Cancelar', confirm: 'Eliminar' },
     })) return;
     try {
@@ -106,7 +125,7 @@ const SalesHistory = () => {
       <FilterBar
         className="mb-4"
         searchValue={search}
-        searchPlaceholder="Buscar por codigo, cliente o preparado por"
+        searchPlaceholder="Buscar por documento, cliente o preparado por"
         onSearchChange={(v) => { setSearch(v); setPage(0); }}
         fields={[]}
         actions={filterActions({ loading, onRefresh: load, onClear: resetFilters })}
@@ -121,11 +140,12 @@ const SalesHistory = () => {
         columns={[
           {
             id: 'sale_code',
-            label: 'Codigo',
+            label: 'Documento',
             sortable: true,
+            sortValue: pendingDocumentLabel,
             render: (item) => (
               <div>
-                <div className="font-mono text-xs font-medium">{item.sale_code}</div>
+                <div className="text-xs font-semibold">{pendingDocumentLabel(item)}</div>
                 <div className="text-xs text-slate-500">{new Date(item.created_at).toLocaleString('es-CL')}</div>
               </div>
             ),

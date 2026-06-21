@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, RefreshCcw, XCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, RefreshCcw, Shuffle, XCircle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import KpiBar from '@/components/common/data/KpiBar';
 import FilterBar from '@/components/common/data/FilterBar';
@@ -36,8 +37,10 @@ const customerName = (customer) => (
 );
 
 const itemCount = (sale) => (sale.items || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+const canSendToReturns = (sale) => !['RETURN_TICKET', 'EXCHANGE_DRAFT'].includes(sale.document_type_code);
 
 const SalesCompleted = () => {
+  const navigate = useNavigate();
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -92,6 +95,10 @@ const SalesCompleted = () => {
   };
 
   const openDetail = (sale) => setDetailSale(sale);
+  const openExchange = (sale) => {
+    const saleCode = encodeURIComponent(sale.sale_code);
+    navigate(`/documents/returns?sale_code=${saleCode}&action=EXCHANGE`);
+  };
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
@@ -155,7 +162,15 @@ const SalesCompleted = () => {
             label: 'Acciones',
             align: 'center',
             render: (sale) => (
-              <RowActionButton label="Ver venta" icon={Eye} onClick={() => openDetail(sale)} />
+              <div className="flex justify-center gap-2">
+                <RowActionButton label="Ver venta" icon={Eye} onClick={() => openDetail(sale)} />
+                <RowActionButton
+                  label="Cambiar productos"
+                  icon={Shuffle}
+                  onClick={() => openExchange(sale)}
+                  disabled={!canSendToReturns(sale)}
+                />
+              </div>
             ),
           },
         ]}

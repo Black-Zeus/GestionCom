@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { RefreshCcw, RotateCcw, Search, Shuffle } from 'lucide-react';
+import { CheckSquare, Eye, RefreshCcw, RotateCcw, Search, Shuffle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
 import DataTable from '@/components/common/data/DataTable';
 import StatusBadge from '@/components/common/data/StatusBadge';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import ReturnActionModal from './ReturnActionModal';
+import ModalManager from '@/components/ui/modal';
+import SaleDetailModal from '@/components/sales/SaleDetailModal';
 import { salesDocumentsService } from '@/services/sales/salesDocumentsService';
 import { documentConfigService } from '@/services/admin/documentConfigService';
 import { getBackendMessage, toast } from '@/services/ui/notify';
@@ -58,6 +60,19 @@ const customerName = (customer) => (
   || 'Cliente'
 );
 
+const isExchangeCreditItem = (item) => (
+  Number(item?.unit_price || 0) < 0
+  || String(item?.name || item?.product_name || '').toLowerCase().includes('credito por cambio')
+);
+
+const exchangeDestinationSummary = (document) => {
+  const destinationItems = (document?.items || []).filter((item) => !isExchangeCreditItem(item));
+  if (destinationItems.length === 0) return '';
+  return destinationItems
+    .map((item) => `${item.name}${Number(item.quantity || 0) > 1 ? ` x${item.quantity}` : ''}`)
+    .join(', ');
+};
+
 const SalesReturns = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -69,6 +84,8 @@ const SalesReturns = () => {
   const [actionType, setActionType] = useState('RETURN');
   const [selectedUnitIds, setSelectedUnitIds] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [relatedDocuments, setRelatedDocuments] = useState({});
+  const [detailSale, setDetailSale] = useState(null);
 
   useEffect(() => {
     documentConfigService.listTypes({ active_only: true }).then((allTypes) => {
@@ -113,8 +130,38 @@ const SalesReturns = () => {
       line_id: line.id,
       product: line.name,
       code: line.code,
+      related_document: relatedDocuments[unit.return_reference] || null,
     })))
-  ), [sale]);
+  ), [relatedDocuments, sale]);
+
+  const referenceKey = useMemo(() => {
+    const references = (sale?.items || [])
+      .flatMap((line) => line.units || [])
+      .map((unit) => unit.return_reference)
+      .filter(Boolean);
+    return [...new Set(references)].sort().join('|');
+  }, [sale]);
+
+  useEffect(() => {
+    if (!referenceKey) {
+      setRelatedDocuments({});
+      return undefined;
+    }
+    let ignore = false;
+    const references = referenceKey.split('|').filter(Boolean);
+    Promise.all(references.map(async (reference) => {
+      try {
+        const document = await salesDocumentsService.getByCode(reference);
+        return [reference, document];
+      } catch {
+        return [reference, null];
+      }
+    })).then((entries) => {
+      if (ignore) return;
+      setRelatedDocuments(Object.fromEntries(entries));
+    });
+    return () => { ignore = true; };
+  }, [referenceKey]);
 
   const fullTicket = () => `${getPrefix(documentTypeCode)}${folio.trim()}`;
 
@@ -123,9 +170,11 @@ const SalesReturns = () => {
     setLoading(true);
     try {
       setSale(await salesDocumentsService.findByTicket(fullTicket()));
+      setRelatedDocuments({});
       setSelectedUnitIds([]);
     } catch (err) {
       setSale(null);
+      setRelatedDocuments({});
       setSelectedUnitIds([]);
       toast.error(getBackendMessage(err, 'No fue posible encontrar el documento.'));
     } finally {
@@ -173,7 +222,55 @@ const SalesReturns = () => {
     }
   };
 
-  const reset = () => { setFolio(''); setSale(null); setSelectedUnitIds([]); };
+  const reloadSale = async () => {
+    if (!sale) return;
+    try {
+      const refreshed = sale.ticket_number
+        ? await salesDocumentsService.findByTicket(sale.ticket_number)
+        : await salesDocumentsService.get(sale.id);
+      setSale(refreshed);
+      setRelatedDocuments({});
+      setSelectedUnitIds([]);
+    } catch (err) {
+      toast.error(getBackendMessage(err, 'No fue posible actualizar el documento.'));
+    }
+  };
+
+  const resumeDraft = (unit) => {
+    if (!unit.return_reference) return;
+    if (unit.related_document && unit.related_document.status !== 'PENDING_CASHIER') {
+      setDetailSale(unit.related_document);
+      return;
+    }
+    navigate(unit.status === 'EXCHANGED'
+      ? `/sales/new?edit=${unit.return_reference}`
+      : `/cash/pos?saleId=${unit.return_reference}`);
+  };
+
+  const cancelDraft = async (unit) => {
+    if (!unit.return_reference) return;
+    const actionLabel = unit.status === 'EXCHANGED' ? 'cambio' : 'devolucion';
+    if (!await ModalManager.confirm({
+      title: `Cancelar ${actionLabel} pendiente`,
+      message: `Se eliminará el borrador ${unit.return_reference} y la unidad volverá a quedar disponible para cambio o devolución.`,
+      buttons: { cancel: 'Mantener', confirm: 'Cancelar borrador' },
+    })) return;
+    try {
+      const draft = await salesDocumentsService.getByCode(unit.return_reference);
+      if (draft.status !== 'PENDING_CASHIER') {
+        toast.error('El borrador ya no está pendiente de caja y no se puede cancelar desde aquí.');
+        await reloadSale();
+        return;
+      }
+      await salesDocumentsService.deletePending(draft.id);
+      toast.success('Borrador cancelado. La unidad quedó disponible nuevamente.');
+      await reloadSale();
+    } catch (err) {
+      toast.error(getBackendMessage(err, 'No fue posible cancelar el borrador.'));
+    }
+  };
+
+  const reset = () => { setFolio(''); setSale(null); setRelatedDocuments({}); setSelectedUnitIds([]); };
 
   const docStatus = sale ? saleStatus(sale.status) : null;
 
@@ -296,12 +393,23 @@ const SalesReturns = () => {
               {
                 id: 'product',
                 label: 'Producto',
-                render: (item) => (
-                  <div>
-                    <div className="font-medium">{item.product}</div>
-                    <div className="font-mono text-xs text-slate-500">{item.code || '—'} · Unidad {item.unit_sequence}</div>
-                  </div>
-                ),
+                render: (item) => {
+                  const destination = exchangeDestinationSummary(item.related_document);
+                  return (
+                    <div>
+                      <div className="font-medium">{item.product}</div>
+                      <div className="font-mono text-xs text-slate-500">{item.code || '—'} · Unidad {item.unit_sequence}</div>
+                      {destination && (
+                        <div className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-300">
+                          Cambiado por: {destination}
+                        </div>
+                      )}
+                      {item.return_reference && !item.related_document && (
+                        <div className="mt-1 text-xs text-slate-500">Referencia: {item.return_reference}</div>
+                      )}
+                    </div>
+                  );
+                },
               },
               {
                 id: 'paid_amount',
@@ -320,17 +428,45 @@ const SalesReturns = () => {
               },
               {
                 id: 'actions',
-                label: 'Seleccion',
+                label: 'Acciones',
                 align: 'center',
-                render: (item) => (
-                  <RowActionButton
-                    label={selectedUnitIds.includes(item.id) ? 'Quitar seleccion' : 'Seleccionar'}
-                    icon={selectedUnitIds.includes(item.id) ? RefreshCcw : actionType === 'RETURN' ? RotateCcw : Shuffle}
-                    variant={selectedUnitIds.includes(item.id) ? 'neutral' : undefined}
-                    onClick={() => toggleUnit(item)}
-                    disabled={item.status !== 'SOLD'}
-                  />
-                ),
+                render: (item) => {
+                  const hasReference = Boolean(item.return_reference);
+                  const referenceLoaded = Boolean(item.related_document);
+                  const isPendingReference = referenceLoaded && item.related_document.status === 'PENDING_CASHIER';
+                  const isClosedReference = referenceLoaded && item.related_document.status !== 'PENDING_CASHIER';
+                  const isSelected = selectedUnitIds.includes(item.id);
+                  return (
+                    <div className="flex justify-center gap-2">
+                      <RowActionButton
+                        label={isSelected ? 'Quitar seleccion' : 'Seleccionar'}
+                        icon={isSelected ? RefreshCcw : CheckSquare}
+                        variant={isSelected ? 'neutral' : undefined}
+                        onClick={() => toggleUnit(item)}
+                        disabled={item.status !== 'SOLD'}
+                      />
+                      <RowActionButton
+                        label="Retomar borrador"
+                        icon={item.status === 'RETURNED' ? RotateCcw : Shuffle}
+                        onClick={() => resumeDraft(item)}
+                        disabled={!hasReference || !isPendingReference}
+                      />
+                      <RowActionButton
+                        label="Cancelar borrador"
+                        icon={RefreshCcw}
+                        variant="danger"
+                        onClick={() => cancelDraft(item)}
+                        disabled={!hasReference || !isPendingReference}
+                      />
+                      <RowActionButton
+                        label="Ver documento asociado"
+                        icon={Eye}
+                        onClick={() => setDetailSale(item.related_document)}
+                        disabled={!hasReference || !isClosedReference}
+                      />
+                    </div>
+                  );
+                },
               },
             ]}
           />
@@ -346,6 +482,13 @@ const SalesReturns = () => {
           actionType={actionType}
           onConfirm={confirmAction}
           onClose={() => setShowConfirm(false)}
+        />
+      )}
+      {detailSale && (
+        <SaleDetailModal
+          sale={detailSale}
+          title={detailSale.document_type_code === 'EXCHANGE_DRAFT' ? 'Detalle de cambio' : 'Detalle de documento'}
+          onClose={() => setDetailSale(null)}
         />
       )}
     </section>
