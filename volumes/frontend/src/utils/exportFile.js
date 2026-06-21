@@ -3,8 +3,8 @@
  * Devuelven un blob URL listo para ser gestionado por ExportModal.
  *
  * Uso:
- *   const url = await buildCsvBlobUrl(headers, rows);
- *   const url = await buildXlsxBlobUrl(headers, rows, sheetName?);
+ *   const url = await buildCsvBlobUrl(headers, rows, { metadataRows });
+ *   const url = await buildXlsxBlobUrl(headers, rows, sheetName?, { metadataRows });
  *
  * El llamador es responsable de revocar la URL (URL.revokeObjectURL)
  * cuando ya no se necesite. ReportLayout lo hace automáticamente al cerrar el modal.
@@ -12,24 +12,40 @@
 
 // ── CSV ──────────────────────────────────────────────────────────────────────
 
-export const buildCsvBlobUrl = (headers, rows) => {
+export const buildCsvBlobUrl = (headers, rows, options = {}) => {
   const esc   = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))];
+  const metadataRows = options.metadataRows || [];
+  const metadataLines = metadataRows.map((r) => r.map(esc).join(','));
+  const lines = [
+    ...metadataLines,
+    ...(metadataLines.length ? [''] : []),
+    headers.map(esc).join(','),
+    ...rows.map((r) => r.map(esc).join(',')),
+  ];
   const blob  = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
   return URL.createObjectURL(blob);
 };
 
 // ── XLSX ─────────────────────────────────────────────────────────────────────
 
-export const buildXlsxBlobUrl = async (headers, rows, sheetName = 'Datos') => {
+export const buildXlsxBlobUrl = async (headers, rows, sheetName = 'Datos', options = {}) => {
   const { utils, write } = await import('xlsx');
+  const metadataRows = options.metadataRows || [];
+  const worksheetRows = [
+    ...metadataRows,
+    ...(metadataRows.length ? [[]] : []),
+    headers,
+    ...rows,
+  ];
 
-  const ws = utils.aoa_to_sheet([headers, ...rows]);
+  const ws = utils.aoa_to_sheet(worksheetRows);
 
   // Ancho de columna automático basado en contenido máximo
-  const colWidths = headers.map((h, ci) => {
+  const maxColumns = Math.max(headers.length, ...metadataRows.map((r) => r.length), 0);
+  const colWidths = Array.from({ length: maxColumns }, (_, ci) => {
     const maxLen = Math.max(
-      String(h).length,
+      String(headers[ci] ?? '').length,
+      ...metadataRows.map((r) => String(r[ci] ?? '').length),
       ...rows.map((r) => String(r[ci] ?? '').length),
     );
     return { wch: Math.min(maxLen + 2, 40) };

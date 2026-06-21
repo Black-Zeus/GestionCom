@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    {{> _styles}}
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       PORTADA
+       ══════════════════════════════════════════ -->
+  {{> _cover}}
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINA 1 — RESUMEN EJECUTIVO
+       ══════════════════════════════════════════ -->
+  <section class="report-page">
+
+    {{> _page_header}}
+
+    <div class="section-heading">
+      <div class="section-label">Visión general</div>
+      <h2 class="section-title">Resumen ejecutivo</h2>
+      <p class="section-description">
+        Consolidado de cambios y devoluciones registrados durante el período seleccionado,
+        con detalle de crédito generado, artículos afectados y locaciones involucradas.
+      </p>
+    </div>
+
+    <div class="summary-banner no-break">
+      <div class="summary-banner-icon">i</div>
+      <div class="summary-banner-content">
+        <div class="summary-banner-title">Alcance del análisis</div>
+        <div class="summary-banner-text">
+          Los valores presentados consideran los documentos registrados
+          para {{BRANCH_LABEL}} durante el período {{PERIOD_LABEL}}.
+          Se incluyen documentos de tipo {{DOC_TYPE_LABEL}} en estado {{STATUS_LABEL}}.
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Información del reporte</div>
+      <div class="subsection-context">Parámetros de generación</div>
+    </div>
+
+    <div class="meta-card no-break">
+      <table class="meta-table">
+        <tbody>{{META_ROWS}}</tbody>
+      </table>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Indicadores clave</div>
+      <div class="subsection-context">Resultados consolidados del período</div>
+    </div>
+
+    <div class="kpi-grid">{{KPI_CARDS}}</div>
+
+    <div class="executive-note no-break">
+      <strong>Observación ejecutiva:</strong> {{EXECUTIVE_NOTE}}
+    </div>
+
+    {{> _page_footer}}
+
+  </section>
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINA 2 — GRÁFICO (opcional)
+       ══════════════════════════════════════════ -->
+  {{CHART_PAGE}}
+
+
+  <!-- ══════════════════════════════════════════
+       PÁGINAS DE DETALLE
+       ══════════════════════════════════════════ -->
+  {{DETAIL_PAGES}}
+
+</body>
+</html>

@@ -23,6 +23,7 @@ import {
 import * as LucideIcons from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { systemPages } from '@/data/modules';
+import { REPORT_GROUPS } from '@/pages/reports/reportGroups';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -123,7 +124,7 @@ const SessionOptionModal = ({ items = [], activeId, emptyMessage, onSelect, onCl
   </div>
 );
 
-const detailNavigationRoutes = [
+const detailNavigationRoutesBase = [
   {
     id: 'customer-detail',
     pattern: /^\/customers\/edit\/([^/?#]+)/,
@@ -339,6 +340,43 @@ const detailNavigationRoutes = [
     getLabel: (record) => `Convenio: ${record.agreement_name}`,
     getTooltip: (record) => `Beneficiarios del convenio: ${record.agreement_name}`,
   },
+];
+
+// Rutas de navegación para cada área y reporte específico.
+// Se generan dinámicamente desde REPORT_GROUPS para no duplicar la metadata.
+const reportNavigationRoutes = REPORT_GROUPS.flatMap((group) => {
+  const labelMap = Object.fromEntries((group.reports || []).map((r) => [r.id, r.label]));
+  // Extrae el sustantivo del área: "Reportes de ventas" → "Ventas"
+  const areaName = group.label.replace(/^Reportes de\s+/i, '');
+  const areaLabel = areaName.charAt(0).toUpperCase() + areaName.slice(1);
+  return [
+    // Coincide cuando hay ?report=<id> → "Reporte Ventas: Ventas diarias"
+    {
+      id: `report-detail-${group.id}`,
+      pathname: group.path,
+      queryParam: 'report',
+      basePath: group.path,
+      group: group.label,
+      fallbackLabel: `Reporte ${areaLabel}`,
+      getLabelFromCode:   (code) => `Reporte ${areaLabel}: ${labelMap[code] || code}`,
+      getTooltipFromCode: (code) => `${group.label} › ${labelMap[code] || code}`,
+    },
+    // Coincide con la ruta base sin query → "Reporte Ventas"
+    {
+      id: `report-hub-${group.id}`,
+      pattern: new RegExp(`^${group.path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
+      basePath: group.path,
+      group: group.label,
+      fallbackLabel: `Reporte ${areaLabel}`,
+      getLabelFromCode:   () => `Reporte ${areaLabel}`,
+      getTooltipFromCode: () => group.label,
+    },
+  ];
+});
+
+const detailNavigationRoutes = [
+  ...detailNavigationRoutesBase,
+  ...reportNavigationRoutes,
 ];
 
 const getDetailNavigationRoute = (pathname, searchParams) => {

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
-import { FileSpreadsheet, FileText } from 'lucide-react';
+import { FileSpreadsheet, FileText, ListFilter } from 'lucide-react';
 import KpiBar from '@/components/common/data/KpiBar';
 import ReportCard from '@/components/common/data/ReportCard';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
@@ -44,7 +44,25 @@ const ReportLayout = ({
   actions = [],
 
   // ── Filtros ─────────────────────────────────────────────
+  // filterBar        → Sucursal | shortcuts | DatePicker
+  // filterBarActions → Acciones de fila default, ej. Limpiar
+  // filterBarTrailing → Filtros propios del reporte
   filterBar,
+  filterBarActions,
+  filterBarTrailing,
+  onRunReport,
+  runReportLabel = 'Ejecutar reporte',
+  runReportDisabled = false,
+  runReportLoading = false,
+
+  // ── Vista (toggle Detalle / agrupado) ───────────────────
+  // Se ubica en la cabecera de la tabla, junto a CSV / Excel.
+  // viewMode: string con el valor activo
+  // onViewModeChange: (id: string) => void
+  // viewModeOptions: [{ id, label }] — por defecto Detalle | Por día
+  viewMode,
+  onViewModeChange,
+  viewModeOptions = [{ id: 'detail', label: 'Detalle' }, { id: 'grouped', label: 'Por día' }],
 
   // ── KPIs ────────────────────────────────────────────────
   kpiItems,
@@ -89,17 +107,41 @@ const ReportLayout = ({
     setModal({ type: null, phase: 'closed', blobUrl: null });
   };
 
-  // Botón PDF en el header
-  const resolvedActions = [
-    ...actions,
-    ...(onExportPdf
-      ? [{ id: '__pdf', label: 'PDF', icon: FileText, onClick: () => openExport('pdf', onExportPdf) }]
-      : []),
-  ];
+  const resolvedActions = actions;
 
-  // Botones CSV / Excel en la cabecera de la tabla
-  const exportButtons = (onExportCsv || onExportExcel) && (
+  // Controles de vista y exportación en la cabecera de la tabla
+  const viewModeButtons = onViewModeChange && (
+    <div className="flex items-center overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+      {viewModeOptions.map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          onClick={() => onViewModeChange(m.id)}
+          className={`h-7 px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
+            viewMode === m.id
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+          }`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const exportButtons = (onExportPdf || onExportCsv || onExportExcel) && (
     <div className="flex items-center divide-x divide-slate-200 overflow-hidden rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+      {onExportPdf && (
+        <button
+          type="button"
+          title="Exportar PDF"
+          onClick={() => openExport('pdf', onExportPdf)}
+          className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+        >
+          <FileText className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
+          PDF
+        </button>
+      )}
       {onExportCsv && (
         <button
           type="button"
@@ -125,9 +167,10 @@ const ReportLayout = ({
     </div>
   );
 
-  const resolvedTableActions = (exportButtons || tableActions) && (
+  const resolvedTableActions = (viewModeButtons || exportButtons || tableActions) && (
     <>
       {tableActions}
+      {viewModeButtons}
       {exportButtons}
     </>
   );
@@ -139,9 +182,33 @@ const ReportLayout = ({
 
       <ModuleHeader title={title} description={description} actions={resolvedActions} />
 
-      {filterBar && (
-        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          {filterBar}
+      {(filterBar || onRunReport || filterBarActions || filterBarTrailing) && (
+        <div className="mb-5 flex flex-col gap-2">
+
+          {/* Fila default: Locación | shortcuts | DatePicker | Limpiar | Ejecutar */}
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            {filterBar}
+            {filterBarActions}
+            {onRunReport && (
+              <button
+                type="button"
+                onClick={onRunReport}
+                disabled={runReportDisabled || runReportLoading}
+                className="ml-auto flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+              >
+                <ListFilter className="h-4 w-4" />
+                {runReportLoading ? 'Ejecutando...' : runReportLabel}
+              </button>
+            )}
+          </div>
+
+          {/* Fila 2: filtros propios del reporte */}
+          {filterBarTrailing && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              {filterBarTrailing}
+            </div>
+          )}
+
         </div>
       )}
 

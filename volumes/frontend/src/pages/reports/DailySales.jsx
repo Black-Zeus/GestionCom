@@ -1,13 +1,16 @@
+/* eslint-disable react/prop-types */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ApexCharts from 'apexcharts';
 import ReactApexChart from 'react-apexcharts';
-import { ArrowLeft, BarChart2, BarChart3, X } from 'lucide-react';
+import { ArrowLeft, BarChart2, BarChart3, Eye, X } from 'lucide-react';
 import ReportLayout from '@/components/common/navigation/ReportLayout';
 import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import DateRangePicker from '@/components/common/forms/DateRangePicker';
+import SaleDetailModal from '@/components/sales/SaleDetailModal';
 import { toast } from '@/services/ui/notify';
 import apiClient from '@/services/api/apiClient';
+import { useSessionStore } from '@/store/useSessionStore';
 import { buildCsvBlobUrl, buildXlsxBlobUrl } from '@/utils/exportFile';
 
 const money   = (v) => Number(v).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
@@ -15,6 +18,7 @@ const toISO   = (d) => d.toISOString().slice(0, 10);
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const fmt     = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
 const fmtDay  = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'short', day: '2-digit', month: '2-digit' });
+const fmtDT   = (v) => v ? new Date(v).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
 // --- Constants -----------------------------------------------------------
 
@@ -36,8 +40,23 @@ const PERIODS = [
 
 const BRANCH_PALETTE = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 const METHOD_PALETTE  = ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6'];
+const ALL_BRANCH_VALUE = '__all__';
+const CURRENCY_LABEL = 'Peso chileno (CLP)';
 
 const periodFrom = (days) => toISO(addDays(new Date(), -(days - 1)));
+const activeWarehouseValue = (location) => {
+  const value = location?.warehouse_id ?? location?.id;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? String(numeric) : '';
+};
+const locationOption = (location) => {
+  const value = activeWarehouseValue(location);
+  if (!value) return null;
+  return {
+    value,
+    label: location?.warehouse_name || location?.label || location?.name || `Sucursal ${value}`,
+  };
+};
 
 // --- Table helpers -------------------------------------------------------
 
@@ -50,22 +69,32 @@ const Td = ({ children, right, center, muted, bold, className: cls = '' }) => (
   </td>
 );
 
+const statusLabel = (status) => ({ CLOSED: 'Cerrado', CANCELLED: 'Anulado' }[status] || status || '-');
+
 // --- Main ----------------------------------------------------------------
 
-const defaultFilters = () => ({
-  sucursal: 'all', period: '30d',
-  dateFrom: toISO(addDays(new Date(), -29)), dateTo: toISO(new Date()),
+const defaultFilters = (warehouseValue = '') => ({
+  sucursal: warehouseValue ? [warehouseValue] : [],
+  period: 'week',
+  dateFrom: getMondayISO(),
+  dateTo: toISO(new Date()),
 });
 
 const DailySales = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isDark = document.documentElement.classList.contains('dark');
+  const activeLocationRecord = useSessionStore((state) => state.getActiveLocation());
+  const locations = useSessionStore((state) => state.locations);
+  const activeWarehouse = useMemo(() => activeWarehouseValue(activeLocationRecord), [activeLocationRecord]);
 
-  const [filters, setFilters]           = useState(defaultFilters);
+  const [filters, setFilters]           = useState(() => defaultFilters(activeWarehouse));
+  const [executedFilters, setExecutedFilters] = useState(() => defaultFilters(activeWarehouse));
+  const [viewMode, setViewMode]         = useState('grouped'); // 'grouped'=por día | 'detail'=individual
   const [rows, setRows]                 = useState([]);
-  const [branchOptions, setBranchOptions] = useState([{ value: 'all', label: 'Todas las sucursales' }]);
+  const [detailRows, setDetailRows]     = useState([]);
   const [loading, setLoading]           = useState(false);
+  const [detailSaleCode, setDetailSaleCode] = useState(null);
 
   const set = (key, val) => setFilters((f) => ({ ...f, [key]: val }));
 
@@ -74,31 +103,88 @@ const DailySales = () => {
     if (p) setFilters((f) => ({ ...f, period: id, dateFrom: p.getFrom ? p.getFrom() : periodFrom(p.days), dateTo: toISO(new Date()) }));
   };
 
-  const clearFilters = () => setFilters(defaultFilters());
-  const isFiltered   = filters.sucursal !== 'all' || filters.period !== '30d';
+  const realBranchOptions = useMemo(() => (
+    locations.map(locationOption).filter(Boolean)
+  ), [locations]);
+  const branchOptions = useMemo(() => [
+    { value: ALL_BRANCH_VALUE, label: 'Todas las sucursales' },
+    ...realBranchOptions,
+  ], [realBranchOptions]);
+  const allBranchValues = useMemo(() => realBranchOptions.map((option) => String(option.value)), [realBranchOptions]);
+  const selectedBranchValues = useMemo(
+    () => (Array.isArray(filters.sucursal) ? filters.sucursal : []),
+    [filters.sucursal]
+  );
+  const executedBranchValues = useMemo(
+    () => (Array.isArray(executedFilters.sucursal) ? executedFilters.sucursal : []),
+    [executedFilters.sucursal]
+  );
 
-  // Fetch data from API whenever filters change
-  const fetchData = useCallback(async () => {
+  const setSelectedBranches = (values = []) => {
+    const nextValues = values.map(String);
+    if (nextValues.includes(ALL_BRANCH_VALUE)) {
+      set('sucursal', allBranchValues);
+      return;
+    }
+    set('sucursal', nextValues);
+  };
+
+  const selectedBranchLabels = (values) => {
+    const selected = new Set((values || []).map(String));
+    const labels = realBranchOptions
+      .filter((option) => selected.has(String(option.value)))
+      .map((option) => option.label);
+    return labels.length ? labels.join(', ') : 'Todas las sucursales';
+  };
+
+  const defaultBranchValues = useMemo(() => (
+    activeWarehouse && allBranchValues.includes(activeWarehouse) ? [activeWarehouse] : []
+  ), [activeWarehouse, allBranchValues]);
+
+  const clearFilters = () => setFilters((current) => ({
+    ...defaultFilters(activeWarehouse),
+    sucursal: defaultBranchValues.length ? defaultBranchValues : current.sucursal,
+  }));
+  const isFiltered = filters.period !== 'week' || (
+    allBranchValues.length > 0
+    && selectedBranchValues.join(',') !== defaultBranchValues.join(',')
+  );
+
+  const fetchData = useCallback(async (nextFilters = filters) => {
     setLoading(true);
     try {
-      const params = { date_from: filters.dateFrom, date_to: filters.dateTo };
-      if (filters.sucursal !== 'all') params.warehouse_id = filters.sucursal;
+      const params = { date_from: nextFilters.dateFrom, date_to: nextFilters.dateTo };
+      const nextBranches = Array.isArray(nextFilters.sucursal) ? nextFilters.sucursal : [];
+      if (nextBranches.length > 0) {
+        params.warehouse_ids = nextBranches.join(',');
+      }
 
       const { data } = await apiClient.get('/reports/daily-sales/data', { params });
+      const optionValues = allBranchValues;
+      const validNextBranches = nextBranches.filter((value) => optionValues.includes(String(value)));
+      const fallbackBranchValues = activeWarehouse && optionValues.includes(activeWarehouse) ? [activeWarehouse] : [];
+      const resolvedFilters = {
+        ...nextFilters,
+        sucursal: validNextBranches.length ? validNextBranches : fallbackBranchValues,
+      };
 
       setRows(data.rows || []);
-      setBranchOptions([
-        { value: 'all', label: 'Todas las sucursales' },
-        ...(data.warehouses || []),
-      ]);
+      setDetailRows(data.detail_rows || []);
+      setExecutedFilters(resolvedFilters);
+      setFilters((current) => (
+        Array.isArray(current.sucursal)
+          && current.sucursal.some((value) => optionValues.includes(String(value)))
+          ? current
+          : { ...current, sucursal: fallbackBranchValues }
+      ));
     } catch {
       toast.error('Error cargando datos del reporte');
     } finally {
       setLoading(false);
     }
-  }, [filters.dateFrom, filters.dateTo, filters.sucursal]);
+  }, [activeWarehouse, allBranchValues, filters]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData(defaultFilters(activeWarehouse)); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived data
   const nonEmptyRows  = rows.filter((r) => r.total > 0);
@@ -133,10 +219,10 @@ const DailySales = () => {
 
   // Area chart series (by branch or single)
   const chartSeries = useMemo(() => {
-    if (filters.sucursal !== 'all' || uniqueBranches.length <= 1) {
+    if (uniqueBranches.length <= 1 || executedBranchValues.length === 1) {
       return [{
-        name: filters.sucursal !== 'all'
-          ? (branchOptions.find((o) => o.value === filters.sucursal)?.label ?? 'Sucursal')
+        name: executedBranchValues.length === 1
+          ? (realBranchOptions.find((o) => String(o.value) === String(executedBranchValues[0]))?.label ?? 'Sucursal')
           : (uniqueBranches[0] ? `Suc. ${uniqueBranches[0]}` : 'Ventas'),
         data:  rows.map((r) => r.total),
         color: BRANCH_PALETTE[0],
@@ -147,7 +233,7 @@ const DailySales = () => {
       data:  rows.map((r) => (r.by_branch || []).find((b) => b.warehouse_name === name)?.total ?? 0),
       color: BRANCH_PALETTE[i % BRANCH_PALETTE.length],
     }));
-  }, [rows, uniqueBranches, filters.sucursal, branchOptions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [rows, uniqueBranches, executedBranchValues, realBranchOptions]);
 
   // Bar chart series (dynamic payment methods)
   const barSeries = useMemo(() =>
@@ -155,7 +241,7 @@ const DailySales = () => {
       name: m.name,
       data: rows.map((r) => Math.round((r.by_method || []).find((x) => x.code === m.code)?.amount ?? 0)),
     }))
-  , [rows, allMethods]); // eslint-disable-line react-hooks/exhaustive-deps
+  , [rows, allMethods]);
 
   const areaOptions = useMemo(() => ({
     chart: {
@@ -165,8 +251,8 @@ const DailySales = () => {
         show: true,
         tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
         export: {
-          png: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` },
-          csv: { filename: `ventas-diarias_${filters.dateFrom}_${filters.dateTo}` },
+          png: { filename: `ventas-diarias_${executedFilters.dateFrom}_${executedFilters.dateTo}` },
+          csv: { filename: `ventas-diarias_${executedFilters.dateFrom}_${executedFilters.dateTo}` },
         },
       },
     },
@@ -183,7 +269,7 @@ const DailySales = () => {
     legend:  { show: uniqueBranches.length > 1, position: 'top', horizontalAlign: 'left', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
     tooltip: { shared: true, y: { formatter: (v) => money(v) } },
     theme:   { mode: isDark ? 'dark' : 'light' },
-  }), [chartLabels, rows.length, isDark, uniqueBranches.length, filters.dateFrom, filters.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [chartLabels, rows.length, isDark, uniqueBranches.length, executedFilters.dateFrom, executedFilters.dateTo]);
 
   const barOptions = useMemo(() => ({
     chart: {
@@ -193,8 +279,8 @@ const DailySales = () => {
         show: true,
         tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false },
         export: {
-          png: { filename: `metodos-pago_${filters.dateFrom}_${filters.dateTo}` },
-          csv: { filename: `metodos-pago_${filters.dateFrom}_${filters.dateTo}` },
+          png: { filename: `metodos-pago_${executedFilters.dateFrom}_${executedFilters.dateTo}` },
+          csv: { filename: `metodos-pago_${executedFilters.dateFrom}_${executedFilters.dateTo}` },
         },
       },
     },
@@ -211,7 +297,7 @@ const DailySales = () => {
     legend:  { show: true, position: 'top', horizontalAlign: 'left', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
     tooltip: { shared: true, intersect: false, y: { formatter: (v) => money(v) } },
     theme:   { mode: isDark ? 'dark' : 'light' },
-  }), [chartLabels, rows.length, isDark, filters.dateFrom, filters.dateTo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [chartLabels, rows.length, isDark, executedFilters.dateFrom, executedFilters.dateTo]);
 
   // KPIs
   const KPI_ITEMS = [
@@ -233,9 +319,10 @@ const DailySales = () => {
       ]);
       const toBlob = async (dataURI) => (await fetch(dataURI)).blob();
       const formData = new FormData();
-      formData.append('date_from', filters.dateFrom);
-      formData.append('date_to',   filters.dateTo);
-      formData.append('branch',    filters.sucursal);
+      formData.append('date_from', executedFilters.dateFrom);
+      formData.append('date_to',   executedFilters.dateTo);
+      formData.append('branch',    executedBranchValues.length ? executedBranchValues.join(',') : 'all');
+      formData.append('view_mode', viewMode);
       if (areaImg?.imgURI) formData.append('chart_area', await toBlob(areaImg.imgURI), 'chart_area.png');
       if (barImg?.imgURI)  formData.append('chart_bar',  await toBlob(barImg.imgURI),  'chart_bar.png');
       const { data: blob } = await apiClient.post('/reports/daily-sales/pdf', formData, {
@@ -252,47 +339,86 @@ const DailySales = () => {
   const buildExportData = () => {
     const methodCodes = allMethods.map((m) => m.code);
     const methodNames = allMethods.map((m) => m.name);
-    const headers = ['Fecha', 'Día', 'Transacciones', 'Total (CLP)', 'Ticket prom. (CLP)', ...methodNames, 'Anulaciones'];
-    const data = rows.map((r) => [
+    let headers = ['Fecha', 'Día', 'Transacciones', `Total ${CURRENCY_LABEL}`, `Ticket prom. ${CURRENCY_LABEL}`, ...methodNames.map((name) => `${name} ${CURRENCY_LABEL}`), 'Anulaciones'];
+    let data = rows.map((r) => [
       fmt(r.iso),
       new Date(`${r.iso}T00:00:00`).toLocaleDateString('es-CL', { weekday: 'long' }),
       r.txn, r.total, r.avg_ticket,
       ...methodCodes.map((code) => Math.round((r.by_method || []).find((m) => m.code === code)?.amount ?? 0)),
       r.cancelled,
     ]);
-    const methodTotals = methodCodes.map((code) =>
-      rows.reduce((sum, r) => sum + Math.round((r.by_method || []).find((m) => m.code === code)?.amount ?? 0), 0)
-    );
-    data.push(['TOTAL', '', totals.txn, totals.total, avgTicketTotal, ...methodTotals, totals.cancelled]);
+    if (viewMode === 'detail') {
+      headers = ['Fecha', 'Folio', 'Estado', 'Cliente', 'Sucursal', 'Medio de pago', `Total ${CURRENCY_LABEL}`];
+      data = detailRows.map((r) => [
+        fmtDT(r.created_at),
+        r.folio,
+        statusLabel(r.status),
+        r.customer_name,
+        r.warehouse_name,
+        r.payment_method_name,
+        r.total_amount,
+      ]);
+    } else {
+      const methodTotals = methodCodes.map((code) =>
+        rows.reduce((sum, r) => sum + Math.round((r.by_method || []).find((m) => m.code === code)?.amount ?? 0), 0)
+      );
+      data.push(['TOTAL', '', totals.txn, totals.total, avgTicketTotal, ...methodTotals, totals.cancelled]);
+    }
     return { headers, data };
   };
 
-  const handleCsvExport  = async () => { const { headers, data } = buildExportData(); return buildCsvBlobUrl(headers, data); };
-  const handleXlsxExport = async () => { const { headers, data } = buildExportData(); return buildXlsxBlobUrl(headers, data, 'Ventas diarias'); };
+  const buildExportMetadata = () => {
+    return [
+      ['Reporte', 'Ventas diarias'],
+      ['Periodo', `${fmt(executedFilters.dateFrom)} - ${fmt(executedFilters.dateTo)}`],
+      ['Sucursal', selectedBranchLabels(executedBranchValues)],
+      ['Moneda', CURRENCY_LABEL],
+      ['Vista', viewMode === 'detail' ? 'Detalle' : 'Por día'],
+      ['Generado el', new Date().toLocaleString('es-CL')],
+    ];
+  };
+
+  const handleCsvExport  = async () => {
+    const { headers, data } = buildExportData();
+    return buildCsvBlobUrl(headers, data, { metadataRows: buildExportMetadata() });
+  };
+
+  const handleXlsxExport = async () => {
+    const { headers, data } = buildExportData();
+    return buildXlsxBlobUrl(headers, data, 'Ventas diarias', { metadataRows: buildExportMetadata() });
+  };
+
+  const handleViewModeChange = (nextMode) => {
+    setViewMode(nextMode);
+    if (nextMode === 'grouped') fetchData(filters);
+  };
 
   const bestIso = bestDay?.iso;
 
   // -------------------------------------------------------------------------
 
   return (
+    <>
     <ReportLayout
       // Header
       title="Ventas diarias"
-      description={`${fmt(filters.dateFrom)} — ${fmt(filters.dateTo)} · ${rows.length} días`}
+      description={`${fmt(executedFilters.dateFrom)} — ${fmt(executedFilters.dateTo)} · ${rows.length} días`}
       actions={[
         { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
       ]}
 
-      // Filtros
+      // Filtros — Sucursal | shortcuts | DatePicker
       filterBar={
         <>
-          <div className="w-52 shrink-0">
+          <div className="w-full shrink-0 sm:w-72 lg:w-80">
             <AutocompleteSelect
-              value={filters.sucursal}
-              onChange={(v) => set('sucursal', v || 'all')}
+              value={selectedBranchValues}
+              onChange={setSelectedBranches}
               options={branchOptions}
               placeholder="Todas las sucursales"
               clearable={false}
+              multiple
+              maxVisibleTags={3}
               buttonClassName="h-10 shadow-none"
             />
           </div>
@@ -318,16 +444,25 @@ const DailySales = () => {
             maxDays={365}
             onChange={({ from, to }) => setFilters((f) => ({ ...f, period: 'custom', dateFrom: from, dateTo: to }))}
           />
-          {isFiltered && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              <X className="h-3.5 w-3.5" /> Limpiar
-            </button>
-          )}
         </>
+      }
+
+      viewMode={viewMode}
+      onViewModeChange={handleViewModeChange}
+      viewModeOptions={[{ id: 'detail', label: 'Detalle' }, { id: 'grouped', label: 'Por día' }]}
+      onRunReport={() => fetchData(filters)}
+      runReportLoading={loading}
+
+      filterBarActions={
+        isFiltered ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="h-3.5 w-3.5" /> Limpiar
+          </button>
+        ) : null
       }
 
       // KPIs
@@ -344,7 +479,7 @@ const DailySales = () => {
               series={chartSeries}
               type="area"
               height={240}
-              key={`daily-area-${filters.sucursal}-${filters.dateFrom}-${filters.dateTo}`}
+              key={`daily-area-${executedBranchValues.join('-')}-${executedFilters.dateFrom}-${executedFilters.dateTo}`}
             />
           ),
         },
@@ -358,46 +493,86 @@ const DailySales = () => {
               series={barSeries}
               type="bar"
               height={240}
-              key={`daily-bar-${filters.sucursal}-${filters.dateFrom}-${filters.dateTo}`}
+              key={`daily-bar-${executedBranchValues.join('-')}-${executedFilters.dateFrom}-${executedFilters.dateTo}`}
             />
           ),
         },
       ]}
 
       // Tabla
-      tableTitle="Detalle por día"
-      tableSubtitle={loading ? 'Cargando…' : `${rows.length} días`}
+      tableTitle={viewMode === 'detail' ? 'Detalle de ventas' : 'Resumen por día'}
+      tableSubtitle={loading ? 'Cargando…' : viewMode === 'detail'
+        ? `${detailRows.length} registro${detailRows.length === 1 ? '' : 's'}`
+        : `${rows.length} día${rows.length === 1 ? '' : 's'}`}
       tableIcon={BarChart3}
       onExportCsv={handleCsvExport}
-      csvFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.csv`}
+      csvFilename={`ventas-diarias_${executedFilters.dateFrom}_${executedFilters.dateTo}.csv`}
       onExportExcel={handleXlsxExport}
-      excelFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.xlsx`}
-      tableFooter={
+      excelFilename={`ventas-diarias_${executedFilters.dateFrom}_${executedFilters.dateTo}.xlsx`}
+      tableFooter={viewMode === 'grouped' ? (
         <div className="grid grid-cols-5 gap-4 text-right text-sm">
           <span className="col-span-2 text-left font-semibold text-slate-700 dark:text-slate-200">Total período</span>
           <span className="font-bold tabular-nums">{totals.txn}</span>
           <span className="font-bold tabular-nums">{money(totals.total)}</span>
           <span className="font-bold tabular-nums text-red-500 dark:text-red-400">{totals.cancelled}</span>
         </div>
-      }
+      ) : null}
 
       // PDF
       onExportPdf={handlePdfExport}
-      pdfDescription={`${fmt(filters.dateFrom)} — ${fmt(filters.dateTo)} · ${rows.length} días`}
-      pdfFilename={`ventas-diarias_${filters.dateFrom}_${filters.dateTo}.pdf`}
+      exportDescription={`${fmt(executedFilters.dateFrom)} — ${fmt(executedFilters.dateTo)} · ${rows.length} días`}
+      pdfFilename={`ventas-diarias_${executedFilters.dateFrom}_${executedFilters.dateTo}.pdf`}
     >
 
-      {/* Tabla detalle */}
       <div className="overflow-x-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-            Cargando datos…
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center py-16 text-sm text-slate-400">
-            Sin ventas en el período seleccionado
-          </div>
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Cargando datos…</div>
+        ) : (viewMode === 'detail' ? detailRows.length === 0 : rows.length === 0) ? (
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Sin ventas en el período seleccionado</div>
+        ) : viewMode === 'detail' ? (
+          /* ── Detalle: una fila por documento ── */
+          <table className="w-full min-w-[980px]">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <Th>Documento</Th>
+                <Th>Fecha</Th>
+                <Th>Cliente</Th>
+                <Th>Sucursal</Th>
+                <Th>Medio de pago</Th>
+                <Th right>Total</Th>
+                <Th right>Acciones</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              {detailRows.map((r) => (
+                <tr key={r.id}>
+                  <Td>
+                    <p className="font-semibold text-slate-900 dark:text-white">{r.folio}</p>
+                    <p className={`text-xs ${r.status === 'CANCELLED' ? 'text-red-500 dark:text-red-400' : 'text-slate-400'}`}>
+                      {statusLabel(r.status)}
+                    </p>
+                  </Td>
+                  <Td muted><span className="text-xs">{fmtDT(r.created_at)}</span></Td>
+                  <Td>{r.customer_name}</Td>
+                  <Td>{r.warehouse_name}</Td>
+                  <Td muted>{r.payment_method_name || '-'}</Td>
+                  <Td right bold>{Number(r.total_amount || 0) > 0 ? money(r.total_amount) : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>
+                  <Td right>
+                    <button
+                      type="button"
+                      onClick={() => setDetailSaleCode(r.sale_code)}
+                      title="Ver detalle"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-blue-300 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400 dark:hover:border-blue-500 dark:hover:text-blue-300"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
+          /* ── Por día: vista compacta con totales ── */
           <table className="w-full min-w-max">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800">
@@ -423,13 +598,9 @@ const DailySales = () => {
                       </div>
                     </Td>
                     <Td right muted>{r.txn}</Td>
-                    <Td right bold>{r.total > 0 ? money(r.total) : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>
-                    <Td right muted>{r.avg_ticket > 0 ? money(r.avg_ticket) : <span className="text-slate-300 dark:text-slate-600">—</span>}</Td>
-                    <Td right>
-                      {r.cancelled > 0
-                        ? <span className="text-red-500 dark:text-red-400">{r.cancelled}</span>
-                        : <span className="text-slate-300 dark:text-slate-600">—</span>}
-                    </Td>
+                    <Td right bold>{money(r.total)}</Td>
+                    <Td right muted>{money(r.avg_ticket)}</Td>
+                    <Td right className={r.cancelled > 0 ? 'text-red-500 dark:text-red-400' : ''}>{r.cancelled}</Td>
                   </tr>
                 );
               })}
@@ -439,6 +610,13 @@ const DailySales = () => {
       </div>
 
     </ReportLayout>
+    {detailSaleCode && (
+      <SaleDetailModal
+        saleCode={detailSaleCode}
+        onClose={() => setDetailSaleCode(null)}
+      />
+    )}
+    </>
   );
 };
 

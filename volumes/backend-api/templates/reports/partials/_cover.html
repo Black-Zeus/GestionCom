@@ -1,7 +1,7 @@
 <!-- ═══════════════ PARTIAL: PORTADA ═══════════════
      Variables: {{LOGO_HTML}} {{REPORT_STATUS}} {{PERIOD_LABEL}}
                 {{TOTAL_DAYS}} {{BRANCH_LABEL}} {{CURRENCY_LABEL}}
-                {{COMPANY_NAME}} {{TODAY}} {{REPORT_ID}}
+                {{COMPANY_NAME}} {{TODAY}}
      ═══════════════════════════════════════════════ -->
 <section class="cover">
   <div class="cover-accent"></div>
@@ -36,7 +36,8 @@
         <div class="cover-period-secondary">
           <div class="cover-data-label">Alcance</div>
           <div class="cover-branch-value">{{BRANCH_LABEL}}</div>
-          <div class="cover-days">Moneda: {{CURRENCY_LABEL}}</div>
+          <div class="cover-data-label cover-currency-label">Moneda</div>
+          <div class="cover-currency-value">{{CURRENCY_LABEL}}</div>
         </div>
 
       </div>
@@ -48,8 +49,7 @@
         Reporte comercial interno
       </div>
       <div class="cover-footer-right">
-        <strong>Generado el {{TODAY}}</strong><br>
-        ID de reporte: {{REPORT_ID}}
+        <strong>Generado el {{TODAY}}</strong>
       </div>
     </footer>
 
