@@ -301,6 +301,7 @@ const NewSale = () => {
   const [items, setItems] = useState([]);
   const [editSaleId, setEditSaleId] = useState(null);
   const [editSale, setEditSale] = useState(null);
+  const [customerCreditConfig, setCustomerCreditConfig] = useState(null);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [sendingToCashier, setSendingToCashier] = useState(false);
@@ -387,9 +388,46 @@ const NewSale = () => {
     return authorizedUsers.filter((buyer) => String(buyer.customer_id) === String(selectedCustomer.id) && buyer.is_active !== false);
   }, [authorizedUsers, selectedCustomer]);
 
+  useEffect(() => {
+    if (!selectedCustomer?.id) {
+      setCustomerCreditConfig(null);
+      return undefined;
+    }
+    let ignore = false;
+    adminMaintainersService.list('customer-credit-config')
+      .then((rows) => {
+        if (ignore) return;
+        const config = (rows || []).find((item) => String(item.customer_id) === String(selectedCustomer.id));
+        setCustomerCreditConfig(config || null);
+      })
+      .catch(() => {
+        if (!ignore) setCustomerCreditConfig(null);
+      });
+    return () => { ignore = true; };
+  }, [selectedCustomer?.id]);
+
+  const isExchangeEdit = editSale?.document_type_code === 'EXCHANGE_DRAFT' || editSale?.is_exchange_document;
+  const isReturnEdit = editSale?.document_type_code === 'RETURN_TICKET' || editSale?.is_return_document;
+  const isAdjustmentEdit = isExchangeEdit || isReturnEdit;
+  const customerHasCreditEnabled = Number(selectedCustomer?.is_credit_customer) === 1 || selectedCustomer?.is_credit_customer === true;
+  const customerHasActiveCredit = customerHasCreditEnabled && customerCreditConfig?.is_active !== false && Boolean(customerCreditConfig);
+  const sourceItemCount = useMemo(
+    () => items
+      .filter((item) => item.is_exchange_credit)
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    [items],
+  );
+  const newItemCount = useMemo(
+    () => items
+      .filter((item) => !item.is_exchange_credit)
+      .reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    [items],
+  );
+
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_price || 0)), 0);
     const lineDiscount = items.reduce((sum, item) => {
+      if (isExchangeEdit) return sum;
       const base = Number(item.quantity || 0) * Number(item.unit_price || 0);
       return sum + (base * Number(item.discount_percent || 0) / 100);
     }, 0);
@@ -398,13 +436,20 @@ const NewSale = () => {
     const net = total / 1.19;
     const tax = total - net;
     return { subtotal, lineDiscount, net, tax, rawTotal, total };
-  }, [items]);
+  }, [isExchangeEdit, items]);
 
-  const isExchangeEdit = editSale?.document_type_code === 'EXCHANGE_DRAFT' || editSale?.is_exchange_document;
   const exchangeCredit = useMemo(
     () => items.filter((item) => item.is_exchange_credit).reduce((sum, item) => sum + Math.abs(Number(item.quantity || 0) * Number(item.unit_price || 0)), 0),
     [items],
   );
+  const exchangeCreditByProduct = useMemo(() => {
+    const map = new Map();
+    items.filter((item) => item.is_exchange_credit && item.product_id).forEach((item) => {
+      const quantity = Math.max(Number(item.quantity || 1), 1);
+      map.set(String(item.product_id), Math.abs(Number(item.unit_price || 0)) / quantity);
+    });
+    return map;
+  }, [items]);
   const hasNewExchangeItems = useMemo(
     () => items.some((item) => !item.is_exchange_credit && Number(item.quantity || 0) > 0),
     [items],
@@ -439,6 +484,9 @@ const NewSale = () => {
       return;
     }
     let blocked = false;
+    const productId = product.product_id || product.id;
+    const recognizedExchangePrice = isExchangeEdit ? exchangeCreditByProduct.get(String(productId)) : null;
+    const effectivePrice = recognizedExchangePrice || price;
     setItems((current) => {
       const existing = current.find((item) => item.key === key);
       if (existing) {
@@ -453,7 +501,7 @@ const NewSale = () => {
         ...current,
         {
           key,
-          product_id: product.product_id || product.id,
+          product_id: productId,
           product_variant_id: product.product_variant_id || product.variant_id || null,
           code: productCode(product),
           name: productName(product),
@@ -461,7 +509,9 @@ const NewSale = () => {
           unit_name: product.unit_name || product.unit_symbol || '',
           available_stock: stock,
           quantity: 1,
-          unit_price: price,
+          unit_price: effectivePrice,
+          list_price: price,
+          is_equivalent_exchange: Boolean(recognizedExchangePrice),
           discount_percent: 0,
         },
       ];
@@ -471,7 +521,7 @@ const NewSale = () => {
       return;
     }
     toast.success('Producto agregado.');
-  }, [activeLocationRecord]);
+  }, [activeLocationRecord, exchangeCreditByProduct, isExchangeEdit]);
 
   const openProductPicker = useCallback((products) => {
     ModalManager.show({
@@ -521,15 +571,21 @@ const NewSale = () => {
   }, [addItem, activeLocationRecord, openProductPicker, priceGroupId, productSearch]);
 
   const updateItem = (key, patch) => {
+    const nextPatch = isExchangeEdit && patch.discount_percent !== undefined
+      ? { ...patch, discount_percent: 0 }
+      : patch;
+    if (isExchangeEdit && patch.discount_percent > 0) {
+      toast.error('Los cambios no permiten descuentos libres. La diferencia se calcula automaticamente.');
+    }
     const hasWarehouse = Boolean(activeLocationRecord?.warehouse_id || activeLocationRecord?.id);
-    if (hasWarehouse && patch.quantity !== undefined) {
+    if (hasWarehouse && nextPatch.quantity !== undefined) {
       const item = items.find((i) => i.key === key);
-      if (item && !item.is_exchange_credit && patch.quantity > item.available_stock) {
+      if (item && !item.is_exchange_credit && nextPatch.quantity > item.available_stock) {
         toast.error(`Stock insuficiente. Disponible en bodega: ${item.available_stock}`);
         return;
       }
     }
-    setItems((current) => current.map((item) => item.key === key ? { ...item, ...patch } : item));
+    setItems((current) => current.map((item) => item.key === key ? { ...item, ...nextPatch } : item));
   };
 
   const removeItem = (key) => setItems((current) => current.filter((item) => item.key !== key));
@@ -557,7 +613,7 @@ const NewSale = () => {
         target_cash_register_id: activeCashRegisterRecord?.id || activeSalesPointRecord.default_cash_register_id || null,
         customer: selectedCustomer,
         authorized_buyer: authorizedBuyer,
-        items,
+        items: items.map((item) => ({ ...item, discount_percent: isExchangeEdit ? 0 : Number(item.discount_percent || 0) })),
         prepared_by: displayUser,
         notes: editSale?.notes || null,
       };
@@ -587,7 +643,7 @@ const NewSale = () => {
         target_cash_register_id: activeCashRegisterRecord?.id || activeSalesPointRecord.default_cash_register_id || null,
         customer: selectedCustomer,
         authorized_buyer: authorizedBuyer,
-        items,
+        items: items.map((item) => ({ ...item, discount_percent: isExchangeEdit ? 0 : Number(item.discount_percent || 0) })),
         prepared_by: displayUser,
         notes: editSale?.notes || null,
       };
@@ -703,7 +759,7 @@ const NewSale = () => {
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Items de la venta</h2>
-                <p className="text-xs text-slate-500">{isExchangeEdit ? 'El credito del cambio descuenta del total de los nuevos productos.' : 'Ajusta cantidades y descuentos antes de enviar a caja.'}</p>
+                <p className="text-xs text-slate-500">{isExchangeEdit ? 'El valor reconocido viene de la venta original; no se aplican descuentos libres.' : 'Ajusta cantidades y descuentos antes de enviar a caja.'}</p>
               </div>
               <ActionButton label="Limpiar" icon={Trash2} variant="neutral" onClick={() => setItems((current) => current.filter((item) => item.is_exchange_credit))} disabled={items.every((item) => item.is_exchange_credit)} />
             </div>
@@ -714,7 +770,7 @@ const NewSale = () => {
                     <th className="px-4 py-3 text-left">Producto</th>
                     <th className="w-28 px-4 py-3 text-right">Precio</th>
                     <th className="w-24 px-4 py-3 text-center">Cantidad</th>
-                    <th className="w-24 px-4 py-3 text-center">Desc. %</th>
+                    <th className="w-24 px-4 py-3 text-center">{isExchangeEdit ? 'Ajuste' : 'Desc. %'}</th>
                     <th className="w-32 px-4 py-3 text-right">Subtotal</th>
                     <th className="w-16 px-4 py-3 text-center"></th>
                   </tr>
@@ -729,13 +785,25 @@ const NewSale = () => {
                           <div className="font-medium">{item.name}</div>
                           <div className="font-mono text-xs text-slate-500">{item.code}{item.unit_name ? ` · ${item.unit_name}` : ''}</div>
                           {item.is_exchange_credit && <div className="mt-1 text-xs font-semibold text-blue-600 dark:text-blue-300">Credito a favor</div>}
+                          {item.is_equivalent_exchange && <div className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">Variante equivalente: sin diferencia</div>}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">{money(item.unit_price)}</td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <div>{money(item.unit_price)}</div>
+                          {item.is_equivalent_exchange && Number(item.list_price || 0) !== Number(item.unit_price || 0) && (
+                            <div className="text-xs text-slate-500">Lista {money(item.list_price)}</div>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <input className={`${compactFieldClassName} text-center`} type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(item.key, { quantity: Number(event.target.value || 1) })} disabled={item.is_exchange_credit} />
                         </td>
                         <td className="px-4 py-3">
-                          <input className={`${compactFieldClassName} text-center`} type="number" min="0" max="100" step="0.01" value={item.discount_percent} onChange={(event) => updateItem(item.key, { discount_percent: Number(event.target.value || 0) })} disabled={item.is_exchange_credit} />
+                          {isExchangeEdit ? (
+                            <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-center text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-950">
+                              No aplica
+                            </div>
+                          ) : (
+                            <input className={`${compactFieldClassName} text-center`} type="number" min="0" max="100" step="0.01" value={item.discount_percent} onChange={(event) => updateItem(item.key, { discount_percent: Number(event.target.value || 0) })} disabled={item.is_exchange_credit} />
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold tabular-nums">{money(base - discount)}</td>
                         <td className="px-4 py-3 text-center"><RowActionButton label="Quitar" icon={Trash2} variant="danger" onClick={() => removeItem(item.key)} disabled={item.is_exchange_credit} /></td>
@@ -764,16 +832,25 @@ const NewSale = () => {
                 <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Resumen</h2>
               </div>
               <div className="space-y-3 text-sm">
-                <div className="flex justify-between"><span className="text-slate-500">Items</span><span className="font-medium">{items.length}</span></div>
-                {isExchangeEdit && <div className="flex justify-between"><span className="text-slate-500">Credito cambio</span><span className="font-medium text-blue-700 dark:text-blue-300">{money(exchangeCredit)}</span></div>}
+                {isAdjustmentEdit ? (
+                  <>
+                    <div className="flex justify-between"><span className="text-slate-500">{isReturnEdit ? 'Artículos devolución' : 'Artículos cambio'}</span><span className="font-medium">{sourceItemCount}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Artículos nuevos</span><span className="font-medium">{newItemCount}</span></div>
+                  </>
+                ) : (
+                  <div className="flex justify-between"><span className="text-slate-500">Artículos</span><span className="font-medium">{newItemCount}</span></div>
+                )}
+                {isExchangeEdit && <div className="flex justify-between"><span className="text-slate-500">Valor pagado original</span><span className="font-medium text-blue-700 dark:text-blue-300">{money(exchangeCredit)}</span></div>}
                 <div className="flex justify-between"><span className="text-slate-500">Subtotal</span><span className="font-medium">{money(totals.subtotal)}</span></div>
-                <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>
+                {!isExchangeEdit && <div className="flex justify-between"><span className="text-slate-500">Descuento linea</span><span className="font-medium">{money(totals.lineDiscount)}</span></div>}
                 <div className="flex justify-between"><span className="text-slate-500">Neto</span><span className="font-medium">{money(totals.net)}</span></div>
                 <div className="flex justify-between"><span className="text-slate-500">IVA 19%</span><span className="font-medium">{money(totals.tax)}</span></div>
                 <div className="flex justify-between border-t border-slate-200 pt-3 text-base font-bold dark:border-slate-800"><span>Total a pagar</span><span>{money(totals.total)}</span></div>
                 {isExchangeEdit && totals.rawTotal < 0 && (
                   <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
-                    El crédito supera los productos seleccionados. La diferencia de {money(Math.abs(totals.rawTotal))} quedará como crédito no utilizado.
+                    {customerHasActiveCredit
+                      ? `El crédito supera los productos seleccionados. La diferencia de ${money(Math.abs(totals.rawTotal))} quedará como crédito no utilizado.`
+                      : `El cliente no tiene crédito activo. La diferencia de ${money(Math.abs(totals.rawTotal))} se perderá al cerrar el cambio.`}
                   </div>
                 )}
               </div>

@@ -510,7 +510,12 @@ def apply_close_amounts(sale: SaleDocument, payload: CloseSalePayload):
         sale.cash_register_id = payload.cash_register_id
 
 
-def replace_pending_sale_payload(sale: SaleDocument, payload: PendingSaleCreate, user: dict):
+def replace_pending_sale_payload(
+    sale: SaleDocument,
+    payload: PendingSaleCreate,
+    user: dict,
+    preserved_exchange_credit_lines: list[SaleDocumentLine] | None = None,
+):
     sale.warehouse_id = payload.warehouse_id
     sale.sales_point_id = payload.sales_point_id
     sale.cash_register_id = payload.target_cash_register_id
@@ -522,14 +527,52 @@ def replace_pending_sale_payload(sale: SaleDocument, payload: PendingSaleCreate,
     sale.notes = payload.notes
     sale.lines.clear()
 
-    for index, item in enumerate(payload.items, start=1):
+    is_exchange = sale.document_type_code == "EXCHANGE_DRAFT"
+    source_credit_by_product: dict[int, Decimal] = {}
+    line_number = 1
+
+    if is_exchange:
+        credit_lines = preserved_exchange_credit_lines or [line for line in sale.lines if _is_exchange_credit_line(line)]
+        if not credit_lines:
+            credit_lines = [
+                SaleDocumentLine(
+                    line_number=0,
+                    product_id=item.product_id,
+                    product_variant_id=item.product_variant_id,
+                    product_code=item.code,
+                    product_name=item.name,
+                    unit_name=item.unit_name,
+                    quantity=int(item.quantity),
+                    unit_price=money(item.unit_price),
+                    discount_percent=Decimal("0.0000"),
+                    line_subtotal=money(int(item.quantity) * money(item.unit_price)),
+                    line_discount_amount=Decimal("0.00"),
+                    document_discount_amount=Decimal("0.00"),
+                    paid_total_amount=money(int(item.quantity) * money(item.unit_price)),
+                )
+                for item in payload.items
+                if _is_exchange_credit_item(item)
+            ]
+        for credit_line in credit_lines:
+            cloned = _clone_line(credit_line, line_number)
+            sale.lines.append(cloned)
+            quantity = max(int(cloned.quantity or 1), 1)
+            if cloned.product_id:
+                source_credit_by_product[int(cloned.product_id)] = money(abs(cloned.paid_total_amount) / Decimal(quantity))
+            line_number += 1
+
+    sale_items = [item for item in payload.items if not (is_exchange and _is_exchange_credit_item(item))]
+    for item in sale_items:
+        if is_exchange and percent(item.discount_percent) > 0:
+            raise ValueError("Los cambios no permiten descuentos de linea; usa ajuste comercial autorizado.")
         quantity = int(item.quantity)
-        unit_price = money(item.unit_price)
+        requested_unit_price = money(item.unit_price)
+        unit_price = source_credit_by_product.get(int(item.product_id or 0), requested_unit_price) if is_exchange else requested_unit_price
         subtotal = money(quantity * unit_price)
-        line_discount = money(subtotal * percent(item.discount_percent) / Decimal("100"))
+        line_discount = Decimal("0.00") if is_exchange else money(subtotal * percent(item.discount_percent) / Decimal("100"))
         sale.lines.append(
             SaleDocumentLine(
-                line_number=index,
+                line_number=line_number,
                 product_id=item.product_id,
                 product_variant_id=item.product_variant_id,
                 product_code=item.code,
@@ -537,12 +580,13 @@ def replace_pending_sale_payload(sale: SaleDocument, payload: PendingSaleCreate,
                 unit_name=item.unit_name,
                 quantity=quantity,
                 unit_price=unit_price,
-                discount_percent=percent(item.discount_percent),
+                discount_percent=Decimal("0.0000") if is_exchange else percent(item.discount_percent),
                 line_subtotal=subtotal,
                 line_discount_amount=line_discount,
                 paid_total_amount=money(subtotal - line_discount),
             )
         )
+        line_number += 1
 
     sale.subtotal_amount = money(sum((line.line_subtotal for line in sale.lines), Decimal("0.00")))
     sale.line_discount_amount = money(sum((line.line_discount_amount for line in sale.lines), Decimal("0.00")))
@@ -572,6 +616,37 @@ def build_return_line(unit: SaleLineUnit, index: int, action_type: str) -> SaleD
         document_discount_amount=Decimal("0.00"),
         tax_amount=money(-amount - (-amount / (Decimal("1.00") + TAX_RATE))),
         paid_total_amount=money(-amount),
+    )
+
+
+def _is_exchange_credit_name(value: str | None) -> bool:
+    return "credito por cambio" in str(value or "").lower()
+
+
+def _is_exchange_credit_line(line: SaleDocumentLine) -> bool:
+    return money(line.unit_price) < 0 or money(line.paid_total_amount) < 0 or _is_exchange_credit_name(line.product_name)
+
+
+def _is_exchange_credit_item(item: SaleItemPayload) -> bool:
+    return money(item.unit_price) < 0 or _is_exchange_credit_name(item.name)
+
+
+def _clone_line(line: SaleDocumentLine, line_number: int) -> SaleDocumentLine:
+    return SaleDocumentLine(
+        line_number=line_number,
+        product_id=line.product_id,
+        product_variant_id=line.product_variant_id,
+        product_code=line.product_code,
+        product_name=line.product_name,
+        unit_name=line.unit_name,
+        quantity=line.quantity,
+        unit_price=money(line.unit_price),
+        discount_percent=Decimal("0.0000"),
+        line_subtotal=money(line.line_subtotal),
+        line_discount_amount=Decimal("0.00"),
+        document_discount_amount=Decimal("0.00"),
+        tax_amount=money(line.tax_amount),
+        paid_total_amount=money(line.paid_total_amount),
     )
 
 
@@ -877,10 +952,15 @@ async def update_pending_sale(payload: PendingSaleCreate, request: Request, sale
         if sale.status != SaleStatus.PENDING_CASHIER:
             return ResponseManager.error(message="Solo se pueden editar ventas pendientes de caja", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
 
+        preserved_exchange_credit_lines = [_clone_line(line, index + 1) for index, line in enumerate(sorted(sale.lines or [], key=lambda item: item.line_number)) if sale.document_type_code == "EXCHANGE_DRAFT" and _is_exchange_credit_line(line)]
         await session.execute(delete(SaleDocumentLine).where(SaleDocumentLine.sale_document_id == sale_id))
         await session.flush()
         sale.lines = []
-        replace_pending_sale_payload(sale, payload, user)
+        try:
+            replace_pending_sale_payload(sale, payload, user, preserved_exchange_credit_lines=preserved_exchange_credit_lines)
+        except ValueError as exc:
+            await session.rollback()
+            return ResponseManager.error(message=str(exc), status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
         await session.flush()
         await session.refresh(sale, attribute_names=["lines"])
         return ResponseManager.success(data=sale_to_dict(sale), message="Venta pendiente actualizada", request=request)
@@ -1100,6 +1180,18 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
             return ResponseManager.error(message="Venta no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_NOT_FOUND, request=request)
         if sale.status != SaleStatus.PENDING_CASHIER:
             return ResponseManager.error(message="La venta no esta pendiente de caja", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+        if sale.document_type_code == "EXCHANGE_DRAFT":
+            has_manual_discount = payload.discount_type != "NONE" or money(payload.discount_value) > 0
+            has_agreement_discount = isinstance(payload.agreement_usage, dict) and money(payload.agreement_usage.get("discount_percent") or 0) > 0
+            has_line_discount = any(percent(line.discount_percent) > 0 for line in sale.lines or [])
+            if has_manual_discount or has_agreement_discount or has_line_discount:
+                return ResponseManager.error(
+                    message="Los cambios no permiten descuentos libres ni convenios de descuento; usa ajuste comercial autorizado.",
+                    status_code=HTTPStatus.BAD_REQUEST,
+                    error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                    error_type=ErrorType.VALIDATION_ERROR,
+                    request=request,
+                )
 
         user_id = current_user_id(user)
         if not user_id:
@@ -1113,6 +1205,9 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
         sale.payment_details = payload.payment_details
         sale.receipt_email = str(payload.receipt_email).lower() if payload.receipt_email else None
         apply_close_amounts(sale, payload)
+        if sale.document_type_code == "EXCHANGE_DRAFT" and money(sale.total_amount) < 0:
+            sale.total_amount = Decimal("0.00")
+            sale.tax_amount = money(sum((line.tax_amount for line in sale.lines if money(line.paid_total_amount) > 0), Decimal("0.00")))
         try:
             await apply_inventory_for_closed_sale(session, sale, user_id)
         except ValueError as exc:
@@ -1129,7 +1224,7 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
         # lo que el cliente eligió y lo que se devolvió como vuelto.
         if sale.document_type_code == "EXCHANGE_DRAFT" and sale.exchange_credit_total:
             credit = money(sale.exchange_credit_total)
-            new_products_total = money(sale.total_amount) + credit  # total_amount = new - credit
+            new_products_total = money(sum((line.paid_total_amount for line in sale.lines if money(line.paid_total_amount) > 0), Decimal("0.00")))
             refunded = money(sale.change_amount or 0)
             sale.exchange_forfeited_credit = max(Decimal("0.00"), credit - new_products_total - refunded)
 

@@ -95,6 +95,11 @@ const customerName = (customer) => (
   || 'Cliente'
 );
 
+const isExchangeCreditItem = (item) => (
+  Number(item?.unit_price || 0) < 0
+  || String(item?.name || item?.product_name || '').toLowerCase().includes('credito por cambio')
+);
+
 const TICKET_CODE = 'TICKET';
 
 const AUTO_DOCUMENT_PREFIX = {
@@ -1454,6 +1459,29 @@ const CashPos = () => {
     return { base, manualDiscount: boundedManual, agreementDiscountAmount: boundedAgreement, discount: totalDiscount, total: Math.max(base - totalDiscount, 0) };
   }, [discountType, discountValue, selectedSale, agreementDiscount, agreementDiscountValid]);
 
+  const exchangeTotals = useMemo(() => {
+    const items = selectedSale?.items || [];
+    const valuePaidOriginal = items
+      .filter(isExchangeCreditItem)
+      .reduce((sum, item) => {
+        const amount = item.paid_total_amount ?? item.line_subtotal;
+        return sum + Math.abs(amount != null ? Number(amount) : Number(item.unit_price || 0) * Number(item.quantity || 1));
+      }, 0);
+    const destinationPrice = items
+      .filter((item) => !isExchangeCreditItem(item))
+      .reduce((sum, item) => sum + Number(item.line_subtotal ?? (Number(item.quantity || 0) * Number(item.unit_price || 0))), 0);
+    const calculatedDifference = Math.max(destinationPrice - valuePaidOriginal, 0);
+    const totalToPay = Math.max(Number(selectedSale?.total_amount || 0), 0);
+    const authorizedAdjustment = Math.max(calculatedDifference - totalToPay, 0);
+    return {
+      valuePaidOriginal,
+      destinationPrice,
+      calculatedDifference,
+      authorizedAdjustment,
+      totalToPay,
+    };
+  }, [selectedSale]);
+
   const availableExchangeRates = useMemo(
     () => exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code),
     [exchangeRates],
@@ -1537,14 +1565,14 @@ const CashPos = () => {
           document_type_code: selectedDocumentType.code,
           document_type_name: selectedDocumentType.name,
           cash_register_id: activeCashRegisterRecord?.id || selectedSale.cash_register_id || null,
-          discount_type: discountType,
-          discount_value: Number(discountValue || 0),
+          discount_type: isExchangeDocument ? 'NONE' : discountType,
+          discount_value: isExchangeDocument ? 0 : Number(discountValue || 0),
           payment_method_code,
           payment_method_name,
           amount_tendered,
           change_amount,
           payment_details,
-          agreement_usage: agreementUsage,
+          agreement_usage: isExchangeDocument ? null : agreementUsage,
           receipt_email,
         });
         const successTitle = isExchangeDocument ? 'Cambio procesado' : isReturnDocument ? 'Devolucion procesada' : 'Venta cerrada';
@@ -1705,90 +1733,104 @@ const CashPos = () => {
             <div className="grid gap-4 xl:grid-cols-[minmax(18rem,0.85fr)_minmax(18rem,1fr)_22rem]">
               <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="mb-3 flex items-center gap-2">
-                  <Percent className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-sm font-semibold">Descuento final</h2>
+                  {isExchangeDocument ? <Repeat2 className="h-5 w-5 text-blue-600" /> : <Percent className="h-5 w-5 text-blue-600" />}
+                  <h2 className="text-sm font-semibold">{isExchangeDocument ? 'Ajuste de cambio' : 'Descuento final'}</h2>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  <label className="space-y-1 text-sm">
-                    <span className="font-medium text-slate-700 dark:text-slate-200">Tipo descuento</span>
-                    <select className={fieldClassName} value={discountType} onChange={(e) => setDiscountType(e.target.value)} disabled={isClosed || isReturnDocument || isExchangeDocument}>
-                      <option value="NONE">Sin descuento</option>
-                      <option value="PERCENT">Porcentaje</option>
-                      <option value="AMOUNT">Monto</option>
-                    </select>
-                  </label>
-                  <label className="space-y-1 text-sm">
-                    <span className="font-medium text-slate-700 dark:text-slate-200">Valor</span>
-                    <input className={fieldClassName} type="number" min="0" max={discountType === 'PERCENT' ? 100 : undefined} step="0.01" value={discountValue} onFocus={(event) => event.target.select()} onChange={(e) => setDiscountValue(Number(e.target.value || 0))} disabled={discountType === 'NONE' || isClosed || isReturnDocument || isExchangeDocument} />
-                  </label>
-                </div>
-                <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <label className="flex flex-1 items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                      <input
-                        type="checkbox"
-                        checked={agreementDiscount.enabled}
-                        onChange={(e) => {
-                          const enabled = e.target.checked;
-                          setAgreementDiscount((current) => ({ ...current, enabled }));
-                          if (!enabled) {
-                            setDiscountType('NONE');
-                            setDiscountValue(0);
-                          }
-                        }}
-                        disabled={isClosed || isReturnDocument || isExchangeDocument}
-                      />
-                      Aplicar descuento Convenio
-                    </label>
-                    {agreementDiscount.enabled && (
-                      <button
-                        type="button"
-                        onClick={openAgreementDiscountModal}
-                        disabled={isClosed || isReturnDocument || isExchangeDocument}
-                        className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-                      >
-                        <Users className="h-3.5 w-3.5" />
-                        {agreementDiscount.organization_name ? 'Cambiar' : 'Seleccionar'}
-                      </button>
-                    )}
+                {isExchangeDocument ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-500">Valor pagado original</span><span className="font-medium tabular-nums">{money(exchangeTotals.valuePaidOriginal)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Precio producto destino</span><span className="font-medium tabular-nums">{money(exchangeTotals.destinationPrice)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Diferencia calculada</span><span className="font-medium tabular-nums">{money(exchangeTotals.calculatedDifference)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Ajuste autorizado</span><span className="font-medium tabular-nums">{money(exchangeTotals.authorizedAdjustment)}</span></div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950">
+                      Los cambios no permiten descuento final ni convenio de descuento. Cualquier condonacion debe quedar como ajuste comercial autorizado.
+                    </div>
                   </div>
-                  {agreementDiscount.enabled && agreementDiscount.organization_name && (() => {
-                    const agreementName = agreements.find((item) => String(item.id) === agreementDiscount.agreement_id)?.agreement_name || agreementDiscount.organization_name;
-                    const discountAmount = closingTotals.base > 0 && agreementDiscountPercent > 0
-                      ? Math.round(closingTotals.base * agreementDiscountPercent / 100)
-                      : null;
-                    return (
-                      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/40">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                              {agreementName}
-                              {agreementDiscountPercent > 0 && <span className="ml-1.5 font-normal normal-case">({agreementDiscountPercent}%)</span>}
-                            </div>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                              <span className="font-mono text-xs text-blue-700 dark:text-blue-300">{agreementDiscount.associate_identifier}</span>
-                              {agreementDiscount.associate_name && (
-                                <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">— {agreementDiscount.associate_name}</span>
-                              )}
-                            </div>
-                          </div>
-                          {discountAmount !== null && (
-                            <div className="shrink-0 text-right">
-                              <div className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">-{agreementDiscountPercent}%</div>
-                              <div className="mt-1 text-sm font-semibold tabular-nums text-blue-800 dark:text-blue-200">{money(discountAmount)}</div>
-                            </div>
-                          )}
-                        </div>
-                        {!agreementDiscountValid && (
-                          <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">Completa empresa, RUT/codigo y porcentaje para aplicar el convenio.</p>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <label className="space-y-1 text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-200">Tipo descuento</span>
+                        <select className={fieldClassName} value={discountType} onChange={(e) => setDiscountType(e.target.value)} disabled={isClosed || isReturnDocument}>
+                          <option value="NONE">Sin descuento</option>
+                          <option value="PERCENT">Porcentaje</option>
+                          <option value="AMOUNT">Monto</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm">
+                        <span className="font-medium text-slate-700 dark:text-slate-200">Valor</span>
+                        <input className={fieldClassName} type="number" min="0" max={discountType === 'PERCENT' ? 100 : undefined} step="0.01" value={discountValue} onFocus={(event) => event.target.select()} onChange={(e) => setDiscountValue(Number(e.target.value || 0))} disabled={discountType === 'NONE' || isClosed || isReturnDocument} />
+                      </label>
+                    </div>
+                    <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <label className="flex flex-1 items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                          <input
+                            type="checkbox"
+                            checked={agreementDiscount.enabled}
+                            onChange={(e) => {
+                              const enabled = e.target.checked;
+                              setAgreementDiscount((current) => ({ ...current, enabled }));
+                              if (!enabled) {
+                                setDiscountType('NONE');
+                                setDiscountValue(0);
+                              }
+                            }}
+                            disabled={isClosed || isReturnDocument}
+                          />
+                          Aplicar descuento Convenio
+                        </label>
+                        {agreementDiscount.enabled && (
+                          <button
+                            type="button"
+                            onClick={openAgreementDiscountModal}
+                            disabled={isClosed || isReturnDocument}
+                            className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            {agreementDiscount.organization_name ? 'Cambiar' : 'Seleccionar'}
+                          </button>
                         )}
                       </div>
-                    );
-                  })()}
-                  {agreementDiscount.enabled && !agreementDiscount.organization_name && (
-                    <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Selecciona un beneficiario para aplicar el descuento de convenio.</p>
-                  )}
-                </div>
+                      {agreementDiscount.enabled && agreementDiscount.organization_name && (() => {
+                        const agreementName = agreements.find((item) => String(item.id) === agreementDiscount.agreement_id)?.agreement_name || agreementDiscount.organization_name;
+                        const discountAmount = closingTotals.base > 0 && agreementDiscountPercent > 0
+                          ? Math.round(closingTotals.base * agreementDiscountPercent / 100)
+                          : null;
+                        return (
+                          <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/40">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                                  {agreementName}
+                                  {agreementDiscountPercent > 0 && <span className="ml-1.5 font-normal normal-case">({agreementDiscountPercent}%)</span>}
+                                </div>
+                                <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                                  <span className="font-mono text-xs text-blue-700 dark:text-blue-300">{agreementDiscount.associate_identifier}</span>
+                                  {agreementDiscount.associate_name && (
+                                    <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-100">— {agreementDiscount.associate_name}</span>
+                                  )}
+                                </div>
+                              </div>
+                              {discountAmount !== null && (
+                                <div className="shrink-0 text-right">
+                                  <div className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">-{agreementDiscountPercent}%</div>
+                                  <div className="mt-1 text-sm font-semibold tabular-nums text-blue-800 dark:text-blue-200">{money(discountAmount)}</div>
+                                </div>
+                              )}
+                            </div>
+                            {!agreementDiscountValid && (
+                              <p className="mt-2 text-xs text-amber-600 dark:text-amber-300">Completa empresa, RUT/codigo y porcentaje para aplicar el convenio.</p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {agreementDiscount.enabled && !agreementDiscount.organization_name && (
+                        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Selecciona un beneficiario para aplicar el descuento de convenio.</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
