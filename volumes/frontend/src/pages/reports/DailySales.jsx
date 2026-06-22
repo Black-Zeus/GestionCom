@@ -90,7 +90,7 @@ const DailySales = () => {
 
   const [filters, setFilters]           = useState(() => defaultFilters(activeWarehouse));
   const [executedFilters, setExecutedFilters] = useState(() => defaultFilters(activeWarehouse));
-  const [viewMode, setViewMode]         = useState('grouped'); // 'grouped'=por día | 'detail'=individual
+  const [viewMode, setViewMode]         = useState('detail'); // 'grouped'=por día | 'detail'=individual
   const [rows, setRows]                 = useState([]);
   const [detailRows, setDetailRows]     = useState([]);
   const [loading, setLoading]           = useState(false);

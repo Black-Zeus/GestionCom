@@ -168,6 +168,8 @@ Orden estándar:
 
 El toggle se declara con `viewMode`, `onViewModeChange` y `viewModeOptions` en `ReportLayout`.
 
+El valor inicial de `viewMode` debe ser siempre `'detail'`. El usuario puede cambiar a la vista agrupada desde el toggle.
+
 Reglas de posicionamiento:
 
 - Se renderiza en la cabecera de la tabla de datos, junto a los botones de exportación.

@@ -101,7 +101,7 @@ const CategorySales = () => {
   const [detailRows,      setDetailRows]      = useState([]);
   const [totals,          setTotals]          = useState({ total: 0, units: 0, txn_count: 0 });
   const [loading,         setLoading]         = useState(false);
-  const [viewMode,        setViewMode]        = useState('grouped');
+  const [viewMode,        setViewMode]        = useState('detail');
   const [detailSaleCode,  setDetailSaleCode]  = useState(null);
 
   const set = (key, val) => setFilters((f) => ({ ...f, [key]: val }));
