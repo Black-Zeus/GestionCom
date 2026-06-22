@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
-import { FileSpreadsheet, FileText, ListFilter } from 'lucide-react';
+import { AlertTriangle, FileSpreadsheet, FileText, ListFilter } from 'lucide-react';
 import KpiBar from '@/components/common/data/KpiBar';
 import ReportCard from '@/components/common/data/ReportCard';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
@@ -9,16 +9,15 @@ import ExportModal from '@/components/reports/ExportModal';
 /**
  * Estructura base para módulos de gestión / reportes.
  *
- * Secciones (todas opcionales excepto title):
+ * Secciones obligatorias:
  *   1. ModuleHeader  — title, description, actions
- *                      + botón PDF automático si se provee onExportPdf
  *   2. Barra filtros — filterBar (JSX libre)
  *   3. KPI bar       — kpiItems[]
  *   4. Gráficos      — charts = [{ title, subtitle, icon, content }]
- *                      1 gráfico → ancho completo
- *                      2+ gráficos → grilla de 2 columnas (responsiva)
+ *                      mínimo 1 gráfico
  *   5. Tabla detalle — children + tableTitle / tableSubtitle / tableIcon
- *                      + botones CSV / Excel con modal si se proveen onExportCsv / onExportExcel
+ *                      + toggle Detalle / Agrupado
+ *                      + botones PDF / CSV / Excel
  *                      + tableActions para acciones adicionales
  *                      + tableFooter
  *
@@ -37,6 +36,13 @@ import ExportModal from '@/components/reports/ExportModal';
  *
  *   exportDescription — texto de resumen compartido por los tres modales
  */
+const RequiredSectionFallback = ({ label }) => (
+  <div className="flex min-h-24 items-center justify-center gap-2 rounded-md border border-dashed border-amber-300 bg-amber-50 px-4 py-6 text-sm font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+    <AlertTriangle className="h-4 w-4 shrink-0" />
+    {label}
+  </div>
+);
+
 const ReportLayout = ({
   // ── Header ──────────────────────────────────────────────
   title,
@@ -108,19 +114,33 @@ const ReportLayout = ({
   };
 
   const resolvedActions = actions;
+  const resolvedKpiItems = kpiItems?.length > 0 ? kpiItems : [{
+    id: 'required-kpi',
+    label: 'KPI obligatorio',
+    value: 'Pendiente',
+    hint: 'Definir kpiItems en el reporte',
+    disabled: true,
+  }];
+  const resolvedCharts = charts?.length > 0 ? charts : [{
+    title: 'Gráfico obligatorio',
+    subtitle: 'Mínimo 1 gráfico por reporte',
+    icon: AlertTriangle,
+    content: <RequiredSectionFallback label="Definir charts con al menos un gráfico para este reporte." />,
+  }];
 
   // Controles de vista y exportación en la cabecera de la tabla
-  const viewModeButtons = onViewModeChange && (
+  const viewModeButtons = (
     <div className="flex items-center overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
       {viewModeOptions.map((m) => (
         <button
           key={m.id}
           type="button"
-          onClick={() => onViewModeChange(m.id)}
+          onClick={() => onViewModeChange?.(m.id)}
+          disabled={!onViewModeChange}
           className={`h-7 px-2.5 text-xs font-medium whitespace-nowrap transition-colors ${
             viewMode === m.id
               ? 'bg-blue-600 text-white'
-              : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+              : 'bg-white text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
           }`}
         >
           {m.label}
@@ -129,45 +149,42 @@ const ReportLayout = ({
     </div>
   );
 
-  const exportButtons = (onExportPdf || onExportCsv || onExportExcel) && (
+  const exportButtons = (
     <div className="flex items-center divide-x divide-slate-200 overflow-hidden rounded-md border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
-      {onExportPdf && (
-        <button
-          type="button"
-          title="Exportar PDF"
-          onClick={() => openExport('pdf', onExportPdf)}
-          className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
-        >
-          <FileText className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
-          PDF
-        </button>
-      )}
-      {onExportCsv && (
-        <button
-          type="button"
-          title="Exportar CSV"
-          onClick={() => openExport('csv', onExportCsv)}
-          className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-blue-50 hover:text-blue-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
-        >
-          <FileText className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
-          CSV
-        </button>
-      )}
-      {onExportExcel && (
-        <button
-          type="button"
-          title="Exportar Excel"
-          onClick={() => openExport('excel', onExportExcel)}
-          className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400"
-        >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
-          Excel
-        </button>
-      )}
+      <button
+        type="button"
+        title={onExportPdf ? 'Exportar PDF' : 'Exportar PDF pendiente de implementar'}
+        onClick={() => openExport('pdf', onExportPdf)}
+        disabled={!onExportPdf}
+        className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+      >
+        <FileText className="h-3.5 w-3.5 text-rose-500 dark:text-rose-400" />
+        PDF
+      </button>
+      <button
+        type="button"
+        title={onExportCsv ? 'Exportar CSV' : 'Exportar CSV pendiente de implementar'}
+        onClick={() => openExport('csv', onExportCsv)}
+        disabled={!onExportCsv}
+        className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+      >
+        <FileText className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" />
+        CSV
+      </button>
+      <button
+        type="button"
+        title={onExportExcel ? 'Exportar Excel' : 'Exportar Excel pendiente de implementar'}
+        onClick={() => openExport('excel', onExportExcel)}
+        disabled={!onExportExcel}
+        className="flex h-7 items-center gap-1.5 bg-white px-2.5 text-xs font-medium text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400"
+      >
+        <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500 dark:text-emerald-400" />
+        Excel
+      </button>
     </div>
   );
 
-  const resolvedTableActions = (viewModeButtons || exportButtons || tableActions) && (
+  const resolvedTableActions = (
     <>
       {tableActions}
       {viewModeButtons}
@@ -182,42 +199,36 @@ const ReportLayout = ({
 
       <ModuleHeader title={title} description={description} actions={resolvedActions} />
 
-      {(filterBar || onRunReport || filterBarActions || filterBarTrailing) && (
-        <div className="mb-5 flex flex-col gap-2">
+      <div className="mb-5 flex flex-col gap-2">
 
-          {/* Fila default: Locación | shortcuts | DatePicker | Limpiar | Ejecutar */}
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            {filterBar}
-            {filterBarActions}
-            {onRunReport && (
-              <button
-                type="button"
-                onClick={onRunReport}
-                disabled={runReportDisabled || runReportLoading}
-                className="ml-auto flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
-              >
-                <ListFilter className="h-4 w-4" />
-                {runReportLoading ? 'Ejecutando...' : runReportLabel}
-              </button>
-            )}
-          </div>
-
-          {/* Fila 2: filtros propios del reporte */}
-          {filterBarTrailing && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              {filterBarTrailing}
-            </div>
-          )}
-
+        {/* Fila default: Locación | shortcuts | DatePicker | Limpiar | Ejecutar */}
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          {filterBar || <RequiredSectionFallback label="Definir barra de filtros del reporte." />}
+          {filterBarActions}
+          <button
+            type="button"
+            onClick={onRunReport}
+            disabled={!onRunReport || runReportDisabled || runReportLoading}
+            className="ml-auto flex h-10 items-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+          >
+            <ListFilter className="h-4 w-4" />
+            {runReportLoading ? 'Ejecutando...' : runReportLabel}
+          </button>
         </div>
-      )}
 
-      {kpiItems?.length > 0 && (
-        <KpiBar items={kpiItems} className="mb-5" />
-      )}
+        {/* Fila 2: filtros propios del reporte */}
+        {filterBarTrailing && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            {filterBarTrailing}
+          </div>
+        )}
+
+      </div>
+
+      <KpiBar items={resolvedKpiItems} className="mb-5" />
 
       {/* Gráficos: cada uno ocupa el ancho completo, apilados */}
-      {charts.map((c, i) => (
+      {resolvedCharts.map((c, i) => (
         <ReportCard key={i} title={c.title} subtitle={c.subtitle} icon={c.icon} className="mb-5">
           {c.content}
         </ReportCard>
@@ -230,7 +241,7 @@ const ReportLayout = ({
         actions={resolvedTableActions}
         footer={tableFooter}
       >
-        {children}
+        {children || <RequiredSectionFallback label="Definir tabla de datos del reporte." />}
       </ReportCard>
 
       <ExportModal

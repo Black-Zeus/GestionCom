@@ -33,6 +33,17 @@ Los reportes canónicos actuales son:
 
 Toda página de reporte debe usar `ReportLayout` como componente raíz.
 
+`ReportLayout` define un contrato obligatorio. Todo reporte debe declarar:
+
+- Barra de filtros: `filterBar`, `filterBarActions` cuando aplique y `onRunReport`.
+- Barra KPI: `kpiItems`.
+- Gráfico: `charts` con al menos 1 gráfico.
+- Tabla de datos: `children`, `tableTitle`, `tableSubtitle` y `tableIcon`.
+- Toggle Detalle/Agrupado: `viewMode`, `onViewModeChange` y `viewModeOptions`.
+- Exportaciones: `onExportPdf`, `onExportCsv` y `onExportExcel`.
+
+Si una página omite una sección, el layout debe dejar visible el espacio obligatorio o el control deshabilitado para evidenciar el cableado pendiente.
+
 ```jsx
 <ReportLayout
   title="Ventas diarias"

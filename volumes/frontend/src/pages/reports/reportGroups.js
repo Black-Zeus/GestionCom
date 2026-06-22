@@ -186,7 +186,7 @@ export const REPORT_GROUPS = [
           'Consolidado semanal de gastos de caja chica agrupados por sucursal y categoría.',
         type: 'Reporte gerencial',
         path: '/reports/petty-cash?report=petty-cash-weekly',
-        available: false,
+        available: true,
         tags: ['Semana', 'Sucursal', 'Reporte PDF'],
       },
       {
@@ -196,7 +196,7 @@ export const REPORT_GROUPS = [
           'Saldo actual vs. saldo asignado de cada fondo de caja chica con nivel de agotamiento por sucursal.',
         type: 'Reporte operativo',
         path: '/reports/petty-cash?report=petty-cash-fund-status',
-        available: false,
+        available: true,
         tags: ['Sucursal', 'Responsable', 'Exportación CSV'],
       },
       {
@@ -206,7 +206,7 @@ export const REPORT_GROUPS = [
           'Reposiciones de fondos de caja chica solicitadas, aprobadas y rechazadas por período.',
         type: 'Reporte operativo',
         path: '/reports/petty-cash?report=petty-cash-replenishments',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Estado', 'Exportación CSV'],
       },
       {
@@ -216,7 +216,7 @@ export const REPORT_GROUPS = [
           'Monto acumulado de gastos de caja chica agrupado por categoría en el período seleccionado.',
         type: 'Reporte gerencial',
         path: '/reports/petty-cash?report=petty-cash-by-category',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Reporte PDF'],
       },
     ],
