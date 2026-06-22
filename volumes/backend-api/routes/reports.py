@@ -4375,6 +4375,614 @@ async def customer_sales_pdf(
     )
 
 
+# ─── Customers module reports ────────────────────────────────────────────────
+
+_CUSTOMER_RISK_LABELS = {"LOW": "Bajo", "MEDIUM": "Medio", "HIGH": "Alto"}
+_CUSTOMER_TYPE_LABELS = {"COMPANY": "Empresa", "INDIVIDUAL": "Persona"}
+_AUTH_LEVEL_LABELS = {"BASIC": "Básico", "ADVANCED": "Avanzado", "FULL": "Completo"}
+
+
+def _customer_display_name(row: dict) -> str:
+    return row.get("commercial_name") or row.get("legal_name") or row.get("customer_name") or "Cliente sin nombre"
+
+
+async def _customer_branch_label(session, warehouse_ids: list[int]) -> str:
+    if not warehouse_ids:
+        return "Todas las locaciones"
+    params: dict = {}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "id", warehouse_ids, "wid")
+    rows = _rows(await session.execute(text(f"""
+        SELECT warehouse_name
+        FROM warehouses
+        WHERE {' AND '.join(filters)}
+        ORDER BY warehouse_name
+    """), params))
+    return ", ".join(row.get("warehouse_name") or "" for row in rows if row.get("warehouse_name")) or "Locaciones seleccionadas"
+
+
+def _customer_date_value(value) -> str:
+    if not value:
+        return ""
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+async def _customers_ranking_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int]) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "sd.warehouse_id", warehouse_ids, "warehouse_id")
+    warehouse_clause = f"AND {' AND '.join(filters)}" if filters else ""
+    async with db_manager.get_async_session() as session:
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+              sd.customer_id,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              COUNT(DISTINCT sd.id) AS txn_count,
+              ROUND(SUM(sd.total_amount), 0) AS total,
+              MAX(DATE(COALESCE(sd.updated_at, sd.created_at))) AS last_sale_date
+            FROM sale_documents sd
+            LEFT JOIN customers c ON c.id = sd.customer_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            GROUP BY sd.customer_id, c.tax_id, c.legal_name, c.commercial_name
+            ORDER BY total DESC
+            LIMIT 500
+        """), params))
+        detail_rows = _rows(await session.execute(text(f"""
+            SELECT
+              sd.sale_code,
+              COALESCE(sd.ticket_number, sd.sale_code) AS folio,
+              sd.customer_id,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              DATE(COALESCE(sd.updated_at, sd.created_at)) AS sale_date,
+              COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+              COALESCE(sd.payment_method_name, sd.payment_method_code, '') AS payment_method_name,
+              ROUND(sd.total_amount, 0) AS total
+            FROM sale_documents sd
+            LEFT JOIN customers c ON c.id = sd.customer_id
+            LEFT JOIN warehouses w ON w.id = sd.warehouse_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            ORDER BY sale_date ASC, sd.id ASC
+            LIMIT 2000
+        """), params))
+        total_row = _row(await session.execute(text(f"""
+            SELECT
+              COUNT(DISTINCT sd.id) AS txn_count,
+              COUNT(DISTINCT sd.customer_id) AS client_count,
+              ROUND(SUM(sd.total_amount), 0) AS total
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+        """), params))
+        branch_label = await _customer_branch_label(session, warehouse_ids)
+
+    grand_total = _money(total_row.get("total"))
+    rows = []
+    for row in group_rows:
+        total = _money(row.get("total"))
+        txn_count = int(row.get("txn_count") or 0)
+        rows.append({
+            "customer_id": row.get("customer_id"),
+            "customer_name": _customer_display_name(row),
+            "tax_id": row.get("tax_id") or "",
+            "txn_count": txn_count,
+            "total": total,
+            "avg_ticket": round(total / txn_count) if txn_count > 0 else 0,
+            "pct": round(total / grand_total * 100, 1) if grand_total > 0 else 0,
+            "last_sale_date": _customer_date_value(row.get("last_sale_date")),
+        })
+    details = [{
+        "sale_code": row.get("sale_code"),
+        "folio": row.get("folio") or "",
+        "customer_id": row.get("customer_id"),
+        "customer_name": _customer_display_name(row),
+        "tax_id": row.get("tax_id") or "",
+        "sale_date": _customer_date_value(row.get("sale_date")),
+        "warehouse_name": row.get("warehouse_name") or "",
+        "payment_method_name": row.get("payment_method_name") or "",
+        "total": _money(row.get("total")),
+    } for row in detail_rows]
+    return {
+        "rows": rows,
+        "detail_rows": details,
+        "totals": {
+            "total": grand_total,
+            "txn_count": int(total_row.get("txn_count") or 0),
+            "client_count": int(total_row.get("client_count") or 0),
+        },
+        "branch_label": branch_label,
+    }
+
+
+async def _customers_credit_status_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], risk_level: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    risk_level = str(risk_level or "all").upper()
+    risk_filter = ""
+    params: dict = {}
+    if risk_level in _CUSTOMER_RISK_LABELS:
+        risk_filter = "AND ccc.risk_level = :risk_level"
+        params["risk_level"] = risk_level
+    async with db_manager.get_async_session() as session:
+        detail_rows = _rows(await session.execute(text(f"""
+            SELECT
+              c.id AS customer_id,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              c.is_credit_customer,
+              ccc.credit_limit,
+              ccc.available_credit,
+              ccc.used_credit,
+              ccc.payment_terms_days,
+              ccc.grace_period_days,
+              ccc.risk_level,
+              ccc.auto_block_on_overdue,
+              ccc.is_active
+            FROM customer_credit_config ccc
+            JOIN customers c ON c.id = ccc.customer_id
+            WHERE c.deleted_at IS NULL
+              {risk_filter}
+            ORDER BY ccc.risk_level DESC, ccc.used_credit DESC, c.legal_name ASC
+            LIMIT 2000
+        """), params))
+        branch_label = await _customer_branch_label(session, warehouse_ids)
+    rows_map: dict[str, dict] = {}
+    details = []
+    for row in detail_rows:
+        risk = str(row.get("risk_level") or "MEDIUM").upper()
+        credit_limit = _money(row.get("credit_limit"))
+        used_credit = _money(row.get("used_credit"))
+        available_credit = _money(row.get("available_credit"))
+        usage_pct = round(used_credit / credit_limit * 100, 1) if credit_limit > 0 else 0
+        entry = rows_map.setdefault(risk, {"risk_level": risk, "risk_label": _CUSTOMER_RISK_LABELS.get(risk, risk), "count": 0, "credit_limit": 0.0, "used_credit": 0.0, "available_credit": 0.0})
+        entry["count"] += 1
+        entry["credit_limit"] += credit_limit
+        entry["used_credit"] += used_credit
+        entry["available_credit"] += available_credit
+        details.append({
+            "customer_id": row.get("customer_id"),
+            "customer_name": _customer_display_name(row),
+            "tax_id": row.get("tax_id") or "",
+            "credit_limit": credit_limit,
+            "used_credit": used_credit,
+            "available_credit": available_credit,
+            "usage_pct": usage_pct,
+            "payment_terms_days": int(row.get("payment_terms_days") or 0),
+            "grace_period_days": int(row.get("grace_period_days") or 0),
+            "risk_level": risk,
+            "risk_label": _CUSTOMER_RISK_LABELS.get(risk, risk),
+            "auto_block_on_overdue": bool(row.get("auto_block_on_overdue")),
+            "is_active": bool(row.get("is_active")),
+        })
+    rows = sorted(rows_map.values(), key=lambda item: _money(item.get("used_credit")), reverse=True)
+    totals = {
+        "count": len(details),
+        "credit_limit": sum(row["credit_limit"] for row in details),
+        "used_credit": sum(row["used_credit"] for row in details),
+        "available_credit": sum(row["available_credit"] for row in details),
+        "high_risk": sum(1 for row in details if row["risk_level"] == "HIGH"),
+    }
+    return {"rows": rows, "detail_rows": details, "totals": totals, "branch_label": branch_label}
+
+
+async def _customers_payment_history_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], method_id: int | None, status: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    method_filter = ""
+    if method_id:
+        method_filter = "AND cp.payment_method_id = :method_id"
+        params["method_id"] = method_id
+    status_filter = ""
+    if str(status or "all").lower() != "all":
+        status_filter = "AND ss.status_code = :status"
+        params["status"] = str(status).upper()
+    async with db_manager.get_async_session() as session:
+        detail_rows = _rows(await session.execute(text(f"""
+            SELECT
+              cp.id,
+              cp.payment_code,
+              cp.customer_id,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              cp.payment_date,
+              cp.payment_amount,
+              cp.allocated_amount,
+              cp.unallocated_amount,
+              cp.reference_number,
+              cp.bank_name,
+              cp.check_date,
+              cp.check_status,
+              pm.method_name AS payment_method_name,
+              COALESCE(ss.status_display_es, ss.status_name, ss.status_code, 'Sin estado') AS status_label,
+              ss.status_code
+            FROM customer_payments cp
+            JOIN customers c ON c.id = cp.customer_id
+            LEFT JOIN payment_methods pm ON pm.id = cp.payment_method_id
+            LEFT JOIN system_statuses ss ON ss.id = cp.status_id
+            WHERE c.deleted_at IS NULL
+              AND cp.payment_date BETWEEN :date_from AND :date_to
+              {method_filter}
+              {status_filter}
+            ORDER BY cp.payment_date ASC, cp.id ASC
+            LIMIT 2000
+        """), params))
+        method_options = _rows(await session.execute(text("""
+            SELECT id, method_name
+            FROM payment_methods
+            WHERE deleted_at IS NULL AND is_active = TRUE
+            ORDER BY display_order ASC, method_name ASC
+        """)))
+        status_options = _rows(await session.execute(text("""
+            SELECT status_code, status_display_es
+            FROM system_statuses
+            WHERE status_group = 'PAYMENT' AND is_active = TRUE
+            ORDER BY sort_order ASC, id ASC
+        """)))
+        branch_label = await _customer_branch_label(session, warehouse_ids)
+    grouped: dict[str, dict] = {}
+    details = []
+    for row in detail_rows:
+        method = row.get("payment_method_name") or "Sin método"
+        amount = _money(row.get("payment_amount"))
+        allocated = _money(row.get("allocated_amount"))
+        unallocated = _money(row.get("unallocated_amount"))
+        entry = grouped.setdefault(method, {"payment_method_name": method, "count": 0, "total": 0.0, "allocated": 0.0, "unallocated": 0.0})
+        entry["count"] += 1
+        entry["total"] += amount
+        entry["allocated"] += allocated
+        entry["unallocated"] += unallocated
+        details.append({
+            "id": row.get("id"),
+            "payment_code": row.get("payment_code") or "",
+            "customer_id": row.get("customer_id"),
+            "customer_name": _customer_display_name(row),
+            "tax_id": row.get("tax_id") or "",
+            "payment_date": _customer_date_value(row.get("payment_date")),
+            "payment_method_name": method,
+            "payment_amount": amount,
+            "allocated_amount": allocated,
+            "unallocated_amount": unallocated,
+            "reference_number": row.get("reference_number") or "",
+            "bank_name": row.get("bank_name") or "",
+            "check_date": _customer_date_value(row.get("check_date")),
+            "check_status": row.get("check_status") or "",
+            "status_label": row.get("status_label") or "Sin estado",
+            "status_code": row.get("status_code") or "",
+        })
+    rows = sorted(grouped.values(), key=lambda item: _money(item.get("total")), reverse=True)
+    totals = {"count": len(details), "total": sum(row["payment_amount"] for row in details), "allocated": sum(row["allocated_amount"] for row in details), "unallocated": sum(row["unallocated_amount"] for row in details), "methods": len(rows)}
+    return {
+        "rows": rows,
+        "detail_rows": details,
+        "totals": totals,
+        "method_options": method_options,
+        "status_options": status_options,
+        "branch_label": branch_label,
+    }
+
+
+async def _customers_authorized_buyers_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], active: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    active = str(active or "all").lower()
+    active_filter = ""
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    if active in ("1", "true", "active"):
+        active_filter = "AND cau.is_active = TRUE"
+    elif active in ("0", "false", "inactive"):
+        active_filter = "AND COALESCE(cau.is_active, 0) = FALSE"
+    async with db_manager.get_async_session() as session:
+        detail_rows = _rows(await session.execute(text(f"""
+            SELECT
+              cau.id,
+              cau.customer_id,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              cau.authorized_name,
+              cau.authorized_tax_id,
+              cau.position,
+              cau.email,
+              cau.phone,
+              cau.mobile,
+              cau.is_primary_contact,
+              cau.authorization_level,
+              cau.max_purchase_amount,
+              cau.is_active,
+              DATE(cau.created_at) AS created_date
+            FROM customer_authorized_users cau
+            JOIN customers c ON c.id = cau.customer_id
+            WHERE c.deleted_at IS NULL
+              AND DATE(cau.created_at) BETWEEN :date_from AND :date_to
+              {active_filter}
+            ORDER BY c.legal_name ASC, cau.authorized_name ASC
+            LIMIT 2000
+        """), params))
+        branch_label = await _customer_branch_label(session, warehouse_ids)
+    grouped: dict[str, dict] = {}
+    details = []
+    for row in detail_rows:
+        level = str(row.get("authorization_level") or "BASIC").upper()
+        amount = _money(row.get("max_purchase_amount"))
+        entry = grouped.setdefault(level, {"authorization_level": level, "authorization_label": _AUTH_LEVEL_LABELS.get(level, level), "count": 0, "active": 0, "max_purchase_amount": 0.0})
+        entry["count"] += 1
+        entry["active"] += 1 if row.get("is_active") else 0
+        entry["max_purchase_amount"] += amount
+        details.append({
+            "id": row.get("id"),
+            "customer_id": row.get("customer_id"),
+            "customer_name": _customer_display_name(row),
+            "customer_tax_id": row.get("tax_id") or "",
+            "authorized_name": row.get("authorized_name") or "",
+            "authorized_tax_id": row.get("authorized_tax_id") or "",
+            "position": row.get("position") or "",
+            "email": row.get("email") or "",
+            "phone": row.get("mobile") or row.get("phone") or "",
+            "is_primary_contact": bool(row.get("is_primary_contact")),
+            "authorization_level": level,
+            "authorization_label": _AUTH_LEVEL_LABELS.get(level, level),
+            "max_purchase_amount": amount,
+            "is_active": bool(row.get("is_active")),
+            "created_date": _customer_date_value(row.get("created_date")),
+        })
+    rows = sorted(grouped.values(), key=lambda item: item.get("count", 0), reverse=True)
+    totals = {"count": len(details), "active": sum(1 for row in details if row["is_active"]), "primary": sum(1 for row in details if row["is_primary_contact"]), "max_purchase_amount": sum(row["max_purchase_amount"] for row in details)}
+    return {"rows": rows, "detail_rows": details, "totals": totals, "branch_label": branch_label}
+
+
+async def _customers_geography_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], group_by: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    group_by = group_by if group_by in ("region", "city", "type", "status") else "region"
+    group_exprs = {
+        "region": "COALESCE(NULLIF(c.region, ''), 'Sin región')",
+        "city": "COALESCE(NULLIF(c.city, ''), 'Sin ciudad')",
+        "type": "COALESCE(c.customer_type, 'Sin tipo')",
+        "status": "COALESCE(ss.status_display_es, ss.status_name, ss.status_code, 'Sin estado')",
+    }
+    group_expr = group_exprs[group_by]
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    async with db_manager.get_async_session() as session:
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+              {group_expr} AS dimension,
+              COUNT(*) AS count,
+              SUM(CASE WHEN c.customer_type = 'COMPANY' THEN 1 ELSE 0 END) AS companies,
+              SUM(CASE WHEN c.customer_type = 'INDIVIDUAL' THEN 1 ELSE 0 END) AS individuals,
+              SUM(CASE WHEN COALESCE(c.is_credit_customer, 0) = 1 THEN 1 ELSE 0 END) AS credit_customers
+            FROM customers c
+            LEFT JOIN system_statuses ss ON ss.id = c.status_id
+            WHERE c.deleted_at IS NULL
+              AND c.registration_date BETWEEN :date_from AND :date_to
+            GROUP BY dimension
+            ORDER BY count DESC, dimension ASC
+            LIMIT 500
+        """), params))
+        detail_rows = _rows(await session.execute(text("""
+            SELECT
+              c.id AS customer_id,
+              c.customer_code,
+              c.tax_id,
+              c.legal_name,
+              c.commercial_name,
+              c.customer_type,
+              c.city,
+              c.region,
+              c.is_credit_customer,
+              c.registration_date,
+              COALESCE(ss.status_display_es, ss.status_name, ss.status_code, 'Sin estado') AS status_label
+            FROM customers c
+            LEFT JOIN system_statuses ss ON ss.id = c.status_id
+            WHERE c.deleted_at IS NULL
+              AND c.registration_date BETWEEN :date_from AND :date_to
+            ORDER BY c.registration_date ASC, c.legal_name ASC
+            LIMIT 2000
+        """), params))
+        branch_label = await _customer_branch_label(session, warehouse_ids)
+    rows = [{
+        "dimension": _CUSTOMER_TYPE_LABELS.get(row.get("dimension"), row.get("dimension") or "Sin dato"),
+        "count": int(row.get("count") or 0),
+        "companies": int(row.get("companies") or 0),
+        "individuals": int(row.get("individuals") or 0),
+        "credit_customers": int(row.get("credit_customers") or 0),
+    } for row in group_rows]
+    details = [{
+        "customer_id": row.get("customer_id"),
+        "customer_code": row.get("customer_code") or "",
+        "customer_name": _customer_display_name(row),
+        "tax_id": row.get("tax_id") or "",
+        "customer_type": _CUSTOMER_TYPE_LABELS.get(row.get("customer_type"), row.get("customer_type") or ""),
+        "city": row.get("city") or "Sin ciudad",
+        "region": row.get("region") or "Sin región",
+        "status_label": row.get("status_label") or "Sin estado",
+        "is_credit_customer": bool(row.get("is_credit_customer")),
+        "registration_date": _customer_date_value(row.get("registration_date")),
+    } for row in detail_rows]
+    totals = {"count": len(details), "companies": sum(1 for row in details if row["customer_type"] == "Empresa"), "individuals": sum(1 for row in details if row["customer_type"] == "Persona"), "credit_customers": sum(1 for row in details if row["is_credit_customer"])}
+    return {"rows": rows, "detail_rows": details, "totals": totals, "branch_label": branch_label}
+
+
+@router.get("/customers/ranking/data", response_class=JSONResponse)
+async def customers_ranking_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _customers_ranking_payload(date_from, date_to, selected_warehouse_ids))
+
+
+@router.get("/customers/credit-status/data", response_class=JSONResponse)
+async def customers_credit_status_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), risk_level: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _customers_credit_status_payload(date_from, date_to, selected_warehouse_ids, risk_level))
+
+
+@router.get("/customers/payment-history/data", response_class=JSONResponse)
+async def customers_payment_history_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), method_id: int | None = Query(None), status: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _customers_payment_history_payload(date_from, date_to, selected_warehouse_ids, method_id, status))
+
+
+@router.get("/customers/authorized-buyers/data", response_class=JSONResponse)
+async def customers_authorized_buyers_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), active: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _customers_authorized_buyers_payload(date_from, date_to, selected_warehouse_ids, active))
+
+
+@router.get("/customers/geography/data", response_class=JSONResponse)
+async def customers_geography_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), group_by: str = Query("region"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _customers_geography_payload(date_from, date_to, selected_warehouse_ids, group_by))
+
+
+async def _build_customers_context(report_kind: str, date_from_str: str, date_to_str: str, warehouse_id_str: str, filter_value: str, view_mode: str) -> dict:
+    start = date.fromisoformat(date_from_str)
+    end = date.fromisoformat(date_to_str)
+    warehouse_ids = [] if warehouse_id_str in ("all", "", "todas", None) else _parse_id_list(warehouse_id_str)
+    view_mode = view_mode if view_mode in ("detail", "grouped") else "detail"
+    if report_kind == "ranking":
+        title = "Clientes - ranking de clientes"
+        payload = await _customers_ranking_payload(start, end, warehouse_ids)
+        columns = [("sale_date", "Fecha", "left"), ("folio", "Folio", "left"), ("customer_name", "Cliente", "left"), ("warehouse_name", "Sucursal", "left"), ("total", "Total", "right")] if view_mode == "detail" else [("customer_name", "Cliente", "left"), ("txn_count", "Ventas", "right"), ("total", "Total", "right"), ("avg_ticket", "Ticket prom.", "right"), ("pct", "%", "right")]
+    elif report_kind == "credit_status":
+        title = "Clientes - estado de crédito"
+        payload = await _customers_credit_status_payload(start, end, warehouse_ids, filter_value)
+        columns = [("customer_name", "Cliente", "left"), ("tax_id", "RUT", "left"), ("risk_label", "Riesgo", "left"), ("credit_limit", "Límite", "right"), ("used_credit", "Usado", "right"), ("available_credit", "Disponible", "right")] if view_mode == "detail" else [("risk_label", "Riesgo", "left"), ("count", "Clientes", "right"), ("credit_limit", "Límite", "right"), ("used_credit", "Usado", "right"), ("available_credit", "Disponible", "right")]
+    elif report_kind == "payment_history":
+        title = "Clientes - historial de pagos"
+        method_id = int(filter_value) if str(filter_value or "").isdigit() else None
+        payload = await _customers_payment_history_payload(start, end, warehouse_ids, method_id, "all")
+        columns = [("payment_date", "Fecha", "left"), ("payment_code", "Pago", "left"), ("customer_name", "Cliente", "left"), ("payment_method_name", "Método", "left"), ("payment_amount", "Monto", "right"), ("allocated_amount", "Aplicado", "right")] if view_mode == "detail" else [("payment_method_name", "Método", "left"), ("count", "Pagos", "right"), ("total", "Total", "right"), ("allocated", "Aplicado", "right"), ("unallocated", "Sin aplicar", "right")]
+    elif report_kind == "authorized_buyers":
+        title = "Clientes - compradores autorizados"
+        payload = await _customers_authorized_buyers_payload(start, end, warehouse_ids, filter_value)
+        columns = [("customer_name", "Cliente", "left"), ("authorized_name", "Autorizado", "left"), ("authorized_tax_id", "RUT", "left"), ("authorization_label", "Nivel", "left"), ("max_purchase_amount", "Límite", "right"), ("is_active", "Activo", "left")] if view_mode == "detail" else [("authorization_label", "Nivel", "left"), ("count", "Personas", "right"), ("active", "Activas", "right"), ("max_purchase_amount", "Límite total", "right")]
+    else:
+        title = "Clientes - clientes por zona"
+        payload = await _customers_geography_payload(start, end, warehouse_ids, filter_value)
+        columns = [("registration_date", "Registro", "left"), ("customer_name", "Cliente", "left"), ("tax_id", "RUT", "left"), ("region", "Región", "left"), ("city", "Ciudad", "left"), ("customer_type", "Tipo", "left")] if view_mode == "detail" else [("dimension", "Dimensión", "left"), ("count", "Clientes", "right"), ("companies", "Empresas", "right"), ("individuals", "Personas", "right"), ("credit_customers", "Crédito", "right")]
+    rows = payload["detail_rows"] if view_mode == "detail" else payload["rows"]
+    for row in rows:
+        for key in ("total", "avg_ticket", "credit_limit", "used_credit", "available_credit", "payment_amount", "allocated_amount", "unallocated_amount", "allocated", "unallocated", "max_purchase_amount"):
+            if key in row:
+                row[key] = _clp(round(_money(row.get(key))))
+        if "is_active" in row:
+            row["is_active"] = "Sí" if row.get("is_active") else "No"
+    today_str = date.today().strftime("%d/%m/%Y")
+    period_label = f"{_fmt(date_from_str)} — {_fmt(date_to_str)}"
+    totals = payload.get("totals", {})
+    count = int(totals.get("count") or totals.get("client_count") or len(rows))
+    if report_kind in ("ranking", "payment_history"):
+        primary_label = "Total"
+        primary_value = _clp(round(_money(totals.get("total"))))
+    elif report_kind == "credit_status":
+        primary_label = "Crédito usado"
+        primary_value = _clp(round(_money(totals.get("used_credit"))))
+    else:
+        primary_label = "Registros"
+        primary_value = str(count)
+    partial_ctx = {
+        "COMPANY_NAME": "CeciChic", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
+        "BRANCH_LABEL": payload.get("branch_label") or "Todas las locaciones",
+        "TODAY": today_str, "FOOTER_NOTE": "Uso interno", "CURRENCY_LABEL": CURRENCY_LABEL,
+    }
+    meta_rows = (
+        f'<tr><td>Período</td><td>{period_label}</td></tr>'
+        f'<tr><td>Locación</td><td>{_escape(partial_ctx["BRANCH_LABEL"])}</td></tr>'
+        f'<tr><td>Vista</td><td>{"Detalle" if view_mode == "detail" else "Agrupada"}</td></tr>'
+        f'<tr><td>Moneda</td><td>{CURRENCY_LABEL}</td></tr>'
+        f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
+    )
+    return {
+        **partial_ctx,
+        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "REPORT_STATUS": "INFORME",
+        "COVER_TITLE": title.replace(" - ", "<br>"),
+        "COVER_SUBTITLE": "Reporte del módulo de clientes generado con datos reales del sistema.",
+        "META_ROWS": meta_rows,
+        "KPI_CARDS": (
+            f'<div class="kpi-card primary"><div class="kpi-label">{primary_label}</div><div class="kpi-value">{primary_value}</div><div class="kpi-hint">{period_label}</div></div>'
+            f'<div class="kpi-card info"><div class="kpi-label">Registros</div><div class="kpi-value">{count}</div><div class="kpi-hint">según filtros</div></div>'
+        ),
+        "EXECUTIVE_NOTE": f"Reporte {title} para {partial_ctx['BRANCH_LABEL']} durante {period_label}.",
+        "CHART_PAGE": "",
+        "DETAIL_PAGES": _simple_petty_cash_pages(rows, columns, title, partial_ctx),
+    }
+
+
+async def _customers_pdf(report_kind: str, date_from: str, date_to: str, warehouse_id: str, filter_value: str, view_mode: str, chart_bar: Optional[UploadFile]) -> Response:
+    try:
+        ctx = await _build_customers_context(report_kind, date_from, date_to, warehouse_id, filter_value, view_mode)
+        if chart_bar:
+            raw = await chart_bar.read()
+            if raw:
+                b64 = base64.b64encode(raw).decode()
+                chart_page = (
+                    '<section class="report-page">{{> _page_header}}'
+                    '<div class="section-heading"><div class="section-label">Gráfico</div>'
+                    f'<h2 class="section-title">{_escape(ctx.get("REPORT_TITLE", "Clientes"))}</h2></div>'
+                    '<div class="chart-card no-break"><div class="chart-section" style="min-height:0">'
+                    f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
+                    '</div></div>{{> _page_footer}}</section>'
+                )
+                chart_page = _resolve_partials(chart_page)
+                for key, value in ctx.items():
+                    chart_page = chart_page.replace(f"{{{{{key}}}}}", str(value))
+                ctx["CHART_PAGE"] = chart_page
+        html_out = _render("petty_cash_detail.html", ctx)
+        loop = asyncio.get_event_loop()
+        pdf_bytes = await loop.run_in_executor(None, _call_gotenberg_sync, html_out.encode("utf-8"), settings.GOTENBERG_URL)
+    except Exception as exc:
+        logger.error("Error generando PDF clientes %s: %s", report_kind, exc)
+        return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
+    filename = f"clientes-{report_kind}_{date_from}_{date_to}.pdf"
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+@router.post("/customers/ranking/pdf", response_class=Response)
+async def customers_ranking_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _customers_pdf("ranking", date_from, date_to, warehouse_id, "all", view_mode, chart_bar)
+
+
+@router.post("/customers/credit-status/pdf", response_class=Response)
+async def customers_credit_status_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), risk_level: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _customers_pdf("credit_status", date_from, date_to, warehouse_id, risk_level, view_mode, chart_bar)
+
+
+@router.post("/customers/payment-history/pdf", response_class=Response)
+async def customers_payment_history_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), method_id: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _customers_pdf("payment_history", date_from, date_to, warehouse_id, method_id, view_mode, chart_bar)
+
+
+@router.post("/customers/authorized-buyers/pdf", response_class=Response)
+async def customers_authorized_buyers_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), active: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _customers_pdf("authorized_buyers", date_from, date_to, warehouse_id, active, view_mode, chart_bar)
+
+
+@router.post("/customers/geography/pdf", response_class=Response)
+async def customers_geography_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), group_by: str = Form("region"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _customers_pdf("geography", date_from, date_to, warehouse_id, group_by, view_mode, chart_bar)
+
+
 # ─── Seller ranking data ──────────────────────────────────────────────────────
 
 _SLR_ROWS_FIRST = 24
