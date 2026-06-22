@@ -2631,7 +2631,7 @@ async def customer_sales_data(
         group_rows = _rows(await session.execute(text(f"""
             SELECT
                 sd.customer_id,
-                ANY_VALUE(sd.customer_snapshot)       AS customer_snapshot,
+                sd.customer_snapshot,
                 COUNT(DISTINCT sd.id)                 AS txn_count,
                 ROUND(SUM(sd.total_amount), 0)        AS total
             FROM sale_documents sd
@@ -2757,7 +2757,7 @@ async def _build_customer_context(
         group_rows = _rows(await session.execute(text(f"""
             SELECT
                 sd.customer_id,
-                ANY_VALUE(sd.customer_snapshot) AS customer_snapshot,
+                sd.customer_snapshot,
                 COUNT(DISTINCT sd.id)           AS txn_count,
                 ROUND(SUM(sd.total_amount), 0)  AS total
             FROM sale_documents sd
@@ -3015,6 +3015,429 @@ async def customer_sales_pdf(
         )
     except Exception as exc:
         logger.error("Gotenberg error client_sales: %s", exc)
+        return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+# ─── Seller ranking data ──────────────────────────────────────────────────────
+
+_SLR_ROWS_FIRST = 24
+_SLR_ROWS_REST  = 28
+
+
+@router.get("/sales/seller-ranking/data", response_class=JSONResponse)
+async def seller_ranking_data(
+    date_from:     date       = Query(...),
+    date_to:       date       = Query(...),
+    warehouse_id:  int | None = Query(None),
+    warehouse_ids: str | None = Query(None),
+    user:          dict       = Depends(get_current_user),
+):
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    params: dict = {"date_from": date_from, "date_to": date_to}
+    warehouse_filters: list[str] = []
+    _append_in_filter(warehouse_filters, params, "sd.warehouse_id", selected_warehouse_ids, "warehouse_id")
+    warehouse_clause = f"AND {' AND '.join(warehouse_filters)}" if warehouse_filters else ""
+
+    async with db_manager.get_async_session() as session:
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+                sd.closed_by_user_id                                        AS seller_id,
+                COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Sin vendedor') AS seller_name,
+                COUNT(DISTINCT sd.id)                                       AS txn_count,
+                ROUND(SUM(sd.total_amount), 0)                              AS total
+            FROM sale_documents sd
+            LEFT JOIN users u ON u.id = sd.closed_by_user_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            GROUP BY sd.closed_by_user_id, u.first_name, u.last_name
+            ORDER BY total DESC
+        """), params))
+
+        total_row = _row(await session.execute(text(f"""
+            SELECT
+                COUNT(DISTINCT sd.id)                  AS txn_count,
+                ROUND(SUM(sd.total_amount), 0)         AS total,
+                COUNT(DISTINCT sd.closed_by_user_id)   AS seller_count
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+        """), params))
+
+        detail_db = _rows(await session.execute(text(f"""
+            SELECT
+                sd.sale_code,
+                COALESCE(sd.ticket_number, sd.sale_code)                    AS folio,
+                sd.closed_by_user_id                                        AS seller_id,
+                COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Sin vendedor') AS seller_name,
+                DATE(COALESCE(sd.updated_at, sd.created_at))                AS sale_date,
+                COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+                sd.payment_method_name,
+                ROUND(sd.total_amount, 0)                                   AS total
+            FROM sale_documents sd
+            LEFT JOIN users u ON u.id = sd.closed_by_user_id
+            LEFT JOIN warehouses w ON w.id = sd.warehouse_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            ORDER BY sale_date ASC, sd.id ASC
+            LIMIT 2000
+        """), params))
+
+    grand_total = _money(total_row.get("total", 0))
+    rows_out: list[dict] = []
+    for r in group_rows:
+        total_v = _money(r["total"])
+        txn_v   = int(r.get("txn_count") or 0)
+        rows_out.append({
+            "seller_id":   r.get("seller_id"),
+            "seller_name": r.get("seller_name") or "Sin vendedor",
+            "txn_count":   txn_v,
+            "total":       total_v,
+            "avg_ticket":  round(total_v / txn_v) if txn_v > 0 else 0,
+            "pct":         round(total_v / grand_total * 100, 1) if grand_total > 0 else 0.0,
+        })
+
+    detail_rows_out = [
+        {
+            "sale_code":           r.get("sale_code"),
+            "folio":               r.get("folio") or "",
+            "seller_id":           r.get("seller_id"),
+            "seller_name":         r.get("seller_name") or "Sin vendedor",
+            "sale_date":           r["sale_date"].isoformat() if r.get("sale_date") and not isinstance(r["sale_date"], str) else (r.get("sale_date") or ""),
+            "warehouse_name":      r.get("warehouse_name") or "",
+            "payment_method_name": r.get("payment_method_name") or "",
+            "total":               _money(r.get("total")),
+        }
+        for r in detail_db
+    ]
+
+    return JSONResponse({
+        "rows":        rows_out,
+        "detail_rows": detail_rows_out,
+        "totals": {
+            "total":        grand_total,
+            "txn_count":    int(total_row.get("txn_count") or 0),
+            "seller_count": int(total_row.get("seller_count") or 0),
+        },
+    })
+
+
+# ─── Seller ranking PDF ───────────────────────────────────────────────────────
+
+async def _build_seller_context(
+    date_from: str, date_to: str,
+    warehouse_id_str: str,
+) -> dict:
+    warehouse_ids = [] if warehouse_id_str in ("all", "", "todas", None) else _parse_id_list(warehouse_id_str)
+    start         = date.fromisoformat(date_from)
+    end           = date.fromisoformat(date_to)
+    duration      = (end - start).days + 1
+    today_str     = date.today().strftime("%d/%m/%Y")
+    period_label  = f"{_fmt(date_from)} — {_fmt(date_to)}"
+
+    params: dict = {"date_from": start, "date_to": end}
+    warehouse_filters: list[str] = []
+    _append_in_filter(warehouse_filters, params, "sd.warehouse_id", warehouse_ids, "warehouse_id")
+    warehouse_clause = f"AND {' AND '.join(warehouse_filters)}" if warehouse_filters else ""
+
+    async with db_manager.get_async_session() as session:
+        if warehouse_ids:
+            lp: dict = {}
+            lf: list[str] = []
+            _append_in_filter(lf, lp, "id", warehouse_ids, "wid")
+            wh_rows = _rows(await session.execute(
+                text(f"SELECT warehouse_name FROM warehouses WHERE {' AND '.join(lf)} ORDER BY warehouse_name"),
+                lp,
+            ))
+            branch_label = ", ".join(f"Sucursal {w['warehouse_name']}" for w in wh_rows) or "Locaciones seleccionadas"
+        else:
+            branch_label = "Todas las locaciones"
+
+        group_rows = _rows(await session.execute(text(f"""
+            SELECT
+                sd.closed_by_user_id                                        AS seller_id,
+                COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Sin vendedor') AS seller_name,
+                COUNT(DISTINCT sd.id)                                       AS txn_count,
+                ROUND(SUM(sd.total_amount), 0)                              AS total
+            FROM sale_documents sd
+            LEFT JOIN users u ON u.id = sd.closed_by_user_id
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+            GROUP BY sd.closed_by_user_id, u.first_name, u.last_name
+            ORDER BY total DESC
+        """), params))
+
+        total_row = _row(await session.execute(text(f"""
+            SELECT
+                COUNT(DISTINCT sd.id)          AS txn_count,
+                ROUND(SUM(sd.total_amount), 0) AS total
+            FROM sale_documents sd
+            WHERE sd.deleted_at IS NULL
+              AND sd.status = 'CLOSED'
+              AND sd.document_type_code NOT IN ('RETURN_TICKET', 'EXCHANGE_DRAFT')
+              AND sd.total_amount > 0
+              AND DATE(COALESCE(sd.updated_at, sd.created_at)) BETWEEN :date_from AND :date_to
+              {warehouse_clause}
+        """), params))
+
+    grand_total = _money(total_row.get("total", 0))
+    total_txn   = int(total_row.get("txn_count") or 0)
+    avg_ticket  = round(grand_total / total_txn) if total_txn > 0 else 0
+
+    rows: list[dict] = []
+    for r in group_rows:
+        tv  = _money(r["total"])
+        txn = int(r.get("txn_count") or 0)
+        rows.append({
+            "seller_name": r.get("seller_name") or "Sin vendedor",
+            "txn_count":   txn,
+            "total":       tv,
+            "avg_ticket":  round(tv / txn) if txn > 0 else 0,
+            "pct":         round(tv / grand_total * 100, 1) if grand_total > 0 else 0.0,
+        })
+
+    top_name = rows[0]["seller_name"] if rows else "—"
+
+    meta_rows = (
+        f'<tr><td>Período</td><td>{period_label}</td></tr>'
+        f'<tr><td>Locación</td><td>{branch_label}</td></tr>'
+        f'<tr><td>Total de días</td><td>{duration} días</td></tr>'
+        f'<tr><td>Moneda</td><td>{CURRENCY_LABEL}</td></tr>'
+        f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
+    )
+
+    kpi_specs = [
+        ("primary", "Total período",      _clp(round(grand_total)), f"en {duration} días"),
+        ("info",    "Vendedores activos", str(len(rows)),           "con ventas en el período"),
+        ("info",    "Transacciones",      str(total_txn),           "documentos de venta"),
+        ("primary", "Ticket promedio",    _clp(avg_ticket),         "por transacción"),
+        ("warning", "Vendedor líder",     top_name,                 _clp(round(_money(group_rows[0]["total"]))) if group_rows else "—"),
+        ("info",    "Ticket prom. líder", _clp(round(_money(group_rows[0]["total"]) / max(int(group_rows[0]["txn_count"]), 1))) if group_rows else "—",
+                    f"{int(group_rows[0]['txn_count']) if group_rows else 0} transacciones"),
+    ]
+    kpi_cards = "".join(
+        f'<div class="kpi-card {v}"><div class="kpi-label">{lbl}</div>'
+        f'<div class="kpi-value">{val}</div><div class="kpi-hint">{hint}</div></div>'
+        for v, lbl, val, hint in kpi_specs
+    )
+
+    executive_note = (
+        f"Durante el período {period_label} se registraron {total_txn} transacciones "
+        f"de ventas para {branch_label}, con un total de {_clp(round(grand_total))}. "
+        f"Participaron {len(rows)} vendedor{'es' if len(rows) != 1 else ''} en el período. "
+        f"El vendedor con mayor facturación fue <strong>{top_name}</strong>."
+    )
+
+    ctx: dict = {
+        "COMPANY_NAME":   "CeciChic",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "REPORT_STATUS":  "INFORME",
+        "REPORT_TITLE":   "Ranking de vendedores",
+        "COVER_TITLE":    "Ranking de<br>Vendedores",
+        "COVER_SUBTITLE": (
+            "Clasificaci&oacute;n de vendedores por monto total de ventas. "
+            "Identifica los vendedores m&aacute;s productivos por facturaci&oacute;n, "
+            "transacciones y ticket promedio."
+        ),
+        "CURRENCY_LABEL": CURRENCY_LABEL,
+        "FOOTER_NOTE":    "Uso interno",
+        "PERIOD_LABEL":   period_label,
+        "BRANCH_LABEL":   branch_label,
+        "TODAY":          today_str,
+        "TOTAL_DAYS":     str(duration),
+        "META_ROWS":      meta_rows,
+        "KPI_CARDS":      kpi_cards,
+        "EXECUTIVE_NOTE": executive_note,
+        "CHART_PAGE":     "",
+        "DETAIL_PAGES":   _build_seller_table_pages(rows, grand_total, {
+            "COMPANY_NAME":   "CeciChic",
+            "REPORT_TITLE":   "Ranking de vendedores",
+            "PERIOD_LABEL":   period_label,
+            "BRANCH_LABEL":   branch_label,
+            "TODAY":          today_str,
+            "FOOTER_NOTE":    "Uso interno",
+            "CURRENCY_LABEL": CURRENCY_LABEL,
+        }),
+    }
+    return ctx
+
+
+def _build_seller_table_pages(rows: list[dict], grand_total: float, ctx: dict) -> str:
+    def _partial(name: str) -> str:
+        path    = os.path.join(_PARTIALS_DIR, f"{name}.html")
+        content = _load_file(path)
+        for k, v in ctx.items():
+            content = content.replace(f"{{{{{k}}}}}", str(v))
+        return content
+
+    page_hdr = _partial("_page_header")
+    page_ftr = _partial("_page_footer")
+
+    chunks: list[list[dict]] = []
+    if not rows:
+        chunks = [[]]
+    elif len(rows) <= _SLR_ROWS_FIRST:
+        chunks = [rows]
+    else:
+        chunks.append(rows[:_SLR_ROWS_FIRST])
+        rest = rows[_SLR_ROWS_FIRST:]
+        while rest:
+            chunks.append(rest[:_SLR_ROWS_REST])
+            rest = rest[_SLR_ROWS_REST:]
+
+    pages = []
+    for page_idx, chunk in enumerate(chunks):
+        section_html = ""
+        if page_idx == 0:
+            section_html = (
+                '<div class="section-heading">'
+                '<div class="section-label">Clasificación</div>'
+                '<h2 class="section-title">Ranking de vendedores</h2>'
+                '</div>'
+            )
+
+        base_idx = sum(len(chunks[j]) for j in range(page_idx))
+
+        if chunk:
+            tbody = "".join(
+                '<tr>'
+                f'<td style="text-align:center;font-size:{"14" if (base_idx + i) < 3 else "10"}px">'
+                f'{"🥇🥈🥉"[base_idx + i] if (base_idx + i) < 3 else str(base_idx + i + 1)}</td>'
+                f'<td style="font-weight:{"700" if (base_idx + i) == 0 else "normal"}">{r["seller_name"]}</td>'
+                f'<td style="text-align:right">{r["txn_count"]:,}</td>'
+                f'<td style="text-align:right;font-weight:600">{_clp(round(r["total"]))}</td>'
+                f'<td style="text-align:right">{r["pct"]:.1f}%</td>'
+                f'<td style="text-align:right">{_clp(round(r["avg_ticket"]))}</td>'
+                '</tr>'
+                for i, r in enumerate(chunk)
+            )
+        else:
+            tbody = (
+                '<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8">'
+                'Sin ventas para los filtros seleccionados'
+                '</td></tr>'
+            )
+
+        tfoot = ""
+        if page_idx == len(chunks) - 1 and rows:
+            tfoot = (
+                '<tfoot><tr style="background:#0f172a;color:white;font-weight:700">'
+                '<td style="padding:6px 8px"></td>'
+                '<td style="padding:6px 8px;font-size:9px">TOTAL PERÍODO</td>'
+                f'<td style="text-align:right;padding:6px 8px">{sum(r["txn_count"] for r in rows):,}</td>'
+                f'<td style="text-align:right;padding:6px 8px">{_clp(round(grand_total))}</td>'
+                '<td style="text-align:right;padding:6px 8px">100%</td>'
+                '<td style="padding:6px 8px"></td>'
+                '</tr></tfoot>'
+            )
+
+        pages.append(
+            '<section class="report-page">'
+            f'{page_hdr}'
+            f'{section_html}'
+            '<table class="detail-table">'
+            '<colgroup>'
+            '<col style="width:6%"><col style="width:34%"><col style="width:12%">'
+            '<col style="width:20%"><col style="width:12%"><col style="width:16%">'
+            '</colgroup>'
+            '<thead><tr>'
+            '<th>#</th>'
+            '<th>Vendedor</th>'
+            '<th style="text-align:right">Transacciones</th>'
+            '<th style="text-align:right">Total</th>'
+            '<th style="text-align:right">% total</th>'
+            '<th style="text-align:right">Ticket prom.</th>'
+            '</tr></thead>'
+            f'<tbody>{tbody}</tbody>{tfoot}'
+            '</table>'
+            f'{page_ftr}'
+            '</section>'
+        )
+
+    return "\n".join(pages)
+
+
+@router.post("/sales/seller-ranking/pdf", response_class=Response)
+async def seller_ranking_pdf(
+    date_from:    str                  = Form(...),
+    date_to:      str                  = Form(...),
+    warehouse_id: str                  = Form("all"),
+    chart_bar:    Optional[UploadFile] = File(None),
+    user:         dict                 = Depends(get_current_user),
+):
+    async def _chart_card(file, title) -> str:
+        if not file:
+            return ""
+        raw = await file.read()
+        if not raw:
+            return ""
+        b64 = base64.b64encode(raw).decode()
+        return (
+            '<div class="chart-card no-break">'
+            f'<div class="chart-header"><div class="chart-header-title">{title}</div></div>'
+            '<div class="chart-section" style="min-height:0">'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
+            '</div></div>'
+        )
+
+    chart_bar_card = await _chart_card(chart_bar, "Ranking por monto total de ventas")
+
+    try:
+        ctx = await _build_seller_context(date_from, date_to, warehouse_id)
+        if chart_bar_card:
+            chart_page = (
+                '<section class="report-page">'
+                '{{> _page_header}}'
+                '<div class="section-heading">'
+                '<div class="section-label">Gráfico</div>'
+                '<h2 class="section-title">Ranking de vendedores</h2>'
+                '</div>'
+                f'{chart_bar_card}'
+                '{{> _page_footer}}'
+                '</section>'
+            )
+            chart_page = _resolve_partials(chart_page)
+            for key, value in ctx.items():
+                chart_page = chart_page.replace(f"{{{{{key}}}}}", str(value))
+            ctx["CHART_PAGE"] = chart_page
+        html = _render("seller_ranking.html", ctx)
+    except Exception as exc:
+        logger.error("Error preparando template seller_ranking: %s", exc)
+        return JSONResponse({"error": "Error preparando reporte", "detail": str(exc)}, status_code=500)
+
+    filename = f"ranking-vendedores_{date_from}_{date_to}.pdf"
+
+    try:
+        loop      = asyncio.get_event_loop()
+        pdf_bytes = await loop.run_in_executor(
+            None, _call_gotenberg_sync, html.encode("utf-8"), settings.GOTENBERG_URL
+        )
+    except Exception as exc:
+        logger.error("Gotenberg error seller_ranking: %s", exc)
         return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
 
     return Response(
