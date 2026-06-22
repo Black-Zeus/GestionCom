@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowLeft, BarChart2, CheckCircle, Clock, FileText, XCir
 import ReactApexChart from 'react-apexcharts';
 import ReportLayout from '@/components/common/navigation/ReportLayout';
 import { agreementsService } from '@/services/sales/agreementsService';
-import { buildCsvBlobUrl } from '@/utils/exportFile';
+import { buildCsvBlobUrl, buildXlsxBlobUrl } from '@/utils/exportFile';
 
 const money = (v) => Number(v || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const fmtDate = (iso) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL') : '—');
@@ -14,6 +14,7 @@ const addDays = (iso, n) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d
 const diffDays = (from, to) => Math.round((new Date(`${to}T00:00:00`) - new Date(`${from}T00:00:00`)) / (1000 * 60 * 60 * 24));
 const CURRENCY_LABEL = 'Peso chileno (CLP)';
 const CHART_ID = 'agreements-validity-chart';
+const XLSX_SHEET = 'Vigencia convenios';
 
 const Th = ({ children, right }) => <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : 'text-left'}`}>{children}</th>;
 const Td = ({ children, right, muted }) => <td className={`py-2.5 px-3 first:pl-0 last:pr-0 text-sm ${right ? 'text-right tabular-nums' : ''} ${muted ? 'text-slate-400' : ''}`}>{children}</td>;
@@ -76,12 +77,21 @@ const SECTIONS = [
   { key: 'inactive', title: 'Inactivos', icon: Clock, iconCls: 'text-slate-400', emptyMsg: 'No hay convenios inactivos.' },
 ];
 
+const statusLabel = (a, today, soonLimit) => {
+  if (!a.is_active) return 'Inactivo';
+  if (!a.valid_to) return 'Activo y vigente';
+  if (a.valid_to < today) return 'Vencido';
+  if (a.valid_to <= soonLimit) return 'Próximo a vencer';
+  return 'Activo y vigente';
+};
+
 const AgreementValidity = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const isDark = document.documentElement.classList.contains('dark');
   const [agreements, setAgreements] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('grouped');
 
   const loadAgreements = async () => {
     setLoading(true);
@@ -122,14 +132,20 @@ const AgreementValidity = () => {
     data: [groups.activeAll?.length || 0, groups.expiringSoon?.length || 0, groups.expired?.length || 0, groups.inactive?.length || 0],
   }];
 
-  const handleCsvExport = () => {
-    const headers = ['Convenio', 'Empresa', 'Tipo', 'Estado', `Monto beneficio ${CURRENCY_LABEL}`, `Consumido ${CURRENCY_LABEL}`, 'Vigencia desde', 'Vigencia hasta', 'Días restantes'];
-    const data = agreements.map((a) => {
-      const days = a.valid_to ? diffDays(today, a.valid_to) : null;
-      return [a.agreement_name, a.company_name, a.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito', a.is_active ? 'Activo' : 'Inactivo', a.benefit_amount || 0, a.consumed_amount || 0, a.valid_from || '', a.valid_to || '', days !== null ? days : 'Sin vencimiento'];
-    });
-    return buildCsvBlobUrl(headers, data, { metadataRows: [['Reporte', 'Vigencia de convenios'], ['Generado el', new Date().toLocaleString('es-CL')]] });
-  };
+  const exportHeaders = ['Convenio', 'Código', 'Empresa', 'Tipo', 'Estado', `Monto beneficio ${CURRENCY_LABEL}`, `Consumido ${CURRENCY_LABEL}`, 'Vigencia desde', 'Vigencia hasta', 'Días restantes'];
+  const exportData = () => agreements.map((a) => {
+    const days = a.valid_to ? diffDays(today, a.valid_to) : null;
+    return [a.agreement_name, a.agreement_code, a.company_name, a.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito', statusLabel(a, today, soonLimit), a.benefit_amount || 0, a.consumed_amount || 0, a.valid_from || '', a.valid_to || '', days !== null ? days : 'Sin vencimiento'];
+  });
+  const metadataRows = () => [['Reporte', 'Vigencia de convenios'], ['Vista', viewMode === 'grouped' ? 'Por vigencia' : 'Detalle'], ['Generado el', new Date().toLocaleString('es-CL')]];
+
+  const handleCsvExport = () => buildCsvBlobUrl(exportHeaders, exportData(), { metadataRows: metadataRows() });
+  const handleXlsxExport = () => buildXlsxBlobUrl(exportHeaders, exportData(), XLSX_SHEET, { metadataRows: metadataRows() });
+
+  const detailRows = useMemo(() => [...agreements].sort((a, b) => {
+    const order = { 'Próximo a vencer': 0, 'Vencido': 1, 'Activo y vigente': 2, 'Inactivo': 3 };
+    return (order[statusLabel(a, today, soonLimit)] ?? 9) - (order[statusLabel(b, today, soonLimit)] ?? 9);
+  }), [agreements, today, soonLimit]);
 
   return (
     <ReportLayout
@@ -154,15 +170,20 @@ const AgreementValidity = () => {
           ? <ReactApexChart options={chartOptions} series={chartSeries} type="bar" height={260} />
           : <div className="flex h-40 items-center justify-center text-sm text-slate-400">Sin datos</div>,
       }]}
-      tableTitle="Convenios por vigencia"
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      viewModeOptions={[{ id: 'grouped', label: 'Por vigencia' }, { id: 'detail', label: 'Detalle' }]}
+      tableTitle={viewMode === 'grouped' ? 'Convenios por vigencia' : 'Todos los convenios'}
       tableSubtitle={loading ? 'Cargando...' : `${agreements.length} convenios`}
       tableIcon={FileText}
       onExportCsv={handleCsvExport}
+      onExportExcel={handleXlsxExport}
       csvFilename="vigencia-convenios.csv"
+      excelFilename="vigencia-convenios.xlsx"
     >
       {loading ? (
         <div className="flex items-center justify-center py-16 text-sm text-slate-400">Cargando datos...</div>
-      ) : (
+      ) : viewMode === 'grouped' ? (
         <div className="space-y-4">
           {SECTIONS.map((section) => (
             <SectionCard
@@ -175,6 +196,44 @@ const AgreementValidity = () => {
               emptyMsg={section.emptyMsg}
             />
           ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          {detailRows.length === 0 ? (
+            <div className="py-16 text-center text-sm text-slate-400">Sin convenios registrados.</div>
+          ) : (
+            <table className="w-full min-w-max">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800">
+                  <Th>Convenio</Th><Th>Empresa</Th><Th>Tipo</Th><Th>Estado</Th><Th right>Monto beneficio</Th><Th right>Consumido</Th><Th>Vigencia hasta</Th><Th>Días restantes</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+                {detailRows.map((a) => (
+                  <tr key={a.id}>
+                    <Td><p className="font-medium">{a.agreement_name}</p><p className="text-xs text-slate-400">{a.agreement_code}</p></Td>
+                    <Td muted>{a.company_name}</Td>
+                    <Td>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${a.agreement_type === 'CREDIT' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
+                        {a.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito'}
+                      </span>
+                    </Td>
+                    <Td>
+                      {(() => {
+                        const s = statusLabel(a, today, soonLimit);
+                        const cls = s === 'Activo y vigente' ? 'text-emerald-600 dark:text-emerald-400' : s === 'Próximo a vencer' ? 'text-amber-600 dark:text-amber-400' : s === 'Vencido' ? 'text-red-500' : 'text-slate-400';
+                        return <span className={`text-xs font-medium ${cls}`}>{s}</span>;
+                      })()}
+                    </Td>
+                    <Td right>{money(a.benefit_amount || 0)}</Td>
+                    <Td right muted>{money(a.consumed_amount || 0)}</Td>
+                    <Td muted><span className="text-xs">{fmtDate(a.valid_to)}</span></Td>
+                    <Td><DaysLeftCell validTo={a.valid_to} today={today} /></Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </ReportLayout>

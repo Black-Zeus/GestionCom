@@ -6,11 +6,12 @@ import ReactApexChart from 'react-apexcharts';
 import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
 import ReportLayout from '@/components/common/navigation/ReportLayout';
 import { agreementsService } from '@/services/sales/agreementsService';
-import { buildCsvBlobUrl } from '@/utils/exportFile';
+import { buildCsvBlobUrl, buildXlsxBlobUrl } from '@/utils/exportFile';
 
 const money = (v) => (v != null ? Number(v).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }) : '—');
 const CURRENCY_LABEL = 'Peso chileno (CLP)';
 const CHART_ID = 'agreements-beneficiaries-chart';
+const XLSX_SHEET = 'Beneficiarios convenio';
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'Todos los estados' },
@@ -30,6 +31,7 @@ const AgreementBeneficiaries = () => {
   const [selectedId, setSelectedId] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState('detail');
 
   useEffect(() => { agreementsService.list().then(setAgreements).catch(() => {}); }, []);
 
@@ -48,6 +50,18 @@ const AgreementBeneficiaries = () => {
     if (statusFilter === 'inactive' && b.is_active) return false;
     return true;
   }), [beneficiaries, statusFilter]);
+
+  const groupedRows = useMemo(() => {
+    const map = {};
+    for (const b of rows) {
+      const key = b.identifier_type || 'Sin tipo';
+      if (!map[key]) map[key] = { type: key, count: 0, active: 0, withUsage: 0 };
+      map[key].count++;
+      if (b.is_active) map[key].active++;
+      if (Number(b.interactions_count || 0) > 0) map[key].withUsage++;
+    }
+    return Object.values(map).sort((a, b) => b.count - a.count);
+  }, [rows]);
 
   const totals = useMemo(() => ({
     count: rows.length,
@@ -72,11 +86,17 @@ const AgreementBeneficiaries = () => {
 
   const chartSeries = [{ name: 'Beneficiarios', data: [totals.active, totals.count - totals.active, totals.withUsage, totals.withoutUsage] }];
 
-  const handleCsvExport = () => {
-    const headers = ['Nombre', 'Identificador', 'Tipo ID', `Beneficio individual ${CURRENCY_LABEL}`, 'Usos registrados', 'Estado'];
-    const data = rows.map((b) => [b.beneficiary_name, b.beneficiary_identifier, b.identifier_type, b.benefit_amount != null ? Number(b.benefit_amount) : '', b.interactions_count || 0, b.is_active ? 'Activo' : 'Inactivo']);
-    return buildCsvBlobUrl(headers, data, { metadataRows: [['Reporte', 'Beneficiarios por convenio'], ['Convenio', selectedAgreement?.agreement_name || ''], ['Generado el', new Date().toLocaleString('es-CL')]] });
-  };
+  const detailHeaders = ['Nombre', 'Identificador', 'Tipo ID', `Beneficio individual ${CURRENCY_LABEL}`, 'Usos registrados', 'Estado'];
+  const detailData = () => rows.map((b) => [b.beneficiary_name, b.beneficiary_identifier, b.identifier_type, b.benefit_amount != null ? Number(b.benefit_amount) : '', b.interactions_count || 0, b.is_active ? 'Activo' : 'Inactivo']);
+  const groupedHeaders = ['Tipo de identificador', 'Total', 'Activos', 'Con usos'];
+  const groupedData = () => groupedRows.map((g) => [g.type, g.count, g.active, g.withUsage]);
+
+  const metadataRows = () => [['Reporte', 'Beneficiarios por convenio'], ['Convenio', selectedAgreement?.agreement_name || ''], ['Vista', viewMode === 'detail' ? 'Detalle' : 'Por tipo ID'], ['Generado el', new Date().toLocaleString('es-CL')]];
+
+  const handleCsvExport = () => buildCsvBlobUrl(viewMode === 'detail' ? detailHeaders : groupedHeaders, viewMode === 'detail' ? detailData() : groupedData(), { metadataRows: metadataRows() });
+  const handleXlsxExport = () => buildXlsxBlobUrl(viewMode === 'detail' ? detailHeaders : groupedHeaders, viewMode === 'detail' ? detailData() : groupedData(), XLSX_SHEET, { metadataRows: metadataRows() });
+
+  const currentRows = viewMode === 'detail' ? rows : groupedRows;
 
   return (
     <ReportLayout
@@ -113,11 +133,16 @@ const AgreementBeneficiaries = () => {
           ? <ReactApexChart options={chartOptions} series={chartSeries} type="bar" height={260} />
           : <div className="flex h-40 items-center justify-center text-sm text-slate-400">{selectedId ? 'Sin beneficiarios registrados' : 'Selecciona un convenio para ver la distribución'}</div>,
       }]}
-      tableTitle="Beneficiarios"
-      tableSubtitle={selectedId ? (loading ? 'Cargando...' : `${rows.length} registros`) : undefined}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      viewModeOptions={[{ id: 'detail', label: 'Detalle' }, { id: 'grouped', label: 'Por tipo ID' }]}
+      tableTitle={viewMode === 'detail' ? 'Beneficiarios' : 'Agrupado por tipo de identificador'}
+      tableSubtitle={selectedId ? (loading ? 'Cargando...' : `${currentRows.length} registros`) : undefined}
       tableIcon={Users}
       onExportCsv={selectedId ? handleCsvExport : undefined}
+      onExportExcel={selectedId ? handleXlsxExport : undefined}
       csvFilename={`beneficiarios-${selectedAgreement?.agreement_name || 'convenio'}.csv`}
+      excelFilename={`beneficiarios-${selectedAgreement?.agreement_name || 'convenio'}.xlsx`}
     >
       <div className="overflow-x-auto">
         {!selectedId ? (
@@ -127,15 +152,11 @@ const AgreementBeneficiaries = () => {
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center py-16 text-sm text-slate-400">Cargando datos...</div>
-        ) : rows.length === 0 ? (
+        ) : currentRows.length === 0 ? (
           <div className="py-16 text-center text-sm text-slate-400">Este convenio no tiene beneficiarios registrados.</div>
-        ) : (
+        ) : viewMode === 'detail' ? (
           <table className="w-full min-w-max">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800">
-                <Th>Nombre</Th><Th>Identificador</Th><Th>Tipo ID</Th><Th right>Beneficio individual</Th><Th right>Usos</Th><Th>Estado</Th>
-              </tr>
-            </thead>
+            <thead><tr className="border-b border-slate-100 dark:border-slate-800"><Th>Nombre</Th><Th>Identificador</Th><Th>Tipo ID</Th><Th right>Beneficio individual</Th><Th right>Usos</Th><Th>Estado</Th></tr></thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
               {rows.map((b) => (
                 <tr key={b.id}>
@@ -148,11 +169,21 @@ const AgreementBeneficiaries = () => {
                       ? <span className="font-semibold text-teal-600 dark:text-teal-400">{b.interactions_count}</span>
                       : <span className="text-slate-300 dark:text-slate-600">0</span>}
                   </Td>
-                  <Td>
-                    {b.is_active
-                      ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Activo</span>
-                      : <span className="text-xs font-medium text-slate-400">Inactivo</span>}
-                  </Td>
+                  <Td>{b.is_active ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Activo</span> : <span className="text-xs font-medium text-slate-400">Inactivo</span>}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full min-w-[500px]">
+            <thead><tr className="border-b border-slate-100 dark:border-slate-800"><Th>Tipo de identificador</Th><Th right>Total</Th><Th right>Activos</Th><Th right>Con usos</Th></tr></thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              {groupedRows.map((g) => (
+                <tr key={g.type}>
+                  <Td bold>{g.type}</Td>
+                  <Td right muted>{g.count}</Td>
+                  <Td right muted>{g.active}</Td>
+                  <Td right>{g.withUsage > 0 ? <span className="font-semibold text-teal-600 dark:text-teal-400">{g.withUsage}</span> : <span className="text-slate-300 dark:text-slate-600">0</span>}</Td>
                 </tr>
               ))}
             </tbody>
