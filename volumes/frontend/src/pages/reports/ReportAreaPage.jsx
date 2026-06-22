@@ -10,6 +10,7 @@ const REPORT_COMPONENTS = {
   'returns-exchanges':        lazy(() => import('./ReturnsExchangesReport')),
   'category-sales':           lazy(() => import('./CategorySales')),
   'customer-sales':           lazy(() => import('./CustomerSales')),
+  'seller-ranking':           lazy(() => import('./SellerRanking')),
   'agreement-summary':        lazy(() => import('./AgreementSummary')),
   'agreement-usage':          lazy(() => import('./AgreementUsage')),
   'agreement-beneficiaries':  lazy(() => import('./AgreementBeneficiaries')),

@@ -8,6 +8,7 @@ Los reportes canónicos actuales son:
 - `ReturnsExchangesReport.jsx`: cambios y devoluciones.
 - `CategorySales.jsx`: ventas por categoría o marca.
 - `CustomerSales.jsx`: ventas por cliente.
+- `SellerRanking.jsx`: ranking de vendedores.
 - `ReportLayout.jsx`: layout común para reportes.
 
 ---

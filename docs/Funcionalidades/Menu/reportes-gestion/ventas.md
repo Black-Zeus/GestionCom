@@ -3,7 +3,7 @@
 **Ruta:** `/reports/sales`  
 **Permiso:** `REPORTS_VISIBLE`  
 **Componente:** `ReportAreaPage`  
-**Estado:** ⚠️ Parcial (4 de 5 reportes disponibles)
+**Estado:** ✅ Completo (5 de 5 reportes disponibles)
 
 ## Misión
 
@@ -17,4 +17,4 @@ Página de área del módulo de reportes de ventas. Lista todos los reportes dis
 | Cambios y devoluciones | ✅ Disponible | — |
 | Ventas por categoría | ✅ Disponible | [→](ventas-categorias.md) |
 | Ventas por cliente | ✅ Disponible | [→](ventas-cliente.md) |
-| Ranking de vendedores | 🚧 En desarrollo | — |
+| Ranking de vendedores | ✅ Disponible | [→](vendedores-ranking.md) |
