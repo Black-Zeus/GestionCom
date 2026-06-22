@@ -1,76 +1,46 @@
-import { useEffect, useMemo, useState } from 'react';
+/* eslint-disable react/prop-types */
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, X } from 'lucide-react';
-import KpiBar from '@/components/common/data/KpiBar';
-import ModuleHeader from '@/components/common/navigation/ModuleHeader';
+import { ArrowLeft, BarChart2, FileText, X } from 'lucide-react';
+import ReactApexChart from 'react-apexcharts';
 import AutocompleteSelect from '@/components/common/forms/AutocompleteSelect';
+import ReportLayout from '@/components/common/navigation/ReportLayout';
 import { agreementsService } from '@/services/sales/agreementsService';
+import { buildCsvBlobUrl } from '@/utils/exportFile';
 
-const money = (v) => Number(v).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+const money = (v) => Number(v || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const fmtDateTime = (iso) =>
-  iso
-    ? new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-    : '—';
+  iso ? new Date(iso).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const CURRENCY_LABEL = 'Peso chileno (CLP)';
+const CHART_ID = 'agreements-usage-chart';
 
-const downloadCSV = (filename, headers, rows) => {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))];
-  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
-  URL.revokeObjectURL(url);
-};
-
-const Card = ({ title, subtitle, icon: Icon, children, actions }) => (
-  <div className="flex flex-col rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-    <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3 dark:border-slate-800">
-      {Icon && <Icon className="h-4 w-4 shrink-0 text-slate-400" />}
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{title}</span>
-        {subtitle && <span className="ml-2 text-xs text-slate-400">{subtitle}</span>}
-      </div>
-      {actions && <div className="ml-2 flex shrink-0 items-center gap-1">{actions}</div>}
-    </div>
-    <div className="flex-1 p-5">{children}</div>
-  </div>
-);
-
-const Th = ({ children, right }) => (
-  <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : 'text-left'}`}>
-    {children}
-  </th>
-);
-const Td = ({ children, right, muted, bold }) => (
-  <td className={`py-2.5 px-3 first:pl-0 last:pr-0 text-sm ${right ? 'text-right tabular-nums' : ''} ${muted ? 'text-slate-400' : ''} ${bold ? 'font-semibold' : ''}`}>
-    {children}
-  </td>
-);
+const Th = ({ children, right }) => <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : 'text-left'}`}>{children}</th>;
+const Td = ({ children, right, muted, bold }) => <td className={`py-2.5 px-3 first:pl-0 last:pr-0 text-sm ${right ? 'text-right tabular-nums' : ''} ${muted ? 'text-slate-400' : ''} ${bold ? 'font-semibold' : ''}`}>{children}</td>;
 
 const AgreementUsage = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const isDark = document.documentElement.classList.contains('dark');
   const [agreements, setAgreements] = useState([]);
   const [usage, setUsage] = useState([]);
   const [selectedId, setSelectedId] = useState('all');
-  const [loadingAgreements, setLoadingAgreements] = useState(true);
-  const [loadingUsage, setLoadingUsage] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    agreementsService.list()
-      .then(setAgreements)
-      .catch(() => setError('No se pudieron cargar los convenios.'))
-      .finally(() => setLoadingAgreements(false));
-  }, []);
+  useEffect(() => { agreementsService.list().then(setAgreements).catch(() => {}); }, []);
 
-  useEffect(() => {
-    setLoadingUsage(true);
-    const params = selectedId !== 'all' ? { agreement_id: selectedId } : {};
-    agreementsService.usage(params)
-      .then(setUsage)
-      .catch(() => setError('No se pudieron cargar los registros de uso.'))
-      .finally(() => setLoadingUsage(false));
-  }, [selectedId]);
+  const loadUsage = useCallback(async (id = selectedId) => {
+    setLoading(true);
+    try {
+      const params = id !== 'all' ? { agreement_id: id } : {};
+      setUsage(await agreementsService.usage(params));
+    } catch {
+      setUsage([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { loadUsage(selectedId); }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const agreementOptions = useMemo(() => [
     { value: 'all', label: 'Todos los convenios' },
@@ -83,127 +53,110 @@ const AgreementUsage = () => {
     uniqueBeneficiaries: new Set(usage.map((u) => u.associate_identifier).filter(Boolean)).size,
   }), [usage]);
 
-  const KPI_ITEMS = [
-    { id: 'count', label: 'Usos registrados', value: totals.count.toString(), hint: 'transacciones' },
-    { id: 'discount', label: 'Beneficio total aplicado', value: money(totals.discountTotal), hint: 'descuento / crédito' },
-    { id: 'ben', label: 'Beneficiarios únicos', value: totals.uniqueBeneficiaries.toString(), hint: 'distintos' },
-  ];
+  const byAgreement = useMemo(() => {
+    const map = {};
+    for (const u of usage) {
+      const key = u.agreement_name || 'Sin convenio';
+      map[key] = (map[key] || 0) + 1;
+    }
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  }, [usage]);
 
-  const exportCSV = () => {
-    const headers = ['Fecha', 'Convenio', 'Beneficiario', 'Identificador', 'Tipo', 'Código venta', 'Ticket', 'Monto original', 'Descuento / crédito', 'Monto final'];
+  const chartOptions = useMemo(() => ({
+    chart: { id: CHART_ID, type: 'bar', background: 'transparent', fontFamily: 'inherit', toolbar: { show: false } },
+    plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '60%' } },
+    colors: ['#2563eb'],
+    dataLabels: { enabled: false },
+    xaxis: { categories: byAgreement.map(([name]) => name), labels: { style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: { labels: { style: { colors: isDark ? '#cbd5e1' : '#475569', fontSize: '11px' }, maxWidth: 200 } },
+    grid: { borderColor: isDark ? '#1e293b' : '#f1f5f9', strokeDashArray: 4 },
+    tooltip: { y: { formatter: (v) => `${v} usos` } },
+    theme: { mode: isDark ? 'dark' : 'light' },
+  }), [byAgreement, isDark]);
+
+  const chartSeries = [{ name: 'Usos', data: byAgreement.map(([, count]) => count) }];
+
+  const handleCsvExport = () => {
+    const headers = ['Fecha', 'Convenio', 'Beneficiario', 'Identificador', 'Tipo', 'Código venta', 'Ticket', `Monto original ${CURRENCY_LABEL}`, `Descuento/crédito ${CURRENCY_LABEL}`, `Monto final ${CURRENCY_LABEL}`];
     const data = usage.map((u) => [
-      fmtDateTime(u.created_at),
-      u.agreement_name,
-      u.associate_name || u.beneficiary_name || '—',
-      u.associate_identifier || '—',
-      u.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito',
-      u.sale_code || '—',
-      u.ticket_number || '—',
-      u.original_amount || 0,
-      u.discount_amount || 0,
-      u.final_amount || 0,
+      fmtDateTime(u.created_at), u.agreement_name, u.associate_name || u.beneficiary_name || '—', u.associate_identifier || '—',
+      u.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito', u.sale_code || '—', u.ticket_number || '—',
+      u.original_amount || 0, u.discount_amount || 0, u.final_amount || 0,
     ]);
-    downloadCSV('uso-convenios.csv', headers, data);
+    return buildCsvBlobUrl(headers, data, { metadataRows: [['Reporte', 'Uso de convenios'], ['Generado el', new Date().toLocaleString('es-CL')]] });
   };
 
-  const loading = loadingAgreements || loadingUsage;
-
   return (
-    <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <ModuleHeader
-        title="Uso de convenios"
-        description="Historial de transacciones que aplicaron un convenio comercial"
-        actions={[
-          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
-        ]}
-      />
-
-      <div className="mb-5 flex flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <ReportLayout
+      title="Uso de convenios"
+      description={`${usage.length} usos registrados · ${totals.uniqueBeneficiaries} beneficiarios distintos`}
+      actions={[{ id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) }]}
+      filterBar={
         <div className="w-64 shrink-0">
-          <AutocompleteSelect
-            value={selectedId}
-            onChange={(v) => setSelectedId(v || 'all')}
-            options={agreementOptions}
-            placeholder="Todos los convenios"
-            clearable={false}
-            buttonClassName="h-10 shadow-none"
-          />
+          <AutocompleteSelect value={selectedId} onChange={(v) => setSelectedId(v || 'all')} options={agreementOptions} placeholder="Todos los convenios" clearable={false} buttonClassName="h-10 shadow-none" />
         </div>
-        {selectedId !== 'all' && (
-          <button
-            type="button"
-            onClick={() => setSelectedId('all')}
-            className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="h-3.5 w-3.5" /> Limpiar
-          </button>
+      }
+      filterBarActions={selectedId !== 'all' ? (
+        <button type="button" onClick={() => setSelectedId('all')} className="flex h-10 items-center gap-1.5 rounded-md px-3 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <X className="h-3.5 w-3.5" /> Limpiar
+        </button>
+      ) : null}
+      onRunReport={() => loadUsage(selectedId)}
+      runReportLabel="Actualizar"
+      runReportLoading={loading}
+      kpiItems={[
+        { id: 'count', label: 'Usos registrados', value: totals.count.toString(), hint: 'transacciones' },
+        { id: 'discount', label: 'Beneficio total aplicado', value: money(totals.discountTotal), hint: 'descuento / crédito' },
+        { id: 'ben', label: 'Beneficiarios únicos', value: totals.uniqueBeneficiaries.toString(), hint: 'distintos' },
+      ]}
+      charts={[{
+        title: 'Usos por convenio',
+        subtitle: 'Top 10 convenios con más transacciones',
+        icon: BarChart2,
+        content: usage.length > 0
+          ? <ReactApexChart options={chartOptions} series={chartSeries} type="bar" height={Math.max(240, Math.min(byAgreement.length * 42, 420))} />
+          : <div className="flex h-40 items-center justify-center text-sm text-slate-400">Sin datos para los filtros seleccionados</div>,
+      }]}
+      tableTitle="Historial de uso"
+      tableSubtitle={loading ? 'Cargando...' : `${usage.length} registros`}
+      tableIcon={FileText}
+      onExportCsv={handleCsvExport}
+      csvFilename="uso-convenios.csv"
+    >
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-sm text-slate-400">Cargando datos...</div>
+        ) : usage.length === 0 ? (
+          <div className="py-16 text-center text-sm text-slate-400">No hay registros de uso para los filtros seleccionados.</div>
+        ) : (
+          <table className="w-full min-w-max">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800">
+                <Th>Fecha</Th><Th>Convenio</Th><Th>Beneficiario</Th><Th>Tipo</Th><Th>Código venta</Th><Th right>Monto original</Th><Th right>Descuento / crédito</Th><Th right>Monto final</Th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
+              {usage.map((u) => (
+                <tr key={u.id}>
+                  <Td muted><span className="text-xs">{fmtDateTime(u.created_at)}</span></Td>
+                  <Td>{u.agreement_name}</Td>
+                  <Td><p>{u.associate_name || u.beneficiary_name || '—'}</p>{u.associate_identifier && <p className="text-xs text-slate-400">{u.associate_identifier}</p>}</Td>
+                  <Td>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${u.agreement_type === 'CREDIT' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
+                      {u.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito'}
+                    </span>
+                  </Td>
+                  <Td muted><span className="font-mono text-xs">{u.sale_code || '—'}</span></Td>
+                  <Td right muted>{money(u.original_amount || 0)}</Td>
+                  <Td right bold>{money(u.discount_amount || 0)}</Td>
+                  <Td right>{money(u.final_amount || 0)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
-
-      <KpiBar items={KPI_ITEMS} className="mb-5" />
-
-      <Card
-        title="Historial de uso"
-        subtitle={`${usage.length} registros`}
-        icon={FileText}
-        actions={
-          <button
-            type="button"
-            onClick={exportCSV}
-            title="Exportar CSV"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-          >
-            <Download className="h-4 w-4" />
-          </button>
-        }
-      >
-        {loading ? (
-          <p className="py-8 text-center text-sm text-slate-400">Cargando...</p>
-        ) : error ? (
-          <p className="py-8 text-center text-sm text-red-500">{error}</p>
-        ) : usage.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400">No hay registros de uso para los filtros seleccionados.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-max">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800">
-                  <Th>Fecha</Th>
-                  <Th>Convenio</Th>
-                  <Th>Beneficiario</Th>
-                  <Th>Tipo</Th>
-                  <Th>Código venta</Th>
-                  <Th right>Monto original</Th>
-                  <Th right>Descuento / crédito</Th>
-                  <Th right>Monto final</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
-                {usage.map((u) => (
-                  <tr key={u.id}>
-                    <Td muted><span className="text-xs">{fmtDateTime(u.created_at)}</span></Td>
-                    <Td>{u.agreement_name}</Td>
-                    <Td>
-                      <p>{u.associate_name || u.beneficiary_name || '—'}</p>
-                      {u.associate_identifier && <p className="text-xs text-slate-400">{u.associate_identifier}</p>}
-                    </Td>
-                    <Td>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${u.agreement_type === 'CREDIT' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
-                        {u.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito'}
-                      </span>
-                    </Td>
-                    <Td muted><span className="font-mono text-xs">{u.sale_code || '—'}</span></Td>
-                    <Td right muted>{money(u.original_amount || 0)}</Td>
-                    <Td right bold>{money(u.discount_amount || 0)}</Td>
-                    <Td right>{money(u.final_amount || 0)}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-    </section>
+    </ReportLayout>
   );
 };
 

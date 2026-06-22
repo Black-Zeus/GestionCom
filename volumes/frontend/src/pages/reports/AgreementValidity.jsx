@@ -1,35 +1,22 @@
+/* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle, Clock, Download, XCircle } from 'lucide-react';
-import KpiBar from '@/components/common/data/KpiBar';
-import ModuleHeader from '@/components/common/navigation/ModuleHeader';
+import { AlertTriangle, ArrowLeft, BarChart2, CheckCircle, Clock, FileText, XCircle } from 'lucide-react';
+import ReactApexChart from 'react-apexcharts';
+import ReportLayout from '@/components/common/navigation/ReportLayout';
 import { agreementsService } from '@/services/sales/agreementsService';
+import { buildCsvBlobUrl } from '@/utils/exportFile';
 
-const money = (v) => Number(v).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
+const money = (v) => Number(v || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
 const fmtDate = (iso) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString('es-CL') : '—');
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const addDays = (iso, n) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const diffDays = (from, to) => Math.round((new Date(`${to}T00:00:00`) - new Date(`${from}T00:00:00`)) / (1000 * 60 * 60 * 24));
+const CURRENCY_LABEL = 'Peso chileno (CLP)';
+const CHART_ID = 'agreements-validity-chart';
 
-const downloadCSV = (filename, headers, rows) => {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const lines = [headers.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))];
-  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
-  URL.revokeObjectURL(url);
-};
-
-const Th = ({ children, right }) => (
-  <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : 'text-left'}`}>
-    {children}
-  </th>
-);
-const Td = ({ children, right, muted, bold }) => (
-  <td className={`py-2.5 px-3 first:pl-0 last:pr-0 text-sm ${right ? 'text-right tabular-nums' : ''} ${muted ? 'text-slate-400' : ''} ${bold ? 'font-semibold' : ''}`}>
-    {children}
-  </td>
-);
+const Th = ({ children, right }) => <th className={`pb-2 px-3 first:pl-0 last:pr-0 text-xs font-medium uppercase text-slate-400 ${right ? 'text-right' : 'text-left'}`}>{children}</th>;
+const Td = ({ children, right, muted }) => <td className={`py-2.5 px-3 first:pl-0 last:pr-0 text-sm ${right ? 'text-right tabular-nums' : ''} ${muted ? 'text-slate-400' : ''}`}>{children}</td>;
 
 const DaysLeftCell = ({ validTo, today }) => {
   if (!validTo) return <span className="text-xs text-slate-400">Sin vencimiento</span>;
@@ -40,7 +27,7 @@ const DaysLeftCell = ({ validTo, today }) => {
   return <span className="text-xs text-slate-500">{days} días</span>;
 };
 
-const Section = ({ title, icon: Icon, iconCls, items, today, emptyMsg }) => (
+const SectionCard = ({ title, icon: Icon, iconCls, items, today, emptyMsg }) => (
   <div className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
     <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-3 dark:border-slate-800">
       <Icon className={`h-4 w-4 shrink-0 ${iconCls}`} />
@@ -55,22 +42,13 @@ const Section = ({ title, icon: Icon, iconCls, items, today, emptyMsg }) => (
           <table className="w-full min-w-max">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800">
-                <Th>Convenio</Th>
-                <Th>Empresa</Th>
-                <Th>Tipo</Th>
-                <Th right>Monto beneficio</Th>
-                <Th right>Consumido</Th>
-                <Th>Vigencia hasta</Th>
-                <Th>Días restantes</Th>
+                <Th>Convenio</Th><Th>Empresa</Th><Th>Tipo</Th><Th right>Monto beneficio</Th><Th right>Consumido</Th><Th>Vigencia hasta</Th><Th>Días restantes</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
               {items.map((r) => (
                 <tr key={r.id}>
-                  <Td>
-                    <p className="font-medium">{r.agreement_name}</p>
-                    <p className="text-xs text-slate-400">{r.agreement_code}</p>
-                  </Td>
+                  <Td><p className="font-medium">{r.agreement_name}</p><p className="text-xs text-slate-400">{r.agreement_code}</p></Td>
                   <Td muted>{r.company_name}</Td>
                   <Td>
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${r.agreement_type === 'CREDIT' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
@@ -91,19 +69,26 @@ const Section = ({ title, icon: Icon, iconCls, items, today, emptyMsg }) => (
   </div>
 );
 
+const SECTIONS = [
+  { key: 'activeAll', title: 'Activos y vigentes', icon: CheckCircle, iconCls: 'text-emerald-500', emptyMsg: 'No hay convenios activos y vigentes.' },
+  { key: 'expiringSoon', title: 'Próximos a vencer (≤ 30 días)', icon: AlertTriangle, iconCls: 'text-amber-500', emptyMsg: 'No hay convenios próximos a vencer.' },
+  { key: 'expired', title: 'Vencidos', icon: XCircle, iconCls: 'text-red-400', emptyMsg: 'No hay convenios vencidos.' },
+  { key: 'inactive', title: 'Inactivos', icon: Clock, iconCls: 'text-slate-400', emptyMsg: 'No hay convenios inactivos.' },
+];
+
 const AgreementValidity = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const isDark = document.documentElement.classList.contains('dark');
   const [agreements, setAgreements] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    agreementsService.list()
-      .then(setAgreements)
-      .catch(() => setError('No se pudieron cargar los convenios.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const loadAgreements = async () => {
+    setLoading(true);
+    try { setAgreements(await agreementsService.list()); } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadAgreements(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const today = todayISO();
   const soonLimit = addDays(today, 30);
@@ -117,87 +102,82 @@ const AgreementValidity = () => {
       if (a.valid_to <= soonLimit) { expiringSoon.push(a); continue; }
       active.push(a);
     }
-    return { active, expiringSoon, expired, noExpiry, inactive };
+    return { activeAll: [...active, ...noExpiry], expiringSoon, expired, inactive };
   }, [agreements, today, soonLimit]);
 
-  const KPI_ITEMS = [
-    { id: 'active', label: 'Activos y vigentes', value: (groups.active.length + groups.noExpiry.length).toString(), hint: 'en regla' },
-    { id: 'soon', label: 'Próximos a vencer', value: groups.expiringSoon.length.toString(), hint: 'en 30 días' },
-    { id: 'expired', label: 'Vencidos', value: groups.expired.length.toString(), hint: 'fuera de vigencia' },
-    { id: 'inactive', label: 'Inactivos', value: groups.inactive.length.toString(), hint: 'deshabilitados' },
-  ];
+  const chartOptions = useMemo(() => ({
+    chart: { id: CHART_ID, type: 'bar', background: 'transparent', fontFamily: 'inherit', toolbar: { show: false } },
+    plotOptions: { bar: { borderRadius: 3, columnWidth: '50%' } },
+    colors: ['#10b981', '#f59e0b', '#ef4444', '#94a3b8'],
+    dataLabels: { enabled: false },
+    xaxis: { categories: ['Activos y vigentes', 'Próx. a vencer', 'Vencidos', 'Inactivos'], labels: { style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: { labels: { formatter: (v) => Math.round(v).toString(), style: { colors: isDark ? '#94a3b8' : '#64748b', fontSize: '11px' } } },
+    grid: { borderColor: isDark ? '#1e293b' : '#f1f5f9', strokeDashArray: 4 },
+    tooltip: { y: { formatter: (v) => `${v} convenios` } },
+    theme: { mode: isDark ? 'dark' : 'light' },
+  }), [isDark]);
 
-  const exportCSV = () => {
-    const headers = ['Convenio', 'Empresa', 'Tipo', 'Estado', 'Monto beneficio', 'Consumido', 'Vigencia desde', 'Vigencia hasta', 'Días restantes'];
+  const chartSeries = [{
+    name: 'Convenios',
+    data: [groups.activeAll?.length || 0, groups.expiringSoon?.length || 0, groups.expired?.length || 0, groups.inactive?.length || 0],
+  }];
+
+  const handleCsvExport = () => {
+    const headers = ['Convenio', 'Empresa', 'Tipo', 'Estado', `Monto beneficio ${CURRENCY_LABEL}`, `Consumido ${CURRENCY_LABEL}`, 'Vigencia desde', 'Vigencia hasta', 'Días restantes'];
     const data = agreements.map((a) => {
       const days = a.valid_to ? diffDays(today, a.valid_to) : null;
-      return [
-        a.agreement_name, a.company_name,
-        a.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito',
-        a.is_active ? 'Activo' : 'Inactivo',
-        a.benefit_amount || 0, a.consumed_amount || 0,
-        a.valid_from || '', a.valid_to || '',
-        days !== null ? days : 'Sin vencimiento',
-      ];
+      return [a.agreement_name, a.company_name, a.agreement_type === 'DISCOUNT' ? 'Descuento' : 'Crédito', a.is_active ? 'Activo' : 'Inactivo', a.benefit_amount || 0, a.consumed_amount || 0, a.valid_from || '', a.valid_to || '', days !== null ? days : 'Sin vencimiento'];
     });
-    downloadCSV('vigencia-convenios.csv', headers, data);
+    return buildCsvBlobUrl(headers, data, { metadataRows: [['Reporte', 'Vigencia de convenios'], ['Generado el', new Date().toLocaleString('es-CL')]] });
   };
 
   return (
-    <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
-      <ModuleHeader
-        title="Vigencia de convenios"
-        description="Estado de vigencia de todos los convenios: activos, próximos a vencer y vencidos"
-        actions={[
-          { id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) },
-          { id: 'csv', label: 'Exportar CSV', icon: Download, onClick: exportCSV },
-        ]}
-      />
-
+    <ReportLayout
+      title="Vigencia de convenios"
+      description={`${agreements.length} convenios · ${groups.activeAll?.length || 0} activos y vigentes`}
+      actions={[{ id: 'back', label: 'Volver', icon: ArrowLeft, variant: 'neutral', onClick: () => navigate(pathname) }]}
+      filterBar={<span className="text-sm text-slate-400">Muestra todos los convenios agrupados por vigencia</span>}
+      onRunReport={loadAgreements}
+      runReportLabel="Actualizar"
+      runReportLoading={loading}
+      kpiItems={[
+        { id: 'active', label: 'Activos y vigentes', value: (groups.activeAll?.length || 0).toString(), hint: 'en regla' },
+        { id: 'soon', label: 'Próximos a vencer', value: (groups.expiringSoon?.length || 0).toString(), hint: 'en 30 días' },
+        { id: 'expired', label: 'Vencidos', value: (groups.expired?.length || 0).toString(), hint: 'fuera de vigencia' },
+        { id: 'inactive', label: 'Inactivos', value: (groups.inactive?.length || 0).toString(), hint: 'deshabilitados' },
+      ]}
+      charts={[{
+        title: 'Convenios por estado de vigencia',
+        subtitle: 'Distribución de convenios según su vigencia actual',
+        icon: BarChart2,
+        content: agreements.length > 0
+          ? <ReactApexChart options={chartOptions} series={chartSeries} type="bar" height={260} />
+          : <div className="flex h-40 items-center justify-center text-sm text-slate-400">Sin datos</div>,
+      }]}
+      tableTitle="Convenios por vigencia"
+      tableSubtitle={loading ? 'Cargando...' : `${agreements.length} convenios`}
+      tableIcon={FileText}
+      onExportCsv={handleCsvExport}
+      csvFilename="vigencia-convenios.csv"
+    >
       {loading ? (
-        <p className="py-16 text-center text-sm text-slate-400">Cargando...</p>
-      ) : error ? (
-        <p className="py-16 text-center text-sm text-red-500">{error}</p>
+        <div className="flex items-center justify-center py-16 text-sm text-slate-400">Cargando datos...</div>
       ) : (
-        <>
-          <KpiBar items={KPI_ITEMS} className="mb-5" />
-          <div className="space-y-4">
-            <Section
-              title="Activos y vigentes"
-              icon={CheckCircle}
-              iconCls="text-emerald-500"
-              items={[...groups.active, ...groups.noExpiry]}
+        <div className="space-y-4">
+          {SECTIONS.map((section) => (
+            <SectionCard
+              key={section.key}
+              title={section.title}
+              icon={section.icon}
+              iconCls={section.iconCls}
+              items={groups[section.key] || []}
               today={today}
-              emptyMsg="No hay convenios activos y vigentes."
+              emptyMsg={section.emptyMsg}
             />
-            <Section
-              title="Próximos a vencer (≤ 30 días)"
-              icon={AlertTriangle}
-              iconCls="text-amber-500"
-              items={groups.expiringSoon}
-              today={today}
-              emptyMsg="No hay convenios próximos a vencer."
-            />
-            <Section
-              title="Vencidos"
-              icon={XCircle}
-              iconCls="text-red-400"
-              items={groups.expired}
-              today={today}
-              emptyMsg="No hay convenios vencidos."
-            />
-            <Section
-              title="Inactivos"
-              icon={Clock}
-              iconCls="text-slate-400"
-              items={groups.inactive}
-              today={today}
-              emptyMsg="No hay convenios inactivos."
-            />
-          </div>
-        </>
+          ))}
+        </div>
       )}
-    </section>
+    </ReportLayout>
   );
 };
 
