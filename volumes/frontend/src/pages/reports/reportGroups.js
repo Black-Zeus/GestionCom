@@ -239,7 +239,7 @@ export const REPORT_GROUPS = [
           'Aperturas y cierres de caja por cajero y sucursal con fondo inicial, fondo final y duración del turno.',
         type: 'Reporte operativo',
         path: '/reports/cash-pos?report=cash-sessions',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Cajero', 'Exportación CSV'],
       },
       {
@@ -249,7 +249,7 @@ export const REPORT_GROUPS = [
           'Sesiones de caja donde el monto contado difiere del monto esperado, ordenadas por diferencia.',
         type: 'Reporte gerencial',
         path: '/reports/cash-pos?report=cash-discrepancies',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Reporte PDF'],
       },
       {
@@ -259,7 +259,7 @@ export const REPORT_GROUPS = [
           'Ingresos y egresos de efectivo registrados durante sesiones de caja que no corresponden a ventas.',
         type: 'Reporte operativo',
         path: '/reports/cash-pos?report=cash-extra-movements',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Tipo', 'Exportación CSV'],
       },
       {
@@ -269,7 +269,7 @@ export const REPORT_GROUPS = [
           'Desglose de lo cobrado en caja POS por método de pago: efectivo, débito, crédito y transferencia, por sucursal y período.',
         type: 'Reporte gerencial',
         path: '/reports/cash-pos?report=pos-collection-by-method',
-        available: false,
+        available: true,
         tags: ['Período', 'Sucursal', 'Reporte PDF', 'Exportación CSV'],
       },
     ],

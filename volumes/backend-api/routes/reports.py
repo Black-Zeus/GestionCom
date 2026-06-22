@@ -3008,6 +3008,479 @@ async def petty_cash_replenishments_pdf(date_from: str = Form(...), date_to: str
     return await _simple_petty_cash_pdf("replenishments", date_from, date_to, warehouse_id, "all", "all", view_mode, chart_bar)
 
 
+_CASH_SESSION_STATUS_LABELS = {14: "Abierta", 15: "Pendiente cierre", 16: "Cerrada", 17: "Cancelada"}
+_CASH_MOVEMENT_LABELS = {
+    "OPENING": "Apertura",
+    "SALE": "Venta",
+    "RETURN": "Devolución",
+    "PETTY_CASH": "Caja chica",
+    "ADJUSTMENT": "Ajuste",
+    "CLOSING": "Cierre",
+}
+
+
+def _cash_session_status_label(status_id) -> str:
+    try:
+        key = int(status_id)
+    except (TypeError, ValueError):
+        key = 0
+    return _CASH_SESSION_STATUS_LABELS.get(key, "Sin estado")
+
+
+def _cash_movement_label(value) -> str:
+    value = str(value or "").upper()
+    return _CASH_MOVEMENT_LABELS.get(value, value or "Sin tipo")
+
+
+def _cash_pos_branch_filter(warehouse_ids: list[int]) -> tuple[str, dict]:
+    params: dict = {}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "cr.warehouse_id", warehouse_ids, "warehouse_id")
+    return (f"AND {' AND '.join(filters)}" if filters else ""), params
+
+
+async def _cash_pos_branch_label(session, warehouse_ids: list[int]) -> str:
+    if not warehouse_ids:
+        return "Todas las locaciones"
+    params: dict = {}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "id", warehouse_ids, "wid")
+    rows = _rows(await session.execute(text(f"SELECT warehouse_name FROM warehouses WHERE {' AND '.join(filters)} ORDER BY warehouse_name"), params))
+    return ", ".join(row.get("warehouse_name") or "" for row in rows if row.get("warehouse_name")) or "Locaciones seleccionadas"
+
+
+def _cash_pos_date_index(date_from_value: date, date_to_value: date) -> dict:
+    index = {}
+    cur = date_from_value
+    while cur <= date_to_value:
+        index[cur.isoformat()] = {"iso": cur.isoformat(), "count": 0, "total": 0.0, "difference": 0.0}
+        cur += timedelta(days=1)
+    return index
+
+
+async def _cash_pos_sessions_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], status: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    branch_filter, branch_params = _cash_pos_branch_filter(warehouse_ids)
+    status = str(status or "all").lower()
+    status_filter = ""
+    status_params = {}
+    if status in ("14", "15", "16", "17"):
+        status_filter = "AND crs.status_id = :status_id"
+        status_params["status_id"] = int(status)
+    params = {"date_from": date_from_value, "date_to": date_to_value, **branch_params, **status_params}
+    async with db_manager.get_async_session() as session:
+        rows = _rows(await session.execute(text(f"""
+            SELECT
+              crs.id,
+              crs.session_code,
+              DATE(crs.opening_datetime) AS opening_date,
+              crs.opening_datetime,
+              crs.closing_datetime,
+              crs.opening_amount,
+              crs.theoretical_amount,
+              crs.physical_amount,
+              crs.difference_amount,
+              crs.status_id,
+              cr.register_code,
+              cr.register_name,
+              cr.warehouse_id,
+              COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+              cashier.username AS cashier_username,
+              cashier.first_name AS cashier_first_name,
+              cashier.last_name AS cashier_last_name,
+              COALESCE(sd.sales_count, 0) AS sales_count,
+              COALESCE(sd.sales_total, 0) AS sales_total
+            FROM cash_register_sessions crs
+            JOIN cash_registers cr ON cr.id = crs.cash_register_id
+            LEFT JOIN warehouses w ON w.id = cr.warehouse_id
+            LEFT JOIN users cashier ON cashier.id = crs.cashier_user_id
+            LEFT JOIN (
+              SELECT cash_register_session_id, COUNT(*) AS sales_count, SUM(total_amount) AS sales_total
+              FROM sale_documents
+              WHERE status = 'CLOSED' AND deleted_at IS NULL
+              GROUP BY cash_register_session_id
+            ) sd ON sd.cash_register_session_id = crs.id
+            WHERE crs.deleted_at IS NULL
+              AND DATE(crs.opening_datetime) BETWEEN :date_from AND :date_to
+              {branch_filter}
+              {status_filter}
+            ORDER BY crs.opening_datetime ASC, crs.id ASC
+        """), params))
+        branch_label = await _cash_pos_branch_label(session, warehouse_ids)
+    detail_rows = []
+    grouped = _cash_pos_date_index(date_from_value, date_to_value)
+    for row in rows:
+        opening_iso = row["opening_date"] if isinstance(row.get("opening_date"), str) else row["opening_date"].isoformat()
+        duration = ""
+        if row.get("opening_datetime") and row.get("closing_datetime"):
+            try:
+                minutes = max(int((row["closing_datetime"] - row["opening_datetime"]).total_seconds() // 60), 0)
+                duration = f"{minutes // 60}h {minutes % 60}m"
+            except Exception:
+                duration = ""
+        sales_total = _money(row.get("sales_total"))
+        difference = _money(row.get("difference_amount"))
+        grouped[opening_iso]["count"] += 1
+        grouped[opening_iso]["total"] += sales_total
+        grouped[opening_iso]["difference"] += abs(difference)
+        detail_rows.append({
+            **row,
+            "opening_date": opening_iso,
+            "opening_datetime": str(row.get("opening_datetime") or ""),
+            "closing_datetime": str(row.get("closing_datetime") or ""),
+            "opening_amount": _money(row.get("opening_amount")),
+            "theoretical_amount": _money(row.get("theoretical_amount")),
+            "physical_amount": _money(row.get("physical_amount")),
+            "difference_amount": difference,
+            "sales_total": sales_total,
+            "cashier_name": _person_name(row, "cashier"),
+            "status_label": _cash_session_status_label(row.get("status_id")),
+            "duration_label": duration or "—",
+        })
+    totals = {
+        "count": len(detail_rows),
+        "sales_total": sum(row["sales_total"] for row in detail_rows),
+        "difference_abs": sum(abs(row["difference_amount"]) for row in detail_rows),
+        "open": sum(1 for row in detail_rows if int(row.get("status_id") or 0) == 14),
+        "closed": sum(1 for row in detail_rows if int(row.get("status_id") or 0) == 16),
+    }
+    return {"rows": list(grouped.values()), "detail_rows": detail_rows, "totals": totals, "branch_label": branch_label}
+
+
+async def _cash_pos_discrepancies_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int]) -> dict:
+    payload = await _cash_pos_sessions_payload(date_from_value, date_to_value, warehouse_ids, "all")
+    detail_rows = [row for row in payload["detail_rows"] if abs(_money(row.get("difference_amount"))) > 0]
+    detail_rows.sort(key=lambda row: abs(_money(row.get("difference_amount"))), reverse=True)
+    grouped: dict[str, dict] = {}
+    for row in detail_rows:
+        key = str(row.get("warehouse_id") or "none")
+        entry = grouped.setdefault(key, {"warehouse_name": row.get("warehouse_name") or "Sin sucursal", "count": 0, "difference_abs": 0.0, "positive": 0.0, "negative": 0.0})
+        diff = _money(row.get("difference_amount"))
+        entry["count"] += 1
+        entry["difference_abs"] += abs(diff)
+        if diff >= 0:
+            entry["positive"] += diff
+        else:
+            entry["negative"] += diff
+    payload["detail_rows"] = detail_rows
+    payload["rows"] = sorted(grouped.values(), key=lambda item: -_money(item.get("difference_abs")))
+    payload["totals"] = {
+        "count": len(detail_rows),
+        "difference_abs": sum(abs(_money(row.get("difference_amount"))) for row in detail_rows),
+        "positive": sum(max(_money(row.get("difference_amount")), 0) for row in detail_rows),
+        "negative": sum(min(_money(row.get("difference_amount")), 0) for row in detail_rows),
+    }
+    return payload
+
+
+async def _cash_pos_extra_movements_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], movement_type: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    branch_filter, branch_params = _cash_pos_branch_filter(warehouse_ids)
+    movement_type = str(movement_type or "all").upper()
+    type_filter = ""
+    type_params = {}
+    if movement_type in ("OPENING", "PETTY_CASH", "ADJUSTMENT", "CLOSING"):
+        type_filter = "AND cm.movement_type = :movement_type"
+        type_params["movement_type"] = movement_type
+    params = {"date_from": date_from_value, "date_to": date_to_value, **branch_params, **type_params}
+    async with db_manager.get_async_session() as session:
+        rows = _rows(await session.execute(text(f"""
+            SELECT
+              cm.id,
+              DATE(cm.created_at) AS movement_date,
+              cm.created_at,
+              cm.movement_type,
+              cm.amount,
+              cm.reference_number,
+              cm.description,
+              pm.method_name AS payment_method_name,
+              crs.session_code,
+              cr.register_code,
+              cr.register_name,
+              cr.warehouse_id,
+              COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+              creator.username AS creator_username,
+              creator.first_name AS creator_first_name,
+              creator.last_name AS creator_last_name
+            FROM cash_movements cm
+            JOIN cash_register_sessions crs ON crs.id = cm.cash_register_session_id
+            JOIN cash_registers cr ON cr.id = crs.cash_register_id
+            LEFT JOIN warehouses w ON w.id = cr.warehouse_id
+            LEFT JOIN payment_methods pm ON pm.id = cm.payment_method_id
+            LEFT JOIN users creator ON creator.id = cm.created_by_user_id
+            WHERE crs.deleted_at IS NULL
+              AND cm.movement_type NOT IN ('SALE', 'RETURN')
+              AND DATE(cm.created_at) BETWEEN :date_from AND :date_to
+              {branch_filter}
+              {type_filter}
+            ORDER BY cm.created_at ASC, cm.id ASC
+        """), params))
+        branch_label = await _cash_pos_branch_label(session, warehouse_ids)
+    detail_rows = []
+    grouped: dict[str, dict] = {}
+    for row in rows:
+        amount = _money(row.get("amount"))
+        key = str(row.get("movement_type") or "OTHER")
+        entry = grouped.setdefault(key, {"movement_type": key, "movement_label": _cash_movement_label(key), "count": 0, "total": 0.0})
+        entry["count"] += 1
+        entry["total"] += amount
+        detail_rows.append({
+            **row,
+            "movement_date": row["movement_date"] if isinstance(row.get("movement_date"), str) else row["movement_date"].isoformat(),
+            "created_at": str(row.get("created_at") or ""),
+            "amount": amount,
+            "movement_label": _cash_movement_label(row.get("movement_type")),
+            "created_by_name": _person_name(row, "creator"),
+        })
+    totals = {"count": len(detail_rows), "total": sum(row["amount"] for row in detail_rows)}
+    return {"rows": sorted(grouped.values(), key=lambda item: -abs(_money(item.get("total")))), "detail_rows": detail_rows, "totals": totals, "branch_label": branch_label}
+
+
+async def _cash_pos_collection_payload(date_from_value: date, date_to_value: date, warehouse_ids: list[int], method_code: str) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "sd.warehouse_id", warehouse_ids, "warehouse_id")
+    method_code = str(method_code or "all").upper()
+    filter_clause = f"AND {' AND '.join(filters)}" if filters else ""
+    async with db_manager.get_async_session() as session:
+        sale_rows = _rows(await session.execute(text(f"""
+            SELECT
+              sd.id,
+              sd.sale_code,
+              COALESCE(sd.ticket_number, sd.sale_code) AS ticket_number,
+              DATE(sd.updated_at) AS sale_date,
+              sd.updated_at AS closed_at,
+              sd.payment_method_code,
+              sd.payment_method_name,
+              sd.payment_details,
+              sd.total_amount,
+              sd.amount_tendered,
+              sd.change_amount,
+              cr.register_code,
+              cr.register_name,
+              COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+              cashier.username AS cashier_username,
+              cashier.first_name AS cashier_first_name,
+              cashier.last_name AS cashier_last_name
+            FROM sale_documents sd
+            LEFT JOIN cash_registers cr ON cr.id = sd.cash_register_id
+            LEFT JOIN warehouses w ON w.id = sd.warehouse_id
+            LEFT JOIN users cashier ON cashier.id = sd.closed_by_user_id
+            WHERE sd.status = 'CLOSED'
+              AND sd.deleted_at IS NULL
+              AND DATE(sd.updated_at) BETWEEN :date_from AND :date_to
+              {filter_clause}
+            ORDER BY sd.updated_at ASC, sd.id ASC
+        """), params))
+        branch_label = await _cash_pos_branch_label(session, warehouse_ids)
+    out_detail = []
+    grouped: dict[str, dict] = {}
+    for row in sale_rows:
+        details = _payment_details(row.get("payment_details"))
+        if isinstance(details, dict) and str(details.get("type") or "").upper() == "MIXED":
+            payments = details.get("payments") or []
+        else:
+            payments = [{
+                "payment_method_code": row.get("payment_method_code"),
+                "payment_method_name": row.get("payment_method_name"),
+                "amount": row.get("total_amount"),
+            }]
+        for idx, payment in enumerate(payments):
+            amount = _money(
+                payment.get("clp_amount")
+                or payment.get("amount")
+                or payment.get("received_amount")
+                or row.get("total_amount")
+            )
+            code = str(payment.get("payment_method_code") or row.get("payment_method_code") or "").upper()
+            name = payment.get("payment_method_name") or row.get("payment_method_name")
+            if not code:
+                code = "NO_CHARGE"
+                name = "Sin cobro"
+            elif code in ("SIN_METODO", "NO_METHOD"):
+                code = "NO_CHARGE"
+                name = "Sin cobro"
+            else:
+                name = name or code
+            if method_code != "ALL" and code != method_code:
+                continue
+            grouped.setdefault(code, {"payment_method_code": code, "payment_method_name": name, "count": 0, "total": 0.0})
+            grouped[code]["count"] += 1
+            grouped[code]["total"] += amount
+            out_detail.append({
+                **row,
+                "id": f'{row.get("id")}-{idx}',
+                "sale_id": row.get("id"),
+                "sale_date": row["sale_date"] if isinstance(row.get("sale_date"), str) else row["sale_date"].isoformat(),
+                "closed_at": str(row.get("closed_at") or ""),
+                "payment_method_code": code,
+                "payment_method_name": name,
+                "total_amount": amount,
+                "sale_total_amount": _money(row.get("total_amount")),
+                "amount_tendered": _money(row.get("amount_tendered")),
+                "change_amount": _money(row.get("change_amount")),
+                "cashier_name": _person_name(row, "cashier"),
+                "is_mixed_component": isinstance(details, dict) and str(details.get("type") or "").upper() == "MIXED",
+            })
+    rows = sorted(grouped.values(), key=lambda item: -_money(item.get("total")))
+    totals = {"count": len(out_detail), "total": sum(row["total_amount"] for row in out_detail), "methods": len(rows)}
+    return {"rows": rows, "detail_rows": out_detail, "totals": totals, "branch_label": branch_label}
+
+
+@router.get("/cash-pos/sessions/data", response_class=JSONResponse)
+async def cash_pos_sessions_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), status: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _cash_pos_sessions_payload(date_from, date_to, selected_warehouse_ids, status))
+
+
+@router.get("/cash-pos/discrepancies/data", response_class=JSONResponse)
+async def cash_pos_discrepancies_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _cash_pos_discrepancies_payload(date_from, date_to, selected_warehouse_ids))
+
+
+@router.get("/cash-pos/extra-movements/data", response_class=JSONResponse)
+async def cash_pos_extra_movements_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), movement_type: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _cash_pos_extra_movements_payload(date_from, date_to, selected_warehouse_ids, movement_type))
+
+
+@router.get("/cash-pos/collection-by-method/data", response_class=JSONResponse)
+async def cash_pos_collection_by_method_data(date_from: date = Query(...), date_to: date = Query(...), warehouse_id: int | None = Query(None), warehouse_ids: str | None = Query(None), method_code: str = Query("all"), user: dict = Depends(get_current_user)):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    return JSONResponse(await _cash_pos_collection_payload(date_from, date_to, selected_warehouse_ids, method_code))
+
+
+async def _build_cash_pos_context(report_kind: str, date_from_str: str, date_to_str: str, warehouse_id_str: str, filter_value: str, view_mode: str) -> dict:
+    start = date.fromisoformat(date_from_str)
+    end = date.fromisoformat(date_to_str)
+    warehouse_ids = [] if warehouse_id_str in ("all", "", "todas", None) else _parse_id_list(warehouse_id_str)
+    view_mode = view_mode if view_mode in ("detail", "grouped") else "detail"
+    if report_kind == "sessions":
+        title = "Caja POS - historial de sesiones"
+        payload = await _cash_pos_sessions_payload(start, end, warehouse_ids, filter_value)
+        rows = payload["detail_rows"] if view_mode == "detail" else payload["rows"]
+        columns = [
+            ("opening_date", "Fecha", "left"), ("session_code", "Sesión", "left"), ("warehouse_name", "Sucursal", "left"),
+            ("register_name", "Caja", "left"), ("cashier_name", "Cajero", "left"), ("status_label", "Estado", "left"), ("sales_total", "Ventas", "right"),
+        ] if view_mode == "detail" else [("iso", "Fecha", "left"), ("count", "Sesiones", "right"), ("total", "Ventas", "right"), ("difference", "Diferencias", "right")]
+    elif report_kind == "discrepancies":
+        title = "Caja POS - diferencias de arqueo"
+        payload = await _cash_pos_discrepancies_payload(start, end, warehouse_ids)
+        rows = payload["detail_rows"] if view_mode == "detail" else payload["rows"]
+        columns = [
+            ("opening_date", "Fecha", "left"), ("session_code", "Sesión", "left"), ("warehouse_name", "Sucursal", "left"),
+            ("register_name", "Caja", "left"), ("cashier_name", "Cajero", "left"), ("difference_amount", "Diferencia", "right"),
+        ] if view_mode == "detail" else [("warehouse_name", "Sucursal", "left"), ("count", "Sesiones", "right"), ("difference_abs", "Diferencia abs.", "right"), ("positive", "Sobrante", "right"), ("negative", "Faltante", "right")]
+    elif report_kind == "extra_movements":
+        title = "Caja POS - movimientos extraordinarios"
+        payload = await _cash_pos_extra_movements_payload(start, end, warehouse_ids, filter_value)
+        rows = payload["detail_rows"] if view_mode == "detail" else payload["rows"]
+        columns = [
+            ("movement_date", "Fecha", "left"), ("movement_label", "Tipo", "left"), ("warehouse_name", "Sucursal", "left"),
+            ("register_name", "Caja", "left"), ("created_by_name", "Usuario", "left"), ("amount", "Monto", "right"),
+        ] if view_mode == "detail" else [("movement_label", "Tipo", "left"), ("count", "Movimientos", "right"), ("total", "Total", "right")]
+    else:
+        title = "Caja POS - recaudación por método"
+        payload = await _cash_pos_collection_payload(start, end, warehouse_ids, filter_value)
+        rows = payload["detail_rows"] if view_mode == "detail" else payload["rows"]
+        columns = [
+            ("sale_date", "Fecha", "left"), ("ticket_number", "Documento", "left"), ("warehouse_name", "Sucursal", "left"),
+            ("register_name", "Caja", "left"), ("payment_method_name", "Método", "left"), ("total_amount", "Total", "right"),
+        ] if view_mode == "detail" else [("payment_method_name", "Método", "left"), ("count", "Pagos", "right"), ("total", "Total", "right")]
+
+    for row in rows:
+        for key in ("total", "sales_total", "difference", "difference_amount", "difference_abs", "positive", "negative", "amount", "total_amount"):
+            if key in row:
+                row[key] = _clp(round(_money(row.get(key))))
+
+    today_str = date.today().strftime("%d/%m/%Y")
+    period_label = f"{_fmt(date_from_str)} — {_fmt(date_to_str)}"
+    totals = payload.get("totals", {})
+    total_amount = _money(totals.get("total") or totals.get("sales_total") or totals.get("difference_abs"))
+    count = int(totals.get("count") or len(rows))
+    partial_ctx = {
+        "COMPANY_NAME": "CeciChic", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
+        "BRANCH_LABEL": payload.get("branch_label") or "Todas las locaciones",
+        "TODAY": today_str, "FOOTER_NOTE": "Uso interno", "CURRENCY_LABEL": CURRENCY_LABEL,
+    }
+    meta_rows = (
+        f'<tr><td>Período</td><td>{period_label}</td></tr>'
+        f'<tr><td>Locación</td><td>{_escape(partial_ctx["BRANCH_LABEL"])}</td></tr>'
+        f'<tr><td>Vista</td><td>{"Detalle" if view_mode == "detail" else "Agrupada"}</td></tr>'
+        f'<tr><td>Moneda</td><td>{CURRENCY_LABEL}</td></tr>'
+        f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
+    )
+    return {
+        **partial_ctx,
+        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "REPORT_STATUS": "INFORME",
+        "COVER_TITLE": title.replace(" - ", "<br>"),
+        "COVER_SUBTITLE": "Reporte operativo de caja POS generado con datos reales del sistema.",
+        "META_ROWS": meta_rows,
+        "KPI_CARDS": (
+            f'<div class="kpi-card primary"><div class="kpi-label">Total</div><div class="kpi-value">{_clp(round(total_amount))}</div><div class="kpi-hint">{period_label}</div></div>'
+            f'<div class="kpi-card info"><div class="kpi-label">Registros</div><div class="kpi-value">{count}</div><div class="kpi-hint">según filtros</div></div>'
+        ),
+        "EXECUTIVE_NOTE": f"Reporte {title} para {partial_ctx['BRANCH_LABEL']} durante {period_label}.",
+        "CHART_PAGE": "",
+        "DETAIL_PAGES": _simple_petty_cash_pages(rows, columns, title, partial_ctx),
+    }
+
+
+async def _cash_pos_pdf(report_kind: str, date_from: str, date_to: str, warehouse_id: str, filter_value: str, view_mode: str, chart_bar: Optional[UploadFile]) -> Response:
+    try:
+        ctx = await _build_cash_pos_context(report_kind, date_from, date_to, warehouse_id, filter_value, view_mode)
+        if chart_bar:
+            raw = await chart_bar.read()
+            if raw:
+                b64 = base64.b64encode(raw).decode()
+                chart_page = (
+                    '<section class="report-page">{{> _page_header}}'
+                    '<div class="section-heading"><div class="section-label">Gráfico</div>'
+                    f'<h2 class="section-title">{_escape(ctx.get("REPORT_TITLE", "Caja POS"))}</h2></div>'
+                    '<div class="chart-card no-break"><div class="chart-section" style="min-height:0">'
+                    f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
+                    '</div></div>{{> _page_footer}}</section>'
+                )
+                chart_page = _resolve_partials(chart_page)
+                for key, value in ctx.items():
+                    chart_page = chart_page.replace(f"{{{{{key}}}}}", str(value))
+                ctx["CHART_PAGE"] = chart_page
+        html_out = _render("petty_cash_detail.html", ctx)
+        loop = asyncio.get_event_loop()
+        pdf_bytes = await loop.run_in_executor(None, _call_gotenberg_sync, html_out.encode("utf-8"), settings.GOTENBERG_URL)
+    except Exception as exc:
+        logger.error("Error generando PDF caja POS %s: %s", report_kind, exc)
+        return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
+    filename = f"caja-pos-{report_kind}_{date_from}_{date_to}.pdf"
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+@router.post("/cash-pos/sessions/pdf", response_class=Response)
+async def cash_pos_sessions_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), status: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _cash_pos_pdf("sessions", date_from, date_to, warehouse_id, status, view_mode, chart_bar)
+
+
+@router.post("/cash-pos/discrepancies/pdf", response_class=Response)
+async def cash_pos_discrepancies_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _cash_pos_pdf("discrepancies", date_from, date_to, warehouse_id, "all", view_mode, chart_bar)
+
+
+@router.post("/cash-pos/extra-movements/pdf", response_class=Response)
+async def cash_pos_extra_movements_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), movement_type: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _cash_pos_pdf("extra_movements", date_from, date_to, warehouse_id, movement_type, view_mode, chart_bar)
+
+
+@router.post("/cash-pos/collection-by-method/pdf", response_class=Response)
+async def cash_pos_collection_by_method_pdf(date_from: str = Form(...), date_to: str = Form(...), warehouse_id: str = Form("all"), method_code: str = Form("all"), view_mode: str = Form("detail"), chart_bar: Optional[UploadFile] = File(None), user: dict = Depends(get_current_user)):
+    return await _cash_pos_pdf("collection_by_method", date_from, date_to, warehouse_id, method_code, view_mode, chart_bar)
+
+
 @router.get("/sales/category-sales/data", response_class=JSONResponse)
 async def category_sales_data(
     date_from:     date       = Query(...),
