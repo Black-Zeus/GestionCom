@@ -11,6 +11,7 @@ const REPORT_COMPONENTS = {
   'category-sales':           lazy(() => import('./CategorySales')),
   'customer-sales':           lazy(() => import('./CustomerSales')),
   'seller-ranking':           lazy(() => import('./SellerRanking')),
+  'petty-cash-detail':        lazy(() => import('./PettyCashDetail')),
   'agreement-summary':        lazy(() => import('./AgreementSummary')),
   'agreement-usage':          lazy(() => import('./AgreementUsage')),
   'agreement-beneficiaries':  lazy(() => import('./AgreementBeneficiaries')),

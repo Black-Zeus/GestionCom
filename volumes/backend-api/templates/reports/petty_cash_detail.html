@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    {{> _styles}}
+  </style>
+</head>
+<body>
+
+  {{> _cover}}
+
+  <section class="report-page">
+
+    {{> _page_header}}
+
+    <div class="section-heading">
+      <div class="section-label">Visión general</div>
+      <h2 class="section-title">Resumen ejecutivo</h2>
+      <p class="section-description">
+        Detalle operativo de gastos de caja chica para el período seleccionado.
+        Incluye filtros por locación, categoría y estado de aprobación.
+      </p>
+    </div>
+
+    <div class="summary-banner no-break">
+      <div class="summary-banner-icon">i</div>
+      <div class="summary-banner-content">
+        <div class="summary-banner-title">Alcance del análisis</div>
+        <div class="summary-banner-text">
+          Los valores presentados consideran gastos de caja chica registrados para
+          {{BRANCH_LABEL}} durante el período {{PERIOD_LABEL}}.
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Información del reporte</div>
+      <div class="subsection-context">Parámetros de generación</div>
+    </div>
+
+    <div class="meta-card no-break">
+      <table class="meta-table">
+        <tbody>{{META_ROWS}}</tbody>
+      </table>
+    </div>
+
+    <div class="subsection-header">
+      <div class="subsection-title">Indicadores clave</div>
+      <div class="subsection-context">Resultados consolidados del período</div>
+    </div>
+
+    <div class="kpi-grid">{{KPI_CARDS}}</div>
+
+    <div class="executive-note no-break">
+      <strong>Observación ejecutiva:</strong> {{EXECUTIVE_NOTE}}
+    </div>
+
+    {{> _page_footer}}
+
+  </section>
+
+  {{CHART_PAGE}}
+
+  {{DETAIL_PAGES}}
+
+</body>
+</html>

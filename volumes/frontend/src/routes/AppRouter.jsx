@@ -106,6 +106,8 @@ const moduleComponents = {
   'reports-inventory':      ReportAreaPage,
   'reports-transfers':      ReportAreaPage,
   'reports-cash':           ReportAreaPage,
+  'reports-petty-cash':     ReportAreaPage,
+  'reports-cash-pos':       ReportAreaPage,
   'reports-customers':          ReportAreaPage,
   'reports-agreements':         ReportAreaPage,
   'daily-sales':                DailySales,
@@ -203,6 +205,7 @@ const routeAliases = [
   { from: 'admin/cash-pos', to: '/admin/cash/pos' },
   { from: 'admin/cash-petty', to: '/admin/cash/petty-cash-categories' },
   { from: 'admin/petty-cash-categories', to: '/admin/cash/petty-cash-categories' },
+  { from: 'reports/cash', to: '/reports/petty-cash' },
   { from: 'config/electronic-billing', to: '/integrations/electronic-billing' },
   { from: 'sales/agreements', to: '/finance/agreements' },
 ];

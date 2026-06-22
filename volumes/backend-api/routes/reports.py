@@ -5,6 +5,7 @@ Template: templates/reports/daily_sales.html
 """
 import asyncio
 import base64
+import html
 import json
 import math
 import os
@@ -2128,6 +2129,442 @@ async def daily_sales_pdf(
 
 _CAT_ROWS_FIRST = 24
 _CAT_ROWS_REST  = 28
+
+
+# ─── Petty cash detail ────────────────────────────────────────────────────────
+
+_PETTY_CASH_DETAIL_ROWS_FIRST = 20
+_PETTY_CASH_DETAIL_ROWS_REST = 28
+_PETTY_CASH_DAILY_ROWS_FIRST = 24
+_PETTY_CASH_DAILY_ROWS_REST = 32
+_PETTY_CASH_STATUS_LABELS = {
+    "PENDING": "Pendiente",
+    "APPROVED": "Aprobado",
+    "REJECTED": "Rechazado",
+}
+
+
+def _person_name(row: dict, prefix: str) -> str:
+    first = str(row.get(f"{prefix}_first_name") or "").strip()
+    last = str(row.get(f"{prefix}_last_name") or "").strip()
+    username = str(row.get(f"{prefix}_username") or "").strip()
+    full = " ".join(part for part in [first, last] if part).strip()
+    return full or username or "Sin responsable"
+
+
+def _escape(value) -> str:
+    return html.escape(str(value or ""), quote=True)
+
+
+def _status_label(status: str | None) -> str:
+    status = str(status or "PENDING").upper()
+    return _PETTY_CASH_STATUS_LABELS.get(status, status)
+
+
+async def _petty_cash_detail_payload(
+    date_from_value: date,
+    date_to_value: date,
+    warehouse_ids: list[int],
+    category_id: int | None,
+    status: str,
+) -> dict:
+    if date_from_value > date_to_value:
+        date_from_value, date_to_value = date_to_value, date_from_value
+
+    status = str(status or "all").upper()
+    if status not in ("ALL", "PENDING", "APPROVED", "REJECTED"):
+        status = "ALL"
+
+    params: dict = {"date_from": date_from_value, "date_to": date_to_value}
+    filters: list[str] = []
+    _append_in_filter(filters, params, "f.warehouse_id", warehouse_ids, "warehouse_id")
+    if category_id:
+        filters.append("e.category_id = :category_id")
+        params["category_id"] = category_id
+    if status != "ALL":
+        filters.append("COALESCE(e.expense_status, 'PENDING') = :status")
+        params["status"] = status
+
+    filter_clause = f"AND {' AND '.join(filters)}" if filters else ""
+
+    async with db_manager.get_async_session() as session:
+        detail_db = _rows(await session.execute(text(f"""
+            SELECT
+              e.id,
+              e.expense_code,
+              e.expense_amount,
+              e.expense_description,
+              e.vendor_name,
+              e.expense_date,
+              COALESCE(e.expense_status, 'PENDING') AS expense_status,
+              e.has_receipt,
+              e.created_at,
+              e.approved_datetime,
+              f.fund_code,
+              f.warehouse_id,
+              COALESCE(w.warehouse_name, w.warehouse_code, 'Sin sucursal') AS warehouse_name,
+              c.id AS category_id,
+              COALESCE(c.category_name, 'Sin categoría') AS category_name,
+              responsible.username AS responsible_username,
+              responsible.first_name AS responsible_first_name,
+              responsible.last_name AS responsible_last_name,
+              creator.username AS creator_username,
+              creator.first_name AS creator_first_name,
+              creator.last_name AS creator_last_name,
+              approver.username AS approver_username,
+              approver.first_name AS approver_first_name,
+              approver.last_name AS approver_last_name
+            FROM petty_cash_expenses e
+            JOIN petty_cash_funds f ON f.id = e.petty_cash_fund_id
+            JOIN warehouses w ON w.id = f.warehouse_id
+            JOIN petty_cash_categories c ON c.id = e.category_id
+            LEFT JOIN users responsible ON responsible.id = f.responsible_user_id
+            LEFT JOIN users creator ON creator.id = e.created_by_user_id
+            LEFT JOIN users approver ON approver.id = e.approved_by_user_id
+            WHERE f.deleted_at IS NULL
+              AND e.expense_date BETWEEN :date_from AND :date_to
+              {filter_clause}
+            ORDER BY e.expense_date ASC, e.id ASC
+            LIMIT 3000
+        """), params))
+
+        category_options = _rows(await session.execute(text("""
+            SELECT id, category_name AS name
+            FROM petty_cash_categories
+            WHERE deleted_at IS NULL
+            ORDER BY category_name
+        """)))
+
+        if warehouse_ids:
+            label_params: dict = {}
+            label_filters: list[str] = []
+            _append_in_filter(label_filters, label_params, "id", warehouse_ids, "wid")
+            warehouse_rows = _rows(await session.execute(
+                text(f"SELECT warehouse_name FROM warehouses WHERE {' AND '.join(label_filters)} ORDER BY warehouse_name"),
+                label_params,
+            ))
+            branch_label = ", ".join(row.get("warehouse_name") or "" for row in warehouse_rows if row.get("warehouse_name")) or "Locaciones seleccionadas"
+        else:
+            branch_label = "Todas las locaciones"
+
+    detail_rows = []
+    date_index: dict[str, dict] = {}
+    cur = date_from_value
+    while cur <= date_to_value:
+        date_index[cur.isoformat()] = {
+            "iso": cur.isoformat(),
+            "total": 0.0,
+            "count": 0,
+            "pending": 0,
+            "approved": 0,
+            "rejected": 0,
+            "with_receipt": 0,
+        }
+        cur += timedelta(days=1)
+
+    category_set = set()
+    totals = {
+        "total": 0.0,
+        "count": 0,
+        "pending": 0,
+        "approved": 0,
+        "rejected": 0,
+        "with_receipt": 0,
+        "categories": 0,
+    }
+
+    for row in detail_db:
+        iso = row["expense_date"] if isinstance(row.get("expense_date"), str) else row["expense_date"].isoformat()
+        amount = _money(row.get("expense_amount"))
+        state = str(row.get("expense_status") or "PENDING").upper()
+        has_receipt = bool(row.get("has_receipt"))
+        day = date_index.get(iso)
+        if day:
+            day["total"] += amount
+            day["count"] += 1
+            if state == "APPROVED":
+                day["approved"] += 1
+            elif state == "REJECTED":
+                day["rejected"] += 1
+            else:
+                day["pending"] += 1
+            if has_receipt:
+                day["with_receipt"] += 1
+
+        totals["total"] += amount
+        totals["count"] += 1
+        if state == "APPROVED":
+            totals["approved"] += 1
+        elif state == "REJECTED":
+            totals["rejected"] += 1
+        else:
+            totals["pending"] += 1
+        if has_receipt:
+            totals["with_receipt"] += 1
+        if row.get("category_id"):
+            category_set.add(row.get("category_id"))
+
+        detail_rows.append({
+            "id": row.get("id"),
+            "expense_code": row.get("expense_code"),
+            "expense_date": iso,
+            "warehouse_id": row.get("warehouse_id"),
+            "warehouse_name": row.get("warehouse_name") or "",
+            "fund_code": row.get("fund_code") or "",
+            "category_id": row.get("category_id"),
+            "category_name": row.get("category_name") or "Sin categoría",
+            "vendor_name": row.get("vendor_name") or "",
+            "responsible_name": _person_name(row, "responsible"),
+            "created_by_name": _person_name(row, "creator"),
+            "approved_by_name": _person_name(row, "approver") if row.get("approved_datetime") else "",
+            "expense_status": state,
+            "expense_status_label": _status_label(state),
+            "has_receipt": has_receipt,
+            "expense_amount": amount,
+            "expense_description": row.get("expense_description") or "",
+        })
+
+    totals["categories"] = len(category_set)
+
+    return {
+        "rows": list(date_index.values()),
+        "detail_rows": detail_rows,
+        "totals": totals,
+        "category_options": category_options,
+        "branch_label": branch_label,
+        "category_label": next((row["name"] for row in category_options if category_id and int(row["id"]) == int(category_id)), "Todas las categorías"),
+        "status_label": "Todos los estados" if status == "ALL" else _status_label(status),
+    }
+
+
+@router.get("/petty-cash/detail/data", response_class=JSONResponse)
+async def petty_cash_detail_data(
+    date_from:     date       = Query(...),
+    date_to:       date       = Query(...),
+    warehouse_id:  int | None = Query(None),
+    warehouse_ids: str | None = Query(None),
+    category_id:   int | None = Query(None),
+    status:        str        = Query("all"),
+    user:          dict       = Depends(get_current_user),
+):
+    selected_warehouse_ids = _parse_id_list(warehouse_ids) or ([warehouse_id] if warehouse_id else [])
+    payload = await _petty_cash_detail_payload(date_from, date_to, selected_warehouse_ids, category_id, status)
+    return JSONResponse(payload)
+
+
+def _build_petty_cash_table_pages(rows: list[dict], view_mode: str, ctx: dict) -> str:
+    def _partial(name: str) -> str:
+        content = _load_file(os.path.join(_PARTIALS_DIR, f"{name}.html"))
+        for key, value in ctx.items():
+            content = content.replace(f"{{{{{key}}}}}", str(value))
+        return content
+
+    page_hdr = _partial("_page_header")
+    page_ftr = _partial("_page_footer")
+    first = _PETTY_CASH_DAILY_ROWS_FIRST if view_mode == "grouped" else _PETTY_CASH_DETAIL_ROWS_FIRST
+    rest = _PETTY_CASH_DAILY_ROWS_REST if view_mode == "grouped" else _PETTY_CASH_DETAIL_ROWS_REST
+
+    chunks = [rows[:first]]
+    remaining = rows[first:]
+    while remaining:
+        chunks.append(remaining[:rest])
+        remaining = remaining[rest:]
+    if not chunks:
+        chunks = [[]]
+
+    pages = []
+    for page_idx, chunk in enumerate(chunks):
+        section_heading = ""
+        if page_idx == 0:
+            section_heading = (
+                '<div class="section-heading">'
+                '<div class="section-label">Detalle</div>'
+                f'<h2 class="section-title">{"Gastos por día" if view_mode == "grouped" else "Detalle de gastos"}</h2>'
+                '</div>'
+            )
+
+        if view_mode == "grouped":
+            tbody = "".join(
+                '<tr>'
+                f'<td>{_fmt(row["iso"])}</td>'
+                f'<td style="text-align:right">{int(row["count"]):,}</td>'
+                f'<td style="text-align:right;font-weight:600">{_clp(round(_money(row["total"])))}</td>'
+                f'<td style="text-align:right">{int(row["pending"]):,}</td>'
+                f'<td style="text-align:right">{int(row["approved"]):,}</td>'
+                f'<td style="text-align:right">{int(row["rejected"]):,}</td>'
+                f'<td style="text-align:right">{int(row["with_receipt"]):,}</td>'
+                '</tr>'
+                for row in chunk
+            ) if chunk else '<tr><td colspan="7" style="text-align:center;padding:20px;color:#94a3b8">Sin gastos para los filtros seleccionados</td></tr>'
+            table = (
+                '<table class="detail-table">'
+                '<thead><tr><th>Fecha</th><th style="text-align:right">Gastos</th>'
+                '<th style="text-align:right">Total</th><th style="text-align:right">Pendientes</th>'
+                '<th style="text-align:right">Aprobados</th><th style="text-align:right">Rechazados</th>'
+                '<th style="text-align:right">Con comprobante</th></tr></thead>'
+                f'<tbody>{tbody}</tbody></table>'
+            )
+        else:
+            tbody = "".join(
+                '<tr>'
+                f'<td>{_fmt(row["expense_date"])}</td>'
+                f'<td>{_escape(row["expense_code"])}</td>'
+                f'<td>{_escape(row["warehouse_name"])}</td>'
+                f'<td>{_escape(row["category_name"])}</td>'
+                f'<td>{_escape(row["vendor_name"] or "-")}</td>'
+                f'<td>{_escape(row["expense_status_label"])}</td>'
+                f'<td style="text-align:right;font-weight:600">{_clp(round(_money(row["expense_amount"])))}</td>'
+                '</tr>'
+                for row in chunk
+            ) if chunk else '<tr><td colspan="7" style="text-align:center;padding:20px;color:#94a3b8">Sin gastos para los filtros seleccionados</td></tr>'
+            table = (
+                '<table class="detail-table">'
+                '<thead><tr><th>Fecha</th><th>Código</th><th>Sucursal</th><th>Categoría</th>'
+                '<th>Comercio</th><th>Estado</th><th style="text-align:right">Monto</th></tr></thead>'
+                f'<tbody>{tbody}</tbody></table>'
+            )
+
+        pages.append(f'<section class="report-page">{page_hdr}{section_heading}{table}{page_ftr}</section>')
+
+    return "\n".join(pages)
+
+
+async def _build_petty_cash_detail_context(
+    date_from_str: str,
+    date_to_str: str,
+    warehouse_id_str: str,
+    category_id_str: str,
+    status: str,
+    view_mode: str,
+) -> dict:
+    start = date.fromisoformat(date_from_str)
+    end = date.fromisoformat(date_to_str)
+    warehouse_ids = [] if warehouse_id_str in ("all", "", "todas", None) else _parse_id_list(warehouse_id_str)
+    category_id = None if category_id_str in ("all", "", None) else int(category_id_str)
+    view_mode = view_mode if view_mode in ("detail", "grouped") else "detail"
+    payload = await _petty_cash_detail_payload(start, end, warehouse_ids, category_id, status)
+    duration = (end - start).days + 1
+    today_str = date.today().strftime("%d/%m/%Y")
+    period_label = f"{_fmt(date_from_str)} — {_fmt(date_to_str)}"
+    totals = payload["totals"]
+    avg_expense = round(_money(totals.get("total")) / max(int(totals.get("count") or 0), 1))
+    table_rows = payload["rows"] if view_mode == "grouped" else payload["detail_rows"]
+
+    meta_rows = (
+        f'<tr><td>Período</td><td>{period_label}</td></tr>'
+        f'<tr><td>Locación</td><td>{_escape(payload["branch_label"])}</td></tr>'
+        f'<tr><td>Categoría</td><td>{_escape(payload["category_label"])}</td></tr>'
+        f'<tr><td>Estado</td><td>{_escape(payload["status_label"])}</td></tr>'
+        f'<tr><td>Vista</td><td>{"Por día" if view_mode == "grouped" else "Detalle"}</td></tr>'
+        f'<tr><td>Moneda</td><td>{CURRENCY_LABEL}</td></tr>'
+        f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
+    )
+    kpi_specs = [
+        ("primary", "Total período", _clp(round(_money(totals.get("total")))), f"en {duration} días"),
+        ("info", "Gastos registrados", str(int(totals.get("count") or 0)), "movimientos de caja chica"),
+        ("primary", "Gasto promedio", _clp(avg_expense), "por registro"),
+        ("info", "Aprobados", str(int(totals.get("approved") or 0)), f"{int(totals.get('pending') or 0)} pendientes"),
+        ("warning", "Rechazados", str(int(totals.get("rejected") or 0)), "gastos observados"),
+        ("info", "Con comprobante", str(int(totals.get("with_receipt") or 0)), "gastos con evidencia"),
+    ]
+    kpi_cards = "".join(
+        f'<div class="kpi-card {variant}"><div class="kpi-label">{label}</div>'
+        f'<div class="kpi-value">{value}</div><div class="kpi-hint">{hint}</div></div>'
+        for variant, label, value, hint in kpi_specs
+    )
+    executive_note = (
+        f"Durante el período {period_label} se registraron {int(totals.get('count') or 0)} gastos "
+        f"de caja chica para {_escape(payload['branch_label'])}, por un total de "
+        f"{_clp(round(_money(totals.get('total'))))}."
+    )
+
+    partial_ctx = {
+        "COMPANY_NAME": "CeciChic",
+        "REPORT_TITLE": "Caja chica - detalle",
+        "PERIOD_LABEL": period_label,
+        "BRANCH_LABEL": payload["branch_label"],
+        "TODAY": today_str,
+        "FOOTER_NOTE": "Uso interno",
+        "CURRENCY_LABEL": CURRENCY_LABEL,
+    }
+
+    return {
+        **partial_ctx,
+        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "REPORT_STATUS": "INFORME",
+        "COVER_TITLE": "Caja chica<br>detalle",
+        "COVER_SUBTITLE": "Detalle operativo de gastos de caja chica por fecha, locación, categoría y estado de aprobación.",
+        "META_ROWS": meta_rows,
+        "KPI_CARDS": kpi_cards,
+        "EXECUTIVE_NOTE": executive_note,
+        "CHART_PAGE": "",
+        "DETAIL_PAGES": _build_petty_cash_table_pages(table_rows, view_mode, partial_ctx),
+    }
+
+
+@router.post("/petty-cash/detail/pdf", response_class=Response)
+async def petty_cash_detail_pdf(
+    date_from:    str                  = Form(...),
+    date_to:      str                  = Form(...),
+    warehouse_id: str                  = Form("all"),
+    category_id:  str                  = Form("all"),
+    status:       str                  = Form("all"),
+    view_mode:    str                  = Form("detail"),
+    chart_bar:    Optional[UploadFile] = File(None),
+    user:         dict                 = Depends(get_current_user),
+):
+    async def _chart_card(file) -> str:
+        if not file:
+            return ""
+        raw = await file.read()
+        if not raw:
+            return ""
+        b64 = base64.b64encode(raw).decode()
+        return (
+            '<div class="chart-card no-break">'
+            '<div class="chart-header"><div class="chart-header-title">Gastos por día</div></div>'
+            '<div class="chart-section" style="min-height:0">'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;" />'
+            '</div></div>'
+        )
+
+    try:
+        ctx = await _build_petty_cash_detail_context(date_from, date_to, warehouse_id, category_id, status, view_mode)
+        chart_card = await _chart_card(chart_bar)
+        if chart_card:
+            chart_page = (
+                '<section class="report-page">'
+                '{{> _page_header}}'
+                '<div class="section-heading"><div class="section-label">Gráfico</div>'
+                '<h2 class="section-title">Serie diaria de gastos</h2></div>'
+                f'{chart_card}'
+                '{{> _page_footer}}'
+                '</section>'
+            )
+            chart_page = _resolve_partials(chart_page)
+            for key, value in ctx.items():
+                chart_page = chart_page.replace(f"{{{{{key}}}}}", str(value))
+            ctx["CHART_PAGE"] = chart_page
+        html_out = _render("petty_cash_detail.html", ctx)
+    except Exception as exc:
+        logger.error("Error preparando template petty_cash_detail: %s", exc)
+        return JSONResponse({"error": "Error preparando reporte", "detail": str(exc)}, status_code=500)
+
+    try:
+        loop = asyncio.get_event_loop()
+        pdf_bytes = await loop.run_in_executor(
+            None, _call_gotenberg_sync, html_out.encode("utf-8"), settings.GOTENBERG_URL
+        )
+    except Exception as exc:
+        logger.error("Gotenberg error petty_cash_detail: %s", exc)
+        return JSONResponse({"error": "Error generando PDF", "detail": str(exc)}, status_code=500)
+
+    filename = f"caja-chica-detalle_{date_from}_{date_to}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
 
 
 @router.get("/sales/category-sales/data", response_class=JSONResponse)
