@@ -365,8 +365,8 @@ services:
     labels:
       stack: ${PROJECT_NAME}
       env: ${ENV}
-      service.group: tools
-      service.lifecycle: support
+      service.group: core
+      service.lifecycle: runtime
     command:
       - "gotenberg"
       - "--chromium-disable-javascript=true"
