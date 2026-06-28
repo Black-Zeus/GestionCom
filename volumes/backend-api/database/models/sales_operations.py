@@ -34,6 +34,9 @@ class SalesPoint(BaseModel):
     channel_type = Column(String(30), nullable=False, default="STORE", comment="Canal: STORE, WEB, WHATSAPP, PHONE, OTHER")
     location_description = Column(String(255), nullable=True, comment="Ubicacion o referencia operacional")
     is_active = Column(Boolean, nullable=False, default=True)
+    has_printer = Column(Boolean, nullable=False, default=False, comment="Si el punto de venta tiene impresora termica vinculada")
+    printer_paper_width_mm = Column(Integer, nullable=False, default=80, comment="Ancho de papel de la impresora termica en mm (58 o 80)")
+    printer_api_key = Column(String(19), nullable=True, unique=True, comment="Clave de autorizacion del agente de impresion (XXXX-XXXX-XXXX-XXXX)")
 
     warehouse = relationship("Warehouse")
     default_cash_register = relationship("CashRegister")

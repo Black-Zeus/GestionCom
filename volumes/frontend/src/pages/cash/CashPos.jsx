@@ -424,6 +424,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   const selectedIsAgreement = isAgreementMethod(selected);
   const selectedRequiresReference = requiresPaymentReference(selected);
   const isRefund = total < 0;
+  const isZeroAmount = Math.round(total) === 0;
   const absoluteTotal = Math.abs(total);
   const availableRates = exchangeRates.filter((rate) => rate.currency_code && rateValue(rate) > 0 && rate.currency_code !== rate.base_currency_code);
   const selectedForeignRate = availableRates.find((rate) => rate.currency_code === foreignCurrencyCode) || availableRates[0];
@@ -505,7 +506,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
     && mixedPayments.every((item) => item.method_code && mixedPaymentAmount(item) > 0)
     && mixedTotal >= absoluteTotal
     && mixedMetadataValid;
-  const canContinue = isMixed
+  const canContinue = isZeroAmount || (isMixed
     ? (isRefund || mixedValid)
     : Boolean(selected) && (
       isRefund
@@ -516,7 +517,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
         && agreementCreditStatus?.type !== 'error'
         && (isForeign ? Boolean(selectedForeignRate) && foreignReceivedSufficient : (!isCash && !selectedIsCheck) || importeNum >= total)
       )
-    );
+    ));
 
   useEffect(() => {
     if (!isForeign || isRefund || !expectedForeignInput) return;
@@ -598,6 +599,23 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   };
 
   const confirm = async () => {
+    if (isZeroAmount) {
+      setProcessing(true);
+      try {
+        await onConfirm({
+          payment_method_code: null,
+          payment_method_name: null,
+          amount_tendered: 0,
+          change_amount: 0,
+          payment_details: null,
+          receipt_email: email.trim() || null,
+        });
+        onClose?.();
+      } finally {
+        setProcessing(false);
+      }
+      return;
+    }
     const paymentMethod = isMixed ? mixedMethod : selected;
     const selectedForeignPayload = selectedForeignRate ? {
       currency_code: selectedForeignRate.currency_code,
@@ -633,6 +651,11 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
             reference_number: agreementDetails.reference_number.trim(),
             discount_percent: null,
             amount: total,
+            agreement_benefit_amount: agreementDetails.beneficiary_benefit_amount != null
+              ? agreementDetails.beneficiary_benefit_amount
+              : agreementDetails.agreement_benefit_amount,
+            agreement_single_purchase: agreementDetails.agreement_single_purchase,
+            beneficiary_consumed_amount: agreementDetails.beneficiary_consumed_amount || 0,
           },
         }
       : selectedRequiresReference
@@ -682,6 +705,11 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
               reference_number: String(itemAgreementDetails.reference_number || '').trim(),
               discount_percent: null,
               amount: mixedPaymentAmount(item),
+              agreement_benefit_amount: itemAgreementDetails.beneficiary_benefit_amount != null
+                ? itemAgreementDetails.beneficiary_benefit_amount
+                : itemAgreementDetails.agreement_benefit_amount || 0,
+              agreement_single_purchase: itemAgreementDetails.agreement_single_purchase !== false,
+              beneficiary_consumed_amount: itemAgreementDetails.beneficiary_consumed_amount || 0,
             },
           } : {}),
           ...(rate ? {
@@ -1088,8 +1116,8 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
       ) : (
         <>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
-            <div className="flex justify-between gap-3"><span className="text-slate-500">Medio de pago</span><span className="font-semibold">{isMixed ? mixedMethod.method_name : selected.method_name}</span></div>
-            {isRefund ? (
+            <div className="flex justify-between gap-3"><span className="text-slate-500">Medio de pago</span><span className="font-semibold">{isZeroAmount ? 'Sin cobro' : isMixed ? mixedMethod.method_name : selected.method_name}</span></div>
+            {isZeroAmount ? null : isRefund ? (
               <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Monto a entregar</span><span className="font-semibold tabular-nums text-red-700 dark:text-red-400">{money(absoluteTotal)}</span></div>
             ) : isMixed ? (
               <>
@@ -1139,7 +1167,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 <div className="flex justify-between gap-3 mt-1"><span className="text-slate-500">Vuelto</span><span className="font-semibold tabular-nums text-green-700 dark:text-green-400">{money(vuelto)}</span></div>
               </>
             )}
-            <div className="flex justify-between gap-3 mt-2 border-t border-slate-200 pt-2 dark:border-slate-700"><span className="font-medium">{isRefund ? 'Total devolucion' : 'Total cobrado'}</span><span className="font-bold tabular-nums">{money(absoluteTotal)}</span></div>
+            <div className="flex justify-between gap-3 mt-2 border-t border-slate-200 pt-2 dark:border-slate-700"><span className="font-medium">{isZeroAmount ? 'Sin cobro' : isRefund ? 'Total devolucion' : 'Total cobrado'}</span><span className="font-bold tabular-nums">{money(absoluteTotal)}</span></div>
           </div>
 
           <div className="space-y-1">
@@ -1594,7 +1622,7 @@ const CashPos = () => {
     };
 
     // Exchange with unused credit: forfeited, no refund — skip PaymentModal
-    if (isExchangeDocument && closingTotals.total <= 0) {
+    if (isExchangeDocument && Math.round(closingTotals.total) <= 0) {
       doClose();
       return;
     }

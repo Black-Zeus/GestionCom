@@ -53,7 +53,12 @@ const paymentRows = (sale) => {
   }];
 };
 
-const itemTotal = (item) => Number(item.paid_total_amount ?? (Number(item.quantity || 0) * Number(item.unit_price || 0)));
+const itemTotal = (item) => {
+  const qty = Number(item.quantity || 0);
+  const price = Number(item.unit_price || 0);
+  const disc = Number(item.discount_percent || 0);
+  return disc > 0 ? qty * price * (1 - disc / 100) : qty * price;
+};
 
 const groupedSaleItems = (items = []) => {
   const grouped = new Map();

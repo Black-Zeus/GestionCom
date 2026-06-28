@@ -49,6 +49,11 @@ export const salesDocumentsService = {
     return unwrap(response);
   },
 
+  async searchByTicket(q, limit = 10) {
+    const response = await apiClient.get(`/sales-documents/search?q=${encodeURIComponent(q)}&limit=${limit}`);
+    return normalizeList(unwrap(response));
+  },
+
   async registerReturn(payload) {
     const response = await apiClient.post('/sales-documents/returns', payload);
     return unwrap(response);

@@ -25,11 +25,16 @@ from database.models.sales_operations import (
     SaleUnitStatus,
 )
 from database.models.cash_sessions import CashRegisterSession, CASH_SESSION_OPEN
+from database.models.print_jobs import PrintJob, PrintJobStatus, PrintTemplate, PrintTicketType
+from database.models.business_foundation import DteCompanyConfig
+from database.models.sales_operations import SalesPoint
+from utils.log_helper import setup_logger
 from utils.permissions_utils import get_current_user
 
+logger = setup_logger(__name__)
 router = APIRouter(tags=["Sales Documents"])
 
-CENT = Decimal("0.01")
+CENT = Decimal("1")  # CLP is integer-only — no centavos
 TAX_RATE = Decimal("0.19")
 
 
@@ -912,6 +917,77 @@ async def apply_inventory_for_closed_sale(session, sale: SaleDocument, user_id: 
             await apply_inventory_out(session, line, int(sale.warehouse_id), quantity, user_id)
 
 
+async def _enqueue_sale_print_job(session, sale: SaleDocument, user_id: int | None) -> None:
+    """Crea un PrintJob PENDING después de cerrar una venta. Falla silenciosamente."""
+    if not sale.sales_point_id:
+        return
+
+    sp_result = await session.execute(
+        select(SalesPoint).where(
+            and_(SalesPoint.id == sale.sales_point_id, SalesPoint.has_printer.is_(True), SalesPoint.deleted_at.is_(None))
+        )
+    )
+    if not sp_result.scalar_one_or_none():
+        return
+
+    template_result = await session.execute(
+        select(PrintTemplate)
+        .where(and_(PrintTemplate.is_active.is_(True), PrintTemplate.deleted_at.is_(None)))
+        .order_by(PrintTemplate.id.desc())
+        .limit(1)
+    )
+    template = template_result.scalar_one_or_none()
+
+    company_result = await session.execute(
+        select(DteCompanyConfig).where(DteCompanyConfig.is_active.is_(True)).limit(1)
+    )
+    company_obj = company_result.scalar_one_or_none()
+    company_dict = None
+    if company_obj:
+        async def _mcode(asset_id):
+            if not asset_id:
+                return None
+            from sqlalchemy import text as _t
+            res = await session.execute(
+                _t("SELECT media_code FROM media_assets WHERE id = :id AND deleted_at IS NULL"),
+                {"id": asset_id},
+            )
+            row = res.fetchone()
+            return row[0] if row else None
+
+        logo_code   = await _mcode(company_obj.logo_media_asset_id)
+        banner_code = await _mcode(company_obj.banner_media_asset_id)
+        address_parts = [p for p in [
+            company_obj.company_address or "",
+            company_obj.company_comuna  or "",
+            company_obj.company_city    or "",
+        ] if p]
+        company_dict = {
+            "name":         company_obj.company_name or "",
+            "fantasy_name": company_obj.company_business_name or "",
+            "rut":          company_obj.company_rut or "",
+            "address":      ", ".join(address_parts),
+            "logo_url":     f"/api/profile/media/{logo_code}/full"   if logo_code   else None,
+            "banner_url":   f"/api/profile/media/{banner_code}/full" if banner_code else None,
+        }
+
+    ticket_type = PrintTicketType.TICKET_CAMBIO if sale.document_type_code == "EXCHANGE_DRAFT" else PrintTicketType.TICKET_VENTA
+
+    from routes.print_jobs import _build_sale_payload
+    job = PrintJob(
+        job_code=str(uuid4()),
+        sales_point_id=sale.sales_point_id,
+        cash_register_id=sale.cash_register_id,
+        sale_document_id=sale.id,
+        ticket_type=ticket_type,
+        template_version=template.version if template else None,
+        status=PrintJobStatus.PENDING,
+        payload=_build_sale_payload(sale, list(sale.lines or []), company=company_dict),
+        requested_by_user_id=user_id,
+    )
+    session.add(job)
+
+
 @router.post("/pending", response_class=JSONResponse)
 async def create_pending_sale(payload: PendingSaleCreate, request: Request, user: dict = Depends(get_current_user)):
     sale_code = str(uuid4())
@@ -1018,6 +1094,42 @@ async def get_sale_by_ticket(ticket_number: str, request: Request, user: dict = 
         if not sale:
             return ResponseManager.error(message="Ticket no encontrado", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_NOT_FOUND, request=request)
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), request=request)
+
+
+@router.get("/search", response_class=JSONResponse)
+async def search_sales_by_ticket(request: Request, user: dict = Depends(get_current_user)):
+    q = request.query_params.get("q", "").strip()
+    try:
+        limit = min(int(request.query_params.get("limit", "10")), 30)
+    except ValueError:
+        limit = 10
+    if not q:
+        return ResponseManager.success(data=[], request=request)
+    async with db_manager.get_async_session() as session:
+        result = await session.execute(
+            select(SaleDocument)
+            .where(and_(
+                SaleDocument.ticket_number.ilike(f"{q}%"),
+                SaleDocument.status == SaleStatus.CLOSED,
+                SaleDocument.deleted_at.is_(None),
+            ))
+            .order_by(SaleDocument.created_at.desc())
+            .limit(limit)
+        )
+        rows = result.scalars().all()
+        def _customer(snap):
+            s = snap or {}
+            return s.get("commercial_name") or s.get("legal_name") or s.get("customer_name") or s.get("name")
+        return ResponseManager.success(data=[
+            {
+                "id": s.id,
+                "ticket_number": s.ticket_number,
+                "document_type_name": s.document_type_name,
+                "total_amount": float(s.total_amount or 0),
+                "customer": _customer(s.customer_snapshot),
+            }
+            for s in rows
+        ], request=request)
 
 
 @router.get("/by-customer/{customer_id}", response_class=JSONResponse)
@@ -1255,6 +1367,12 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
                 request=request,
             )
         await session.flush()
+
+        try:
+            await _enqueue_sale_print_job(session, sale, user_id)
+        except Exception as exc:
+            logger.warning("No se pudo encolar trabajo de impresion para venta %s: %s", sale.id, exc)
+
         return ResponseManager.success(data=sale_to_dict(sale, include_units=True), message="Venta cerrada", request=request)
 
 

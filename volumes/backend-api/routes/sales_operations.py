@@ -105,6 +105,8 @@ def sales_point_to_dict(sales_point: SalesPoint) -> dict:
         "channel_type": sales_point.channel_type,
         "location_description": sales_point.location_description,
         "is_active": sales_point.is_active,
+        "has_printer": bool(sales_point.has_printer) if hasattr(sales_point, "has_printer") else False,
+        "printer_api_key": sales_point.printer_api_key if hasattr(sales_point, "printer_api_key") else None,
         "display_name": sales_point.display_name,
         "created_at": sales_point.created_at.isoformat() if sales_point.created_at else None,
         "updated_at": sales_point.updated_at.isoformat() if sales_point.updated_at else None,
@@ -486,7 +488,7 @@ async def update_sales_point(sales_point_data: SalesPointUpdate, request: Reques
                     sales_point.default_cash_register_id = sales_point_data.default_cash_register_id
                     sales_point.default_cash_register = cash_register
 
-            for field in ["sales_point_name", "channel_type", "location_description", "is_active"]:
+            for field in ["sales_point_name", "channel_type", "location_description", "is_active", "has_printer"]:
                 value = getattr(sales_point_data, field)
                 if value is not None:
                     setattr(sales_point, field, value)

@@ -14,6 +14,8 @@ class SalesPointBase(BaseModel):
     channel_type: str = Field(default="STORE", min_length=2, max_length=30)
     location_description: Optional[str] = Field(None, max_length=255)
     is_active: bool = True
+    has_printer: bool = False
+    printer_paper_width_mm: int = Field(default=80)
 
 
 class SalesPointCreate(SalesPointBase):
@@ -27,6 +29,8 @@ class SalesPointUpdate(BaseModel):
     channel_type: Optional[str] = Field(None, min_length=2, max_length=30)
     location_description: Optional[str] = Field(None, max_length=255)
     is_active: Optional[bool] = None
+    has_printer: Optional[bool] = None
+    printer_paper_width_mm: Optional[int] = None
 
 
 class OperatorAssignmentBase(BaseModel):

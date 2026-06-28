@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckSquare, Eye, RefreshCcw, RotateCcw, Search, Shuffle } from 'lucide-react';
 import ModuleHeader from '@/components/common/navigation/ModuleHeader';
@@ -86,6 +86,9 @@ const SalesReturns = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [relatedDocuments, setRelatedDocuments] = useState({});
   const [detailSale, setDetailSale] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const folioContainerRef = useRef(null);
 
   useEffect(() => {
     documentConfigService.listTypes({ active_only: true }).then((allTypes) => {
@@ -163,10 +166,38 @@ const SalesReturns = () => {
     return () => { ignore = true; };
   }, [referenceKey]);
 
+  useEffect(() => {
+    const q = `${getPrefix(documentTypeCode)}${folio.trim()}`;
+    if (!folio.trim()) { setSearchResults([]); setShowDropdown(false); return undefined; }
+    const timer = setTimeout(async () => {
+      try {
+        const results = await salesDocumentsService.searchByTicket(q);
+        setSearchResults(results);
+        setShowDropdown(results.length > 0);
+      } catch {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [folio, documentTypeCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (folioContainerRef.current && !folioContainerRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const fullTicket = () => `${getPrefix(documentTypeCode)}${folio.trim()}`;
 
   const searchSale = async () => {
     if (!folio.trim()) { toast.error('Ingresa el folio del documento.'); return; }
+    setShowDropdown(false);
+    setSearchResults([]);
     setLoading(true);
     try {
       setSale(await salesDocumentsService.findByTicket(fullTicket()));
@@ -177,6 +208,26 @@ const SalesReturns = () => {
       setRelatedDocuments({});
       setSelectedUnitIds([]);
       toast.error(getBackendMessage(err, 'No fue posible encontrar el documento.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectResult = async (result) => {
+    setShowDropdown(false);
+    setSearchResults([]);
+    const prefix = getPrefix(documentTypeCode);
+    setFolio(result.ticket_number.startsWith(prefix)
+      ? result.ticket_number.slice(prefix.length)
+      : result.ticket_number);
+    setLoading(true);
+    try {
+      setSale(await salesDocumentsService.findByTicket(result.ticket_number));
+      setRelatedDocuments({});
+      setSelectedUnitIds([]);
+    } catch (err) {
+      setSale(null);
+      toast.error(getBackendMessage(err, 'No fue posible cargar el documento.'));
     } finally {
       setLoading(false);
     }
@@ -270,9 +321,15 @@ const SalesReturns = () => {
     }
   };
 
-  const reset = () => { setFolio(''); setSale(null); setRelatedDocuments({}); setSelectedUnitIds([]); };
+  const reset = () => { setFolio(''); setSale(null); setRelatedDocuments({}); setSelectedUnitIds([]); setSearchResults([]); setShowDropdown(false); };
 
   const docStatus = sale ? saleStatus(sale.status) : null;
+
+  const saleDiscount = sale
+    ? Number(sale.line_discount_amount || 0)
+      + Number(sale.document_discount_amount || 0)
+      + Number(sale.agreement_discount_amount || 0)
+    : 0;
 
   return (
     <section className="min-h-full bg-slate-50 px-6 py-5 text-slate-950 dark:bg-slate-950 dark:text-white">
@@ -296,7 +353,7 @@ const SalesReturns = () => {
             </select>
           </div>
 
-          <div className="space-y-1 text-sm">
+          <div className="relative space-y-1 text-sm" ref={folioContainerRef}>
             <span className="font-medium text-slate-700 dark:text-slate-200">Folio</span>
             <div className="flex h-10 overflow-hidden rounded-md border border-slate-300 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:focus-within:border-blue-500 dark:focus-within:ring-blue-950">
               {getPrefix(documentTypeCode) && (
@@ -308,10 +365,27 @@ const SalesReturns = () => {
                 className="h-full flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-slate-400"
                 value={folio}
                 onChange={(e) => { setFolio(e.target.value); setSale(null); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') searchSale(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') searchSale(); if (e.key === 'Escape') setShowDropdown(false); }}
                 placeholder="Folio"
+                autoComplete="off"
               />
             </div>
+            {showDropdown && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                {searchResults.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    className="flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                    onMouseDown={(e) => { e.preventDefault(); selectResult(r); }}
+                  >
+                    <span className="shrink-0 font-mono text-slate-900 dark:text-white">{r.ticket_number}</span>
+                    <span className="truncate text-xs text-slate-500">{r.customer || r.document_type_name}</span>
+                    <span className="shrink-0 tabular-nums text-xs text-slate-400">{money(r.total_amount)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-end">
@@ -332,14 +406,35 @@ const SalesReturns = () => {
               <p className="font-semibold">{customerName(sale.customer)}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Total pagado</p>
-              <p className="font-semibold tabular-nums">{money(sale.total_amount)}</p>
+              <p className="text-xs text-slate-500">
+                {saleDiscount > 0 ? 'Subtotal / Total pagado' : 'Total pagado'}
+              </p>
+              {saleDiscount > 0 ? (
+                <p className="font-semibold tabular-nums">
+                  <span className="text-slate-400 line-through">{money(Number(sale.total_amount) + saleDiscount)}</span>
+                  {' '}
+                  {money(sale.total_amount)}
+                </p>
+              ) : (
+                <p className="font-semibold tabular-nums">{money(sale.total_amount)}</p>
+              )}
             </div>
             <div>
               <p className="text-xs text-slate-500">Estado</p>
               <StatusBadge variant={docStatus.variant}>{docStatus.label}</StatusBadge>
             </div>
           </div>
+
+          {saleDiscount > 0 && (
+            <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-800/40 dark:bg-amber-950/25">
+              <span className="mt-0.5 text-amber-500">ⓘ</span>
+              <span className="text-amber-800 dark:text-amber-300">
+                Esta venta tiene un descuento de{' '}
+                <strong className="tabular-nums">{money(saleDiscount)}</strong>{' '}
+                distribuido entre las unidades. El monto <em>Pagado exacto</em> por unidad ya refleja ese descuento.
+              </span>
+            </div>
+          )}
 
           <div className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:grid-cols-[1fr_auto]">
             <div className="flex flex-wrap items-center gap-2">
