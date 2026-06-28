@@ -408,7 +408,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   const directMethods = sortPaymentMethods(methods.filter((method) => method.method_code !== 'MIXED'));
   const isRefundMode = total < 0;
   const paymentMethodOptions = isRefundMode
-    ? directMethods.filter((m) => m.method_type === 'CASH' || m.method_type === 'TRANSFER')
+    ? directMethods.filter((m) => m.method_type === 'CASH' || m.method_type === 'TRANSFER' || m.method_code === 'FOREIGN_CURRENCY')
     : directMethods;
   const mixedOptionsForIndex = (index) => {
     const selectedCodes = new Set(mixedPayments.map((item, itemIndex) => (itemIndex === index ? null : item.method_code)).filter(Boolean));
@@ -512,9 +512,10 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
   const canContinue = isZeroAmount || (isMixed
     ? (isRefund || mixedValid)
     : Boolean(selected) && (
-      isRefund
+      (isRefund && (!selectedRequiresReference || referenceValid) && (!isForeign || Boolean(selectedForeignRate)))
       || (
-        referenceValid
+        !isRefund
+        && referenceValid
         && checkDetailsValid
         && agreementDetailsValid
         && agreementCreditStatus?.type !== 'error'
@@ -851,7 +852,7 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
             </div>
           )}
 
-          {paymentMode === 'DIRECT' && isForeign && !isRefund && (
+          {paymentMode === 'DIRECT' && isForeign && (
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-sm">
                 <span className="font-medium text-slate-700 dark:text-slate-200">Divisa</span>
@@ -868,30 +869,32 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 </select>
                 {selectedForeignRate && (
                   <p className="text-xs text-slate-400">
-                    Esperado: {formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code)} · Fee {feeValue(selectedForeignRate).toLocaleString('es-CL')}%
+                    {isRefund ? 'A devolver' : 'Esperado'}: {formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code)}{!isRefund && ` · Fee ${feeValue(selectedForeignRate).toLocaleString('es-CL')}%`}
                   </p>
                 )}
               </label>
-              <label className="space-y-1 text-sm">
-                <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
-                <input
-                  className={inputCls}
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={selectedForeignRate ? formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code) : ''}
-                  value={foreignReceived}
-                  onChange={(e) => setForeignReceived(e.target.value)}
-                  onFocus={(e) => focusAmountInput(e, setForeignReceived)}
-                  onBlur={(e) => setForeignReceived(formatAmountForInput(e.target.value, selectedForeignRate?.currency_code || 'CLP'))}
-                />
-                {foreignReceived !== '' && !foreignReceivedSufficient && (
-                  <p className="text-xs text-red-600 dark:text-red-400">El importe es menor al esperado.</p>
-                )}
-              </label>
+              {!isRefund && (
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium text-slate-700 dark:text-slate-200">Importe recibido</span>
+                  <input
+                    className={inputCls}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={selectedForeignRate ? formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code) : ''}
+                    value={foreignReceived}
+                    onChange={(e) => setForeignReceived(e.target.value)}
+                    onFocus={(e) => focusAmountInput(e, setForeignReceived)}
+                    onBlur={(e) => setForeignReceived(formatAmountForInput(e.target.value, selectedForeignRate?.currency_code || 'CLP'))}
+                  />
+                  {foreignReceived !== '' && !foreignReceivedSufficient && (
+                    <p className="text-xs text-red-600 dark:text-red-400">El importe es menor al esperado.</p>
+                  )}
+                </label>
+              )}
             </div>
           )}
 
-          {paymentMode === 'DIRECT' && selectedRequiresReference && !selectedIsCheck && !isRefund && (
+          {paymentMode === 'DIRECT' && selectedRequiresReference && !selectedIsCheck && (
             <label className="space-y-1 text-sm">
               <span className="font-medium text-slate-700 dark:text-slate-200">{selectedReferenceCopy.label}</span>
               <input
