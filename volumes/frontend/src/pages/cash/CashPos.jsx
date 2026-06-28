@@ -406,7 +406,10 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
     icon_name: 'split-square-horizontal',
   };
   const directMethods = sortPaymentMethods(methods.filter((method) => method.method_code !== 'MIXED'));
-  const paymentMethodOptions = directMethods;
+  const isRefundMode = total < 0;
+  const paymentMethodOptions = isRefundMode
+    ? directMethods.filter((m) => m.method_type === 'CASH' || m.method_type === 'TRANSFER')
+    : directMethods;
   const mixedOptionsForIndex = (index) => {
     const selectedCodes = new Set(mixedPayments.map((item, itemIndex) => (itemIndex === index ? null : item.method_code)).filter(Boolean));
     return paymentMethodOptions.filter((method) => !selectedCodes.has(method.method_code));
@@ -753,39 +756,41 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
           </div>
 
           <div>
-            <div className="mb-3 grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1 text-sm dark:border-slate-700 dark:bg-slate-900">
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentMode('DIRECT');
-                  setMixedPayments([newMixedPayment()]);
-                }}
-                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
-              >
-                <CreditCard className="h-4 w-4" />
-                Pago directo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPaymentMode('MIXED');
-                  setSelected(null);
-                  setImporte('');
-                  setForeignReceived('');
-                  setMixedPayments([{ method_code: defaultMixedMethodCode(), amount: formatAmountForInput(absoluteTotal) }]);
-                }}
-                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
-              >
-                <SplitSquareHorizontal className="h-4 w-4" />
-                Pago mixto
-              </button>
-            </div>
+            {!isRefundMode && (
+              <div className="mb-3 grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1 text-sm dark:border-slate-700 dark:bg-slate-900">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMode('DIRECT');
+                    setMixedPayments([newMixedPayment()]);
+                  }}
+                  className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pago directo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMode('MIXED');
+                    setSelected(null);
+                    setImporte('');
+                    setForeignReceived('');
+                    setMixedPayments([{ method_code: defaultMixedMethodCode(), amount: formatAmountForInput(absoluteTotal) }]);
+                  }}
+                  className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+                >
+                  <SplitSquareHorizontal className="h-4 w-4" />
+                  Pago mixto
+                </button>
+              </div>
+            )}
 
-            {paymentMode === 'DIRECT' && (
+            {(paymentMode === 'DIRECT' || isRefundMode) && (
               <>
-                <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Medio de pago</p>
+                <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">{isRefundMode ? 'Medio de reembolso' : 'Medio de pago'}</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {directMethods.map((m) => {
+                  {paymentMethodOptions.map((m) => {
                     const Icon = METHOD_ICON_NAMES[m.icon_name] || (isAgreementMethod(m) ? Building2 : m.method_code === 'FOREIGN_CURRENCY' ? Repeat2 : METHOD_ICONS[m.method_type] || CheckCircle2);
                     const active = selected?.id === m.id;
                     return (
@@ -1636,7 +1641,7 @@ const CashPos = () => {
 
     ModalManager.show({
       type: 'custom',
-      title: 'Procesar pago',
+      title: isReturnDocument ? 'Registrar devolución' : 'Procesar pago',
       size: 'large',
       showFooter: false,
       contentComponent: PaymentModal,
