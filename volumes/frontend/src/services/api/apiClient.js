@@ -11,9 +11,8 @@ const resolveApiUrl = () => {
 
   try {
     const apiUrl = new URL(configuredUrl, window.location.origin);
-    const sameLocalOrigin = ['localhost', '127.0.0.1'].includes(window.location.hostname);
     const pointsToDirectBackend = ['localhost', '127.0.0.1'].includes(apiUrl.hostname) && apiUrl.port === '8000';
-    if (sameLocalOrigin && pointsToDirectBackend) return '/api';
+    if (pointsToDirectBackend) return '/api';
   } catch {
     return '/api';
   }
@@ -118,6 +117,10 @@ apiClient.interceptors.request.use(async (config) => {
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
   }
 
   Object.entries(getClientContextHeaders()).forEach(([key, value]) => {

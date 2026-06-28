@@ -865,7 +865,7 @@ async def _build_rx_context(
         f'<tr><td>Estado</td><td>{status_label}</td></tr>'
         f'<tr><td>Total de días</td><td>{duration} días</td></tr>'
         f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
-        f'<tr><td>Generado por</td><td>Sistema de Gestión CeciChic</td></tr>'
+        f'<tr><td>Generado por</td><td>Sistema de Gestión GestionCom</td></tr>'
     )
 
     kpi_specs = [
@@ -891,8 +891,8 @@ async def _build_rx_context(
     )
 
     ctx: dict = {
-        "COMPANY_NAME":   "CeciChic",
-        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":   "GestionCom",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS":  "INFORME",
         "REPORT_TITLE":   "Cambios y devoluciones",
         "COVER_TITLE":    "Reporte de<br>Cambios y Devoluciones",
@@ -1647,7 +1647,7 @@ async def _build_context(date_from: str, date_to: str, branch: str, view_mode: s
         f'<tr><td>Sucursal</td><td>{branch_label}</td></tr>'
         f'<tr><td>Total de días</td><td>{len(curr_rows)} días</td></tr>'
         f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
-        f'<tr><td>Generado por</td><td>Sistema de Gestión CeciChic</td></tr>'
+        f'<tr><td>Generado por</td><td>Sistema de Gestión GestionCom</td></tr>'
     )
 
     pct_total = _pct_diff(round(total), round(p_total))
@@ -1682,8 +1682,8 @@ async def _build_context(date_from: str, date_to: str, branch: str, view_mode: s
     )
 
     ctx: dict = {
-        "COMPANY_NAME":   "CeciChic",
-        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":   "GestionCom",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS":  "INFORME",
         "REPORT_TITLE":   "Reporte de Ventas Diarias",
         "COVER_TITLE":    "Reporte de<br>Ventas Diarias",
@@ -1755,7 +1755,7 @@ def _build_context_mock(date_from: str, date_to: str, branch: str) -> dict:
         f'<tr><td>Sucursal</td><td>{branch_label}</td></tr>'
         f'<tr><td>Total de días</td><td>{len(curr_rows)} días</td></tr>'
         f'<tr><td>Generado el</td><td>{today_str}</td></tr>'
-        f'<tr><td>Generado por</td><td>Sistema de Gestión CeciChic</td></tr>'
+        f'<tr><td>Generado por</td><td>Sistema de Gestión GestionCom</td></tr>'
     )
 
     p_total = sum(r["total"] for r in prev_rows)
@@ -1798,8 +1798,8 @@ def _build_context_mock(date_from: str, date_to: str, branch: str) -> dict:
     # Build base context first (DETAIL_PAGES needs it to render partials)
     ctx: dict = {
         # ── Identidad ──────────────────────────────────
-        "COMPANY_NAME":  "CeciChic",
-        "LOGO_HTML":     '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":  "GestionCom",
+        "LOGO_HTML":     '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS": "INFORME MOCKUP",
         "REPORT_TITLE":  "Reporte de Ventas Diarias",
         "COVER_TITLE":   "Reporte de<br>Ventas Diarias",
@@ -2479,7 +2479,7 @@ async def _build_petty_cash_detail_context(
     )
 
     partial_ctx = {
-        "COMPANY_NAME": "CeciChic",
+        "COMPANY_NAME": "GestionCom",
         "REPORT_TITLE": "Caja chica - detalle",
         "PERIOD_LABEL": period_label,
         "BRANCH_LABEL": payload["branch_label"],
@@ -2490,7 +2490,7 @@ async def _build_petty_cash_detail_context(
 
     return {
         **partial_ctx,
-        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "LOGO_HTML": '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS": "INFORME",
         "COVER_TITLE": "Caja chica<br>detalle",
         "COVER_SUBTITLE": "Detalle operativo de gastos de caja chica por fecha, locación, categoría y estado de aprobación.",
@@ -2918,13 +2918,13 @@ async def _build_simple_petty_cash_context(report_kind: str, date_from_str: str,
         f'<div class="kpi-card info"><div class="kpi-label">Registros</div><div class="kpi-value">{count}</div><div class="kpi-hint">según filtros</div></div>'
     )
     partial_ctx = {
-        "COMPANY_NAME": "CeciChic", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
+        "COMPANY_NAME": "GestionCom", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
         "BRANCH_LABEL": payload.get("branch_label") or "Todas las locaciones",
         "TODAY": today_str, "FOOTER_NOTE": "Uso interno", "CURRENCY_LABEL": CURRENCY_LABEL,
     }
     return {
         **partial_ctx,
-        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "LOGO_HTML": '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS": "INFORME",
         "COVER_TITLE": title.replace(" - ", "<br>"),
         "COVER_SUBTITLE": "Reporte operativo de caja chica generado con datos reales del sistema.",
@@ -3404,7 +3404,7 @@ async def _build_cash_pos_context(report_kind: str, date_from_str: str, date_to_
     total_amount = _money(totals.get("total") or totals.get("sales_total") or totals.get("difference_abs"))
     count = int(totals.get("count") or len(rows))
     partial_ctx = {
-        "COMPANY_NAME": "CeciChic", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
+        "COMPANY_NAME": "GestionCom", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
         "BRANCH_LABEL": payload.get("branch_label") or "Todas las locaciones",
         "TODAY": today_str, "FOOTER_NOTE": "Uso interno", "CURRENCY_LABEL": CURRENCY_LABEL,
     }
@@ -3417,7 +3417,7 @@ async def _build_cash_pos_context(report_kind: str, date_from_str: str, date_to_
     )
     return {
         **partial_ctx,
-        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "LOGO_HTML": '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS": "INFORME",
         "COVER_TITLE": title.replace(" - ", "<br>"),
         "COVER_SUBTITLE": "Reporte operativo de caja POS generado con datos reales del sistema.",
@@ -3759,8 +3759,8 @@ async def _build_category_context(
     )
 
     ctx: dict = {
-        "COMPANY_NAME":   "CeciChic",
-        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":   "GestionCom",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS":  "INFORME",
         "REPORT_TITLE":   f"Ventas por {group_label.lower()}",
         "COVER_TITLE":    f"Ventas por<br>{group_label}",
@@ -3781,7 +3781,7 @@ async def _build_category_context(
         "EXECUTIVE_NOTE": executive_note,
         "CHART_PAGE":     "",
         "DETAIL_PAGES":   _build_category_table_pages(rows, group_label, grand_total, {
-            "COMPANY_NAME":   "CeciChic",
+            "COMPANY_NAME":   "GestionCom",
             "REPORT_TITLE":   f"Ventas por {group_label.lower()}",
             "PERIOD_LABEL":   period_label,
             "BRANCH_LABEL":   branch_label,
@@ -4185,8 +4185,8 @@ async def _build_customer_context(
     )
 
     ctx: dict = {
-        "COMPANY_NAME":   "CeciChic",
-        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":   "GestionCom",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS":  "INFORME",
         "REPORT_TITLE":   "Ventas por cliente",
         "COVER_TITLE":    "Ventas por<br>Cliente",
@@ -4206,7 +4206,7 @@ async def _build_customer_context(
         "EXECUTIVE_NOTE": executive_note,
         "CHART_PAGE":     "",
         "DETAIL_PAGES":   _build_client_table_pages(rows, grand_total, {
-            "COMPANY_NAME":   "CeciChic",
+            "COMPANY_NAME":   "GestionCom",
             "REPORT_TITLE":   "Ventas por cliente",
             "PERIOD_LABEL":   period_label,
             "BRANCH_LABEL":   branch_label,
@@ -4901,7 +4901,7 @@ async def _build_customers_context(report_kind: str, date_from_str: str, date_to
         primary_label = "Registros"
         primary_value = str(count)
     partial_ctx = {
-        "COMPANY_NAME": "CeciChic", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
+        "COMPANY_NAME": "GestionCom", "REPORT_TITLE": title, "PERIOD_LABEL": period_label,
         "BRANCH_LABEL": payload.get("branch_label") or "Todas las locaciones",
         "TODAY": today_str, "FOOTER_NOTE": "Uso interno", "CURRENCY_LABEL": CURRENCY_LABEL,
     }
@@ -4914,7 +4914,7 @@ async def _build_customers_context(report_kind: str, date_from_str: str, date_to
     )
     return {
         **partial_ctx,
-        "LOGO_HTML": '<span class="cover-logo-fallback">CECICHIC</span>',
+        "LOGO_HTML": '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS": "INFORME",
         "COVER_TITLE": title.replace(" - ", "<br>"),
         "COVER_SUBTITLE": "Reporte del módulo de clientes generado con datos reales del sistema.",
@@ -5212,8 +5212,8 @@ async def _build_seller_context(
     )
 
     ctx: dict = {
-        "COMPANY_NAME":   "CeciChic",
-        "LOGO_HTML":      '<span class="cover-logo-fallback">CECICHIC</span>',
+        "COMPANY_NAME":   "GestionCom",
+        "LOGO_HTML":      '<span class="cover-logo-fallback">GESTIONCOM</span>',
         "REPORT_STATUS":  "INFORME",
         "REPORT_TITLE":   "Ranking de vendedores",
         "COVER_TITLE":    "Ranking de<br>Vendedores",
@@ -5233,7 +5233,7 @@ async def _build_seller_context(
         "EXECUTIVE_NOTE": executive_note,
         "CHART_PAGE":     "",
         "DETAIL_PAGES":   _build_seller_table_pages(rows, grand_total, {
-            "COMPANY_NAME":   "CeciChic",
+            "COMPANY_NAME":   "GestionCom",
             "REPORT_TITLE":   "Ranking de vendedores",
             "PERIOD_LABEL":   period_label,
             "BRANCH_LABEL":   branch_label,

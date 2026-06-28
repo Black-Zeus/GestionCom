@@ -8,7 +8,7 @@ const upload = async (url, file, fields = {}) => {
     if (value !== undefined && value !== null && value !== '') formData.append(key, value);
   });
   formData.append('file', file);
-  return unwrap(await apiClient.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } }));
+  return unwrap(await apiClient.post(url, formData));
 };
 
 export const mediaService = {

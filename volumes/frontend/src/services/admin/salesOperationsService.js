@@ -36,12 +36,18 @@ export const salesOperationsService = {
       channel_type: salesPoint.channel_type,
       location_description: salesPoint.location_description || null,
       is_active: isActive,
+      has_printer: Boolean(salesPoint.has_printer),
     });
     return unwrap(response);
   },
 
   async removeSalesPoint(salesPointId) {
     const response = await apiClient.delete(`/sales-operations/sales-points/${salesPointId}`);
+    return unwrap(response);
+  },
+
+  async regeneratePrinterApiKey(salesPointId) {
+    const response = await apiClient.post(`/print/sales-points/${salesPointId}/regenerate-key`);
     return unwrap(response);
   },
 

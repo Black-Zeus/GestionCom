@@ -218,6 +218,7 @@ const AdminCompanyFormPage = ({ mode = 'create' }) => {
 
   const save = async (form) => {
     const payload = buildPayload(form);
+    if (isEdit) delete payload.company_rut;
     await notifyPromise((async () => {
       const savedCompany = isEdit
         ? await businessFoundationService.companies.update(company.id, payload)

@@ -19,3 +19,5 @@ Módulo operativo de caja y punto de venta. Gestiona la apertura y cierre de caj
 | [Movimientos de caja](movimientos.md) | `/cash/movements` | — | ✅ |
 | [Fondos de caja chica](caja-chica-fondos.md) | `/cash/petty` | `PETTY_CASH_FUNDS_ACCESS` | ✅ |
 | [Gastos de caja chica](caja-chica-gastos.md) | `/cash/petty/expenses` | `PETTY_CASH_EXPENSES_ACCESS` | ✅ |
+| [Templates de impresión](impresion-templates.md) | `/admin/print/templates` | `PRINT_TEMPLATES_ACCESS` | ✅ |
+| [Historial de impresiones](impresion-historial.md) | `/admin/print/jobs` | `PRINT_TEMPLATES_ACCESS` | ✅ |

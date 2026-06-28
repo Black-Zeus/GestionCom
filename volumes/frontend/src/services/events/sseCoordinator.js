@@ -44,7 +44,7 @@ const resolveEventsUrl = () => {
   try {
     const apiUrl = new URL(configuredUrl, window.location.origin);
     if (apiUrl.hostname === 'localhost' && apiUrl.port === '8000') {
-      return 'http://localhost/api';
+      return '/api';
     }
   } catch {
     return '/api';
