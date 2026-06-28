@@ -16,9 +16,10 @@ const textareaClassName = 'w-full rounded-md border border-slate-300 px-3 py-2 t
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
 
 const TICKET_TYPES = [
-  { code: 'TICKET_VENTA',  label: 'Ticket de Venta'  },
-  { code: 'TICKET_CAMBIO', label: 'Ticket de Cambio' },
-  { code: 'TICKET_PRUEBA', label: 'Ticket de Prueba' },
+  { code: 'TICKET_VENTA',      label: 'Ticket de Venta'      },
+  { code: 'TICKET_CAMBIO',     label: 'Ticket de Cambio'     },
+  { code: 'TICKET_DEVOLUCION', label: 'Ticket de Devolución' },
+  { code: 'TICKET_PRUEBA',     label: 'Ticket de Prueba'     },
 ];
 
 const BARCODE_TYPES = [
@@ -137,6 +138,13 @@ const Row = ({ left, right, className = '' }) => (
   </div>
 );
 
+const SAMPLE_DEVOLUCION = {
+  return_items: [{ name: 'Polera Talla M', qty: 1, unit_price: 15990, total: 15990, discount: 0 }],
+  subtotal: 13445,
+  tax: 2545,
+  refund_total: 15990,
+};
+
 const SAMPLE_CAMBIO = {
   credit_items: [{ name: 'Polera Talla M (dev.)', qty: 1, unit_price: 15990, total: 15990, discount: 0 }],
   received_items: [{ name: 'Polera Talla L', qty: 1, unit_price: 15990, total: 15990, discount: 0 }],
@@ -148,7 +156,8 @@ const SAMPLE_CAMBIO = {
 
 const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
   const { header, body, footer } = content;
-  const isCambio = templateCode === 'TICKET_CAMBIO';
+  const isCambio     = templateCode === 'TICKET_CAMBIO';
+  const isDevolucion = templateCode === 'TICKET_DEVOLUCION';
   const cols = paperWidth === 58 ? 32 : 48;
   const divider = '─'.repeat(cols);
 
@@ -191,12 +200,11 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           <p className="my-1 text-slate-300">{divider}</p>
 
           {/* TICKET NUMBER */}
-          <p className="text-center font-bold">{isCambio ? 'CAMBIO DE PRODUCTO' : 'BOLETA'} #{SAMPLE.ticket_number}</p>
+          <p className="text-center font-bold">{isCambio ? 'CAMBIO DE PRODUCTO' : isDevolucion ? 'TICKET DE DEVOLUCIÓN' : 'BOLETA'} #{SAMPLE.ticket_number}</p>
           <p className="my-1 text-slate-300">{divider}</p>
 
           {isCambio ? (
             <>
-              {/* DEVUELTO */}
               {body.show_credit_section && (
                 <>
                   <p className="text-center font-bold text-[9px] uppercase">Devuelto</p>
@@ -207,19 +215,13 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
                         <span className="flex-1 truncate font-medium">{item.name}</span>
                         <span className="shrink-0">{clp(item.total)}</span>
                       </div>
-                      {body.show_unit_price && (
-                        <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>
-                      )}
+                      {body.show_unit_price && <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>}
                     </div>
                   ))}
                 </>
               )}
-
-              {/* RECIBIDO */}
               <p className="my-0.5 text-slate-300">{divider}</p>
-              {body.show_received_section && (
-                <p className="text-center font-bold text-[9px] uppercase">Recibido</p>
-              )}
+              {body.show_received_section && <p className="text-center font-bold text-[9px] uppercase">Recibido</p>}
               <p className="my-0.5 text-slate-300">{divider}</p>
               {SAMPLE_CAMBIO.received_items.map((item, i) => (
                 <div key={i} className="mb-1">
@@ -227,29 +229,35 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
                     <span className="flex-1 truncate font-medium">{item.name}</span>
                     <span className="shrink-0">{clp(item.total)}</span>
                   </div>
-                  {body.show_unit_price && (
-                    <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>
-                  )}
-                  {body.show_discount && item.discount > 0 && (
-                    <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>
-                  )}
+                  {body.show_unit_price && <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>}
+                  {body.show_discount && item.discount > 0 && <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>}
+                </div>
+              ))}
+            </>
+          ) : isDevolucion ? (
+            <>
+              <p className="text-center font-bold text-[9px] uppercase">Productos devueltos</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              {SAMPLE_DEVOLUCION.return_items.map((item, i) => (
+                <div key={i} className="mb-1">
+                  <div className="flex justify-between gap-1">
+                    <span className="flex-1 truncate font-medium">{item.name}</span>
+                    <span className="shrink-0">{clp(item.total)}</span>
+                  </div>
+                  {body.show_unit_price && <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>}
+                  {body.show_discount && item.discount > 0 && <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>}
                 </div>
               ))}
             </>
           ) : (
-            /* ITEMS normales */
             SAMPLE.items.map((item, i) => (
               <div key={i} className="mb-1">
                 <div className="flex justify-between gap-1">
                   <span className="flex-1 truncate font-medium">{item.name}</span>
                   <span className="shrink-0">{clp(item.total)}</span>
                 </div>
-                {body.show_unit_price && (
-                  <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>
-                )}
-                {body.show_discount && item.discount > 0 && (
-                  <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>
-                )}
+                {body.show_unit_price && <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>}
+                {body.show_discount && item.discount > 0 && <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>}
               </div>
             ))
           )}
@@ -259,16 +267,16 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           {/* FOOTER TOTALS */}
           {isCambio ? (
             <>
-              {footer.show_subtotal && (
-                <Row left="Subtotal recibido:" right={clp(SAMPLE_CAMBIO.subtotal)} />
-              )}
-              {footer.show_tax && (
-                <Row left="IVA (19%):" right={clp(SAMPLE_CAMBIO.tax)} />
-              )}
+              {footer.show_subtotal && <Row left="Subtotal recibido:" right={clp(SAMPLE_CAMBIO.subtotal)} />}
+              {footer.show_tax && <Row left="IVA (19%):" right={clp(SAMPLE_CAMBIO.tax)} />}
               <Row left="Crédito devuelto:" right={`-${clp(SAMPLE_CAMBIO.exchange_credit)}`} className="text-slate-600" />
-              {footer.show_total && (
-                <Row left="TOTAL:" right="Sin cobro adicional" className="font-bold" />
-              )}
+              {footer.show_total && <Row left="TOTAL:" right="Sin cobro adicional" className="font-bold" />}
+            </>
+          ) : isDevolucion ? (
+            <>
+              {footer.show_subtotal && <Row left="Subtotal devuelto:" right={clp(SAMPLE_DEVOLUCION.subtotal)} />}
+              {footer.show_tax && <Row left="IVA (19%):" right={clp(SAMPLE_DEVOLUCION.tax)} />}
+              {footer.show_total && <Row left="TOTAL DEVUELTO:" right={clp(SAMPLE_DEVOLUCION.refund_total)} className="font-bold text-red-700" />}
             </>
           ) : (
             <>

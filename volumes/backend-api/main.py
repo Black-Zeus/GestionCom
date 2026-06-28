@@ -413,6 +413,8 @@ async def _run_schema_migrations():
          "ALTER TABLE media_assets MODIFY COLUMN media_role ENUM('AVATAR','LOGO','BANNER','PRODUCT_IMAGE','VARIANT_IMAGE') NOT NULL"),
         ("media_assets", "owner_type", "AGREEMENT",
          "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT','AGREEMENT') NOT NULL"),
+        ("print_jobs", "ticket_type", "TICKET_DEVOLUCION",
+         "ALTER TABLE print_jobs MODIFY COLUMN ticket_type ENUM('TICKET_VENTA','TICKET_CAMBIO','TICKET_DEVOLUCION','TICKET_PRUEBA') NOT NULL"),
     ]
     new_tables = [
         """CREATE TABLE IF NOT EXISTS print_templates (
@@ -436,7 +438,7 @@ async def _run_schema_migrations():
             sales_point_id BIGINT NULL,
             cash_register_id BIGINT NULL,
             sale_document_id BIGINT NULL,
-            ticket_type ENUM('TICKET_VENTA','TICKET_CAMBIO','TICKET_PRUEBA') NOT NULL,
+            ticket_type ENUM('TICKET_VENTA','TICKET_CAMBIO','TICKET_DEVOLUCION','TICKET_PRUEBA') NOT NULL,
             template_version VARCHAR(20) NULL,
             status ENUM('PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED') NOT NULL DEFAULT 'PENDING',
             payload JSON NOT NULL,

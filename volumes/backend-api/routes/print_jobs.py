@@ -687,6 +687,7 @@ def _build_sale_payload(sale: SaleDocument, lines: list[SaleDocumentLine], compa
     agreement = _enrich_agreement(_extract_agreement(sale.payment_details), sale_total)
 
     is_exchange = sale.document_type_code == "EXCHANGE_DRAFT"
+    is_return   = sale.document_type_code == "RETURN_TICKET"
     credit_lines = [l for l in lines if _to_decimal(l.paid_total_amount) < 0]
     dest_lines   = [l for l in lines if _to_decimal(l.paid_total_amount) >= 0]
 
@@ -703,6 +704,10 @@ def _build_sale_payload(sale: SaleDocument, lines: list[SaleDocumentLine], compa
         display_subtotal = sum(_to_decimal(l.line_subtotal or 0) for l in dest_lines)
         display_tax      = sum(_to_decimal(l.tax_amount   or 0) for l in dest_lines)
         exchange_credit  = sum(abs(_to_decimal(l.paid_total_amount or 0)) for l in credit_lines)
+    elif is_return:
+        display_subtotal = sum(abs(_to_decimal(l.line_subtotal or 0)) for l in lines)
+        display_tax      = sum(abs(_to_decimal(l.tax_amount   or 0)) for l in lines)
+        exchange_credit  = None
     else:
         display_subtotal = _to_decimal(sale.subtotal_amount or 0)
         display_tax      = _to_decimal(sale.tax_amount or 0)
@@ -722,7 +727,7 @@ def _build_sale_payload(sale: SaleDocument, lines: list[SaleDocumentLine], compa
         "line_discount":      str(sale.line_discount_amount or 0),
         "document_discount":  str(sale.document_discount_amount or 0),
         "tax":                str(display_tax),
-        "total":              str(sale.total_amount or 0),
+        "total":              str(abs(_to_decimal(sale.total_amount or 0))),
         "payment_method":     sale.payment_method_name,
         "payment_breakdown":  _extract_payment_breakdown(sale.payment_details),
         "amount_tendered":    str(sale.amount_tendered or 0),
@@ -734,4 +739,7 @@ def _build_sale_payload(sale: SaleDocument, lines: list[SaleDocumentLine], compa
     if is_exchange:
         payload["exchange_credit_items"] = [_line_item(l) for l in credit_lines]
         payload["exchange_credit"]       = str(exchange_credit)
+    if is_return:
+        payload["return_items"]  = [_line_item(l) for l in lines]
+        payload["refund_total"]  = str(sum(abs(_to_decimal(l.paid_total_amount or 0)) for l in lines))
     return payload

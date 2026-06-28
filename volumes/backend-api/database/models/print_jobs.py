@@ -10,9 +10,10 @@ from .base import BaseModel
 
 
 class PrintTicketType(str, enum.Enum):
-    TICKET_VENTA = "TICKET_VENTA"
-    TICKET_CAMBIO = "TICKET_CAMBIO"
-    TICKET_PRUEBA = "TICKET_PRUEBA"
+    TICKET_VENTA      = "TICKET_VENTA"
+    TICKET_CAMBIO     = "TICKET_CAMBIO"
+    TICKET_DEVOLUCION = "TICKET_DEVOLUCION"
+    TICKET_PRUEBA     = "TICKET_PRUEBA"
 
 
 class PrintJobStatus(str, enum.Enum):

@@ -971,7 +971,11 @@ async def _enqueue_sale_print_job(session, sale: SaleDocument, user_id: int | No
             "banner_url":   f"/api/profile/media/{banner_code}/full" if banner_code else None,
         }
 
-    ticket_type = PrintTicketType.TICKET_CAMBIO if sale.document_type_code == "EXCHANGE_DRAFT" else PrintTicketType.TICKET_VENTA
+    _type_map = {
+        "EXCHANGE_DRAFT": PrintTicketType.TICKET_CAMBIO,
+        "RETURN_TICKET":  PrintTicketType.TICKET_DEVOLUCION,
+    }
+    ticket_type = _type_map.get(sale.document_type_code, PrintTicketType.TICKET_VENTA)
 
     from routes.print_jobs import _build_sale_payload
     job = PrintJob(
