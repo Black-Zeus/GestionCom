@@ -269,6 +269,11 @@ ROUTERS_TO_LOAD = [
         "prefix": "/reports",
         "tags": ["Reports"]
     },
+    {
+        "name": "print_jobs",
+        "prefix": "/print",
+        "tags": ["Thermal Printing"]
+    },
 ]
 
 ROUTERS_TO_LOAD = sorted(ROUTERS_TO_LOAD, key=lambda x: x["tags"][0].lower())
@@ -384,12 +389,23 @@ async def _run_schema_migrations():
          "ALTER TABLE products ADD COLUMN variant_image_mode ENUM('inherit','own','default') NOT NULL DEFAULT 'inherit'"),
         ("agreements", "logo_media_asset_id",
          "ALTER TABLE agreements ADD COLUMN logo_media_asset_id BIGINT NULL"),
+        ("sales_points", "has_printer",
+         "ALTER TABLE sales_points ADD COLUMN has_printer BOOLEAN NOT NULL DEFAULT FALSE"),
+        ("sales_points", "printer_paper_width_mm",
+         "ALTER TABLE sales_points ADD COLUMN printer_paper_width_mm INT NOT NULL DEFAULT 80"),
+        ("sales_points", "printer_api_key",
+         "ALTER TABLE sales_points ADD COLUMN printer_api_key VARCHAR(19) NULL UNIQUE"),
     ]
     drop_columns = [
         ("agreements", "deleted_at", "ALTER TABLE agreements DROP COLUMN deleted_at"),
         ("agreement_beneficiaries", "deleted_at", "ALTER TABLE agreement_beneficiaries DROP COLUMN deleted_at"),
     ]
     # (table, column, new_enum_value, full_alter_ddl)
+    column_modifications = [
+        # printer_api_key se creó originalmente como VARCHAR(16); necesita VARCHAR(19) para formato XXXX-XXXX-XXXX-XXXX
+        ("sales_points", "printer_api_key", 19,
+         "ALTER TABLE sales_points MODIFY COLUMN printer_api_key VARCHAR(19) NULL"),
+    ]
     enum_extensions = [
         ("media_assets", "owner_type", "PRODUCT_VARIANT",
          "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT','AGREEMENT') NOT NULL"),
@@ -398,6 +414,58 @@ async def _run_schema_migrations():
         ("media_assets", "owner_type", "AGREEMENT",
          "ALTER TABLE media_assets MODIFY COLUMN owner_type ENUM('USER','COMPANY','CUSTOMER','SUPPLIER','PRODUCT','PRODUCT_VARIANT','AGREEMENT') NOT NULL"),
     ]
+    new_tables = [
+        """CREATE TABLE IF NOT EXISTS print_templates (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            template_code VARCHAR(50) NOT NULL UNIQUE,
+            template_name VARCHAR(100) NOT NULL,
+            version VARCHAR(20) NOT NULL DEFAULT '1.0.0',
+            content JSON NOT NULL,
+            paper_width_mm INT NOT NULL DEFAULT 80,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL,
+            INDEX idx_print_templates_code (template_code),
+            INDEX idx_print_templates_active (is_active),
+            INDEX idx_print_templates_deleted_at (deleted_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
+        """CREATE TABLE IF NOT EXISTS print_jobs (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            job_code VARCHAR(36) NOT NULL UNIQUE,
+            sales_point_id BIGINT NULL,
+            cash_register_id BIGINT NULL,
+            sale_document_id BIGINT NULL,
+            ticket_type ENUM('TICKET_VENTA','TICKET_CAMBIO','TICKET_PRUEBA') NOT NULL,
+            template_version VARCHAR(20) NULL,
+            status ENUM('PENDING','PROCESSING','COMPLETED','FAILED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+            payload JSON NOT NULL,
+            error_message TEXT NULL,
+            attempts INT NOT NULL DEFAULT 0,
+            requested_by_user_id BIGINT NULL,
+            completed_at TIMESTAMP NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP NULL,
+            INDEX idx_print_jobs_code (job_code),
+            INDEX idx_print_jobs_sales_point (sales_point_id),
+            INDEX idx_print_jobs_register (cash_register_id),
+            INDEX idx_print_jobs_sale (sale_document_id),
+            INDEX idx_print_jobs_status (status),
+            INDEX idx_print_jobs_deleted_at (deleted_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci""",
+    ]
+    # DDL (CREATE TABLE) en sesión separada: en MySQL las DDL hacen commit implícito
+    # y pueden dejar la sesión en estado inconsistente si se mezclan con DML.
+    try:
+        async with db_manager.get_async_session() as session:
+            for ddl in new_tables:
+                table_name = ddl.strip().split("print_")[1].split(" ")[0] if "print_" in ddl else "?"
+                await session.execute(_text(ddl))
+                print(f"✅ Table ensured: print_{table_name}")
+    except Exception as exc:
+        print(f"⚠️  Error creando tablas nuevas: {exc}")
+
     try:
         async with db_manager.get_async_session() as session:
             for table, column, ddl in migrations:
@@ -422,6 +490,18 @@ async def _run_schema_migrations():
                 if result.scalar() > 0:
                     await session.execute(_text(ddl))
                     print(f"✅ Column dropped: {table}.{column}")
+            for table, column, min_length, ddl in column_modifications:
+                result = await session.execute(
+                    _text(
+                        "SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS "
+                        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND COLUMN_NAME = :c"
+                    ),
+                    {"t": table, "c": column},
+                )
+                current_length = result.scalar()
+                if current_length is not None and current_length < min_length:
+                    await session.execute(_text(ddl))
+                    print(f"✅ Column resized: {table}.{column} → VARCHAR({min_length})")
             for table, column, new_value, ddl in enum_extensions:
                 result = await session.execute(
                     _text(

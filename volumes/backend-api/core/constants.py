@@ -376,6 +376,7 @@ PRIVATE_ROUTES = [
     "/global-search",               # Busqueda global federada
     "/menu-items",                  # Gestión de Menus
     "/user-menus",                  # Gestión de Menus del usuario
+    "/print",                       # Sistema de impresión térmica
 ]
 
 PUBLIC_MEDIA_ROUTES = [
@@ -390,6 +391,7 @@ SELF_AUTH_ROUTES = [
     "/auth/validate-token",
     "/auth/forgot-password",
     "/auth/reset-password",
+    "/print/agent",                  # Agente de impresión: autenticación por printer_api_key
 ]
 
 RESPONSE_MANAGER_AVAILABLE = True

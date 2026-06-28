@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   ArrowRightLeft,
   Handshake,
+  Printer,
 } from 'lucide-react';
 
 // IMPORTANTE: El menú lateral (sidebar) es dinámico y viene de la base de datos via useMenuStore → menuService.getUserHierarchy().
@@ -86,6 +87,8 @@ export const moduleGroups = [
       { id: 'cash-movements', label: 'Movimientos de caja', path: '/cash/movements', icon: CircleDollarSign, weight: 60 },
       { id: 'petty-cash', label: 'Fondos de caja chica', path: '/cash/petty', icon: WalletCards, weight: 70, permissions: ['PETTY_CASH_FUNDS_ACCESS', 'PETTY_CASH_ACCESS', 'PETTY_CASH_FUNDS_MANAGE', 'PETTY_CASH_REPLENISH', 'PETTY_CASH_APPROVE'] },
       { id: 'petty-cash-expenses', label: 'Gastos de caja chica', path: '/cash/petty/expenses', icon: Receipt, weight: 80, permissions: ['PETTY_CASH_EXPENSES_ACCESS', 'PETTY_CASH_EXPENSES_CREATE', 'PETTY_CASH_EXPENSES_APPROVE', 'PETTY_CASH_SPEND'] },
+      { id: 'print-templates', label: 'Templates de impresion termica', path: '/admin/print/templates', icon: Printer, weight: 90, permissions: ['PRINT_TEMPLATES_ACCESS'] },
+      { id: 'print-jobs', label: 'Historial de impresiones', path: '/admin/print/jobs', icon: FileText, weight: 95, permissions: ['PRINT_TEMPLATES_ACCESS'] },
     ],
   },
   {

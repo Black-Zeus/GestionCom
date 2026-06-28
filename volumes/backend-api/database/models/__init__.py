@@ -24,6 +24,7 @@ from .measurement_units import MeasurementUnit, MeasurementUnitType
 from .product_config import AttributeGroup, AttributeType, AttributeValue, Category, ProductAttribute
 from .document_config import DocumentCategory, DocumentSeries, DocumentType, MovementType
 from .business_foundation import DteCompanyConfig, PriceList, PriceListGroup, PriceListItem, Product, ProductVariant, TaxRate
+from .print_jobs import PrintJob, PrintJobStatus, PrintTemplate, PrintTicketType
 
 # Modelos de relación (después de los principales)
 from .user_roles import UserRole
@@ -74,6 +75,8 @@ __all_models__ = [
     "Product",
     "ProductVariant",
     "TaxRate",
+    "PrintTemplate",
+    "PrintJob",
 ]
 
 # Modelos de relación

@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, EyeOff, Pencil, RefreshCw, Store, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, Copy, EyeOff, Pencil, Printer, RefreshCw, Store, Trash2, XCircle } from 'lucide-react';
 import ModalManager from '@/components/ui/modal';
 import { ActionButton, RowActionButton } from '@/components/common/actions/ActionButton';
 import DataTable from '@/components/common/data/DataTable';
@@ -34,6 +34,8 @@ const emptyForm = {
   channel_type: 'STORE',
   location_description: '',
   is_active: true,
+  has_printer: false,
+  printer_paper_width_mm: 80,
 };
 
 const salesPointToForm = (salesPoint) => ({
@@ -43,6 +45,8 @@ const salesPointToForm = (salesPoint) => ({
   channel_type: salesPoint.channel_type || 'STORE',
   location_description: salesPoint.location_description || '',
   is_active: salesPoint.is_active !== false,
+  has_printer: Boolean(salesPoint.has_printer),
+  printer_paper_width_mm: salesPoint.printer_paper_width_mm ?? 80,
 });
 
 const toPayload = (form) => ({
@@ -52,12 +56,17 @@ const toPayload = (form) => ({
   channel_type: form.channel_type,
   location_description: form.location_description.trim() || null,
   is_active: Boolean(form.is_active),
+  has_printer: Boolean(form.has_printer),
+  printer_paper_width_mm: Number(form.printer_paper_width_mm) || 80,
 });
 
-const SalesPointFormModal = ({ mode = 'create', initialValues = emptyForm, warehouses = [], cashRegisters = [], onSubmit, onClose }) => {
+const SalesPointFormModal = ({ mode = 'create', initialValues = emptyForm, salesPointId = null, initialPrinterApiKey = null, warehouses = [], cashRegisters = [], onSubmit, onClose }) => {
   const [form, setForm] = useState(initialValues);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [printerApiKey, setPrinterApiKey] = useState(initialPrinterApiKey);
+  const [regenerating, setRegenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const filteredCashRegisters = useMemo(() => {
@@ -79,6 +88,26 @@ const SalesPointFormModal = ({ mode = 'create', initialValues = emptyForm, wareh
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRegenerateKey = async () => {
+    if (!salesPointId) return;
+    setRegenerating(true);
+    try {
+      const result = await salesOperationsService.regeneratePrinterApiKey(salesPointId);
+      setPrinterApiKey(result.printer_api_key);
+    } catch {
+      setFormError('No fue posible generar la clave de impresora.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleCopyKey = () => {
+    if (!printerApiKey) return;
+    navigator.clipboard.writeText(printerApiKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -125,6 +154,55 @@ const SalesPointFormModal = ({ mode = 'create', initialValues = emptyForm, wareh
           <span className="font-medium text-slate-700 dark:text-slate-200">Ubicacion / referencia</span>
           <input className={fieldClassName} value={form.location_description} onChange={(event) => updateField('location_description', event.target.value)} maxLength={255} />
         </label>
+      </div>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Printer className="h-4 w-4 text-slate-500" />
+            <span className="text-sm font-semibold text-slate-950 dark:text-white">Impresora térmica</span>
+          </div>
+          <label className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+            <input type="checkbox" checked={form.has_printer} onChange={(event) => updateField('has_printer', event.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+            Posee impresora
+          </label>
+        </div>
+
+        {form.has_printer && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              {/* Ancho de papel */}
+              <select
+                value={form.printer_paper_width_mm}
+                onChange={(e) => updateField('printer_paper_width_mm', Number(e.target.value))}
+                className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+              >
+                <option value={58}>58 mm</option>
+                <option value={80}>80 mm</option>
+              </select>
+
+              {/* Clave de autorización */}
+              {mode === 'edit' && salesPointId ? (
+                <>
+                  <code className="flex-1 min-w-0 rounded-md border border-slate-200 bg-white px-3 h-9 flex items-center font-mono text-sm tracking-widest text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 select-all overflow-hidden">
+                    {printerApiKey || '—'}
+                  </code>
+                  <button type="button" onClick={handleCopyKey} disabled={!printerApiKey} title="Copiar clave" className="h-9 w-9 shrink-0 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800">
+                    <Copy className={`h-4 w-4 ${copied ? 'text-green-500' : 'text-slate-500'}`} />
+                  </button>
+                  <button type="button" onClick={handleRegenerateKey} disabled={regenerating} className="h-9 shrink-0 rounded-md border border-amber-300 bg-amber-50 px-3 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    {regenerating ? 'Generando...' : printerApiKey ? 'Regenerar' : 'Generar clave'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">Guarda el punto de venta primero, luego podrás generar la clave de autorización para el agente.</p>
+              )}
+            </div>
+            {mode === 'edit' && salesPointId && printerApiKey && (
+              <p className="text-xs text-slate-500 dark:text-slate-400">Copia esta clave en el archivo de configuración del agente de impresión. Al regenerar, la clave anterior queda inválida.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {formError && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{formError}</div>}
@@ -202,6 +280,8 @@ const AdminSalesPoints = () => {
       contentProps: {
         mode: salesPoint ? 'edit' : 'create',
         initialValues: salesPoint ? salesPointToForm(salesPoint) : emptyForm,
+        salesPointId: salesPoint?.id || null,
+        initialPrinterApiKey: salesPoint?.printer_api_key || null,
         warehouses,
         cashRegisters,
         onSubmit: async (payload) => {

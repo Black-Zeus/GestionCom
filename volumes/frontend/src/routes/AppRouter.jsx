@@ -88,6 +88,8 @@ const AdminNotificationSettings = lazy(() => import('@/pages/admin/AdminNotifica
 const AdminSystemParameterMaintainers = lazy(() => import('@/pages/admin/AdminSystemParameterMaintainers'));
 const AdminElectronicBilling = lazy(() => import('@/pages/admin/AdminElectronicBilling'));
 const AdminAgreements = lazy(() => import('@/pages/admin/AdminAgreements'));
+const AdminPrintTemplates = lazy(() => import('@/pages/admin/AdminPrintTemplates'));
+const AdminPrintJobs = lazy(() => import('@/pages/admin/AdminPrintJobs'));
 const NotificationInbox = lazy(() => import('@/pages/notifications/NotificationInbox'));
 const Profile = lazy(() => import('@/pages/profile/Profile'));
 const GlobalSearchResults = lazy(() => import('@/pages/search/GlobalSearchResults'));
@@ -175,6 +177,8 @@ const moduleComponents = {
   'system-parameters': AdminSystemParameterMaintainers,
   'electronic-billing': AdminElectronicBilling,
   agreements: AdminAgreements,
+  'print-templates': AdminPrintTemplates,
+  'print-jobs': AdminPrintJobs,
   system_parameters: AdminSystemParameterMaintainers,
   notifications: NotificationInbox,
   profile: Profile,
