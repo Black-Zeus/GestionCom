@@ -456,6 +456,23 @@ async def get_session_summary(
             if row["method_type"] == "CASH"
         )
 
+        cash_returns_result = await session.execute(
+            text("""
+                SELECT COALESCE(SUM(ABS(sd.total_amount)), 0) AS returns_total
+                FROM sale_documents sd
+                LEFT JOIN payment_methods pm
+                    ON pm.method_code = sd.payment_method_code
+                    AND pm.deleted_at IS NULL
+                WHERE sd.cash_register_session_id = :session_id
+                    AND sd.status = 'CLOSED'
+                    AND sd.deleted_at IS NULL
+                    AND sd.document_type_code = 'RETURN_TICKET'
+                    AND COALESCE(pm.method_type, 'OTHER') = 'CASH'
+            """),
+            {"session_id": session_id},
+        )
+        cash_returns_total = money(cash_returns_result.scalar_one() or 0)
+
         petty_cash_result = await session.execute(
             text("""
                 SELECT COALESCE(SUM(expense_amount), 0) AS total
@@ -506,6 +523,7 @@ async def get_session_summary(
                     for row in by_method
                 ],
                 "total_sales_amount": str(money(total_sales)),
+                "cash_returns_total": str(cash_returns_total),
                 "petty_cash_expenses_total": str(petty_cash_total),
                 "petty_cash_fund_initial_amount": str(petty_cash_fund_initial),
                 "petty_cash_fund_current_balance": str(petty_cash_fund_balance),

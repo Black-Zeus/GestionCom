@@ -613,6 +613,12 @@ const CashCount = () => {
                   <span>Asignacion (apertura)</span>
                   <span className="tabular-nums">{money(summary.opening_amount)}</span>
                 </div>
+                {Number(summary.cash_returns_total || 0) > 0 && (
+                  <div className="flex justify-between text-xs text-red-500">
+                    <span>Devoluciones efectivo</span>
+                    <span className="tabular-nums">-{money(summary.cash_returns_total)}</span>
+                  </div>
+                )}
                 {Number(summary.petty_cash_expenses_total || 0) > 0 && (
                   <div className="flex justify-between text-xs text-red-500">
                     <span>Gastos caja chica</span>
