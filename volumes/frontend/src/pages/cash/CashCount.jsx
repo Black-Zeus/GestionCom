@@ -657,6 +657,16 @@ const CashCount = () => {
                   <p className="text-xs text-slate-400">Sin otros medios de pago</p>
                 )}
               </div>
+              {Number(summary.transfer_returns_total || 0) > 0 && (
+                <div className="mt-3 space-y-1 border-t border-red-200 pt-2 dark:border-red-800">
+                  <p className="mb-1 text-xs font-bold uppercase tracking-wide text-red-600 dark:text-red-400">Devoluciones por transferir</p>
+                  <div className="flex justify-between text-xs text-red-600 dark:text-red-400">
+                    <span>Monto a transferir al cliente</span>
+                    <span className="tabular-nums font-semibold">{money(summary.transfer_returns_total)}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400">Verificar que la transferencia fue realizada al cliente.</p>
+                </div>
+              )}
               {Number(summary.petty_cash_fund_initial_amount || 0) > 0 && (
                 <div className="mt-3 space-y-1 border-t border-amber-200 pt-2 dark:border-amber-800">
                   <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">Caja chica</p>

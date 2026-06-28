@@ -273,10 +273,16 @@ async def register_cash_movements_for_sale(session, sale: SaleDocument, payload:
     if not method_map:
         return
 
-    reference = _reference_for_sale(sale)
+    sale_reference = _reference_for_sale(sale)
     movement_type = "RETURN" if total < 0 else "SALE"
     expected_total = abs(total)
     detail_type = _payment_detail_type(payload.payment_details)
+    # For returns, prefer the payment reference (transfer folio) over the sale code
+    payment_ref = (
+        str(payload.payment_details.get("reference_number") or "").strip()
+        if isinstance(payload.payment_details, dict) else ""
+    )
+    reference = f"{sale_reference} | {payment_ref}" if payment_ref else sale_reference
     rows: list[dict] = []
 
     if detail_type == "MIXED" and isinstance(payload.payment_details, dict):
