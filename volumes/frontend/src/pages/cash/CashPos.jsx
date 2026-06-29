@@ -353,7 +353,7 @@ const AgreementCreditSelector = ({ agreements = [], value = {}, onChange }) => {
   );
 };
 
-const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', agreements = [], onConfirm, onClose }) => {
+const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', initialEmail = '', agreements = [], availableForeignCurrency = {}, onConfirm, onClose }) => {
   const [step, setStep] = useState(1);
   const [paymentMode, setPaymentMode] = useState('DIRECT');
   const [methods, setMethods] = useState([]);
@@ -504,15 +504,33 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
         && String(agreement.associate_identifier || '').trim()
       ));
   });
+  // For direct foreign currency refunds: check drawer has enough of that currency
+  const foreignRefundAvailable = isRefund && isForeign && selectedForeignRate
+    ? (availableForeignCurrency[selectedForeignRate.currency_code] ?? 0)
+    : null;
+  const foreignRefundInsufficient = foreignRefundAvailable !== null && expectedForeignAmountRounded > foreignRefundAvailable;
+
+  // For mixed refunds: validate that foreign currency portion doesn't exceed available
+  const refundMixedFcItem = isMixed ? mixedPayments.find((item) => item.method_code === 'FOREIGN_CURRENCY') : null;
+  const refundMixedFcRate = refundMixedFcItem ? (availableRates.find((r) => r.currency_code === refundMixedFcItem.currency_code) || availableRates[0] || null) : null;
+  const refundMixedFcUnits = refundMixedFcItem && refundMixedFcRate
+    ? parseLocalizedAmount(refundMixedFcItem.foreign_amount || '0')
+    : 0;
+  const refundMixedFcAvailable = isRefund && refundMixedFcItem && refundMixedFcRate
+    ? (availableForeignCurrency[refundMixedFcRate.currency_code] ?? 0)
+    : null;
+  const refundMixedFcInsufficient = refundMixedFcAvailable !== null && refundMixedFcUnits > refundMixedFcAvailable;
+
   const mixedValid = isMixed
     && mixedPayments.length > 0
     && mixedPayments.every((item) => item.method_code && mixedPaymentAmount(item) > 0)
     && mixedTotal >= absoluteTotal
-    && mixedMetadataValid;
+    && mixedMetadataValid
+    && !refundMixedFcInsufficient;
   const canContinue = isZeroAmount || (isMixed
-    ? (isRefund || mixedValid)
+    ? mixedValid
     : Boolean(selected) && (
-      (isRefund && (!selectedRequiresReference || referenceValid) && (!isForeign || Boolean(selectedForeignRate)))
+      (isRefund && (!selectedRequiresReference || referenceValid) && (!isForeign || (Boolean(selectedForeignRate) && !foreignRefundInsufficient)))
       || (
         !isRefund
         && referenceValid
@@ -757,37 +775,30 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
           </div>
 
           <div>
-            {!isRefundMode && (
-              <div className="mb-3 grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1 text-sm dark:border-slate-700 dark:bg-slate-900">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMode('DIRECT');
-                    setMixedPayments([newMixedPayment()]);
-                  }}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Pago directo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentMode('MIXED');
-                    setSelected(null);
-                    setImporte('');
-                    setForeignReceived('');
-                    setMixedPayments([{ method_code: defaultMixedMethodCode(), amount: formatAmountForInput(absoluteTotal) }]);
-                  }}
-                  className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
-                >
-                  <SplitSquareHorizontal className="h-4 w-4" />
-                  Pago mixto
-                </button>
-              </div>
-            )}
+            <div className="mb-3 grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1 text-sm dark:border-slate-700 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => { setPaymentMode('DIRECT'); setMixedPayments([newMixedPayment()]); }}
+                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'DIRECT' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+              >
+                <CreditCard className="h-4 w-4" />
+                {isRefundMode ? 'Devolución directa' : 'Pago directo'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentMode('MIXED');
+                  setSelected(null); setImporte(''); setForeignReceived('');
+                  setMixedPayments([{ method_code: defaultMixedMethodCode(), amount: formatAmountForInput(absoluteTotal) }]);
+                }}
+                className={`flex h-10 items-center justify-center gap-2 rounded-md font-medium transition ${paymentMode === 'MIXED' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-950 dark:text-blue-300' : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'}`}
+              >
+                <SplitSquareHorizontal className="h-4 w-4" />
+                {isRefundMode ? 'Devolución mixta' : 'Pago mixto'}
+              </button>
+            </div>
 
-            {(paymentMode === 'DIRECT' || isRefundMode) && (
+            {paymentMode === 'DIRECT' && (
               <>
                 <p className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">{isRefundMode ? 'Medio de reembolso' : 'Medio de pago'}</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -870,6 +881,12 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                 {selectedForeignRate && (
                   <p className="text-xs text-slate-400">
                     {isRefund ? 'A devolver' : 'Esperado'}: {formatMoney(expectedForeignAmountRounded, selectedForeignRate.currency_code)}{!isRefund && ` · Fee ${feeValue(selectedForeignRate).toLocaleString('es-CL')}%`}
+                  </p>
+                )}
+                {isRefund && foreignRefundAvailable !== null && (
+                  <p className={`text-xs ${foreignRefundInsufficient ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>
+                    En caja: {Number(foreignRefundAvailable).toLocaleString('es-CL', { maximumFractionDigits: 4 })} {selectedForeignRate?.currency_code}
+                    {foreignRefundInsufficient && (foreignRefundAvailable > 0 ? ' — insuficiente, usa devolución mixta' : ' — sin divisa en caja')}
                   </p>
                 )}
               </label>
@@ -956,10 +973,10 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
             </div>
           )}
 
-          {paymentMode === 'MIXED' && !isRefund && (
+          {paymentMode === 'MIXED' && (
             <div className="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium text-slate-700 dark:text-slate-200">Pagos mixtos</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{isRefund ? 'Medios de devolución' : 'Pagos mixtos'}</span>
                 <span className={`font-semibold tabular-nums ${mixedRemaining > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-green-700 dark:text-green-400'}`}>
                   Restante {money(mixedRemaining)}
                 </span>
@@ -1042,6 +1059,11 @@ const PaymentModal = ({ total, exchangeRates = [], preferredCurrencyCode = '', i
                         {mixedForeignRate(item)
                           ? `Equivalencia: ${formatMoney(parseLocalizedAmount(item.foreign_amount), mixedForeignRate(item).currency_code)} = ${money(mixedPaymentAmount(item))} CLP · Fee ${feeValue(mixedForeignRate(item)).toLocaleString('es-CL')}%`
                           : 'Selecciona una divisa con tasa vigente.'}
+                        {isRefund && refundMixedFcAvailable !== null && (
+                          <span className={`ml-2 ${refundMixedFcInsufficient ? 'text-red-600 dark:text-red-400' : 'text-slate-400'}`}>
+                            · En caja: {Number(refundMixedFcAvailable).toLocaleString('es-CL', { maximumFractionDigits: 4 })} {refundMixedFcRate?.currency_code}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -1365,6 +1387,7 @@ const CashPos = () => {
   const [exchangeRates, setExchangeRates] = useState([]);
   const [currencyCode, setCurrencyCode] = useState('');
   const [activeCashSession, setActiveCashSession] = useState(undefined);
+  const [availableForeignCurrency, setAvailableForeignCurrency] = useState({});
 
   const isReturnDocument = selectedSale?.document_type_code === 'RETURN_TICKET' || selectedSale?.is_return_document;
   const isExchangeDocument = selectedSale?.document_type_code === 'EXCHANGE_DRAFT' || selectedSale?.is_exchange_document;
@@ -1391,6 +1414,17 @@ const CashPos = () => {
       })
       .catch(() => setActiveCashSession(null));
   }, [activeCashRegisterRecord]);
+
+  useEffect(() => {
+    if (!activeCashSession?.id) { setAvailableForeignCurrency({}); return; }
+    cashSessionsService.getSummary(activeCashSession.id)
+      .then((summary) => {
+        const map = {};
+        (summary.available_foreign_currency || []).forEach((item) => { map[item.currency_code] = item.available_amount; });
+        setAvailableForeignCurrency(map);
+      })
+      .catch(() => setAvailableForeignCurrency({}));
+  }, [activeCashSession?.id]);
 
   // Solo actualiza la lista de pendientes — no toca el formulario ni selectedSale
   const refreshPendingList = useCallback(async () => {
@@ -1654,6 +1688,7 @@ const CashPos = () => {
         preferredCurrencyCode: selectedExchangeRate?.currency_code || currencyCode,
         initialEmail: selectedSale.customer?.email || '',
         agreements,
+        availableForeignCurrency,
         onConfirm: async ({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email }) => {
           await doClose({ payment_method_code, payment_method_name, amount_tendered, change_amount, payment_details, receipt_email });
         },

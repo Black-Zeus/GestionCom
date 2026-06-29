@@ -1302,6 +1302,39 @@ async def close_sale_document(payload: CloseSalePayload, request: Request, sale_
             return ResponseManager.error(message="Venta no encontrada", status_code=HTTPStatus.NOT_FOUND, error_code=ErrorCode.RESOURCE_NOT_FOUND, error_type=ErrorType.RESOURCE_NOT_FOUND, request=request)
         if sale.status != SaleStatus.PENDING_CASHIER:
             return ResponseManager.error(message="La venta no esta pendiente de caja", status_code=HTTPStatus.BAD_REQUEST, error_code=ErrorCode.VALIDATION_FIELD_FORMAT, error_type=ErrorType.VALIDATION_ERROR, request=request)
+        if sale.document_type_code == "RETURN_TICKET" and str(payload.payment_method_code or "").upper() == "FOREIGN_CURRENCY":
+            fc_details = payload.payment_details if isinstance(payload.payment_details, dict) else {}
+            fc_info = fc_details.get("foreign_currency", {}) if fc_details.get("type") == "FOREIGN_CURRENCY" else {}
+            refund_currency = str(fc_info.get("currency_code") or "").strip().upper()
+            refund_amount_fc = Decimal(str(fc_info.get("expected_amount") or 0))
+            if refund_currency and refund_amount_fc > 0 and sale.cash_register_session_id:
+                avail_result = await session.execute(
+                    text("""
+                        SELECT COALESCE(SUM(CASE
+                            WHEN sd.document_type_code != 'RETURN_TICKET'
+                                THEN CAST(COALESCE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.received_amount'), 0) AS DECIMAL(15,6))
+                            ELSE
+                                -CAST(COALESCE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.expected_amount'), 0) AS DECIMAL(15,6))
+                        END), 0) AS available_amount
+                        FROM sale_documents sd
+                        WHERE sd.cash_register_session_id = :session_id
+                            AND sd.status = 'CLOSED'
+                            AND sd.deleted_at IS NULL
+                            AND sd.payment_method_code = 'FOREIGN_CURRENCY'
+                            AND JSON_UNQUOTE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.currency_code')) = :currency_code
+                    """),
+                    {"session_id": sale.cash_register_session_id, "currency_code": refund_currency},
+                )
+                available_fc = Decimal(str(avail_result.scalar_one() or 0))
+                if refund_amount_fc > available_fc:
+                    return ResponseManager.error(
+                        message=f"Saldo insuficiente de {refund_currency} en caja: disponible {float(available_fc):.4f}, requerido {float(refund_amount_fc):.4f}",
+                        status_code=HTTPStatus.BAD_REQUEST,
+                        error_code=ErrorCode.VALIDATION_FIELD_FORMAT,
+                        error_type=ErrorType.VALIDATION_ERROR,
+                        request=request,
+                    )
+
         if sale.document_type_code == "EXCHANGE_DRAFT":
             has_manual_discount = payload.discount_type != "NONE" or money(payload.discount_value) > 0
             has_agreement_discount = isinstance(payload.agreement_usage, dict) and money(payload.agreement_usage.get("discount_percent") or 0) > 0

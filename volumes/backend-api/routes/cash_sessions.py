@@ -477,6 +477,32 @@ async def get_session_summary(
         cash_returns_total     = returns_by_method_rows.get("CASH", Decimal("0.00"))
         transfer_returns_total = returns_by_method_rows.get("TRANSFER", Decimal("0.00"))
 
+        foreign_balance_result = await session.execute(
+            text("""
+                SELECT
+                    JSON_UNQUOTE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.currency_code')) AS currency_code,
+                    SUM(CASE
+                        WHEN sd.document_type_code != 'RETURN_TICKET'
+                            THEN CAST(COALESCE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.received_amount'), 0) AS DECIMAL(15,6))
+                        ELSE
+                            -CAST(COALESCE(JSON_EXTRACT(sd.payment_details, '$.foreign_currency.expected_amount'), 0) AS DECIMAL(15,6))
+                    END) AS available_amount
+                FROM sale_documents sd
+                WHERE sd.cash_register_session_id = :session_id
+                    AND sd.status = 'CLOSED'
+                    AND sd.deleted_at IS NULL
+                    AND sd.payment_method_code = 'FOREIGN_CURRENCY'
+                    AND JSON_EXTRACT(sd.payment_details, '$.foreign_currency.currency_code') IS NOT NULL
+                GROUP BY currency_code
+            """),
+            {"session_id": session_id},
+        )
+        available_foreign_currency = [
+            {"currency_code": row["currency_code"], "available_amount": float(row["available_amount"] or 0)}
+            for row in foreign_balance_result.mappings().all()
+            if row["currency_code"]
+        ]
+
         petty_cash_result = await session.execute(
             text("""
                 SELECT COALESCE(SUM(expense_amount), 0) AS total
@@ -529,6 +555,7 @@ async def get_session_summary(
                 "total_sales_amount": str(money(total_sales)),
                 "cash_returns_total": str(cash_returns_total),
                 "transfer_returns_total": str(transfer_returns_total),
+                "available_foreign_currency": available_foreign_currency,
                 "petty_cash_expenses_total": str(petty_cash_total),
                 "petty_cash_fund_initial_amount": str(petty_cash_fund_initial),
                 "petty_cash_fund_current_balance": str(petty_cash_fund_balance),
