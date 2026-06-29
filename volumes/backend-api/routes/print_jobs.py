@@ -121,23 +121,17 @@ async def list_templates(request: Request, user: dict = Depends(get_current_user
 
 @router.post("/templates", response_class=JSONResponse)
 async def create_template(payload: PrintTemplateCreate, request: Request, user: dict = Depends(get_current_user)):
-    """Crea un nuevo template de boleta."""
+    """Crea un nuevo template de boleta. Si se activa, desactiva los demás del mismo tipo."""
     async with db_manager.get_async_session() as session:
-        existing = await session.execute(
-            select(PrintTemplate).where(
-                and_(PrintTemplate.template_code == payload.template_code.upper(), PrintTemplate.deleted_at.is_(None))
-            )
-        )
-        if existing.scalar_one_or_none():
-            return ResponseManager.error(
-                message="Ya existe un template con ese código",
-                status_code=HTTPStatus.CONFLICT,
-                error_code=ErrorCode.RESOURCE_CONFLICT,
-                error_type=ErrorType.RESOURCE_ERROR,
-                request=request,
+        code = payload.template_code.upper()
+        if payload.is_active:
+            await session.execute(
+                update(PrintTemplate)
+                .where(and_(PrintTemplate.template_code == code, PrintTemplate.deleted_at.is_(None), PrintTemplate.is_active.is_(True)))
+                .values(is_active=False)
             )
         template = PrintTemplate(
-            template_code=payload.template_code.upper(),
+            template_code=code,
             template_name=payload.template_name,
             version=payload.version,
             content=payload.content,
@@ -205,6 +199,17 @@ async def update_template(
         if payload.paper_width_mm is not None:
             template.paper_width_mm = payload.paper_width_mm
         if payload.is_active is not None:
+            if payload.is_active and not template.is_active:
+                await session.execute(
+                    update(PrintTemplate)
+                    .where(and_(
+                        PrintTemplate.template_code == template.template_code,
+                        PrintTemplate.id != template.id,
+                        PrintTemplate.deleted_at.is_(None),
+                        PrintTemplate.is_active.is_(True),
+                    ))
+                    .values(is_active=False)
+                )
             template.is_active = payload.is_active
         await session.flush()
         return ResponseManager.success(data=_template_to_dict(template), message="Template actualizado", request=request)

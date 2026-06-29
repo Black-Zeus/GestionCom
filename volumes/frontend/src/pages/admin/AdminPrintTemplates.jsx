@@ -16,11 +16,27 @@ const textareaClassName = 'w-full rounded-md border border-slate-300 px-3 py-2 t
 const selectClassName = `${fieldClassName} bg-white dark:bg-slate-950`;
 
 const TICKET_TYPES = [
-  { code: 'TICKET_VENTA',      label: 'Ticket de Venta'      },
-  { code: 'TICKET_CAMBIO',     label: 'Ticket de Cambio'     },
-  { code: 'TICKET_DEVOLUCION', label: 'Ticket de Devolución' },
-  { code: 'TICKET_PRUEBA',     label: 'Ticket de Prueba'     },
+  { code: 'TICKET_VENTA',      label: 'Ticket de Venta'         },
+  { code: 'TICKET_CAMBIO',     label: 'Ticket de Cambio'        },
+  { code: 'TICKET_DEVOLUCION', label: 'Ticket de Devolución'    },
+  { code: 'TICKET_PRUEBA',     label: 'Ticket de Prueba'        },
+  { code: 'TICKET_APERTURA',   label: 'Apertura de Caja'        },
+  { code: 'TICKET_ARQUEO',     label: 'Arqueo de Caja'          },
+  { code: 'TICKET_CIERRE',     label: 'Cierre de Caja'          },
+  { code: 'TICKET_ANULACION',  label: 'Anulación de Venta'      },
+  { code: 'TICKET_RETIRO',     label: 'Retiro de Efectivo'      },
+  { code: 'TICKET_INGRESO',    label: 'Ingreso de Efectivo'     },
+  { code: 'TICKET_GASTO',      label: 'Gasto Menor'             },
+  { code: 'TICKET_REPORTE_X',  label: 'Reporte X (Corte Parc.)' },
+  { code: 'TICKET_REPORTE_Z',  label: 'Reporte Z (Cierre Cons.)'},
 ];
+
+// Todos los tipos de operación de caja (sin productos, sin totales de venta)
+const CASH_OP_CODES = new Set([
+  'TICKET_APERTURA', 'TICKET_ARQUEO',  'TICKET_CIERRE',
+  'TICKET_ANULACION','TICKET_RETIRO',  'TICKET_INGRESO',
+  'TICKET_GASTO',    'TICKET_REPORTE_X','TICKET_REPORTE_Z',
+]);
 
 const BARCODE_TYPES = [
   { value: 'CODE128', label: 'CODE128',          numeric: false, hint: 'Alfanumérico — el más versátil, compatible con cualquier campo' },
@@ -67,6 +83,194 @@ const DEFAULT_CONTENT = {
     barcode_type: 'CODE128',
     footer_message: 'Guarda este ticket para cambios',
   },
+};
+
+const DEFAULT_CONTENT_PRUEBA = {
+  header: {
+    show_banner: true,
+    show_commercial_name: true,
+    show_fantasy_name: true,
+    show_rut: true,
+    show_address: true,
+    show_date: true,
+  },
+  body: {
+    show_unit_price: true,
+    show_discount: true,
+    show_credit_section: false,
+    show_received_section: false,
+  },
+  footer: {
+    show_subtotal: true,
+    show_tax: true,
+    show_discounts: false,
+    show_total: true,
+    show_payment_method: false,
+    show_payment_breakdown: false,
+    show_change: false,
+    show_agreement: false,
+    show_email: false,
+    show_barcode: false,
+    barcode_field: 'ticket_number',
+    barcode_type: 'CODE128',
+    footer_message: '',
+  },
+};
+
+const DEFAULT_CONTENT_APERTURA = {
+  header: {
+    show_banner: true,
+    show_commercial_name: true,
+    show_fantasy_name: true,
+    show_rut: true,
+    show_address: false,
+    show_date: true,
+  },
+  body: {
+    show_cash_detail: true,
+    show_observations: true,
+    show_signature: true,
+  },
+  footer: {
+    show_subtotal: false,
+    show_tax: false,
+    show_discounts: false,
+    show_total: false,
+    show_payment_method: false,
+    show_payment_breakdown: false,
+    show_change: false,
+    show_agreement: false,
+    show_email: false,
+    show_barcode: false,
+    barcode_field: 'ticket_number',
+    barcode_type: 'CODE128',
+    footer_message: '',
+  },
+};
+
+const DEFAULT_CONTENT_ARQUEO = {
+  header: {
+    show_banner: false,
+    show_commercial_name: true,
+    show_fantasy_name: true,
+    show_rut: true,
+    show_address: false,
+    show_date: true,
+  },
+  body: {
+    show_sales_by_method: true,
+    show_adjustments: true,
+    show_cash_count: true,
+    show_observations: true,
+    show_signature: true,
+  },
+  footer: {
+    show_subtotal: false,
+    show_tax: false,
+    show_discounts: false,
+    show_total: false,
+    show_payment_method: false,
+    show_payment_breakdown: false,
+    show_change: false,
+    show_agreement: false,
+    show_email: false,
+    show_barcode: false,
+    barcode_field: 'ticket_number',
+    barcode_type: 'CODE128',
+    footer_message: '',
+  },
+};
+
+const DEFAULT_CONTENT_CIERRE = {
+  header: {
+    show_banner: false,
+    show_commercial_name: true,
+    show_fantasy_name: true,
+    show_rut: true,
+    show_address: false,
+    show_date: true,
+  },
+  body: {
+    show_sales_by_method: true,
+    show_adjustments: true,
+    show_cash_count: true,
+    show_observations: true,
+    show_signature: true,
+  },
+  footer: {
+    show_subtotal: false,
+    show_tax: false,
+    show_discounts: false,
+    show_total: false,
+    show_payment_method: false,
+    show_payment_breakdown: false,
+    show_change: false,
+    show_agreement: false,
+    show_email: false,
+    show_barcode: false,
+    barcode_field: 'ticket_number',
+    barcode_type: 'CODE128',
+    footer_message: '',
+  },
+};
+
+const _CASH_OP_FOOTER = {
+  show_subtotal: false, show_tax: false, show_discounts: false, show_total: false,
+  show_payment_method: false, show_payment_breakdown: false, show_change: false,
+  show_agreement: false, show_email: false, show_barcode: false,
+  barcode_field: 'ticket_number', barcode_type: 'CODE128', footer_message: '',
+};
+const _CASH_OP_HEADER_FULL  = { show_banner: false, show_commercial_name: true, show_fantasy_name: true, show_rut: true, show_address: false, show_date: true };
+const _CASH_OP_HEADER_FULL2 = { show_banner: true,  show_commercial_name: true, show_fantasy_name: true, show_rut: true, show_address: false, show_date: true };
+
+const DEFAULT_CONTENT_ANULACION = {
+  header: { ..._CASH_OP_HEADER_FULL },
+  body:   { show_original_folio: true, show_reason: true, show_authorizer: true, show_payment_method: true, show_status: true },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const DEFAULT_CONTENT_RETIRO = {
+  header: { ..._CASH_OP_HEADER_FULL },
+  body:   { show_cash_before_after: true, show_receiver: true, show_authorizer: true, show_observations: true, show_signature: true },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const DEFAULT_CONTENT_INGRESO = {
+  header: { ..._CASH_OP_HEADER_FULL },
+  body:   { show_cash_before_after: true, show_deliverer: true, show_authorizer: true, show_observations: true, show_signature: true },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const DEFAULT_CONTENT_GASTO = {
+  header: { ..._CASH_OP_HEADER_FULL },
+  body:   { show_supplier: true, show_associated_doc: false, show_authorizer: true, show_cash_before_after: true, show_observations: true, show_signature: true },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const DEFAULT_CONTENT_REPORTE_X = {
+  header: { ..._CASH_OP_HEADER_FULL2 },
+  body:   { show_sales_by_method: true, show_cancellations: true, show_refunds: true, show_exchanges: true, show_withdrawals: true, show_deposits: true, show_expenses: true, show_cash_count: false },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const DEFAULT_CONTENT_REPORTE_Z = {
+  header: { ..._CASH_OP_HEADER_FULL2 },
+  body:   { show_sales_by_method: true, show_cancellations: true, show_transaction_count: true, show_adjustments: true, show_cash_count: true },
+  footer: { ..._CASH_OP_FOOTER },
+};
+
+const defaultContentFor = (code) => {
+  if (code === 'TICKET_PRUEBA')    return DEFAULT_CONTENT_PRUEBA;
+  if (code === 'TICKET_APERTURA')  return DEFAULT_CONTENT_APERTURA;
+  if (code === 'TICKET_ARQUEO')    return DEFAULT_CONTENT_ARQUEO;
+  if (code === 'TICKET_CIERRE')    return DEFAULT_CONTENT_CIERRE;
+  if (code === 'TICKET_ANULACION') return DEFAULT_CONTENT_ANULACION;
+  if (code === 'TICKET_RETIRO')    return DEFAULT_CONTENT_RETIRO;
+  if (code === 'TICKET_INGRESO')   return DEFAULT_CONTENT_INGRESO;
+  if (code === 'TICKET_GASTO')     return DEFAULT_CONTENT_GASTO;
+  if (code === 'TICKET_REPORTE_X') return DEFAULT_CONTENT_REPORTE_X;
+  if (code === 'TICKET_REPORTE_Z') return DEFAULT_CONTENT_REPORTE_Z;
+  return DEFAULT_CONTENT;
 };
 
 const SAMPLE = {
@@ -138,6 +342,132 @@ const Row = ({ left, right, className = '' }) => (
   </div>
 );
 
+const SAMPLE_PRUEBA = {
+  items: [
+    { name: 'Producto de muestra A', qty: 2, unit_price: 12990, total: 25980, discount: 0 },
+    { name: 'Artículo de muestra B', qty: 1, unit_price: 8900,  total: 8900,  discount: 0 },
+    { name: 'Ítem de muestra C',     qty: 3, unit_price: 5990,  total: 17970, discount: 0 },
+  ],
+  subtotal: 44412,
+  tax: 8438,
+  total_amount: 52850,
+};
+
+const SAMPLE_APERTURA = {
+  session_folio: 'A-000023',
+  cashier_name: 'Ana García',
+  supervisor_name: 'Luis Pérez',
+  cash_register_name: 'Caja 1',
+  branch_name: 'Sucursal Centro',
+  initial_amount: 50000,
+  cash_detail: [
+    { denomination: 10000, qty: 3, total: 30000 },
+    { denomination: 5000,  qty: 3, total: 15000 },
+    { denomination: 1000,  qty: 5, total: 5000  },
+  ],
+};
+
+const SAMPLE_ARQUEO = {
+  session_folio: 'ARQ-000011',
+  cashier_name: 'Ana García',
+  cash_register_name: 'Caja 1',
+  branch_name: 'Sucursal Centro',
+  initial_amount: 50000,
+  total_sales: 320500,
+  sales_by_method: [
+    { method: 'Efectivo', amount: 185000 },
+    { method: 'Débito',   amount: 95500  },
+    { method: 'Crédito',  amount: 40000  },
+  ],
+  withdrawals: 30000,
+  deposits: 0,
+  cancellations: 12000,
+  refunds: 8000,
+  expected_cash: 205000,
+  counted_cash: 204500,
+  difference: -500,
+};
+
+const SAMPLE_CIERRE = {
+  session_folio: 'C-000019',
+  cashier_name: 'Ana García',
+  supervisor_name: 'Luis Pérez',
+  cash_register_name: 'Caja 1',
+  branch_name: 'Sucursal Centro',
+  shift: 'Turno Mañana',
+  open_date: '09:00',
+  close_date: '18:00',
+  total_sales: 650800,
+  sales_by_method: [
+    { method: 'Efectivo', amount: 380000 },
+    { method: 'Débito',   amount: 195000 },
+    { method: 'Crédito',  amount: 75800  },
+  ],
+  total_discounts: 22500,
+  total_refunds: 15990,
+  total_cancellations: 18000,
+  initial_amount: 50000,
+  total_withdrawals: 60000,
+  total_deposits: 0,
+  expected_cash: 370000,
+  declared_cash: 370000,
+  difference: 0,
+  close_status: 'CUADRADO',
+};
+
+const SAMPLE_ANULACION = {
+  session_folio: 'ANU-000007', original_folio: 'T-001234',
+  cashier_name: 'Ana García', authorizer_name: 'Luis Pérez',
+  cash_register_name: 'Caja 1', branch_name: 'Sucursal Centro', shift: 'Turno Mañana',
+  cancelled_amount: 45990, payment_method: 'Débito',
+  reason: 'Error en precio ingresado', cancellation_status: 'ANULADA',
+};
+
+const SAMPLE_RETIRO = {
+  session_folio: 'RET-000014',
+  cashier_name: 'Ana García', authorizer_name: 'Luis Pérez', receiver_name: 'Carlos Muñoz',
+  cash_register_name: 'Caja 1', branch_name: 'Sucursal Centro', shift: 'Turno Mañana',
+  amount: 100000, reason: 'Depósito bancario', cash_before: 285000, cash_after: 185000,
+};
+
+const SAMPLE_INGRESO = {
+  session_folio: 'ING-000009',
+  cashier_name: 'Ana García', authorizer_name: 'Luis Pérez', deliverer_name: 'Carlos Muñoz',
+  cash_register_name: 'Caja 1', branch_name: 'Sucursal Centro', shift: 'Turno Mañana',
+  amount: 30000, reason: 'Reposición de sencillo', cash_before: 185000, cash_after: 215000,
+};
+
+const SAMPLE_GASTO = {
+  session_folio: 'GST-000003',
+  cashier_name: 'Ana García', authorizer_name: 'Luis Pérez',
+  cash_register_name: 'Caja 1', branch_name: 'Sucursal Centro', shift: 'Turno Mañana',
+  amount: 3500, concept: 'Locomoción despacho', supplier: 'Varios', associated_doc: '',
+  cash_before: 215000, cash_after: 211500,
+};
+
+const SAMPLE_REPORTE_X = {
+  report_folio: 'X-000021',
+  cashier_name: 'Ana García', cash_register_name: 'Caja 1',
+  branch_name: 'Sucursal Centro', shift: 'Turno Mañana', open_date: '09:00',
+  total_sales: 420300,
+  sales_by_method: [{ method: 'Efectivo', amount: 245000 }, { method: 'Débito', amount: 130000 }, { method: 'Crédito', amount: 45300 }],
+  total_cancellations: 15990, total_refunds: 8900, total_exchanges: 25000,
+  total_withdrawals: 100000, total_deposits: 30000, total_expenses: 3500,
+  expected_cash: 171500,
+};
+
+const SAMPLE_REPORTE_Z = {
+  report_folio: 'Z-000005', period: '26/06/2026',
+  responsible_name: 'Ana García', cash_register_name: 'Caja 1',
+  branch_name: 'Sucursal Centro', shift: 'Turno Mañana',
+  gross_total: 850600, total_discounts: 32100, total_refunds: 24890,
+  total_cancellations: 28450, net_total: 765160, tax: 121697,
+  sales_by_method: [{ method: 'Efectivo', amount: 390000 }, { method: 'Débito', amount: 280000 }, { method: 'Crédito', amount: 95160 }],
+  transaction_count: 87, product_count: 214,
+  total_withdrawals: 100000, total_deposits: 30000, total_expenses: 8700,
+  expected_cash: 311300, declared_cash: 311300, difference: 0, close_status: 'CUADRADO',
+};
+
 const SAMPLE_DEVOLUCION = {
   return_items: [{ name: 'Polera Talla M', qty: 1, unit_price: 15990, total: 15990, discount: 0 }],
   subtotal: 13445,
@@ -158,6 +488,17 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
   const { header, body, footer } = content;
   const isCambio     = templateCode === 'TICKET_CAMBIO';
   const isDevolucion = templateCode === 'TICKET_DEVOLUCION';
+  const isPrueba     = templateCode === 'TICKET_PRUEBA';
+  const isApertura   = templateCode === 'TICKET_APERTURA';
+  const isArqueo     = templateCode === 'TICKET_ARQUEO';
+  const isCierre     = templateCode === 'TICKET_CIERRE';
+  const isAnulacion  = templateCode === 'TICKET_ANULACION';
+  const isRetiro     = templateCode === 'TICKET_RETIRO';
+  const isIngreso    = templateCode === 'TICKET_INGRESO';
+  const isGasto      = templateCode === 'TICKET_GASTO';
+  const isReporteX   = templateCode === 'TICKET_REPORTE_X';
+  const isReporteZ   = templateCode === 'TICKET_REPORTE_Z';
+  const isCashSession = CASH_OP_CODES.has(templateCode);
   const cols = paperWidth === 58 ? 32 : 48;
   const divider = '─'.repeat(cols);
 
@@ -176,9 +517,12 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
 
           {/* HEADER */}
           {header.show_banner && (
-            <div className="mb-1 flex items-center justify-center rounded border border-dashed border-slate-300 py-3 text-[9px] uppercase tracking-widest text-slate-400">
-              [ BANNER ]
-            </div>
+            <>
+              <div className="flex items-center justify-center rounded border border-dashed border-slate-300 py-3 text-[9px] uppercase tracking-widest text-slate-400">
+                [ BANNER ]
+              </div>
+              <p className="my-1 text-slate-300">{divider}</p>
+            </>
           )}
           {header.show_fantasy_name && (
             <p className="text-center text-[11px] font-bold uppercase">{SAMPLE.fantasy_name}</p>
@@ -199,8 +543,45 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           {/* divider */}
           <p className="my-1 text-slate-300">{divider}</p>
 
-          {/* TICKET NUMBER */}
-          <p className="text-center font-bold">{isCambio ? 'CAMBIO DE PRODUCTO' : isDevolucion ? 'TICKET DE DEVOLUCIÓN' : 'BOLETA'} #{SAMPLE.ticket_number}</p>
+          {/* TICKET NUMBER / prueba banner */}
+          {isPrueba ? (
+            <>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <p className="text-center font-bold text-[10px]">*** TICKET DE PRUEBA ***</p>
+              <p className="text-center text-[8px] text-slate-500">NO ES UNA VENTA REAL</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <p className="text-center font-bold">TICKET DE PRUEBA</p>
+              <p className="text-center text-[9px] text-slate-500">T-00000</p>
+            </>
+          ) : (
+            <p className="text-center font-bold">
+              {isCambio    ? 'CAMBIO DE PRODUCTO'
+                : isDevolucion ? 'TICKET DE DEVOLUCIÓN'
+                : isApertura   ? 'APERTURA DE CAJA'
+                : isArqueo     ? 'ARQUEO DE CAJA'
+                : isCierre     ? 'CIERRE DE CAJA'
+                : isAnulacion  ? 'ANULACIÓN DE VENTA'
+                : isRetiro     ? 'RETIRO DE EFECTIVO'
+                : isIngreso    ? 'INGRESO DE EFECTIVO'
+                : isGasto      ? 'GASTO MENOR'
+                : isReporteX   ? 'REPORTE X — CORTE PARCIAL'
+                : isReporteZ   ? 'REPORTE Z'
+                : 'BOLETA'
+              }{' '}
+              {isCashSession
+                ? (isApertura  ? SAMPLE_APERTURA.session_folio
+                  : isArqueo   ? SAMPLE_ARQUEO.session_folio
+                  : isCierre   ? SAMPLE_CIERRE.session_folio
+                  : isAnulacion? SAMPLE_ANULACION.session_folio
+                  : isRetiro   ? SAMPLE_RETIRO.session_folio
+                  : isIngreso  ? SAMPLE_INGRESO.session_folio
+                  : isGasto    ? SAMPLE_GASTO.session_folio
+                  : isReporteX ? SAMPLE_REPORTE_X.report_folio
+                  : SAMPLE_REPORTE_Z.report_folio)
+                : `#${SAMPLE.ticket_number}`
+              }
+            </p>
+          )}
           <p className="my-1 text-slate-300">{divider}</p>
 
           {isCambio ? (
@@ -249,6 +630,316 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
                 </div>
               ))}
             </>
+          ) : isPrueba ? (
+            SAMPLE_PRUEBA.items.map((item, i) => (
+              <div key={i} className="mb-1">
+                <div className="flex justify-between gap-1">
+                  <span className="flex-1 truncate font-medium">{item.name}</span>
+                  <span className="shrink-0">{clp(item.total)}</span>
+                </div>
+                {body.show_unit_price && <p className="text-slate-500">  {item.qty} x {clp(item.unit_price)}</p>}
+                {body.show_discount && item.discount > 0 && <p className="text-slate-500">  Desc: -{clp(item.discount)}</p>}
+              </div>
+            ))
+          ) : isApertura ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_APERTURA.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_APERTURA.cash_register_name}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_APERTURA.cashier_name}</p>
+              <p className="text-[9px] text-slate-600">Supervisor: {SAMPLE_APERTURA.supervisor_name}</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <Row left="MONTO INICIAL:" right={clp(SAMPLE_APERTURA.initial_amount)} className="font-bold" />
+              {body.show_cash_detail && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-semibold">Detalle efectivo inicial</p>
+                  {SAMPLE_APERTURA.cash_detail.map((d, i) => (
+                    <Row key={i} left={`  ${clp(d.denomination)} x ${d.qty}`} right={clp(d.total)} className="text-[9px] text-slate-600" />
+                  ))}
+                </>
+              )}
+              {body.show_observations && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-[9px] text-slate-600">Obs.: —</p>
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Firma: ___________________________</p>
+                </>
+              )}
+            </>
+          ) : isArqueo ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_ARQUEO.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_ARQUEO.cash_register_name}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_ARQUEO.cashier_name}</p>
+              <p className="text-[9px] text-slate-600">M. inicial: {clp(SAMPLE_ARQUEO.initial_amount)}</p>
+              {body.show_sales_by_method && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-semibold">Ventas por medio de pago</p>
+                  {SAMPLE_ARQUEO.sales_by_method.map((m, i) => (
+                    <Row key={i} left={`  ${m.method}:`} right={clp(m.amount)} className="text-[9px] text-slate-600" />
+                  ))}
+                  <Row left="TOTAL VENTAS:" right={clp(SAMPLE_ARQUEO.total_sales)} className="font-bold" />
+                </>
+              )}
+              {body.show_adjustments && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Retiros:"      right={`-${clp(SAMPLE_ARQUEO.withdrawals)}`}   className="text-[9px] text-slate-600" />
+                  <Row left="Anulaciones:"  right={`-${clp(SAMPLE_ARQUEO.cancellations)}`} className="text-[9px] text-slate-600" />
+                  <Row left="Devoluciones:" right={`-${clp(SAMPLE_ARQUEO.refunds)}`}       className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_cash_count && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Efectivo esperado:" right={clp(SAMPLE_ARQUEO.expected_cash)} className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo contado:"  right={clp(SAMPLE_ARQUEO.counted_cash)}  className="text-[9px] text-slate-600" />
+                  <Row left="DIFERENCIA:" right={clp(SAMPLE_ARQUEO.difference)} className="font-bold text-red-700" />
+                </>
+              )}
+              {body.show_observations && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-[9px] text-slate-600">Obs.: —</p>
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Firma: ___________________________</p>
+                </>
+              )}
+            </>
+          ) : isCierre ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_CIERRE.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_CIERRE.cash_register_name} / {SAMPLE_CIERRE.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_CIERRE.cashier_name} / Superv.: {SAMPLE_CIERRE.supervisor_name}</p>
+              <p className="text-[9px] text-slate-600">Apertura: {SAMPLE_CIERRE.open_date} · Cierre: {SAMPLE_CIERRE.close_date}</p>
+              {body.show_sales_by_method && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-semibold">Ventas por medio de pago</p>
+                  {SAMPLE_CIERRE.sales_by_method.map((m, i) => (
+                    <Row key={i} left={`  ${m.method}:`} right={clp(m.amount)} className="text-[9px] text-slate-600" />
+                  ))}
+                  <Row left="TOTAL VENTAS:" right={clp(SAMPLE_CIERRE.total_sales)} className="font-bold" />
+                </>
+              )}
+              {body.show_adjustments && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Descuentos:"   right={`-${clp(SAMPLE_CIERRE.total_discounts)}`}    className="text-[9px] text-slate-600" />
+                  <Row left="Devoluciones:" right={`-${clp(SAMPLE_CIERRE.total_refunds)}`}      className="text-[9px] text-slate-600" />
+                  <Row left="Anulaciones:"  right={`-${clp(SAMPLE_CIERRE.total_cancellations)}`} className="text-[9px] text-slate-600" />
+                  <Row left="Retiros:"      right={`-${clp(SAMPLE_CIERRE.total_withdrawals)}`}  className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_cash_count && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="M. inicial:"        right={clp(SAMPLE_CIERRE.initial_amount)}  className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo esperado:" right={clp(SAMPLE_CIERRE.expected_cash)}   className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo declarado:" right={clp(SAMPLE_CIERRE.declared_cash)}  className="text-[9px] text-slate-600" />
+                  <Row left="DIFERENCIA:" right={clp(SAMPLE_CIERRE.difference)} className="font-bold" />
+                  <p className="text-center text-[9px] font-bold text-emerald-700">Estado: {SAMPLE_CIERRE.close_status}</p>
+                </>
+              )}
+              {body.show_observations && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-[9px] text-slate-600">Obs.: —</p>
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Cajero: ___________________________</p>
+                  <p className="text-center text-[9px] text-slate-500">Supervisor: _______________________</p>
+                </>
+              )}
+            </>
+          ) : isAnulacion ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_ANULACION.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_ANULACION.cash_register_name} · {SAMPLE_ANULACION.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_ANULACION.cashier_name}</p>
+              {body.show_original_folio && <p className="text-[9px] text-slate-600">Folio original: {SAMPLE_ANULACION.original_folio}</p>}
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <Row left="MONTO ANULADO:" right={clp(SAMPLE_ANULACION.cancelled_amount)} className="font-bold" />
+              {body.show_payment_method && <p className="text-[9px] text-slate-600">Medio de pago: {SAMPLE_ANULACION.payment_method}</p>}
+              {body.show_reason && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-[9px] text-slate-600">Motivo: {SAMPLE_ANULACION.reason}</p>
+                </>
+              )}
+              {body.show_authorizer && <p className="text-[9px] text-slate-600">Autorizador: {SAMPLE_ANULACION.authorizer_name}</p>}
+              {body.show_status && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-bold">Estado: {SAMPLE_ANULACION.cancellation_status}</p>
+                </>
+              )}
+            </>
+          ) : isRetiro ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_RETIRO.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_RETIRO.cash_register_name} · {SAMPLE_RETIRO.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_RETIRO.cashier_name}</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <Row left="MONTO RETIRADO:" right={clp(SAMPLE_RETIRO.amount)} className="font-bold" />
+              <p className="text-[9px] text-slate-600">Motivo: {SAMPLE_RETIRO.reason}</p>
+              {body.show_receiver    && <p className="text-[9px] text-slate-600">Recibe: {SAMPLE_RETIRO.receiver_name}</p>}
+              {body.show_authorizer  && <p className="text-[9px] text-slate-600">Supervisor: {SAMPLE_RETIRO.authorizer_name}</p>}
+              {body.show_cash_before_after && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Efectivo antes:"   right={clp(SAMPLE_RETIRO.cash_before)} className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo después:" right={clp(SAMPLE_RETIRO.cash_after)}  className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Firma: ___________________________</p>
+                </>
+              )}
+            </>
+          ) : isIngreso ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_INGRESO.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_INGRESO.cash_register_name} · {SAMPLE_INGRESO.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_INGRESO.cashier_name}</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <Row left="MONTO INGRESADO:" right={clp(SAMPLE_INGRESO.amount)} className="font-bold" />
+              <p className="text-[9px] text-slate-600">Motivo: {SAMPLE_INGRESO.reason}</p>
+              {body.show_deliverer   && <p className="text-[9px] text-slate-600">Entrega: {SAMPLE_INGRESO.deliverer_name}</p>}
+              {body.show_authorizer  && <p className="text-[9px] text-slate-600">Supervisor: {SAMPLE_INGRESO.authorizer_name}</p>}
+              {body.show_cash_before_after && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Efectivo antes:"   right={clp(SAMPLE_INGRESO.cash_before)} className="text-[9px] text-emerald-700" />
+                  <Row left="Efectivo después:" right={clp(SAMPLE_INGRESO.cash_after)}  className="text-[9px] text-emerald-700" />
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Firma: ___________________________</p>
+                </>
+              )}
+            </>
+          ) : isGasto ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_GASTO.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_GASTO.cash_register_name} · {SAMPLE_GASTO.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_GASTO.cashier_name}</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <Row left="MONTO:" right={clp(SAMPLE_GASTO.amount)} className="font-bold" />
+              <p className="text-[9px] text-slate-600">Concepto: {SAMPLE_GASTO.concept}</p>
+              {body.show_supplier       && <p className="text-[9px] text-slate-600">Proveedor: {SAMPLE_GASTO.supplier}</p>}
+              {body.show_associated_doc && SAMPLE_GASTO.associated_doc && <p className="text-[9px] text-slate-600">Doc.: {SAMPLE_GASTO.associated_doc}</p>}
+              {body.show_authorizer     && <p className="text-[9px] text-slate-600">Supervisor: {SAMPLE_GASTO.authorizer_name}</p>}
+              {body.show_cash_before_after && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Efectivo antes:"   right={clp(SAMPLE_GASTO.cash_before)} className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo después:" right={clp(SAMPLE_GASTO.cash_after)}  className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_signature && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] text-slate-500">Firma: ___________________________</p>
+                </>
+              )}
+            </>
+          ) : isReporteX ? (
+            <>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_REPORTE_X.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_REPORTE_X.cash_register_name} · {SAMPLE_REPORTE_X.shift}</p>
+              <p className="text-[9px] text-slate-600">Cajero: {SAMPLE_REPORTE_X.cashier_name} · Apertura: {SAMPLE_REPORTE_X.open_date}</p>
+              {body.show_sales_by_method && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-semibold">Ventas por medio de pago</p>
+                  {SAMPLE_REPORTE_X.sales_by_method.map((m, i) => (
+                    <Row key={i} left={`  ${m.method}:`} right={clp(m.amount)} className="text-[9px] text-slate-600" />
+                  ))}
+                  <Row left="TOTAL VENTAS:" right={clp(SAMPLE_REPORTE_X.total_sales)} className="font-bold" />
+                </>
+              )}
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              {body.show_cancellations && <Row left="Anulaciones:"  right={`-${clp(SAMPLE_REPORTE_X.total_cancellations)}`} className="text-[9px] text-slate-600" />}
+              {body.show_refunds       && <Row left="Devoluciones:" right={`-${clp(SAMPLE_REPORTE_X.total_refunds)}`}       className="text-[9px] text-slate-600" />}
+              {body.show_exchanges     && <Row left="Cambios:"      right={clp(SAMPLE_REPORTE_X.total_exchanges)}           className="text-[9px] text-slate-600" />}
+              {body.show_withdrawals   && <Row left="Retiros:"      right={`-${clp(SAMPLE_REPORTE_X.total_withdrawals)}`}   className="text-[9px] text-slate-600" />}
+              {body.show_deposits      && <Row left="Ingresos:"     right={`+${clp(SAMPLE_REPORTE_X.total_deposits)}`}      className="text-[9px] text-slate-600" />}
+              {body.show_expenses      && <Row left="Gastos:"       right={`-${clp(SAMPLE_REPORTE_X.total_expenses)}`}      className="text-[9px] text-slate-600" />}
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              {body.show_cash_count
+                ? <Row left="Efectivo esperado:" right={clp(SAMPLE_REPORTE_X.expected_cash)} className="text-[9px] text-slate-600" />
+                : <Row left="EFECTIVO ESPERADO:" right={clp(SAMPLE_REPORTE_X.expected_cash)} className="font-bold" />
+              }
+            </>
+          ) : isReporteZ ? (
+            <>
+              <p className="text-[9px] text-slate-600">Periodo: {SAMPLE_REPORTE_Z.period}</p>
+              <p className="text-[9px] text-slate-600">Sucursal: {SAMPLE_REPORTE_Z.branch_name}</p>
+              <p className="text-[9px] text-slate-600">Caja: {SAMPLE_REPORTE_Z.cash_register_name} · {SAMPLE_REPORTE_Z.shift}</p>
+              <p className="text-[9px] text-slate-600">Responsable: {SAMPLE_REPORTE_Z.responsible_name}</p>
+              {body.show_sales_by_method && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <p className="text-center text-[9px] font-semibold">Ventas por medio de pago</p>
+                  {SAMPLE_REPORTE_Z.sales_by_method.map((m, i) => (
+                    <Row key={i} left={`  ${m.method}:`} right={clp(m.amount)} className="text-[9px] text-slate-600" />
+                  ))}
+                  <Row left="TOTAL BRUTO:" right={clp(SAMPLE_REPORTE_Z.gross_total)} className="font-bold" />
+                </>
+              )}
+              {body.show_cancellations && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Descuentos:"   right={`-${clp(SAMPLE_REPORTE_Z.total_discounts)}`}    className="text-[9px] text-slate-600" />
+                  <Row left="Devoluciones:" right={`-${clp(SAMPLE_REPORTE_Z.total_refunds)}`}      className="text-[9px] text-slate-600" />
+                  <Row left="Anulaciones:"  right={`-${clp(SAMPLE_REPORTE_Z.total_cancellations)}`} className="text-[9px] text-slate-600" />
+                  <Row left="TOTAL NETO:" right={clp(SAMPLE_REPORTE_Z.net_total)} className="font-bold" />
+                  <Row left="IVA (19%):"  right={clp(SAMPLE_REPORTE_Z.tax)}      className="text-[9px] text-slate-500" />
+                </>
+              )}
+              {body.show_transaction_count && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Transacciones:" right={String(SAMPLE_REPORTE_Z.transaction_count)} className="text-[9px] text-slate-600" />
+                  <Row left="Productos:"     right={String(SAMPLE_REPORTE_Z.product_count)}     className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_adjustments && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Retiros:"  right={`-${clp(SAMPLE_REPORTE_Z.total_withdrawals)}`} className="text-[9px] text-slate-600" />
+                  <Row left="Ingresos:" right={`+${clp(SAMPLE_REPORTE_Z.total_deposits)}`}    className="text-[9px] text-slate-600" />
+                  <Row left="Gastos:"   right={`-${clp(SAMPLE_REPORTE_Z.total_expenses)}`}    className="text-[9px] text-slate-600" />
+                </>
+              )}
+              {body.show_cash_count && (
+                <>
+                  <p className="my-0.5 text-slate-300">{divider}</p>
+                  <Row left="Efectivo esperado:"  right={clp(SAMPLE_REPORTE_Z.expected_cash)} className="text-[9px] text-slate-600" />
+                  <Row left="Efectivo declarado:" right={clp(SAMPLE_REPORTE_Z.declared_cash)} className="text-[9px] text-slate-600" />
+                  <Row left="DIFERENCIA:" right={clp(SAMPLE_REPORTE_Z.difference)} className="font-bold" />
+                  <p className="text-center text-[9px] font-bold text-emerald-700">Estado: {SAMPLE_REPORTE_Z.close_status}</p>
+                </>
+              )}
+            </>
           ) : (
             SAMPLE.items.map((item, i) => (
               <div key={i} className="mb-1">
@@ -262,10 +953,10 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
             ))
           )}
 
-          <p className="my-1 text-slate-300">{divider}</p>
+          {!isCashSession && <p className="my-1 text-slate-300">{divider}</p>}
 
           {/* FOOTER TOTALS */}
-          {isCambio ? (
+          {isCashSession ? null : isCambio ? (
             <>
               {footer.show_subtotal && <Row left="Subtotal recibido:" right={clp(SAMPLE_CAMBIO.subtotal)} />}
               {footer.show_tax && <Row left="IVA (19%):" right={clp(SAMPLE_CAMBIO.tax)} />}
@@ -277,6 +968,19 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
               {footer.show_subtotal && <Row left="Subtotal devuelto:" right={clp(SAMPLE_DEVOLUCION.subtotal)} />}
               {footer.show_tax && <Row left="IVA (19%):" right={clp(SAMPLE_DEVOLUCION.tax)} />}
               {footer.show_total && <Row left="TOTAL DEVUELTO:" right={clp(SAMPLE_DEVOLUCION.refund_total)} className="font-bold text-red-700" />}
+            </>
+          ) : isPrueba ? (
+            <>
+              {footer.show_subtotal && <Row left="Subtotal (neto):" right={clp(SAMPLE_PRUEBA.subtotal)} />}
+              {footer.show_tax && <Row left="IVA (19%):" right={clp(SAMPLE_PRUEBA.tax)} />}
+              {footer.show_total && <Row left="TOTAL:" right={clp(SAMPLE_PRUEBA.total_amount)} className="font-bold" />}
+              <p className="my-1 text-slate-300">{divider}</p>
+              <p className="text-[8px] text-slate-400">Template: TICKET_PRUEBA  v1.0.0</p>
+              <p className="text-[8px] text-slate-400">Fuente: calibri  26px</p>
+              <p className="text-[8px] text-slate-400">Impres.: Impresora de prueba</p>
+              <p className="my-0.5 text-slate-300">{divider}</p>
+              <p className="text-center text-[9px] text-slate-500">Si ves este ticket,</p>
+              <p className="text-center text-[9px] font-bold">el agente funciona OK.</p>
             </>
           ) : (
             <>
@@ -310,7 +1014,7 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           )}
 
           {/* CONVENIO */}
-          {footer.show_agreement && SAMPLE.agreement && (
+          {!isPrueba && !isCashSession && footer.show_agreement && SAMPLE.agreement && (
             <>
               <p className="my-1 text-slate-300">{divider}</p>
               <p className="text-center text-[8px] font-semibold uppercase tracking-wide text-slate-500">
@@ -336,7 +1040,7 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           )}
 
           {/* EMAIL */}
-          {footer.show_email && SAMPLE.receipt_email && (
+          {!isPrueba && !isCashSession && footer.show_email && SAMPLE.receipt_email && (
             <>
               <p className="my-1 text-slate-300">{divider}</p>
               <p className="text-center text-[9px] text-slate-500">{SAMPLE.receipt_email}</p>
@@ -344,7 +1048,7 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           )}
 
           {/* BARCODE */}
-          {footer.show_barcode && (
+          {!isPrueba && !isCashSession && footer.show_barcode && (
             <>
               <p className="my-1 text-slate-300">{divider}</p>
               <div className="flex flex-col items-center py-1">
@@ -368,7 +1072,7 @@ const ReceiptPreview = ({ content, paperWidth, templateCode }) => {
           )}
 
           {/* FOOTER MESSAGE */}
-          {footer.footer_message && (
+          {!isPrueba && !isCashSession && footer.footer_message && (
             <>
               <p className="my-1 text-slate-300">{divider}</p>
               <p className="text-center text-[9px] italic text-slate-500">{footer.footer_message}</p>
@@ -393,11 +1097,14 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
   const [version, setVersion] = useState(initialValues?.version || '1.0.0');
   const [paperWidth, setPaperWidth] = useState(initialValues?.paper_width_mm ?? 80);
   const [isActive, setIsActive] = useState(initialValues?.is_active !== false);
-  const [content, setContent] = useState(() => ({
-    header: { ...DEFAULT_CONTENT.header, ...(initialValues?.content?.header || {}) },
-    body:   { ...DEFAULT_CONTENT.body,   ...(initialValues?.content?.body   || {}) },
-    footer: { ...DEFAULT_CONTENT.footer, ...(initialValues?.content?.footer || {}) },
-  }));
+  const [content, setContent] = useState(() => {
+    const base = defaultContentFor(initialValues?.template_code || '');
+    return {
+      header: { ...base.header, ...(initialValues?.content?.header || {}) },
+      body:   { ...base.body,   ...(initialValues?.content?.body   || {}) },
+      footer: { ...base.footer, ...(initialValues?.content?.footer || {}) },
+    };
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -440,17 +1147,42 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
         {/* Identificación */}
         <div className="grid grid-cols-2 gap-3">
           <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-300">Tipo de ticket</span>
+            <span className="font-medium text-slate-700 dark:text-slate-300">Ticket de Impresión</span>
             {isEdit ? (
               <div className={`${fieldClassName} flex items-center bg-slate-50 text-slate-500 dark:bg-slate-900`}>{templateCode}</div>
             ) : (
               <select className={selectClassName} value={templateCode} onChange={(e) => {
-                const found = TICKET_TYPES.find((t) => t.code === e.target.value);
-                setTemplateCode(e.target.value);
-                if (found && !templateName) setTemplateName(found.label);
+                const newCode = e.target.value;
+                const found = TICKET_TYPES.find((t) => t.code === newCode);
+                setTemplateCode(newCode);
+                if (found) setTemplateName(found.label);
+                if (newCode !== templateCode) {
+                  const base = defaultContentFor(newCode);
+                  setContent({ header: { ...base.header }, body: { ...base.body }, footer: { ...base.footer } });
+                }
               }} required>
                 <option value="">Seleccionar tipo...</option>
-                {TICKET_TYPES.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
+                <optgroup label="── Operaciones de Caja ─">
+                  <option value="TICKET_ANULACION">Anulación de Venta</option>
+                  <option value="TICKET_APERTURA">Apertura de Caja</option>
+                  <option value="TICKET_ARQUEO">Arqueo de Caja</option>
+                  <option value="TICKET_CIERRE">Cierre de Caja</option>
+                  <option value="TICKET_GASTO">Gasto Menor</option>
+                  <option value="TICKET_INGRESO">Ingreso de Efectivo</option>
+                  <option value="TICKET_RETIRO">Retiro de Efectivo</option>
+                </optgroup>
+                <optgroup label="── Reportes ────────────">
+                  <option value="TICKET_REPORTE_X">Reporte X (Corte Parc.)</option>
+                  <option value="TICKET_REPORTE_Z">Reporte Z (Cierre Cons.)</option>
+                </optgroup>
+                <optgroup label="── Sistema ─────────────">
+                  <option value="TICKET_PRUEBA">Ticket de Prueba</option>
+                </optgroup>
+                <optgroup label="── Ventas ──────────────">
+                  <option value="TICKET_CAMBIO">Ticket de Cambio</option>
+                  <option value="TICKET_DEVOLUCION">Ticket de Devolución</option>
+                  <option value="TICKET_VENTA">Ticket de Venta</option>
+                </optgroup>
               </select>
             )}
           </label>
@@ -496,14 +1228,81 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
           </div>
 
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Cuerpo — Productos</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {CASH_OP_CODES.has(templateCode) ? 'Cuerpo — Sesión' : 'Cuerpo — Productos'}
+            </p>
             <div className="space-y-0.5">
-              <ToggleField label="Precio unitario"     checked={content.body.show_unit_price} onChange={(v) => setBody('show_unit_price', v)} />
-              <ToggleField label="Descuento por línea" checked={content.body.show_discount}   onChange={(v) => setBody('show_discount', v)} />
-              {templateCode === 'TICKET_CAMBIO' && (
+              {CASH_OP_CODES.has(templateCode) ? (
                 <>
-                  <ToggleField label="Sección Devuelto"   checked={content.body.show_credit_section}   onChange={(v) => setBody('show_credit_section', v)} />
-                  <ToggleField label="Etiqueta Recibido"  checked={content.body.show_received_section} onChange={(v) => setBody('show_received_section', v)} />
+                  {templateCode === 'TICKET_APERTURA' && (
+                    <ToggleField label="Detalle efectivo inicial" checked={content.body.show_cash_detail ?? true} onChange={(v) => setBody('show_cash_detail', v)} />
+                  )}
+                  {(templateCode === 'TICKET_ARQUEO' || templateCode === 'TICKET_CIERRE') && (<>
+                    <ToggleField label="Ventas por medio de pago" checked={content.body.show_sales_by_method ?? true} onChange={(v) => setBody('show_sales_by_method', v)} />
+                    <ToggleField label="Movimientos"             checked={content.body.show_adjustments    ?? true} onChange={(v) => setBody('show_adjustments', v)} />
+                    <ToggleField label="Conteo de efectivo"       checked={content.body.show_cash_count     ?? true} onChange={(v) => setBody('show_cash_count', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_ANULACION' && (<>
+                    <ToggleField label="Folio venta original"   checked={content.body.show_original_folio  ?? true} onChange={(v) => setBody('show_original_folio', v)} />
+                    <ToggleField label="Motivo de anulación"    checked={content.body.show_reason           ?? true} onChange={(v) => setBody('show_reason', v)} />
+                    <ToggleField label="Autorizador"            checked={content.body.show_authorizer       ?? true} onChange={(v) => setBody('show_authorizer', v)} />
+                    <ToggleField label="Medio de pago afectado" checked={content.body.show_payment_method   ?? true} onChange={(v) => setBody('show_payment_method', v)} />
+                    <ToggleField label="Estado de anulación"    checked={content.body.show_status           ?? true} onChange={(v) => setBody('show_status', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_RETIRO' && (<>
+                    <ToggleField label="Efectivo antes/después"  checked={content.body.show_cash_before_after ?? true} onChange={(v) => setBody('show_cash_before_after', v)} />
+                    <ToggleField label="Responsable que recibe"  checked={content.body.show_receiver          ?? true} onChange={(v) => setBody('show_receiver', v)} />
+                    <ToggleField label="Autorizador"             checked={content.body.show_authorizer        ?? true} onChange={(v) => setBody('show_authorizer', v)} />
+                    <ToggleField label="Observaciones"           checked={content.body.show_observations      ?? true} onChange={(v) => setBody('show_observations', v)} />
+                    <ToggleField label="Firma / Validación"      checked={content.body.show_signature         ?? true} onChange={(v) => setBody('show_signature', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_INGRESO' && (<>
+                    <ToggleField label="Efectivo antes/después"  checked={content.body.show_cash_before_after ?? true} onChange={(v) => setBody('show_cash_before_after', v)} />
+                    <ToggleField label="Responsable que entrega" checked={content.body.show_deliverer         ?? true} onChange={(v) => setBody('show_deliverer', v)} />
+                    <ToggleField label="Autorizador"             checked={content.body.show_authorizer        ?? true} onChange={(v) => setBody('show_authorizer', v)} />
+                    <ToggleField label="Observaciones"           checked={content.body.show_observations      ?? true} onChange={(v) => setBody('show_observations', v)} />
+                    <ToggleField label="Firma / Validación"      checked={content.body.show_signature         ?? true} onChange={(v) => setBody('show_signature', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_GASTO' && (<>
+                    <ToggleField label="Proveedor/Referencia"    checked={content.body.show_supplier          ?? true}  onChange={(v) => setBody('show_supplier', v)} />
+                    <ToggleField label="Documento asociado"      checked={content.body.show_associated_doc    ?? false} onChange={(v) => setBody('show_associated_doc', v)} />
+                    <ToggleField label="Autorizador"             checked={content.body.show_authorizer        ?? true}  onChange={(v) => setBody('show_authorizer', v)} />
+                    <ToggleField label="Efectivo antes/después"  checked={content.body.show_cash_before_after ?? true}  onChange={(v) => setBody('show_cash_before_after', v)} />
+                    <ToggleField label="Observaciones"           checked={content.body.show_observations      ?? true}  onChange={(v) => setBody('show_observations', v)} />
+                    <ToggleField label="Firma / Validación"      checked={content.body.show_signature         ?? true}  onChange={(v) => setBody('show_signature', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_REPORTE_X' && (<>
+                    <ToggleField label="Ventas por medio de pago" checked={content.body.show_sales_by_method ?? true}  onChange={(v) => setBody('show_sales_by_method', v)} />
+                    <ToggleField label="Anulaciones"              checked={content.body.show_cancellations   ?? true}  onChange={(v) => setBody('show_cancellations', v)} />
+                    <ToggleField label="Devoluciones"             checked={content.body.show_refunds         ?? true}  onChange={(v) => setBody('show_refunds', v)} />
+                    <ToggleField label="Cambios"                  checked={content.body.show_exchanges       ?? true}  onChange={(v) => setBody('show_exchanges', v)} />
+                    <ToggleField label="Retiros de efectivo"      checked={content.body.show_withdrawals     ?? true}  onChange={(v) => setBody('show_withdrawals', v)} />
+                    <ToggleField label="Ingresos manuales"        checked={content.body.show_deposits        ?? true}  onChange={(v) => setBody('show_deposits', v)} />
+                    <ToggleField label="Gastos menores"           checked={content.body.show_expenses        ?? true}  onChange={(v) => setBody('show_expenses', v)} />
+                    <ToggleField label="Conteo de efectivo"       checked={content.body.show_cash_count      ?? false} onChange={(v) => setBody('show_cash_count', v)} />
+                  </>)}
+                  {templateCode === 'TICKET_REPORTE_Z' && (<>
+                    <ToggleField label="Ventas por medio de pago"     checked={content.body.show_sales_by_method  ?? true} onChange={(v) => setBody('show_sales_by_method', v)} />
+                    <ToggleField label="Deducciones"                  checked={content.body.show_cancellations    ?? true} onChange={(v) => setBody('show_cancellations', v)} />
+                    <ToggleField label="Cantidad de transacciones"    checked={content.body.show_transaction_count ?? true} onChange={(v) => setBody('show_transaction_count', v)} />
+                    <ToggleField label="Movimientos"                  checked={content.body.show_adjustments      ?? true} onChange={(v) => setBody('show_adjustments', v)} />
+                    <ToggleField label="Conteo de efectivo y estado"  checked={content.body.show_cash_count       ?? true} onChange={(v) => setBody('show_cash_count', v)} />
+                  </>)}
+                  {(templateCode === 'TICKET_APERTURA' || templateCode === 'TICKET_ARQUEO' || templateCode === 'TICKET_CIERRE') && (<>
+                    <ToggleField label="Observaciones"      checked={content.body.show_observations ?? true} onChange={(v) => setBody('show_observations', v)} />
+                    <ToggleField label="Firma / Validación" checked={content.body.show_signature    ?? true} onChange={(v) => setBody('show_signature', v)} />
+                  </>)}
+                </>
+              ) : (
+                <>
+                  <ToggleField label="Precio unitario"     checked={content.body.show_unit_price ?? false} onChange={(v) => setBody('show_unit_price', v)} />
+                  <ToggleField label="Descuento por línea" checked={content.body.show_discount   ?? true}  onChange={(v) => setBody('show_discount', v)} />
+                  {templateCode === 'TICKET_CAMBIO' && (
+                    <>
+                      <ToggleField label="Sección Devuelto"  checked={content.body.show_credit_section   ?? true} onChange={(v) => setBody('show_credit_section', v)} />
+                      <ToggleField label="Etiqueta Recibido" checked={content.body.show_received_section ?? true} onChange={(v) => setBody('show_received_section', v)} />
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -512,24 +1311,32 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
           <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Pie — Totales</p>
             <div className="space-y-0.5">
-              <ToggleField label="Subtotal (neto)"    checked={content.footer.show_subtotal}        onChange={(v) => setFooter('show_subtotal', v)} />
-              <ToggleField label="IVA (19%)"          checked={content.footer.show_tax}             onChange={(v) => setFooter('show_tax', v)} />
-              <ToggleField label="Descuentos"         checked={content.footer.show_discounts}       onChange={(v) => setFooter('show_discounts', v)} />
-              <ToggleField label="Total a pagar"      checked={content.footer.show_total}           onChange={(v) => setFooter('show_total', v)} />
-              <ToggleField label="Método de pago"         checked={content.footer.show_payment_method}    onChange={(v) => setFooter('show_payment_method', v)} />
-              <ToggleField label="Detalle pagos mixtos"   checked={content.footer.show_payment_breakdown} onChange={(v) => setFooter('show_payment_breakdown', v)} />
-              <ToggleField label="Vuelto"                 checked={content.footer.show_change}            onChange={(v) => setFooter('show_change', v)} />
-              <ToggleField label="Datos convenio"         checked={content.footer.show_agreement}         onChange={(v) => setFooter('show_agreement', v)} />
-              <ToggleField label="Email cliente"          checked={content.footer.show_email}             onChange={(v) => setFooter('show_email', v)} />
-              <ToggleField label="Código de barras"       checked={content.footer.show_barcode}           onChange={(v) => setFooter('show_barcode', v)} />
+              {CASH_OP_CODES.has(templateCode) ? (
+                <p className="text-xs text-slate-400 italic">Sin opciones de pie para este tipo.</p>
+              ) : (<>
+                <ToggleField label="Subtotal (neto)" checked={content.footer.show_subtotal} onChange={(v) => setFooter('show_subtotal', v)} />
+                <ToggleField label="IVA (19%)"       checked={content.footer.show_tax}      onChange={(v) => setFooter('show_tax', v)} />
+                {templateCode !== 'TICKET_PRUEBA' && (
+                  <ToggleField label="Descuentos" checked={content.footer.show_discounts} onChange={(v) => setFooter('show_discounts', v)} />
+                )}
+                <ToggleField label="Total a pagar" checked={content.footer.show_total} onChange={(v) => setFooter('show_total', v)} />
+                {templateCode !== 'TICKET_PRUEBA' && (<>
+                  <ToggleField label="Método de pago"         checked={content.footer.show_payment_method}    onChange={(v) => setFooter('show_payment_method', v)} />
+                  <ToggleField label="Detalle pagos mixtos"   checked={content.footer.show_payment_breakdown} onChange={(v) => setFooter('show_payment_breakdown', v)} />
+                  <ToggleField label="Vuelto"                 checked={content.footer.show_change}            onChange={(v) => setFooter('show_change', v)} />
+                  <ToggleField label="Datos convenio"         checked={content.footer.show_agreement}         onChange={(v) => setFooter('show_agreement', v)} />
+                  <ToggleField label="Email cliente"          checked={content.footer.show_email}             onChange={(v) => setFooter('show_email', v)} />
+                  <ToggleField label="Código de barras"       checked={content.footer.show_barcode}           onChange={(v) => setFooter('show_barcode', v)} />
+                </>)}
+              </>)}
             </div>
           </div>
         </div>
 
         {/* Barcode + activo (fila 1) | Compatibilidad (fila 2) | Mensaje de pie (fila 3) */}
         <div className="grid grid-cols-3 gap-3">
-          {/* Fila 1, col 1: campo barcode (solo si está activo) */}
-          {content.footer.show_barcode ? (
+          {/* Fila 1, col 1: campo barcode (solo si está activo y aplica al tipo) */}
+          {content.footer.show_barcode && templateCode !== 'TICKET_PRUEBA' && !CASH_OP_CODES.has(templateCode) ? (
             <label className="space-y-1 text-sm">
               <span className="font-medium text-slate-700 dark:text-slate-300">Campo del barcode</span>
               <select className={selectClassName} value={content.footer.barcode_field} onChange={(e) => setFooter('barcode_field', e.target.value)}>
@@ -540,8 +1347,8 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
             </label>
           ) : <div />}
 
-          {/* Fila 1, col 2: tipo barcode (solo si está activo) */}
-          {content.footer.show_barcode ? (
+          {/* Fila 1, col 2: tipo barcode (solo si está activo y aplica al tipo) */}
+          {content.footer.show_barcode && templateCode !== 'TICKET_PRUEBA' && !CASH_OP_CODES.has(templateCode) ? (
             <label className="space-y-1 text-sm">
               <span className="font-medium text-slate-700 dark:text-slate-300">Tipo de barcode</span>
               <select className={selectClassName} value={content.footer.barcode_type} onChange={(e) => setFooter('barcode_type', e.target.value)}>
@@ -564,7 +1371,7 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
           </div>
 
           {/* Fila 2: aviso de compatibilidad barcode */}
-          {content.footer.show_barcode && (() => {
+          {content.footer.show_barcode && templateCode !== 'TICKET_PRUEBA' && !CASH_OP_CODES.has(templateCode) && (() => {
             const bt = BARCODE_TYPES.find((t) => t.value === content.footer.barcode_type);
             const bf = BARCODE_FIELDS.find((f) => f.value === content.footer.barcode_field);
             if (!bt) return <div className="col-span-3" />;
@@ -587,12 +1394,14 @@ export const TemplateFormModal = ({ mode = 'create', initialValues, onSubmit, on
             );
           })()}
 
-          {/* Fila 3: Mensaje de pie — ocupa las 3 columnas */}
-          <label className="col-span-3 space-y-1 text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-300">Mensaje de pie</span>
-            <textarea className={textareaClassName} rows={2} value={content.footer.footer_message} onChange={(e) => setFooter('footer_message', e.target.value)} placeholder="Ej: Gracias por su compra." maxLength={200} />
-            <span className="text-xs text-slate-400">{content.footer.footer_message.length}/200</span>
-          </label>
+          {/* Fila 3: Mensaje de pie — ocupa las 3 columnas (no aplica a TICKET_PRUEBA) */}
+          {templateCode !== 'TICKET_PRUEBA' && !CASH_OP_CODES.has(templateCode) && (
+            <label className="col-span-3 space-y-1 text-sm">
+              <span className="font-medium text-slate-700 dark:text-slate-300">Mensaje de pie</span>
+              <textarea className={textareaClassName} rows={2} value={content.footer.footer_message} onChange={(e) => setFooter('footer_message', e.target.value)} placeholder="Ej: Gracias por su compra." maxLength={200} />
+              <span className="text-xs text-slate-400">{content.footer.footer_message.length}/200</span>
+            </label>
+          )}
         </div>
 
       </div>
@@ -661,6 +1470,17 @@ export default function AdminPrintTemplates() {
         mode: isEdit ? 'edit' : 'create',
         initialValues: template || null,
         onSubmit: async (payload) => {
+          if (!isEdit && payload.is_active) {
+            const currentActive = templates.find((t) => t.template_code === payload.template_code && t.is_active);
+            if (currentActive) {
+              const ok = await ModalManager.confirm({
+                title: 'Reemplazar template activo',
+                message: `Ya existe un template activo para ${payload.template_code}: "${currentActive.template_name}" (${currentActive.version}). Al crear este nuevo template activo, ese quedará inactivo.`,
+                buttons: { cancel: 'Cancelar', confirm: 'Crear y reemplazar' },
+              });
+              if (!ok) return;
+            }
+          }
           const action = isEdit
             ? printService.updateTemplate(template.id, payload)
             : printService.createTemplate(payload);
@@ -677,9 +1497,14 @@ export default function AdminPrintTemplates() {
 
   const handleToggleActive = async (template) => {
     const nextState = !template.is_active;
+    const currentActive = nextState
+      ? templates.find((t) => t.id !== template.id && t.template_code === template.template_code && t.is_active)
+      : null;
     const confirmed = await ModalManager.confirm({
       title: `${nextState ? 'Activar' : 'Desactivar'} template`,
-      message: `¿Confirmas que deseas ${nextState ? 'activar' : 'desactivar'} "${template.template_name}"?`,
+      message: nextState && currentActive
+        ? `Activar "${template.template_name}" desactivará el template vigente actual: "${currentActive.template_name}" (${currentActive.version}). Solo puede haber un template activo por tipo.`
+        : `¿Confirmas que deseas ${nextState ? 'activar' : 'desactivar'} "${template.template_name}"?`,
       buttons: { cancel: 'Cancelar', confirm: nextState ? 'Activar' : 'Desactivar' },
     });
     if (!confirmed) return;
